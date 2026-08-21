@@ -159,3 +159,14 @@ input{font:inherit; color:inherit}
 .leadrow .p{font-variant-numeric:tabular-nums}
 
 @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important;transition-duration:.01ms!important} }
+
+/* ── print: the grown-up's weekly page ───────────────────────────────── */
+#printsheet{display:none}
+@media print{
+  body.printing .topbar,body.printing .tabbar,body.printing .content,body.printing .ov{display:none!important}
+  body.printing #printsheet{display:block;padding:24px;color:#000;background:#fff;font-family:Georgia,serif}
+  #printsheet h1{font-size:22px;margin:0 0 4px}
+  #printsheet h2{font-size:14px;margin:16px 0 4px;text-transform:uppercase;letter-spacing:.08em}
+  #printsheet ul{margin:0;padding-left:18px;font-size:13px;line-height:1.7}
+  #printsheet p{font-size:13px}
+}

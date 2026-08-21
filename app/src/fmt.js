@@ -19,6 +19,12 @@ export function setCurrency(c) { if (CURRENCIES[c]) cur = c; }
 export function currency() { return cur; }
 export function sign() { return CURRENCIES[cur].sign; }
 
+/* Same purchasing power, different agreement — used when a child changes the
+   currency setting, so the town converts rather than resetting. */
+export function convert(n, from, to) {
+  if (from === to) return n;
+  return n / RATE[from] * RATE[to];
+}
 export function price(units) {
   const raw = units * RATE[cur];
   return raw >= 100 ? Math.round(raw / 10) * 10 : Math.round(raw);

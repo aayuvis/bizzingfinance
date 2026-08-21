@@ -6,12 +6,12 @@
 import { esc } from './ui.js';
 
 export const PLACES = [
-  { key: 'wallet',    x: 20,  nav: 'money', sub: 'wallet',    name: 'Your stall',      lv: 1, blurb: 'Market Row' },
-  { key: 'jars',      x: 175, nav: 'money', sub: 'jars',      name: 'The Jar Shed',    lv: 2, blurb: 'four jars' },
-  { key: 'goals',     x: 330, nav: 'money', sub: 'goals',     name: 'The Build Yard',  lv: 3, blurb: 'goals rise here' },
-  { key: 'bank',      x: 485, nav: 'money', sub: 'bank',      name: 'The Bank',        lv: 4, blurb: 'the clock strikes interest' },
-  { key: 'exchange',  x: 640, nav: 'money', sub: 'portfolio', name: 'The Exchange',    lv: 5, blurb: 'Bo & Bea keep the board' },
-  { key: 'shop',      x: 795, nav: 'money', sub: 'business',  name: "Nana Bizz's shop", lv: 6, blurb: 'shuttered — for now' },
+  { key: 'wallet',   x: 20,  sub: 'wallet',    name: 'Your stall',       lv: 1,  blurb: 'Market Row — where the money you earn actually sits' },
+  { key: 'jars',     x: 175, sub: 'jars',      name: 'The Jar Shed',     lv: 6,  blurb: 'four jars, and a rule that splits your pay day by itself' },
+  { key: 'goals',    x: 330, sub: 'goals',     name: 'The Build Yard',   lv: 8,  blurb: 'name a thing and watch it go up floor by floor' },
+  { key: 'bank',     x: 485, sub: 'bank',      name: 'The Bank',         lv: 11, blurb: 'the clock strikes interest, in public, every pay day' },
+  { key: 'exchange', x: 640, sub: 'portfolio', name: 'The Exchange',     lv: 16, blurb: 'Bo and Bea keep the board and neither of them knows' },
+  { key: 'shop',     x: 795, sub: 'business',  name: "Nana Bizz's shop", lv: 23, blurb: 'shuttered since she retired. Yours when you are ready' },
 ];
 
 const W = 960, H = 348, G = 250;
@@ -137,8 +137,9 @@ function lantern(x, lit) {
    whole street can be seen in one sitting; the shipping ladder is docs/01 §10. */
 export function isOpen(place, level) { return level >= place.lv; }
 
-export function townSVG(s) {
-  const lv = s.learn.level;
+export function townSVG(c) {
+  const s = c;
+  const lv = c.learn.level;
   const jars = ['spend', 'save', 'grow', 'give'].map((k) => {
     const tot = s.money.jars.spend + s.money.jars.save + s.money.jars.grow + s.money.jars.give;
     return tot > 0 ? s.money.jars[k] / Math.max(tot, 1) * 2 : 0;

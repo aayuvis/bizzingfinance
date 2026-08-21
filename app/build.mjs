@@ -21,8 +21,11 @@ const css = ['styles/tokens.css', 'styles/app.css']
 
 const html = readFileSync(join(here, 'index.html'), 'utf8')
   .replace(/<link rel="stylesheet" href="styles[^>]*>\s*/g, '')
+  .replace(/<link rel="manifest"[^>]*>\s*/g, '')
   .replace('</head>', `<style>\n${css}\n</style>\n</head>`)
-  .replace(/<script type="module"[^>]*><\/script>/, `<script>\n${js}\n</script>`);
+  /* the single file has nothing to fetch, so it must not look for a worker */
+  .replace(/<script type="module"[^>]*><\/script>/,
+    `<script>window.BZF_SINGLE=true;</script>\n<script>\n${js}\n</script>`);
 
 writeFileSync(join(out, 'bizzington.html'), html);
 console.log('dist/bizzington.html', (html.length / 1024).toFixed(0) + 'kb');

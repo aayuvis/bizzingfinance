@@ -1,39 +1,63 @@
 /* store.js — THE SEAM.
-   Today: localStorage. Tomorrow: Supabase. Callers never change.
-   Split is deliberate: `profile` syncs to the cloud, `device` never does. */
+   Today: localStorage. Tomorrow: Supabase + RLS. Callers never change.
+   Two buckets, deliberately: `profile` is the household and syncs to the
+   cloud; `device` is this browser's business (sound, theme) and never does. */
 
-const KEY = 'bzf_v1';
+const KEY = 'bzf_profile';
+const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 1;
+export const SCHEMA = 2;
 
 function read(k, fallback) {
-  try {
-    const raw = localStorage.getItem(k);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (e) { return fallback; }
+  try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
+  catch (e) { return fallback; }
 }
 function write(k, v) {
   try { localStorage.setItem(k, JSON.stringify(v)); return true; }
-  catch (e) { return false; }
+  catch (e) { console.warn('storage unavailable', e); return false; }
 }
 
 let pending = null;
 export const Store = {
-  loadProfile() { return migrate(read(KEY, null)); },
-  saveProfile(blob) {
-    clearTimeout(pending);
-    pending = setTimeout(() => write(KEY, blob), 120);
+  loadProfile() {
+    let blob = read(KEY, null);
+    if (!blob) { const legacy = read(OLD, null); if (legacy) blob = legacy; }
+    return blob ? migrate(blob) : null;
   },
+  saveProfile(blob) { clearTimeout(pending); pending = setTimeout(() => write(KEY, blob), 150); },
   saveNow(blob) { clearTimeout(pending); write(KEY, blob); },
-  loadDevice(k, fb) { return read(DEV, {})[k] ?? fb; },
+  loadDevice(k, fb) { const d = read(DEV, {}); return d[k] === undefined ? fb : d[k]; },
   saveDevice(k, v) { const d = read(DEV, {}); d[k] = v; write(DEV, d); },
-  wipe() { try { localStorage.removeItem(KEY); } catch (e) {} },
+  wipe() { try { localStorage.removeItem(KEY); localStorage.removeItem(OLD); } catch (e) {} },
 };
 
-/* Formalised from commit one so future changes are safe. */
+/* Versioned from the first commit so future changes are safe rather than
+   brave. Each step is one small function and never reaches backwards. */
 function migrate(blob) {
-  if (!blob) return null;
-  if (!blob.v) blob.v = SCHEMA;
-  // future: while (blob.v < SCHEMA) { ...; blob.v++ }
+  if (!blob.v) blob.v = 1;
+  while (blob.v < SCHEMA) {
+    if (blob.v === 1) blob = v1_to_v2(blob);
+    else break;
+  }
   return blob;
+}
+
+/* v1 was single-child and kept the child at the top level. v2 is a household:
+   one parent, many children, one active. */
+function v1_to_v2(old) {
+  const kid = {
+    id: 'k1', name: (old.child && old.child.name) || 'Friend',
+    band: (old.child && old.child.band) || 'builder',
+    currency: (old.child && old.child.currency) || 'INR',
+    created: (old.child && old.child.created) || Date.now(),
+    money: old.money, learn: old.learn, market: old.market, streak: old.streak,
+    postbox: old.postbox, shop: old.shop || { owned: [] }, badges: old.badges || [],
+    history: old.history || [],
+  };
+  return {
+    v: 2, parent: { created: Date.now(), gate: false },
+    kids: [kid], active: 0,
+    settings: old.settings || { sound: true },
+    clock: { lastSeen: Date.now() },
+  };
 }

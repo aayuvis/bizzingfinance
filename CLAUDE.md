@@ -9,10 +9,11 @@ basics → budgeting → banking → a stock portfolio → running a business. T
 Bizzing family, after [Bizzing Bee](https://github.com/aayuvis/Bizzing-Bee) (spelling, 8–15)
 and [Bizzing India](https://github.com/aayuvis/bizzingindia.com) (culture & Hindi, 4–12).
 
-**Concept plus a playable prototype.** The docs are the spec; [`app/`](app/) is a working
-slice of it — Bizzington, a town with a wallet, jars, goals, a bank, an Exchange and three
-games. `cd app && python3 -m http.server 8080`. Read [app/README.md](app/README.md) for the
-module map and the known gaps before changing it.
+**Concept plus a working app.** The docs are the spec; [`app/`](app/) is the app —
+Bizzington, with the full 30-level ladder, eight chapters, jobs, jars, goals, a bank that
+lends, the Exchange, a shop you run, six games, a grown-up's page and an offline PWA.
+`cd app && npm install && npm run dev`. Read [app/README.md](app/README.md) for the module
+map and the known gaps before changing anything.
 
 ## Working style (the user's pace)
 
@@ -85,15 +86,23 @@ not aspirational. The short version:
 ## The prototype's own rules
 
 - **`src/store.js` is the only module that touches storage.** That is the Phase 1 linchpin;
-  do not reach around it.
-- **`src/sim.js` owns the money.** Views render it, they never compute it.
+  do not reach around it. It is versioned — add a `vN_to_vN+1` step, never edit an old one.
+- **`src/sim.js` owns the money.** Views render it, they never compute it. If a view is
+  doing arithmetic on a balance, it is in the wrong file.
+- **State is a household**, not a child: `{parent, kids[], active}`. Anything child-shaped
+  goes on the kid, never at the top level — a second child must never inherit the first's
+  money, ladder or town.
 - **Nothing gets taught without a place in the town** (docs/02 §1). If you can't point at
   the building, the feature isn't ready.
 - **Option order is permuted from the card id** (`shuffledDrill`). Authoring answers by hand
   put 11 of 12 in slot B, and position leaks the answer as surely as the text does.
-- **The prototype ladder is compressed to 6 levels** so the street can be walked in one
-  sitting. Don't "fix" it to match docs/01 §10 without also fixing the XP curve.
-- **The sim clock is client-side here and must not stay that way** — see the known gaps.
+- **The ladder is 30 levels and the unlocks are the doc's** (Jars 6, Goals 8, Bank 11,
+  Exchange 16, Shop 23). Changing a threshold means re-checking the XP curve in `content.js`.
+- **The sim clock is client-side and must not stay that way.** It refuses to run backwards
+  and says so; the server-authoritative version is a launch blocker, not a nicety.
+- **Nav lives in the hash.** The back button is how people leave a screen on a phone.
+- Every game gets its wage through `payout()`, so there is exactly one place that decides
+  what play is worth.
 
 ## Architecture (planned)
 

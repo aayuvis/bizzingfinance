@@ -1,136 +1,191 @@
-/* main.js — boot, shell, and every action in one table.
+/* main.js — boot, shell, routing, and every action in one table.
    state -> render() -> string -> innerHTML; clicks dispatch by [data-act]. */
 
 import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js';
-import { money, price, setCurrency, CURRENCIES } from './fmt.js';
-import { say, face, CAST } from './art.js';
+import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
+import { say, CAST } from './art.js';
 import { PLACES } from './town.js';
-import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, rankFor, shuffledDrill } from './content.js';
+import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK,
+  rankFor, rankObj, shuffledDrill } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
-import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress, viewCollection } from './views.js';
-import { viewArcade, startGame, quitGame, GAMES } from './arcade.js';
+import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
+  viewParents, viewCollection } from './views.js';
+import { viewArcade, startGame, quitGame, GAME_ACTS } from './arcade.js';
 
 const root = document.getElementById('app');
-const fields = {};
 let draft = { step: 0 };
+let routing = false;
 
-/* ══ shell ════════════════════════════════════════════════════════════ */
 const TABS = [
   { k: 'home', n: 'Home', g: '🏘️' }, { k: 'learn', n: 'Learn', g: '📗' },
   { k: 'money', n: 'Money', g: '🪙' }, { k: 'arcade', n: 'Arcade', g: '🎮' },
   { k: 'store', n: 'Store', g: '🛒' }, { k: 'progress', n: 'Progress', g: '📈' },
   { k: 'collection', n: 'Collection', g: '🏅' },
 ];
-const SPROUT_TABS = ['home', 'learn', 'money', 'arcade'];
+const SPROUT = ['home', 'learn', 'money', 'arcade'];
 
+/* ══ routing ══════════════════════════════════════════════════════════
+   The back button is not a nice-to-have on a phone; it is how people leave
+   a screen. Nav lives in the hash so it works. */
+function writeHash() {
+  if (!R.s || !R.s.kids.length) return;
+  const u = R.s.ui;
+  const h = '#/' + u.nav + (u.nav === 'money' ? '/' + u.sub : '');
+  if (location.hash !== h) { routing = true; location.hash = h; routing = false; }
+}
+function readHash() {
+  const m = (location.hash || '').replace(/^#\/?/, '').split('/');
+  if (!m[0]) return false;
+  const known = TABS.map((t) => t.k).concat(['parents']);
+  if (known.indexOf(m[0]) < 0) return false;
+  R.s.ui.nav = m[0];
+  if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
+  return true;
+}
+
+/* ══ shell ════════════════════════════════════════════════════════════ */
 function render() {
   const s = R.s;
-  if (!s) { root.innerHTML = `<div class="content">${viewOnboard(draft)}</div>`; return; }
+  if (!s || !s.kids.length || R.adding) { root.innerHTML = `<div class="content">${viewOnboard(draft)}</div>`; return; }
+  const c = sim.kid(s);
+  const sprout = c.band === 'sprout';
+  const tabs = sprout ? TABS.filter((t) => SPROUT.includes(t.k)) : TABS;
 
-  const tabs = s.child.band === 'sprout' ? TABS.filter((t) => SPROUT_TABS.includes(t.k)) : TABS;
   const body =
-    s.nav === 'learn' ? viewLearn() :
-    s.nav === 'money' ? viewMoney() :
-    s.nav === 'arcade' ? viewArcade() :
-    s.nav === 'store' ? viewStore() :
-    s.nav === 'progress' ? viewProgress() :
-    s.nav === 'collection' ? viewCollection() : viewHome();
+    s.ui.nav === 'learn' ? viewLearn() :
+    s.ui.nav === 'money' ? viewMoney() :
+    s.ui.nav === 'arcade' ? viewArcade() :
+    s.ui.nav === 'store' ? viewStore() :
+    s.ui.nav === 'progress' ? viewProgress() :
+    s.ui.nav === 'parents' ? viewParents() :
+    s.ui.nav === 'collection' ? viewCollection() : viewHome();
 
-  const bar = (s.child.band === 'sprout' ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]));
+  const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]);
 
   root.innerHTML = `
     <header class="topbar">
       <div class="topbar-in">
-        <span class="brand"><em>Bizzing</em> Finance</span>
-        <button class="chip money" data-act="nav" data-arg="money" title="Your money — opens the town's ledger, not the shop">
-          ${money(s.money.wallet)}</button>
-        <span class="chip streak" title="Days in a row">🔥 ${s.streak.days.length}</span>
+        <button class="brand" data-act="nav" data-arg="home"><em>Bizzing</em> Finance</button>
+        <button class="chip money" data-act="nav" data-arg="money"
+          title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
+        <span class="chip streak" title="Days in a row">🔥 ${c.streak.days.length}</span>
         <button class="iconbtn" data-act="mode" aria-label="Light or dark">${R.mode === 'dark' ? '☾' : '☀'}</button>
-        <button class="iconbtn" data-act="sound" aria-label="Sound on or off">${s.settings.sound ? '🔊' : '🔇'}</button>
+        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">👪</button>
       </div>
       <nav class="nav" aria-label="Sections">
         ${tabs.map((t) => `<button class="navbtn" data-act="nav" data-arg="${t.k}"
-          aria-current="${s.nav === t.k ? 'page' : 'false'}">${t.n}</button>`).join('')}
+          aria-current="${s.ui.nav === t.k ? 'page' : 'false'}">${t.n}</button>`).join('')}
       </nav>
     </header>
-    <main class="content">${body}</main>
+    <main class="content">${sim.clockSuspect(s) ? clockWarning() : ''}${body}</main>
     <nav class="tabbar" aria-label="Primary">
       ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
-        aria-current="${s.nav === t.k ? 'page' : 'false'}"><span class="gl">${t.g}</span><span>${t.n}</span></button>`).join('')}
+        aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${t.g}</span><span>${t.n}</span></button>`).join('')}
     </nav>
     ${R.overlay ? overlay() : ''}`;
+  writeHash();
   sim.save(s);
 }
 R.render = render;
 
+function clockWarning() {
+  return `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint);margin-bottom:14px">
+    <div class="eyebrow" style="color:var(--treasure-deep)">The town clock</div>
+    <p class="small" style="color:var(--treasure-deep)">This device's clock has gone backwards, so Bizzington is holding
+      the date it last saw. Pay day cannot be replayed by winding a clock back — in the shipping build the time comes
+      from the server and this cannot happen at all.</p></div>`;
+}
+
 /* ══ overlays ═════════════════════════════════════════════════════════ */
 function overlay() {
-  const o = R.overlay, s = R.s;
-  const box = (inner, wide) => `<div class="ov" data-act="closeOv"><div class="ovbox${wide ? ' wide' : ''}" data-act="noop">${inner}</div></div>`;
+  const o = R.overlay, c = sim.kid(R.s);
+  const box = (inner, wide) => `<div class="ov" data-act="closeOv"><div class="ovbox${wide ? ' wide' : ''}" data-act="noop" role="dialog" aria-modal="true">${inner}</div></div>`;
 
   if (o.kind === 'letter') {
     const L = o.letter;
     const from = L.from === 'scam' ? null : CAST[L.from];
     return box(`
       <div class="row" style="gap:11px;margin-bottom:12px">
-        <span class="who" style="width:46px;height:46px;flex:0 0 auto;border-radius:50%;overflow:hidden;border:1px solid var(--line);display:block;background:var(--surface2)">
+        <span style="width:46px;height:46px;flex:0 0 auto;border-radius:50%;overflow:hidden;border:1px solid var(--line);display:block;background:var(--surface2)">
           ${from ? from.svg : '<div style="display:grid;place-items:center;height:100%;font-size:22px">✉️</div>'}</span>
         <div class="grow"><div class="eyebrow">${from ? esc(from.name) : 'Sender unknown'}</div>
-        <h3 style="font-size:19px">${esc(L.title)}</h3></div>
-      </div>
+        <h3 style="font-size:19px">${esc(L.title)}</h3></div></div>
       <p style="font-size:15px;line-height:1.6;background:var(--tint);border-radius:var(--r-md);padding:13px 15px">${esc(L.body)}</p>
       ${o.result
         ? `<div style="margin-top:12px;background:${o.result.good ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>
            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? '+' : '−'}${money(Math.abs(o.result.money))}</span>` : ''}
              <span class="pill grow">+${o.result.xp} XP</span>
-             ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ''}
-           </div>
+             ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ''}</div>
            <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button>`
         : `<div class="stack" style="gap:8px;margin-top:14px">
-            ${L.choices.map((c, i) => `<button class="opt" data-act="letterPick" data-arg="${i}">${esc(c.label)}</button>`).join('')}
-           </div>
-           ${L.scam ? '' : ''}`}`);
+            ${L.choices.map((ch, i) => `<button class="opt" data-act="letterPick" data-arg="${i}">${esc(ch.label)}</button>`).join('')}
+           </div>`}`);
   }
 
   if (o.kind === 'payday') {
     const p = o.res;
     return box(`
-      <div style="text-align:center">
-        <div style="font-size:44px">🔔</div>
+      <div style="text-align:center"><div style="font-size:44px">🔔</div>
         <div class="eyebrow">The bell rang</div>
-        <h2 style="margin:4px 0 10px">Pay day in Bizzington</h2>
-      </div>
+        <h2 style="margin:4px 0 10px">Pay day in Bizzington</h2></div>
       <div class="stack" style="gap:7px">
         <div class="row"><span class="grow">Wages</span><b style="color:var(--grow)">+${money(p.wage)}</b></div>
+        ${p.chores.map((ch) => `<div class="row"><span class="grow muted">${esc(ch.name)}</span><b style="color:var(--grow)">+${money(ch.amt)}</b></div>`).join('')}
         ${p.bills.map((b) => `<div class="row"><span class="grow muted">${esc(b.name)}</span><b>−${money(b.amt)}</b></div>`).join('')}
         ${p.interest ? `<div class="row"><span class="grow">Bank interest</span><b style="color:var(--grow)">+${money(p.interest)}</b></div>` : ''}
-        ${p.split ? `<div class="sep"></div>
-          <div class="eyebrow">Your rule split it before you could think about it</div>
+        ${p.loan ? `<div class="row"><span class="grow muted">Loan repayment</span><b>−${money(p.loan)}</b></div>` : ''}
+        ${p.split ? `<div class="sep"></div><div class="eyebrow">Your rule split it before you could think about it</div>
           ${Object.keys(p.split).map((k) => `<div class="row"><span class="grow muted">${k[0].toUpperCase() + k.slice(1)} jar</span><b>${money(p.split[k])}</b></div>`).join('')}` : ''}
       </div>
       <div class="sep" style="margin:12px 0"></div>
-      <div class="row"><span class="grow" style="font-weight:800">In your pocket now</span><span class="big" style="font-size:22px">${money(R.s.money.wallet)}</span></div>
+      <div class="row"><span class="grow" style="font-weight:800">In your pocket now</span><span class="big" style="font-size:22px">${money(c.money.wallet)}</span></div>
+      ${p.loanCleared ? '<div style="margin-top:10px;background:var(--grow-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px"><b>Loan cleared.</b> Your trust score went up, and the next one will be cheaper.</div>' : ''}
       ${say('pip', p.split ? 'Split before you could think about it. That is the point of a rule.' : 'Open the Jar Shed and set a rule — then this happens by itself.')}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market →</button>`);
   }
 
   if (o.kind === 'level') {
-    const place = PLACES.find((p) => p.lv === o.level);
+    const place = PLACES.find((p) => p.lv > o.from && p.lv <= o.level);
+    const rank = rankObj(o.level);
     return box(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 8px;border-radius:50%;overflow:hidden">${CAST.pip.svg}</div>
-        <div class="eyebrow">Level ${o.level} · ${rankFor(o.level)}</div>
-        <h2 style="margin:4px 0 8px;font-size:28px">${place ? esc(place.name) + ' is open' : 'Level up'}</h2>
-        <p class="muted">${place ? esc(place.blurb) : 'The street just got longer.'}</p>
+        <div class="eyebrow">Level ${o.level} · ${rank.em} ${rank.name}</div>
+        <h2 style="margin:4px 0 8px;font-size:28px">${place ? esc(place.name) + ' is open' : 'Level ' + o.level}</h2>
+        <p class="muted">${place ? esc(place.blurb) : 'Learning ' + esc(rank.of) + '.'}</p>
         ${place ? `<button class="btn wide" style="margin-top:16px" data-act="goPlace" data-arg="${place.key}">Go and look →</button>` : ''}
         <button class="${place ? 'small muted' : 'btn wide'}" style="margin-top:10px;width:100%;text-align:center" data-act="closeOv">${place ? 'Later' : 'Keep going'}</button>
       </div>`);
   }
 
+  if (o.kind === 'biz') {
+    const d = o.day, w = d.weather;
+    return box(`
+      <div style="text-align:center"><div style="font-size:42px">${w.em}</div>
+        <div class="eyebrow">${esc(w.name)}</div>
+        <h2 style="margin:4px 0 10px">Day's trading</h2></div>
+      <div class="stack" style="gap:6px">
+        ${STOCK.filter((s) => d.sold[s.id]).map((s) => `<div class="row"><span class="grow muted">${s.em} ${d.sold[s.id]} × ${esc(s.name)}</span><b style="color:var(--grow)">+${money(d.sold[s.id] * sim.kid(R.s).biz.prices[s.id])}</b></div>`).join('')
+          || '<p class="small muted">Nothing sold. It happens — the rent still arrived.</p>'}
+        <div class="sep"></div>
+        <div class="row"><span class="grow">Revenue</span><b>${money(d.revenue)}</b></div>
+        <div class="row"><span class="grow muted">Rent</span><b>−${money(d.rent)}</b></div>
+        <div class="sep"></div>
+        <div class="row"><span class="grow" style="font-weight:800">Profit</span>
+          <span class="big" style="font-size:22px;color:${d.profit >= 0 ? 'var(--grow)' : 'var(--spend)'}">${d.profit >= 0 ? '+' : '−'}${money(Math.abs(d.profit))}</span></div>
+      </div>
+      ${Object.keys(d.spoiled || {}).length ? `<div style="margin-top:11px;background:var(--spend-tint);border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">
+        ${Object.keys(d.spoiled).map((k) => d.spoiled[k] + ' ' + STOCK.find((s) => s.id === k).name.toLowerCase()).join(', ')} melted overnight — stock you had already paid for.</div>` : ''}
+      ${say('nana', d.profit >= 0
+        ? 'Revenue is the number people brag about. That one at the bottom is the one that decides whether you are open next year.'
+        : 'A loss is information, not a verdict. Look at what the weather wanted and what you had on the counter.')}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">Close up →</button>`);
+  }
+
   if (o.kind === 'more') {
-    const rest = TABS.filter((t) => !SPROUT_TABS.includes(t.k));
+    const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat([{ k: 'parents', n: "Grown-up's page", g: '👪' }]);
     return box(`<div class="eyebrow" style="margin-bottom:10px">Everything else</div>
       <div class="stack" style="gap:8px">
         ${rest.map((t) => `<button class="opt" data-act="nav" data-arg="${t.k}">${t.g} &nbsp;${t.n}</button>`).join('')}
@@ -140,17 +195,21 @@ function overlay() {
 }
 
 /* ══ actions ══════════════════════════════════════════════════════════ */
+const C = () => sim.kid(R.s);
+
 on('noop', () => {});
 on('closeOv', () => { R.overlay = null; render(); });
 on('more', () => { R.overlay = { kind: 'more' }; render(); });
 on('nav', (k) => {
-  R.overlay = null;
+  R.overlay = null; R.shelf = '';
   if (R.game) quitGame();
-  R.s.nav = k; R.s.learn.openCard = null;
+  R.s.ui.nav = k;
+  if (R.s.kids.length) C().learn.openCard = null;
   sfx.click(); render(); window.scrollTo(0, 0);
 });
-on('sub', (k) => { R.s.sub = k; sfx.click(); render(); });
-on('locked', (lv) => toast(`Opens at level ${lv} — keep learning`));
+on('sub', (k) => { R.overlay = null; R.s.ui.nav = 'money'; R.s.ui.sub = k; sfx.click(); render(); window.scrollTo(0, 0); });
+on('shelf', (k) => { R.shelf = k || ''; R.query = ''; render(); window.scrollTo(0, 0); });
+on('locked', (lv) => { toast(`Opens at level ${lv} — keep learning`); sfx.bad(); });
 on('mode', () => {
   R.mode = R.mode === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-mode', R.mode);
@@ -161,202 +220,322 @@ on('sound', () => { R.s.settings.sound = !R.s.settings.sound; setSound(R.s.setti
 
 /* onboarding */
 on('obNext', () => {
-  const n = (fields.name || '').trim();
+  const n = (R.fields.name || '').trim();
   if (!n) { toast('Type a name first'); return; }
   draft.name = n; draft.step = 1; sfx.click(); render();
 });
 on('obBand', (b) => { draft.band = b; draft.step = 2; sfx.click(); render(); });
-on('obCur', (c) => {
-  R.s = sim.newState(draft.name, draft.band, c);
-  setCurrency(c);
-  sfx.level(); confetti(40);
-  render();
+on('obCancel', () => { draft = { step: 0 }; R.adding = false; render(); });
+on('obCur', (cur) => {
+  if (!R.s) R.s = sim.newState();
+  const child = sim.newChild(draft.name, draft.band, cur);
+  R.s.kids.push(child);
+  R.s.active = R.s.kids.length - 1;
+  R.s.ui = { nav: 'home', sub: 'wallet' };
+  setCurrency(cur);
+  R.fields = {}; draft = { step: 0 }; R.adding = false;
+  sfx.level(); confetti(40); render();
 });
 
 /* town */
 on('town', (key) => {
   const p = PLACES.find((x) => x.key === key);
   if (!p) return;
-  if (R.s.learn.level < p.lv) { toast(`${p.name} opens at level ${p.lv}`); sfx.bad(); return; }
-  R.s.nav = 'money'; R.s.sub = p.sub; sfx.click(); render(); window.scrollTo(0, 0);
+  if (C().learn.level < p.lv) { toast(`${p.name} opens at level ${p.lv}`); sfx.bad(); return; }
+  fire('sub', p.sub);
 });
 on('goPlace', (key) => { R.overlay = null; fire('town', key); });
 
 /* learn */
-on('card', (id) => { R.s.nav = 'learn'; R.s.learn.openCard = id; R.s.learn.drill = null; sfx.click(); render(); window.scrollTo(0, 0); });
-on('closeCard', () => { R.s.learn.openCard = null; R.s.learn.drill = null; render(); });
+on('card', (id) => {
+  R.s.ui.nav = 'learn'; R.shelf = '';
+  C().learn.openCard = id; C().learn.drill = null;
+  sfx.click(); render(); window.scrollTo(0, 0);
+});
+on('closeCard', () => { C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
-  const s = R.s, c = ALL_CARDS.find((x) => x.id === s.learn.openCard);
-  if (!c || (s.learn.drill && s.learn.drill.card === c.id)) return;
+  const c = C(), card = ALL_CARDS.find((x) => x.id === c.learn.openCard);
+  if (!card || (c.learn.drill && c.learn.drill.card === card.id)) return;
   const pick = +i;
-  const right = pick === shuffledDrill(c).answer;
-  s.learn.drill = { card: c.id, pick, right };
+  const right = pick === shuffledDrill(card).answer;
+  c.learn.drill = { card: card.id, pick, right };
   if (right) sfx.good(); else sfx.bad();
   render();
 });
 on('cardDone', (id) => {
-  const s = R.s, c = ALL_CARDS.find((x) => x.id === id);
-  if (!c) return;
-  const right = !!(s.learn.drill && s.learn.drill.right);
-  const first = !s.learn.done[id];
-  s.learn.done[id] = true;
-  const res = sim.addXP(s, first ? (right ? 22 : 12) : 2);
-  const ch = CHAPTERS.find((x) => x.id === c.ch);
-  if (ch.cards.every((k) => s.learn.done[k.id])) sim.badge(s, 'chapter-' + ch.id.slice(1));
-  s.learn.openCard = null; s.learn.drill = null;
-  if (res.leveled) { levelUp(res.level); } else { toast('+' + res.gained + ' XP'); render(); }
+  const c = C(), card = ALL_CARDS.find((x) => x.id === id);
+  if (!card) return;
+  const right = !!(c.learn.drill && c.learn.drill.right);
+  const first = !c.learn.done[id];
+  c.learn.done[id] = true;
+  const res = sim.addXP(c, first ? (right ? 22 : 12) : 2);
+  const ch = CHAPTERS.find((x) => x.id === card.ch);
+  if (ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
+  c.learn.openCard = null; c.learn.drill = null;
+  if (res.leveled) levelUp(res); else { toast('+' + res.gained + ' XP'); render(); }
 });
-function levelUp(level) {
+function levelUp(res) {
   sfx.level(); confetti(50);
-  R.overlay = { kind: 'level', level };
+  R.overlay = { kind: 'level', level: res.level, from: res.from };
   render();
 }
 
 /* postbox */
 on('postbox', () => {
-  const s = R.s;
-  if (s.postbox.answered) { toast('Emptied — another one tomorrow'); return; }
-  const L = LETTERS[s.postbox.idx % LETTERS.length];
-  R.overlay = { kind: 'letter', letter: L, result: null };
+  const c = C();
+  if (c.postbox.answered) { toast('Emptied — another one tomorrow'); return; }
+  R.overlay = { kind: 'letter', letter: LETTERS[c.postbox.idx % LETTERS.length], result: null };
   sfx.click(); render();
 });
 on('letterPick', (i) => {
-  const s = R.s, L = R.overlay.letter, c = L.choices[+i];
+  const c = C(), L = R.overlay.letter, ch = L.choices[+i];
   let delta = 0;
-  if (c.wallet) {
-    const amt = price(Math.abs(c.wallet));
-    if (c.wallet > 0) { sim.earn(s, amt, L.title, 'letter'); delta = amt; }
-    else { sim.spend(s, amt, L.title, 'letter'); delta = -amt; }
+  if (ch.wallet) {
+    const amt = price(Math.abs(ch.wallet));
+    if (ch.wallet > 0) { sim.earn(c, amt, L.title, 'letter'); delta = amt; }
+    else { sim.spend(c, amt, L.title, 'letter'); delta = -amt; }
   }
-  const res = sim.addXP(s, c.xp || 0);
-  if (c.badge) sim.badge(s, c.badge);
-  s.postbox.answered = true;
-  s.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!(L.scam && c.badge) });
-  R.overlay.result = { note: c.note, money: delta, xp: c.xp || 0, badge: c.badge, good: !(L.scam && !c.badge) };
-  if (delta > 0) sfx.coin(); else if (L.scam && !c.badge) sfx.bad(); else sfx.good();
+  const res = sim.addXP(c, ch.xp || 0);
+  if (ch.badge) sim.badge(c, ch.badge);
+  c.postbox.answered = true;
+  c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
+  sim.stamp(c);
+  R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, good: !(L.scam && !ch.safe) };
+  if (delta > 0) sfx.coin(); else if (L.scam && !ch.safe) sfx.bad(); else sfx.good();
   render();
-  if (res.leveled) setTimeout(() => levelUp(res.level), 900);
+  if (res.leveled) setTimeout(() => levelUp(res), 900);
 });
 
-/* pay day */
+/* the week */
 on('payday', () => {
-  const s = R.s;
-  if (!sim.payDue(s)) { toast('Not yet — the bell rings on Friday'); return; }
-  const res = sim.runPayDay(s);
-  R.overlay = { kind: 'payday', res };
+  const c = C();
+  if (!sim.payDue(c, R.s)) { toast('Not yet — the bell rings on ' + weekday(c.money.nextPay)); return; }
+  R.overlay = { kind: 'payday', res: sim.runPayDay(c, R.s) };
   sfx.bell(); confetti(30); render();
 });
-on('skipWeek', () => { sim.protoSkipWeek(R.s); toast('Clock pushed to pay day'); R.s.nav = 'home'; render(); });
+on('skipWeek', () => { sim.protoSkipWeek(C(), R.s); toast('Clock pushed to pay day'); fire('nav', 'home'); });
+on('grantXP', () => {
+  const res = sim.addXP(C(), 200);
+  if (res.leveled) levelUp(res); else { toast('+200 XP'); render(); }
+});
 on('wipe', () => {
-  if (!confirm('Start Bizzington over? Everything in this town goes.')) return;
-  try { localStorage.removeItem('bzf_v1'); } catch (e) {}
-  R.s = null; draft = { step: 0 }; render();
+  if (!confirm('Start this household over? Every town in it goes.')) return;
+  try { localStorage.removeItem('bzf_profile'); localStorage.removeItem('bzf_v1'); } catch (e) {}
+  R.s = null; draft = { step: 0 }; location.hash = ''; render();
 });
 
-/* jars, goals, bank */
-on('jarIn', (k) => { const a = sim.toJar(R.s, k, price(2)); a ? sfx.coin() : toast('Wallet is empty'); render(); });
-on('jarOut', (k) => { const a = sim.fromJar(R.s, k, price(2)); a ? sfx.click() : toast('That jar is empty'); render(); });
+/* market row */
+on('job', (id) => {
+  const a = sim.doJob(C(), id);
+  if (a) { sfx.coin(); toast('+' + money(a)); } else toast('Done that one today');
+  render();
+});
+
+/* jars, goals */
+on('jarIn', (k) => { sim.toJar(C(), k, price(2)) ? sfx.coin() : toast('Wallet is empty'); render(); });
+on('jarOut', (k) => { sim.fromJar(C(), k, price(2)) ? sfx.click() : toast('That jar is empty'); render(); });
 on('rule', (arg) => {
-  const [k, d] = arg.split(':');
-  const r = R.s.money.rules;
+  const [k, d] = arg.split(':'), r = C().money.rules;
   r[k] = Math.max(0, Math.min(100, r[k] + +d));
   sfx.click(); render();
 });
 on('addGoal', () => {
-  const n = (fields.goalName || '').trim();
-  const a = parseInt(String(fields.goalAmt || '').replace(/[^0-9]/g, ''), 10);
+  const n = (R.fields.goalName || '').trim();
+  const a = parseInt(String(R.fields.goalAmt || '').replace(/[^0-9]/g, ''), 10);
   if (!n) { toast('Name it first'); return; }
   if (!a || a <= 0) { toast('How much does it cost?'); return; }
-  sim.addGoal(R.s, n, a);
-  fields.goalName = ''; fields.goalAmt = '';
+  sim.addGoal(C(), n, a);
+  R.fields.goalName = ''; R.fields.goalAmt = '';
   sfx.good(); toast('Scaffolding up'); render();
 });
 on('fundGoal', (id) => {
-  const a = sim.fundGoal(R.s, id, price(5));
-  if (!a) { toast('The Save jar is empty'); return; }
-  const g = R.s.money.goals.find((x) => x.id === id);
+  if (!sim.fundGoal(C(), id, price(5))) { toast('The Save jar is empty'); return; }
+  const g = C().money.goals.find((x) => x.id === id);
   if (g && g.done) { sfx.level(); confetti(40); toast('Built it!'); } else sfx.coin();
   render();
 });
-on('raidGoal', (id) => { const a = sim.raidGoal(R.s, id); if (a) { sfx.bad(); toast('Scaffolding came down'); } render(); });
-on('bankIn', () => {
-  const s = R.s, a = Math.min(price(10), s.money.jars.save);
-  if (a <= 0) { toast('Nothing in the Save jar'); return; }
-  s.money.jars.save -= a; s.money.bank.balance += a; s.money.bank.opened = true;
-  sim.txn(s, 'out', a, 'Into the bank', 'bank'); sfx.coin(); render();
+on('autoGoal', (id) => {
+  const g = C().money.goals.find((x) => x.id === id); if (!g) return;
+  g.auto = g.auto ? 0 : price(5);
+  toast(g.auto ? 'Will move ' + money(g.auto) + ' every pay day' : 'Auto-save off');
+  sfx.click(); render();
 });
-on('bankOut', () => {
-  const s = R.s, a = Math.min(price(10), s.money.bank.balance);
-  if (a <= 0) return;
-  s.money.bank.balance -= a; s.money.jars.save += a;
-  sim.txn(s, 'in', a, 'Out of the bank', 'bank'); sfx.click(); render();
+on('raidGoal', (id) => { if (sim.raidGoal(C(), id)) { sfx.bad(); toast('Scaffolding came down'); } render(); });
+
+/* bank */
+on('bankIn', () => { sim.bankIn(C(), price(10)) ? sfx.coin() : toast('Nothing in the Save jar'); render(); });
+on('bankOut', () => { sim.bankOut(C(), price(10)); sfx.click(); render(); });
+on('loan', () => {
+  const c = C();
+  const offer = sim.loanOffer(c, 40, 8);
+  if (!confirm(`Borrow ${money(offer.amount)}?\n\nYou pay back ${money(offer.perWeek)} every pay day for ${offer.weeks} pay days.\nYou hand over ${money(offer.total)} in total.\nSo it costs ${money(offer.cost)}.`)) return;
+  sim.takeLoan(c, offer); sfx.coin(); toast('Borrowed — and you knew the cost first'); render();
 });
+on('repay', () => { const a = sim.repayLoan(C(), C().money.wallet); if (a) { sfx.coin(); toast('Repaid ' + money(a)); } render(); });
 
 /* exchange */
 on('buy', (id) => {
-  const s = R.s, spend = price(5);
-  if (s.money.jars.grow < spend) { toast('Buy from the Grow jar — it needs filling first'); return; }
-  if (!s.market.cup) s.market.cup = { cash: 0, units: {} };
-  const p = s.market.series[id][s.market.step];
-  s.money.jars.grow -= spend;
-  s.market.cup.units[id] = (s.market.cup.units[id] || 0) + spend / p;
-  sim.txn(s, 'out', spend, 'Bought ' + ASSETS.find((a) => a.id === id).name, 'invest');
+  if (!sim.buyAsset(C(), id, price(5))) { toast('Fill the Grow jar first'); return; }
   sfx.coin(); render();
 });
-on('sell', (id) => {
-  const s = R.s, u = (s.market.cup && s.market.cup.units[id]) || 0;
-  if (u <= 0) return;
-  const v = Math.round(u * s.market.series[id][s.market.step]);
-  s.market.cup.units[id] = 0; s.money.jars.grow += v;
-  sim.txn(s, 'in', v, 'Sold ' + ASSETS.find((a) => a.id === id).name, 'invest');
-  sfx.click(); render();
+on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
+
+/* bizz & co */
+on('openBiz', () => { sim.openBiz(C()); sfx.level(); confetti(30); render(); });
+on('bizBuy', (id) => { sim.bizBuy(C(), id, 5) ? sfx.coin() : toast('Not enough in the till'); render(); });
+on('bizPrice', (arg) => { const [id, d] = arg.split(':'); sim.bizPrice(C(), id, price(1) * +d); sfx.click(); render(); });
+on('bizTrade', () => {
+  const c = C();
+  const any = STOCK.some((s) => (c.biz.stock[s.id] || 0) > 0);
+  if (!any) { toast('Buy something to sell first'); sfx.bad(); return; }
+  const day = sim.bizTrade(c);
+  R.overlay = { kind: 'biz', day };
+  if (day.profit >= 0) sfx.coin(); else sfx.bad();
+  render();
 });
+on('bizCashOut', () => { const a = sim.bizCashOut(C()); if (a) { sfx.coin(); toast('Drew ' + money(a) + ' from the till'); } render(); });
 
 /* store */
+on('cool', (id) => {
+  C().shop.cooling[id] = Date.now() + 24 * 3600000;
+  toast('Come back tomorrow — see if you still want it');
+  sfx.click(); render();
+});
 on('buyItem', (id) => {
-  const s = R.s, it = SHOP.find((x) => x.id === id), p = price(it.units);
-  let short = p - s.money.wallet;
+  const c = C(), it = SHOP.find((x) => x.id === id), p = price(it.units);
+  let short = p - c.money.wallet;
   if (short > 0) {
-    const take = Math.min(short, s.money.jars.spend);
-    s.money.jars.spend -= take; s.money.wallet += take;
-    short -= take;
+    const take = Math.min(short, c.money.jars.spend);
+    c.money.jars.spend -= take; c.money.wallet += take; short -= take;
   }
   if (short > 0) { toast('Not enough — even after the Spend jar'); sfx.bad(); return; }
-  s.money.wallet -= p;
-  sim.txn(s, 'out', p, it.name, 'shop');
-  s.shop.owned.push(id);
+  c.money.wallet -= p;
+  sim.txn(c, 'out', p, it.name, 'shop');
+  c.shop.owned.push(id);
+  sim.stamp(c);
   sfx.coin(); toast(it.name + ' is yours'); render();
+});
+
+/* the grown-up's page */
+on('allow', (d) => {
+  const c = C(), step = price(5);
+  if (c.family.allowance == null) c.family.allowance = +d > 0 ? step : null;
+  else {
+    const v = c.family.allowance + step * +d;
+    c.family.allowance = v < step ? null : v;
+  }
+  sfx.click(); render();
+});
+on('coolOff', () => { C().family.coolOff = !C().family.coolOff; sfx.click(); render(); });
+on('chore', (i) => { const ch = C().family.chores[i]; ch.done = !ch.done; sfx.click(); render(); });
+on('choreAdd', () => {
+  const n = (R.fields.choreName || '').trim();
+  const a = parseInt(String(R.fields.choreAmt || '').replace(/[^0-9]/g, ''), 10);
+  if (!n || !a) { toast('A job and an amount'); return; }
+  C().family.chores.push({ name: n, amt: a, done: false });
+  R.fields.choreName = ''; R.fields.choreAmt = '';
+  sfx.good(); render();
+});
+on('choreDel', (i) => { C().family.chores.splice(+i, 1); render(); });
+on('switchKid', (i) => {
+  R.s.active = +i;
+  setCurrency(C().currency);
+  sim.touchDay(C());
+  R.s.ui = { nav: 'home', sub: 'wallet' };
+  sfx.click(); toast('Now playing as ' + C().name); render();
+});
+on('addKid', () => { R.adding = true; draft = { step: 0 }; R.fields = {}; render(); });
+on('band', () => {
+  const c = C();
+  c.band = c.band === 'sprout' ? 'builder' : 'sprout';
+  sfx.click(); render();
+});
+on('print', () => {
+  document.body.classList.add('printing');
+  const c = C();
+  const w = document.createElement('div');
+  w.id = 'printsheet';
+  w.innerHTML = `<h1>${esc(c.name)} · Bizzington</h1>
+    <p>Week to ${new Date().toLocaleDateString()} · level ${c.learn.level} · ${rankFor(c.learn.level)}</p>
+    <h2>Money</h2>
+    <p>Wallet ${money(c.money.wallet)} · jars ${money(sim.jarTotal(c))} · bank ${money(c.money.bank.balance)} ·
+       invested ${money(sim.holdingsValue(c))} · <b>net worth ${money(sim.netWorth(c))}</b></p>
+    <h2>Chapters</h2>
+    <ul>${CHAPTERS.map((ch) => `<li>${esc(ch.title)} — ${ch.cards.filter((x) => c.learn.done[x.id]).length}/${ch.cards.length}</li>`).join('')}</ul>
+    <h2>Recent movements</h2>
+    <ul>${c.money.txns.slice(0, 20).map((t) => `<li>${new Date(t.t).toLocaleDateString()} — ${esc(t.label)} — ${t.kind === 'in' ? '+' : '−'}${money(t.amt)}</li>`).join('')}</ul>
+    <p style="margin-top:18px;font-size:11px">Simulated money only. Bizzing Finance never touches real money.</p>`;
+  document.body.appendChild(w);
+  setTimeout(() => {
+    try { window.print(); } catch (e) { toast('Printing is not available here'); }
+    setTimeout(() => { w.remove(); document.body.classList.remove('printing'); }, 400);
+  }, 60);
 });
 
 /* arcade */
 on('game', (id) => { startGame(id); render(); });
 on('gquit', () => { quitGame(); render(); });
-['nwNeed', 'nwWant', 'bbPay', 'bbSkip', 'mcAdj', 'mcNext', 'mcSel'].forEach((a) => {
-  on(a, (arg) => { if (R.game && R.game.act) R.game.act(a, arg); });
-});
+GAME_ACTS.forEach((a) => { on(a, (arg) => { if (R.game && R.game.act) R.game.act(a, arg); }); });
 
-/* ══ boot ═════════════════════════════════════════════════════════════ */
+/* ══ input plumbing ═══════════════════════════════════════════════════ */
 bindRoot(document.body);
 document.body.addEventListener('input', (e) => {
   const f = e.target.getAttribute && e.target.getAttribute('data-field');
-  if (f) fields[f] = e.target.value;
+  if (!f) return;
+  R.fields[f] = e.target.value;
+  if (e.target.getAttribute('data-live')) liveField(f, e.target.value);
 });
+document.body.addEventListener('change', (e) => {
+  const f = e.target.getAttribute && e.target.getAttribute('data-field');
+  if (f && e.target.getAttribute('data-live')) liveField(f, e.target.value);
+});
+function liveField(f, v) {
+  if (f === 'query') { R.query = v; render(); requeue('query'); }
+  else if (f === 'cur') { sim.changeCurrency(C(), v); toast('Converted to ' + CURRENCIES[v].name); render(); }
+  else if (f === 'payday') {
+    sim.setPayWeekday(C(), +v);
+    toast('Pay day moves to ' + ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][+v]);
+    render();
+  }
+}
+/* Re-rendering blows away focus; put the caret back where the child left it. */
+function requeue(field) {
+  const el = document.querySelector(`[data-field="${field}"]`);
+  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
 document.addEventListener('keydown', (e) => {
   if (R.game && R.game.key && !R.overlay) {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) e.preventDefault();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)
+      && document.activeElement && document.activeElement.tagName !== 'INPUT') e.preventDefault();
     R.game.key(e);
     return;
   }
   if (e.key === 'Escape' && R.overlay) { R.overlay = null; render(); }
 });
+window.addEventListener('hashchange', () => {
+  if (routing || !R.s || !R.s.kids.length) return;
+  if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
+});
 
+/* ══ boot ═════════════════════════════════════════════════════════════ */
 try { R.mode = localStorage.getItem('bzf_mode') || null; } catch (e) { R.mode = null; }
 if (R.mode) document.documentElement.setAttribute('data-mode', R.mode);
 
 R.s = sim.load();
-if (R.s) {
+if (R.s && R.s.kids.length) {
   setSound(R.s.settings.sound);
-  sim.touchDay(R.s);
+  sim.touchDay(sim.kid(R.s));
+  readHash();
 }
 render();
-window.BZF = { R, sim, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };  /* headless verification hook */
+
+/* Offline-first is a hard rule, so the shell caches itself when served over
+   http. Skipped in the single-file build, which has nothing to fetch. */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.BZF_SINGLE) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+window.BZF = { R, sim, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };

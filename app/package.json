@@ -1,0 +1,18 @@
+{
+  "name": "bizzington",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Bizzing Finance — the town where kids 8+ learn how money works",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "single": "node build.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "vite": "^5.4.0"
+  }
+}

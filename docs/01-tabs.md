@@ -308,7 +308,25 @@ chapters → playable engines → dialogue scripts), which makes the engine work
 
 ---
 
-## 11. Open questions for the product owner
+## 11. What is built
+
+Everything in this document exists in [`app/`](../app/) except where noted, at the depth a
+first release needs rather than the depth a third one will:
+
+| Built | Not yet |
+|---|---|
+| The town, all six buildings, on the shipping unlock ladder | Audio narration — the cast speaks in text |
+| 8 chapters · 32 cards · 30 levels · 5 ranks | The remaining chapters that fill levels 24–30 |
+| Jobs, jars with a pay-day rule, goals with auto-save | — |
+| The bank: interest, a loan whose total cost shows first, a trust score | Insurance, tax |
+| The Exchange, research nudges, the Time Machine | Company research cards as a collectible |
+| Bizz & Co: stock, pricing with real demand response, weather, spoilage, rent | Hiring, a second stall |
+| Six arcade games, keyboard and touch | Bizzopoly — the board game is the largest single unbuilt piece |
+| The postbox: 22 letters, roughly one in six a scam | — |
+| The grown-up's page: what they decided, Family Mode, several children, a printable week | Server-side entitlements; a parent gate |
+| Offline PWA, hash routing, currency conversion | Accounts, sync, and a server-authoritative clock |
+
+## 12. Open questions for the product owner
 
 1. **Default currency** — ship US-first ($) with ₹ a setting, or detect and offer both on
    first run? Affects which denomination art gets drawn first.
