@@ -9,7 +9,10 @@ basics → budgeting → banking → a stock portfolio → running a business. T
 Bizzing family, after [Bizzing Bee](https://github.com/aayuvis/Bizzing-Bee) (spelling, 8–15)
 and [Bizzing India](https://github.com/aayuvis/bizzingindia.com) (culture & Hindi, 4–12).
 
-**Currently concept-stage.** Docs only, no application code yet.
+**Concept plus a playable prototype.** The docs are the spec; [`app/`](app/) is a working
+slice of it — Bizzington, a town with a wallet, jars, goals, a bank, an Exchange and three
+games. `cd app && python3 -m http.server 8080`. Read [app/README.md](app/README.md) for the
+module map and the known gaps before changing it.
 
 ## Working style (the user's pace)
 
@@ -78,6 +81,19 @@ not aspirational. The short version:
 - Where Devanagari or any Indic script appears, it is **set correctly or not at all** (real
   face, unbroken shirorekha, never letter-spaced) — the Bizzing India rule applies here too.
 - **Never** put a real model identifier in commits, PRs, code, or any pushed artefact.
+
+## The prototype's own rules
+
+- **`src/store.js` is the only module that touches storage.** That is the Phase 1 linchpin;
+  do not reach around it.
+- **`src/sim.js` owns the money.** Views render it, they never compute it.
+- **Nothing gets taught without a place in the town** (docs/02 §1). If you can't point at
+  the building, the feature isn't ready.
+- **Option order is permuted from the card id** (`shuffledDrill`). Authoring answers by hand
+  put 11 of 12 in slot B, and position leaks the answer as surely as the text does.
+- **The prototype ladder is compressed to 6 levels** so the street can be walked in one
+  sitting. Don't "fix" it to match docs/01 §10 without also fixing the XP curve.
+- **The sim clock is client-side here and must not stay that way** — see the known gaps.
 
 ## Architecture (planned)
 

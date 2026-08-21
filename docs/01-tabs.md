@@ -51,17 +51,20 @@ Drawer   Glossary · Money Safety · Saga · Parents · Settings · Help
 
 ---
 
-## 2. Home — "the Hive"
+## 2. Home — the street
 
-The daily hub. Answers *what should I do right now* in one screen, and *how am I doing* in
-one line.
+**Home is Bizzington itself**, drawn side-on like a picture-book street and growing as you
+climb — see [docs/02](02-the-world.md). Every building is a surface of the Money tab, and
+locked ones are *drawn, not hidden*, with their rank on the door. Under the street sits the
+daily hub: what should I do right now, and how am I doing, in one line.
 
 | Block | What it is |
 |---|---|
 | **Money strip** | `Wallet · Saved · Invested · Net worth`, four numbers, always the top of the screen. In Sprout mode: `Wallet · Saved` only. |
 | **Pay Day counter** | "Pay day in 3 days — ₹200 due out for the phone plan." The weekly clock made visible; this is what creates the habit of *planning*, which no quiz can teach. |
 | **Today** | One 3-minute task chosen by the engine: the next lesson, a drill on a weak skill, a decision waiting in the sim, or a portfolio check-in. One card, one button. |
-| **Money Moment** | The daily dilemma. *"You have ₹200. The bus is ₹40 each way and your friends want to split a ₹300 pizza. What do you do?"* Two to four answers, none of them wrong-and-punished, each with a consequence shown after. This is the Daily Buzz analogue and the single most shareable object in the app. |
+| **The postbox** | One letter a day, from somebody in town: a job, a bill, a dilemma, a pitch from Mags — and roughly one in seven is a **scam that looks exactly like the others**, because that is the lesson. Thirty seconds, and it always lands somewhere in the sim. |
+| **Money Moment** | The daily dilemma, delivered as that letter. *"You have ₹200. The bus is ₹40 each way and your friends want to split a ₹300 pizza. What do you do?"* Two to four answers, none of them wrong-and-punished, each with a consequence shown after. This is the Daily Buzz analogue and the single most shareable object in the app. |
 | **Streak** | 🔥 calendar, inherited from Bizzing Bee including the 3/7/14/30-day milestones — but milestones pay a **bonus wage**, not a special currency (CONCEPT §3.1). |
 | **Jump back in** | Last lesson, last game, unfinished Bizzopoly. |
 | **Alerts** | A bill is due · a goal is reached · the market moved more than X% · **a scam has arrived in your inbox** · Mags wants something. |

@@ -61,6 +61,13 @@ is not something a competitor can hand a new user.
 
 ## 3. The spine: one simulated money life
 
+It has a body, and the body is a town called **Bizzington** — every abstract idea in the
+curriculum is a building you can walk into, and progress is a skyline rather than a number.
+That is the whole engagement design and it has its own document:
+[docs/02-the-world.md](docs/02-the-world.md). The rule it produces governs everything here:
+**no concept ships without a place.**
+
+
 Everything in the app is a surface onto **one persistent object** — the child's money life.
 Lessons deep-link into it, games pay into it, the store spends out of it, the parent
 dashboard reads it.
@@ -244,5 +251,9 @@ Entitlements stay server-authoritative too, read via RLS — never a client flag
 
 ## 10. Where to start
 
-[**docs/01-tabs.md**](docs/01-tabs.md) — the tab map. It is the first build spec: seven
-tabs, what is on each, and which rank unlocks it.
+- [**docs/02-the-world.md**](docs/02-the-world.md) — Bizzington. Read this before the spec,
+  because a tab map for a product nobody wants to open is just furniture.
+- [**docs/01-tabs.md**](docs/01-tabs.md) — the tab map: seven tabs, what is on each, and
+  which rank unlocks it.
+- [**app/**](app/) — the playable prototype. All seven tabs exist; the depth behind them is
+  what is still being built.
