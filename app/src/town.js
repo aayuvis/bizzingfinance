@@ -24,8 +24,10 @@ function plaque(x, w, lv) {
   </g>`;
 }
 function label(x, w, text, on) {
+  /* var(--ink) flips with the theme exactly as the ground under it does; a
+     hard-coded ink is readable on the tan ground and invisible on the dark. */
   return `<text x="${x + w / 2}" y="${G + 22}" text-anchor="middle" font-size="12.5" font-weight="800"
-    fill="${on ? 'rgba(28,34,30,.86)' : 'rgba(28,34,30,.45)'}">${esc(text)}</text>`;
+    fill="var(--ink)" opacity="${on ? '.85' : '.5'}">${esc(text)}</text>`;
 }
 
 function stall(x, on) {
@@ -164,7 +166,7 @@ export function townSVG(c) {
     return `<g class="hot" data-act="town" data-arg="${p.key}" role="button" tabindex="0"
         aria-label="${esc(p.name)}${on ? '' : ' — locked until level ' + p.lv}">
       <rect class="bldg-glow" x="${p.x - 4}" y="${G - 190}" width="138" height="196" rx="10" fill="#F0B429" opacity="0"/>
-      <g opacity="${on ? 1 : 0.34}">${art}</g>
+      <g opacity="${on ? 1 : 0.42}">${art}</g>
       ${on ? '' : plaque(p.x, 130, p.lv)}
       ${label(p.x, 130, p.name, on)}
     </g>`;
@@ -218,7 +220,7 @@ export function townSVG(c) {
       <rect x="36" y="288" width="34" height="5" rx="2.5" fill="rgba(0,0,0,.42)"/>
       ${s.postbox.answered ? '' : `<g class="ping"><circle cx="83" cy="272" r="11" fill="#F0B429"/>
         <text x="83" y="277" text-anchor="middle" font-size="14" font-weight="800" fill="#5A3D00">1</text></g>`}
-      <text x="52" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(28,34,30,.7)">Postbox</text>
+      <text x="52" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" opacity=".7">Postbox</text>
     </g>
   </svg>`;
 }
