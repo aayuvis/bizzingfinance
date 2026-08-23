@@ -554,239 +554,6 @@ input{font:inherit; color:inherit}
     return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
   }
 
-  // src/town.js
-  var PLACES = [
-    { key: "place", x: 20, sub: "place", name: "Your place", lv: 1, blurb: "where you live, and what it costs you every single week" },
-    { key: "wallet", x: 175, sub: "wallet", name: "Your stall", lv: 1, blurb: "Market Row \u2014 where the money you earn actually sits" },
-    { key: "jars", x: 330, sub: "jars", name: "The Jar Shed", lv: 6, blurb: "four jars, and a rule that splits your pay day by itself" },
-    { key: "goals", x: 485, sub: "goals", name: "The Build Yard", lv: 8, blurb: "name a thing and watch it go up floor by floor" },
-    { key: "bank", x: 640, sub: "bank", name: "The Bank", lv: 11, blurb: "the clock strikes interest, in public, every pay day" },
-    { key: "exchange", x: 795, sub: "portfolio", name: "The Exchange", lv: 16, blurb: "Bo and Bea keep the board and neither of them knows" },
-    { key: "shop", x: 950, sub: "business", name: "Nana Bizz's shop", lv: 23, blurb: "shuttered since she retired. Yours when you are ready" }
-  ];
-  var W = 1115;
-  var H = 348;
-  var G = 250;
-  function plaque(x, w, lv) {
-    return `<g>
-    <rect x="${x + w / 2 - 30}" y="${G - 54}" width="60" height="24" rx="12" fill="#1C2A2E" opacity=".82"/>
-    <text x="${x + w / 2}" y="${G - 37}" text-anchor="middle" font-size="12.5" font-weight="700"
-      fill="#EAE2CE" font-family="ui-monospace,monospace">\u{1F512} Lv ${lv}</text>
-  </g>`;
-  }
-  function label(x, w, text, on2) {
-    return `<text x="${x + w / 2}" y="${G + 22}" text-anchor="middle" font-size="12.5" font-weight="800"
-    fill="var(--ink)" opacity="${on2 ? ".85" : ".5"}">${esc(text)}</text>`;
-  }
-  function dwelling(x, tier) {
-    const walls = ["#B9A98C", "#C6B58F", "#D3BE96", "#E0C79E", "#E8CFA8"][tier] || "#B9A98C";
-    const roof = ["#8A6A4E", "#96745A", "#A57E5E", "#B0866A", "#B8563F"][tier] || "#8A6A4E";
-    const storeys = tier >= 2 ? 2 : 1;
-    const h = storeys === 2 ? 118 : 78;
-    let win = "";
-    const rows = storeys === 2 ? [G - 108, G - 62] : [G - 66];
-    rows.forEach((wy) => {
-      const n = tier >= 2 ? 3 : tier >= 1 ? 2 : 1;
-      for (let i = 0; i < n; i++) {
-        win += `<rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="#F6E9C8"/>
-        <rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="none" stroke="${roof}" stroke-width="2"/>`;
-      }
-    });
-    return `<g>
-    <rect x="${x + 8}" y="${G - h}" width="114" height="${h}" fill="${walls}" rx="3"/>
-    <path d="M${x} ${G - h} L${x + 65} ${G - h - 34} L${x + 130} ${G - h} Z" fill="${roof}"/>
-    ${win}
-    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" rx="2" fill="${roof}"/>
-    <circle cx="${x + 73}" cy="${G - 17}" r="2" fill="#F0B429"/>
-    ${tier >= 3 ? `<rect x="${x + 96}" y="${G - h - 26}" width="12" height="26" fill="${roof}"/>
-      <ellipse cx="${x + 102}" cy="${G - h - 32}" rx="9" ry="6" fill="rgba(255,255,255,.5)"/>` : ""}
-    ${tier >= 4 ? `<rect x="${x + 6}" y="${G - 14}" width="118" height="14" rx="4" fill="#7FA86F"/>
-      <circle cx="${x + 22}" cy="${G - 16}" r="6" fill="#5F8A52"/><circle cx="${x + 110}" cy="${G - 16}" r="5" fill="#5F8A52"/>` : ""}
-  </g>`;
-  }
-  function stall(x, on2) {
-    const wood = on2 ? "#B07A45" : "#6E6A5E", roof = on2 ? "#C8524A" : "#5E5A52";
-    return `<g>
-    <rect x="${x + 8}" y="${G - 62}" width="114" height="62" fill="${wood}" rx="3"/>
-    <rect x="${x + 8}" y="${G - 72}" width="114" height="12" fill="${on2 ? "#8E5F35" : "#57544B"}" rx="2"/>
-    <path d="M${x} ${G - 72} L${x + 65} ${G - 112} L${x + 130} ${G - 72} Z" fill="${roof}"/>
-    <path d="M${x + 12} ${G - 74} l14-24 14 24z" fill="${on2 ? "#E8D9B8" : "#6E6A5E"}"/>
-    ${on2 ? `<circle cx="${x + 34}" cy="${G - 46}" r="7" fill="#E0603C"/><circle cx="${x + 52}" cy="${G - 46}" r="7" fill="#F0B429"/><circle cx="${x + 70}" cy="${G - 46}" r="7" fill="#7CA84F"/>` : ""}
-    <rect x="${x + 88}" y="${G - 52}" width="26" height="52" fill="${on2 ? "#7A5230" : "#4E4B44"}" rx="2"/>
-  </g>`;
-  }
-  function shed(x, on2, jars) {
-    const wall = on2 ? "#D8C79E" : "#6E6A5E";
-    let inner = "";
-    if (on2) {
-      const cols = ["#C4453C", "#2E7FA8", "#178A4C", "#8A5BD6"];
-      jars.forEach((f, i) => {
-        const jx = x + 17 + i * 25, jh = 38 * Math.max(0.08, Math.min(1, f));
-        inner += `<rect x="${jx}" y="${G - 80}" width="21" height="42" rx="5" fill="#F4F9FA" opacity=".92"/>
-        <rect x="${jx + 2}" y="${G - 38 - jh}" width="17" height="${jh}" rx="4" fill="${cols[i]}"/>
-        <rect x="${jx}" y="${G - 80}" width="21" height="6" rx="3" fill="#CFDDDF"/>`;
-      });
-    }
-    return `<g>
-    <rect x="${x + 6}" y="${G - 92}" width="118" height="92" fill="${wall}" rx="3"/>
-    <path d="M${x} ${G - 92} L${x + 65} ${G - 124} L${x + 130} ${G - 92} Z" fill="${on2 ? "#7E9C6A" : "#5E5A52"}"/>
-    <rect x="${x + 14}" y="${G - 80}" width="102" height="46" rx="4" fill="${on2 ? "#3E3226" : "#4E4B44"}" opacity=".25"/>
-    ${inner}
-    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" fill="${on2 ? "#8E6238" : "#4E4B44"}" rx="2"/>
-  </g>`;
-  }
-  function yard(x, on2, prog) {
-    const floors = 4, done = Math.floor(prog * floors + 1e-3);
-    let f = "";
-    for (let i = 0; i < floors; i++) {
-      const y = G - 26 - (i + 1) * 26;
-      const built = i < done;
-      f += `<rect x="${x + 22}" y="${y}" width="86" height="24" rx="2"
-      fill="${built ? on2 ? "#C9A87A" : "#6E6A5E" : "none"}"
-      stroke="${on2 ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.25)"}" stroke-width="1.4" stroke-dasharray="${built ? "0" : "4 4"}"/>`;
-      if (built && on2) f += `<rect x="${x + 32}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".9"/>
-      <rect x="${x + 58}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".55"/>`;
-    }
-    return `<g>
-    <rect x="${x + 10}" y="${G - 26}" width="110" height="26" fill="${on2 ? "#A98C63" : "#6E6A5E"}" rx="2"/>
-    ${f}
-    <path d="M${x + 14} ${G} L${x + 14} ${G - 118} M${x + 116} ${G} L${x + 116} ${G - 118} M${x + 14} ${G - 58} L${x + 116} ${G - 58}"
-      stroke="${on2 ? "#8A6A3E" : "#57544B"}" stroke-width="4" stroke-linecap="round"/>
-    ${on2 && done >= floors ? `<path d="M${x + 46} ${G - 132} l18-8 v10 z" fill="#C8524A"/><rect x="${x + 44}" y="${G - 134}" width="3" height="22" fill="#8A6A3E"/>` : ""}
-  </g>`;
-  }
-  function bank(x, on2, hour) {
-    const stone = on2 ? "#DCD3C0" : "#6E6A5E";
-    const ang = hour % 12 * 30;
-    return `<g>
-    <rect x="${x + 8}" y="${G - 86}" width="114" height="86" fill="${stone}" rx="2"/>
-    <rect x="${x}" y="${G - 96}" width="130" height="12" fill="${on2 ? "#C6BBA4" : "#5E5A52"}" rx="2"/>
-    ${[0, 1, 2, 3].map((i) => `<rect x="${x + 18 + i * 26}" y="${G - 84}" width="12" height="84" fill="${on2 ? "#EFE9DA" : "#7A7669"}"/>`).join("")}
-    <rect x="${x + 44}" y="${G - 156}" width="42" height="62" fill="${on2 ? "#CFC5AE" : "#5E5A52"}" rx="2"/>
-    <path d="M${x + 40} ${G - 156} L${x + 65} ${G - 176} L${x + 90} ${G - 156} Z" fill="${on2 ? "#3E6E77" : "#4E4B44"}"/>
-    <circle cx="${x + 65}" cy="${G - 132}" r="15" fill="${on2 ? "#FBF7EC" : "#8A8678"}" stroke="${on2 ? "#8A5B00" : "#57544B"}" stroke-width="2"/>
-    ${on2 ? `<path d="M${x + 65} ${G - 132} v-9" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"
-        transform="rotate(${ang} ${x + 65} ${G - 132})"/>
-      <path d="M${x + 65} ${G - 132} l7 4" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"/>` : ""}
-    <rect x="${x + 54}" y="${G - 42}" width="22" height="42" rx="10" fill="${on2 ? "#6E5233" : "#4E4B44"}"/>
-  </g>`;
-  }
-  function exch(x, on2, up) {
-    const wall = on2 ? "#C8D8DA" : "#6E6A5E";
-    return `<g>
-    <rect x="${x + 6}" y="${G - 104}" width="118" height="104" fill="${wall}" rx="3"/>
-    <rect x="${x + 16}" y="${G - 94}" width="98" height="52" rx="3" fill="${on2 ? "#22383C" : "#4E4B44"}"/>
-    ${on2 ? `<polyline points="${x + 22},${G - 56} ${x + 40},${G - 68} ${x + 56},${G - 60} ${x + 74},${G - 80} ${x + 108},${G - 86}"
-      fill="none" stroke="${up ? "#5BC98C" : "#EC8B81"}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
-    <path d="M${x} ${G - 104} L${x + 65} ${G - 130} L${x + 130} ${G - 104} Z" fill="${on2 ? "#3E6E77" : "#5E5A52"}"/>
-    <rect x="${x + 52}" y="${G - 36}" width="26" height="36" fill="${on2 ? "#7A5230" : "#4E4B44"}" rx="2"/>
-
-  </g>`;
-  }
-  function shopN(x, on2) {
-    const wall = on2 ? "#E8CFA8" : "#6E6A5E";
-    return `<g>
-    <rect x="${x + 6}" y="${G - 98}" width="118" height="98" fill="${wall}" rx="3"/>
-    <path d="M${x} ${G - 98} L${x + 65} ${G - 128} L${x + 130} ${G - 98} Z" fill="${on2 ? "#B8563F" : "#5E5A52"}"/>
-    ${on2 ? `<rect x="${x + 18}" y="${G - 78}" width="94" height="44" rx="3" fill="#FBF3E2"/>
-         <rect x="${x + 18}" y="${G - 86}" width="94" height="10" fill="#C8524A"/>
-         <text x="${x + 65}" y="${G - 50}" text-anchor="middle" font-size="13" font-weight="800" fill="#8A5B00" font-family="Georgia,serif">BIZZ &amp; CO</text>
-         <rect x="${x + 52}" y="${G - 32}" width="26" height="32" fill="#7A5230" rx="2"/>` : `<rect x="${x + 18}" y="${G - 78}" width="94" height="60" rx="3" fill="#4E4B44"/>
-         ${[0, 1, 2, 3, 4].map((i) => `<rect x="${x + 20}" y="${G - 76 + i * 12}" width="90" height="9" fill="#6E6A5E"/>`).join("")}`}
-  </g>`;
-  }
-  function lantern(x, lit) {
-    return `<g><rect x="${x - 1.5}" y="18" width="3" height="14" fill="#7A6A50"/>
-    <circle cx="${x}" cy="38" r="7.5" fill="${lit ? "#F0B429" : "rgba(140,140,130,.5)"}"/>
-    ${lit ? `<circle cx="${x}" cy="38" r="13" fill="#F0B429" opacity=".2"/>` : ""}</g>`;
-  }
-  function isOpen(place, level) {
-    return level >= place.lv;
-  }
-  function townSVG(c) {
-    const s = c;
-    const lv = c.learn.level;
-    const jars = ["spend", "save", "grow", "give"].map((k) => {
-      const tot = s.money.jars.spend + s.money.jars.save + s.money.jars.grow + s.money.jars.give;
-      return tot > 0 ? s.money.jars[k] / Math.max(tot, 1) * 2 : 0;
-    });
-    const g = s.money.goals.find((x) => !x.done);
-    const prog = g ? Math.min(1, g.saved / g.target) : 0;
-    const up = s.market.lastMove >= 0;
-    const streak = s.streak.days.length;
-    const hour = (/* @__PURE__ */ new Date()).getHours();
-    const lanterns = [0, 1, 2, 3, 4, 5, 6].map((i) => lantern(120 + i * 118, i < Math.min(7, streak))).join("");
-    const build = (p) => {
-      const on2 = isOpen(p, lv);
-      let art = "";
-      if (p.key === "place") art = dwelling(p.x, c.home && c.home.tier || 0);
-      else if (p.key === "wallet") art = stall(p.x, on2);
-      else if (p.key === "jars") art = shed(p.x, on2, jars);
-      else if (p.key === "goals") art = yard(p.x, on2, prog);
-      else if (p.key === "bank") art = bank(p.x, on2, hour);
-      else if (p.key === "exchange") art = exch(p.x, on2, up);
-      else art = shopN(p.x, on2);
-      return `<g class="hot" data-act="town" data-arg="${p.key}" role="button" tabindex="0"
-        aria-label="${esc(p.name)}${on2 ? "" : " \u2014 locked until level " + p.lv}">
-      <rect class="bldg-glow" x="${p.x - 4}" y="${G - 190}" width="138" height="196" rx="10" fill="#F0B429" opacity="0"/>
-      <g opacity="${on2 ? 1 : 0.42}">${art}</g>
-      ${on2 ? "" : plaque(p.x, 130, p.lv)}
-      ${label(p.x, 130, p.name, on2)}
-    </g>`;
-    };
-    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
-    <style>
-      .bob{animation:bzf-bob 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
-      .glow{animation:bzf-glow 4.2s ease-in-out infinite}
-      .ping{animation:bzf-ping 1.9s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
-      @keyframes bzf-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-      @keyframes bzf-glow{0%,100%{opacity:.2}50%{opacity:.42}}
-      @keyframes bzf-ping{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
-      @media (prefers-reduced-motion:reduce){.bob,.glow,.ping{animation:none}}
-    </style>
-    <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/>
-      </linearGradient>
-    </defs>
-    <rect width="${W}" height="${H}" fill="url(#sky)"/>
-    <circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
-    <g fill="rgba(255,255,255,.6)">
-      <ellipse cx="150" cy="70" rx="34" ry="15"/><ellipse cx="178" cy="62" rx="24" ry="17"/>
-      <ellipse cx="520" cy="52" rx="28" ry="13"/><ellipse cx="546" cy="46" rx="20" ry="14"/>
-    </g>
-    <g stroke="rgba(40,60,64,.35)" stroke-width="1.6" fill="none" stroke-linecap="round">
-      <path d="M300 82 q7-6 14 0 q7-6 14 0"/><path d="M352 62 q6-5 12 0 q6-5 12 0"/>
-    </g>
-    <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>
-    ${lanterns}
-    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
-    <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
-    ${PLACES.map(build).join("")}
-    <g aria-hidden="true" transform="translate(301,204) scale(.72)"><g class="bob">
-      <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
-      <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>
-      <ellipse cx="16" cy="44" rx="12" ry="14" fill="#D98338"/>
-      <ellipse cx="16" cy="48" rx="7" ry="8" fill="#F6DEBE"/>
-      <circle cx="16" cy="22" r="11" fill="#E29350"/>
-      <path d="M8 14c-2-4 0-7 3-6s4 5 2 7zM24 14c2-4 0-7-3-6s-4 5-2 7z" fill="#E29350"/>
-      <ellipse cx="16" cy="26" rx="7" ry="5" fill="#F6DEBE"/>
-      <circle cx="12" cy="20" r="2.2" fill="#25201C"/><circle cx="20" cy="20" r="2.2" fill="#25201C"/>
-      <path d="M16 25c-1.2 0-2-.8-2-1.5s.8-1.2 2-1.2 2 .5 2 1.2-.8 1.5-2 1.5z" fill="#2A2320"/>
-    </g></g>
-    <g class="hot" data-act="postbox" role="button" tabindex="0" aria-label="Open the postbox">
-      <ellipse cx="52" cy="322" rx="28" ry="6" fill="rgba(0,0,0,.13)"/>
-      <rect x="48" y="288" width="7" height="34" rx="2" fill="#6B5B44"/>
-      <rect x="26" y="272" width="54" height="36" rx="10" fill="${s.postbox.answered ? "#9C978A" : "#C4453C"}"/>
-      <rect x="26" y="272" width="54" height="11" rx="5" fill="rgba(255,255,255,.2)"/>
-      <rect x="36" y="288" width="34" height="5" rx="2.5" fill="rgba(0,0,0,.42)"/>
-      ${s.postbox.answered ? "" : `<g class="ping"><circle cx="83" cy="272" r="11" fill="#F0B429"/>
-        <text x="83" y="277" text-anchor="middle" font-size="14" font-weight="800" fill="#5A3D00">1</text></g>`}
-      <text x="52" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" opacity=".7">Postbox</text>
-    </g>
-  </svg>`;
-  }
-
   // src/content.js
   var LEVELS = (() => {
     const t = [];
@@ -1335,6 +1102,124 @@ input{font:inherit; color:inherit}
     }
     return { order: idx, opts: idx.map((i) => card.drill.opts[i]), answer: idx.indexOf(card.drill.a) };
   }
+  var WORLDS = [
+    {
+      id: "market",
+      tint: "#E0A85C",
+      name: "Market Row",
+      em: "\u{1F9FA}",
+      rank: "Saver",
+      blurb: "Stalls, crates and your first room. Where money arrives because you went and got it.",
+      chapters: ["c1", "c2"],
+      places: ["place", "wallet"],
+      jobs: ["crates", "flyers", "sweep"],
+      sky: ["#CFE9EE", "#F6EFDC"],
+      ground: "#DCCFA8",
+      road: "#C9BE9C",
+      opens: "Your stall, and a room above it."
+    },
+    {
+      id: "harbour",
+      tint: "#3E86A8",
+      name: "The Old Harbour",
+      em: "\u2693",
+      rank: "Budgeter",
+      blurb: "Cargo, tides and weather. Nothing here rewards a plan made on the day.",
+      chapters: ["c3", "c4"],
+      places: ["jars", "goals"],
+      jobs: ["nets", "cargo", "mend"],
+      sky: ["#BFDDE8", "#E9EEDF"],
+      ground: "#B9C3A8",
+      road: "#9FAE93",
+      opens: "The Jar Shed and the Build Yard."
+    },
+    {
+      id: "clock",
+      tint: "#6E6AA8",
+      name: "Clocktower Square",
+      em: "\u{1F570}\uFE0F",
+      rank: "Banker",
+      blurb: "Stone, ledgers and a clock that strikes interest in public.",
+      chapters: ["c5", "c6"],
+      places: ["bank"],
+      jobs: ["books", "errands"],
+      sky: ["#D6DCE9", "#F1EEE4"],
+      ground: "#C6BEB0",
+      road: "#ADA595",
+      opens: "The Bank \u2014 and, once you have read chapter six, borrowing."
+    },
+    {
+      id: "exchange",
+      tint: "#2F9E8F",
+      name: "The Exchange Quarter",
+      em: "\u{1F4C8}",
+      rank: "Investor",
+      blurb: "Chalkboards, arguments, and two animals who are each certain and often wrong.",
+      chapters: ["c7"],
+      places: ["exchange"],
+      jobs: ["runner", "board"],
+      sky: ["#C9E0E4", "#EDE6DC"],
+      ground: "#AFC0BE",
+      road: "#96A8A6",
+      opens: "The Exchange. Not before you have learned what a share is."
+    },
+    {
+      id: "works",
+      tint: "#B4682F",
+      name: "The Works",
+      em: "\u{1F3ED}",
+      rank: "Founder",
+      blurb: "Where things get made, priced, and sold for more than they cost. Or not.",
+      chapters: ["c8"],
+      places: ["shop"],
+      jobs: ["crates", "books"],
+      sky: ["#E4D9CD", "#F4EBDC"],
+      ground: "#C3AE93",
+      road: "#A8957D",
+      opens: "Bizz & Co, and the shutters come off for good."
+    }
+  ];
+  var UNLOCKS = {
+    place: null,
+    wallet: null,
+    jars: "c3",
+    goals: "c3",
+    bank: "c5",
+    loans: "c6",
+    portfolio: "c7",
+    business: "c8"
+  };
+  function chapterDone(c, id) {
+    const ch = CHAPTERS.find((x) => x.id === id);
+    return !!ch && ch.cards.every((k) => c.learn.done[k.id]);
+  }
+  function isOpen(c, key) {
+    const need = UNLOCKS[key];
+    return !need || chapterDone(c, need);
+  }
+  function needFor(key) {
+    const id = UNLOCKS[key];
+    const ch = id && CHAPTERS.find((x) => x.id === id);
+    return ch ? ch.title : null;
+  }
+  function worldOpen(c, i) {
+    if (i <= 0) return true;
+    return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterDone(c, ch)));
+  }
+  var QUESTS = [
+    { id: "q-card", em: "\u{1F4D7}", kind: "lesson", n: 1, pay: 5, t: "Learn one card", sub: "Any chapter that is open to you." },
+    { id: "q-card2", em: "\u{1F4D8}", kind: "lesson", n: 2, pay: 9, t: "Learn two cards", sub: "Back to back. It is ten minutes." },
+    { id: "q-letter", em: "\u2709\uFE0F", kind: "letter", n: 1, pay: 4, t: "Empty the postbox", sub: "One letter. Thirty seconds." },
+    { id: "q-job", em: "\u{1F9FA}", kind: "job", n: 2, pay: 6, t: "Take two jobs", sub: "Whatever is going on the Row." },
+    { id: "q-play", em: "\u{1F3AE}", kind: "game", n: 2, pay: 7, t: "Play two games", sub: "Any two in the arcade." },
+    { id: "q-earn", em: "\u{1FA99}", kind: "earn", n: 40, pay: 6, t: "Earn 40 today", sub: "Jobs, games, letters \u2014 it all counts." },
+    { id: "q-jar", em: "\u{1FAD9}", kind: "jar", n: 20, pay: 7, t: "Put 20 away", sub: "Into any jar that is not Spend.", needs: "c3" },
+    { id: "q-goal", em: "\u{1F3D7}\uFE0F", kind: "goal", n: 1, pay: 8, t: "Feed the Build Yard", sub: "Any goal, any amount.", needs: "c3" },
+    { id: "q-scam", em: "\u{1F6E1}\uFE0F", kind: "scam", n: 1, pay: 9, t: "Spot a scam", sub: "In the postbox or in Scam Spotter." },
+    { id: "q-board", em: "\u{1F3B2}", kind: "board", n: 1, pay: 12, t: "Finish a game of Main Street", sub: "About ten minutes.", needs: "c1" },
+    { id: "q-invest", em: "\u{1F4C8}", kind: "invest", n: 1, pay: 10, t: "Add to your holdings", sub: "From the Grow jar, as always.", needs: "c7" },
+    { id: "q-shop", em: "\u{1F3EA}", kind: "trade", n: 1, pay: 10, t: "Trade a day at Bizz & Co", sub: "Open the doors and count it honestly.", needs: "c8" }
+  ];
   var LETTERS = [
     {
       id: "l1",
@@ -1569,8 +1454,13 @@ input{font:inherit; color:inherit}
     { id: "crates", em: "\u{1F4E6}", name: "Stack crates", units: 6, who: "the grain seller" },
     { id: "flyers", em: "\u{1F4C4}", name: "Deliver flyers", units: 5, who: "Mrs Rao" },
     { id: "sweep", em: "\u{1F9F9}", name: "Sweep Market Row", units: 3, who: "the market office" },
-    { id: "mend", em: "\u{1F9F5}", name: "Mend umbrellas", units: 8, who: "Mags", lv: 6 },
-    { id: "books", em: "\u{1F4D2}", name: "Do Nana's books", units: 12, who: "Nana Bizz", lv: 11 }
+    { id: "nets", em: "\u{1F578}\uFE0F", name: "Mend the nets", units: 7, who: "the harbour master" },
+    { id: "cargo", em: "\u2693", name: "Unload the cargo", units: 9, who: "a skipper in a hurry" },
+    { id: "mend", em: "\u{1F9F5}", name: "Mend umbrellas", units: 8, who: "Mags" },
+    { id: "errands", em: "\u{1F3C3}", name: "Run the errands", units: 8, who: "the clerk at the bank" },
+    { id: "books", em: "\u{1F4D2}", name: "Do Nana's books", units: 12, who: "Nana Bizz" },
+    { id: "runner", em: "\u{1F4E8}", name: "Run the orders", units: 11, who: "the floor manager" },
+    { id: "board", em: "\u{1F58D}\uFE0F", name: "Chalk up the board", units: 13, who: "Bo and Bea, arguing" }
   ];
   var HOMES = [
     {
@@ -1757,8 +1647,250 @@ input{font:inherit; color:inherit}
     "held-the-storm": { em: "\u26C8\uFE0F", name: "Held through it", desc: "Sat still while everything was red." },
     "exact-change": { em: "\u{1FA99}", name: "Exact change", desc: "Counted it right, at speed." },
     "climbed": { em: "\u{1F5FC}", name: "Over the line", desc: "Fifteen years of compounding, and still standing." },
-    "main-street": { em: "\u{1F3B2}", name: "Main Street", desc: "Your shops paid for your life. Nobody went bankrupt." }
+    "main-street": { em: "\u{1F3B2}", name: "Main Street", desc: "Your shops paid for your life. Nobody went bankrupt." },
+    "three-of-three": { em: "\u2B50", name: "All three", desc: "Cleared a whole day of quests." },
+    "traveller": { em: "\u{1F5FA}\uFE0F", name: "On the road", desc: "Left Market Row for somewhere new." }
   };
+
+  // src/town.js
+  var PLACES = [
+    { key: "place", x: 20, sub: "place", name: "Your place", lv: 1, blurb: "where you live, and what it costs you every single week" },
+    { key: "wallet", x: 175, sub: "wallet", name: "Your stall", lv: 1, blurb: "Market Row \u2014 where the money you earn actually sits" },
+    { key: "jars", x: 330, sub: "jars", name: "The Jar Shed", lv: 6, blurb: "four jars, and a rule that splits your pay day by itself" },
+    { key: "goals", x: 485, sub: "goals", name: "The Build Yard", lv: 8, blurb: "name a thing and watch it go up floor by floor" },
+    { key: "bank", x: 640, sub: "bank", name: "The Bank", lv: 11, blurb: "the clock strikes interest, in public, every pay day" },
+    { key: "exchange", x: 795, sub: "portfolio", name: "The Exchange", lv: 16, blurb: "Bo and Bea keep the board and neither of them knows" },
+    { key: "shop", x: 950, sub: "business", name: "Nana Bizz's shop", lv: 23, blurb: "shuttered since she retired. Yours when you are ready" }
+  ];
+  var H = 348;
+  var G = 250;
+  function plaque(x, w) {
+    return `<g>
+    <rect x="${x + w / 2 - 44}" y="${G - 54}" width="88" height="24" rx="12" fill="#1C2A2E" opacity=".82"/>
+    <text x="${x + w / 2}" y="${G - 37}" text-anchor="middle" font-size="11.5" font-weight="700"
+      fill="#EAE2CE">\u{1F512} learn first</text>
+  </g>`;
+  }
+  function label(x, w, text, on2) {
+    return `<text x="${x + w / 2}" y="${G + 22}" text-anchor="middle" font-size="12.5" font-weight="800"
+    fill="var(--ink)" opacity="${on2 ? ".85" : ".5"}">${esc(text)}</text>`;
+  }
+  function dwelling(x, tier) {
+    const walls = ["#B9A98C", "#C6B58F", "#D3BE96", "#E0C79E", "#E8CFA8"][tier] || "#B9A98C";
+    const roof = ["#8A6A4E", "#96745A", "#A57E5E", "#B0866A", "#B8563F"][tier] || "#8A6A4E";
+    const storeys = tier >= 2 ? 2 : 1;
+    const h = storeys === 2 ? 118 : 78;
+    let win = "";
+    const rows = storeys === 2 ? [G - 108, G - 62] : [G - 66];
+    rows.forEach((wy) => {
+      const n = tier >= 2 ? 3 : tier >= 1 ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        win += `<rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="#F6E9C8"/>
+        <rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="none" stroke="${roof}" stroke-width="2"/>`;
+      }
+    });
+    return `<g>
+    <rect x="${x + 8}" y="${G - h}" width="114" height="${h}" fill="${walls}" rx="3"/>
+    <path d="M${x} ${G - h} L${x + 65} ${G - h - 34} L${x + 130} ${G - h} Z" fill="${roof}"/>
+    ${win}
+    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" rx="2" fill="${roof}"/>
+    <circle cx="${x + 73}" cy="${G - 17}" r="2" fill="#F0B429"/>
+    ${tier >= 3 ? `<rect x="${x + 96}" y="${G - h - 26}" width="12" height="26" fill="${roof}"/>
+      <ellipse cx="${x + 102}" cy="${G - h - 32}" rx="9" ry="6" fill="rgba(255,255,255,.5)"/>` : ""}
+    ${tier >= 4 ? `<rect x="${x + 6}" y="${G - 14}" width="118" height="14" rx="4" fill="#7FA86F"/>
+      <circle cx="${x + 22}" cy="${G - 16}" r="6" fill="#5F8A52"/><circle cx="${x + 110}" cy="${G - 16}" r="5" fill="#5F8A52"/>` : ""}
+  </g>`;
+  }
+  function stall(x, on2) {
+    const wood = on2 ? "#B07A45" : "#6E6A5E", roof = on2 ? "#C8524A" : "#5E5A52";
+    return `<g>
+    <rect x="${x + 8}" y="${G - 62}" width="114" height="62" fill="${wood}" rx="3"/>
+    <rect x="${x + 8}" y="${G - 72}" width="114" height="12" fill="${on2 ? "#8E5F35" : "#57544B"}" rx="2"/>
+    <path d="M${x} ${G - 72} L${x + 65} ${G - 112} L${x + 130} ${G - 72} Z" fill="${roof}"/>
+    <path d="M${x + 12} ${G - 74} l14-24 14 24z" fill="${on2 ? "#E8D9B8" : "#6E6A5E"}"/>
+    ${on2 ? `<circle cx="${x + 34}" cy="${G - 46}" r="7" fill="#E0603C"/><circle cx="${x + 52}" cy="${G - 46}" r="7" fill="#F0B429"/><circle cx="${x + 70}" cy="${G - 46}" r="7" fill="#7CA84F"/>` : ""}
+    <rect x="${x + 88}" y="${G - 52}" width="26" height="52" fill="${on2 ? "#7A5230" : "#4E4B44"}" rx="2"/>
+  </g>`;
+  }
+  function shed(x, on2, jars) {
+    const wall = on2 ? "#D8C79E" : "#6E6A5E";
+    let inner = "";
+    if (on2) {
+      const cols = ["#C4453C", "#2E7FA8", "#178A4C", "#8A5BD6"];
+      jars.forEach((f, i) => {
+        const jx = x + 17 + i * 25, jh = 38 * Math.max(0.08, Math.min(1, f));
+        inner += `<rect x="${jx}" y="${G - 80}" width="21" height="42" rx="5" fill="#F4F9FA" opacity=".92"/>
+        <rect x="${jx + 2}" y="${G - 38 - jh}" width="17" height="${jh}" rx="4" fill="${cols[i]}"/>
+        <rect x="${jx}" y="${G - 80}" width="21" height="6" rx="3" fill="#CFDDDF"/>`;
+      });
+    }
+    return `<g>
+    <rect x="${x + 6}" y="${G - 92}" width="118" height="92" fill="${wall}" rx="3"/>
+    <path d="M${x} ${G - 92} L${x + 65} ${G - 124} L${x + 130} ${G - 92} Z" fill="${on2 ? "#7E9C6A" : "#5E5A52"}"/>
+    <rect x="${x + 14}" y="${G - 80}" width="102" height="46" rx="4" fill="${on2 ? "#3E3226" : "#4E4B44"}" opacity=".25"/>
+    ${inner}
+    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" fill="${on2 ? "#8E6238" : "#4E4B44"}" rx="2"/>
+  </g>`;
+  }
+  function yard(x, on2, prog) {
+    const floors = 4, done = Math.floor(prog * floors + 1e-3);
+    let f = "";
+    for (let i = 0; i < floors; i++) {
+      const y = G - 26 - (i + 1) * 26;
+      const built = i < done;
+      f += `<rect x="${x + 22}" y="${y}" width="86" height="24" rx="2"
+      fill="${built ? on2 ? "#C9A87A" : "#6E6A5E" : "none"}"
+      stroke="${on2 ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.25)"}" stroke-width="1.4" stroke-dasharray="${built ? "0" : "4 4"}"/>`;
+      if (built && on2) f += `<rect x="${x + 32}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".9"/>
+      <rect x="${x + 58}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".55"/>`;
+    }
+    return `<g>
+    <rect x="${x + 10}" y="${G - 26}" width="110" height="26" fill="${on2 ? "#A98C63" : "#6E6A5E"}" rx="2"/>
+    ${f}
+    <path d="M${x + 14} ${G} L${x + 14} ${G - 118} M${x + 116} ${G} L${x + 116} ${G - 118} M${x + 14} ${G - 58} L${x + 116} ${G - 58}"
+      stroke="${on2 ? "#8A6A3E" : "#57544B"}" stroke-width="4" stroke-linecap="round"/>
+    ${on2 && done >= floors ? `<path d="M${x + 46} ${G - 132} l18-8 v10 z" fill="#C8524A"/><rect x="${x + 44}" y="${G - 134}" width="3" height="22" fill="#8A6A3E"/>` : ""}
+  </g>`;
+  }
+  function bank(x, on2, hour) {
+    const stone = on2 ? "#DCD3C0" : "#6E6A5E";
+    const ang = hour % 12 * 30;
+    return `<g>
+    <rect x="${x + 8}" y="${G - 86}" width="114" height="86" fill="${stone}" rx="2"/>
+    <rect x="${x}" y="${G - 96}" width="130" height="12" fill="${on2 ? "#C6BBA4" : "#5E5A52"}" rx="2"/>
+    ${[0, 1, 2, 3].map((i) => `<rect x="${x + 18 + i * 26}" y="${G - 84}" width="12" height="84" fill="${on2 ? "#EFE9DA" : "#7A7669"}"/>`).join("")}
+    <rect x="${x + 44}" y="${G - 156}" width="42" height="62" fill="${on2 ? "#CFC5AE" : "#5E5A52"}" rx="2"/>
+    <path d="M${x + 40} ${G - 156} L${x + 65} ${G - 176} L${x + 90} ${G - 156} Z" fill="${on2 ? "#3E6E77" : "#4E4B44"}"/>
+    <circle cx="${x + 65}" cy="${G - 132}" r="15" fill="${on2 ? "#FBF7EC" : "#8A8678"}" stroke="${on2 ? "#8A5B00" : "#57544B"}" stroke-width="2"/>
+    ${on2 ? `<path d="M${x + 65} ${G - 132} v-9" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"
+        transform="rotate(${ang} ${x + 65} ${G - 132})"/>
+      <path d="M${x + 65} ${G - 132} l7 4" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"/>` : ""}
+    <rect x="${x + 54}" y="${G - 42}" width="22" height="42" rx="10" fill="${on2 ? "#6E5233" : "#4E4B44"}"/>
+  </g>`;
+  }
+  function exch(x, on2, up) {
+    const wall = on2 ? "#C8D8DA" : "#6E6A5E";
+    return `<g>
+    <rect x="${x + 6}" y="${G - 104}" width="118" height="104" fill="${wall}" rx="3"/>
+    <rect x="${x + 16}" y="${G - 94}" width="98" height="52" rx="3" fill="${on2 ? "#22383C" : "#4E4B44"}"/>
+    ${on2 ? `<polyline points="${x + 22},${G - 56} ${x + 40},${G - 68} ${x + 56},${G - 60} ${x + 74},${G - 80} ${x + 108},${G - 86}"
+      fill="none" stroke="${up ? "#5BC98C" : "#EC8B81"}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
+    <path d="M${x} ${G - 104} L${x + 65} ${G - 130} L${x + 130} ${G - 104} Z" fill="${on2 ? "#3E6E77" : "#5E5A52"}"/>
+    <rect x="${x + 52}" y="${G - 36}" width="26" height="36" fill="${on2 ? "#7A5230" : "#4E4B44"}" rx="2"/>
+
+  </g>`;
+  }
+  function shopN(x, on2) {
+    const wall = on2 ? "#E8CFA8" : "#6E6A5E";
+    return `<g>
+    <rect x="${x + 6}" y="${G - 98}" width="118" height="98" fill="${wall}" rx="3"/>
+    <path d="M${x} ${G - 98} L${x + 65} ${G - 128} L${x + 130} ${G - 98} Z" fill="${on2 ? "#B8563F" : "#5E5A52"}"/>
+    ${on2 ? `<rect x="${x + 18}" y="${G - 78}" width="94" height="44" rx="3" fill="#FBF3E2"/>
+         <rect x="${x + 18}" y="${G - 86}" width="94" height="10" fill="#C8524A"/>
+         <text x="${x + 65}" y="${G - 50}" text-anchor="middle" font-size="13" font-weight="800" fill="#8A5B00" font-family="Georgia,serif">BIZZ &amp; CO</text>
+         <rect x="${x + 52}" y="${G - 32}" width="26" height="32" fill="#7A5230" rx="2"/>` : `<rect x="${x + 18}" y="${G - 78}" width="94" height="60" rx="3" fill="#4E4B44"/>
+         ${[0, 1, 2, 3, 4].map((i) => `<rect x="${x + 20}" y="${G - 76 + i * 12}" width="90" height="9" fill="#6E6A5E"/>`).join("")}`}
+  </g>`;
+  }
+  function lantern(x, lit) {
+    return `<g><rect x="${x - 1.5}" y="18" width="3" height="14" fill="#7A6A50"/>
+    <circle cx="${x}" cy="38" r="7.5" fill="${lit ? "#F0B429" : "rgba(140,140,130,.5)"}"/>
+    ${lit ? `<circle cx="${x}" cy="38" r="13" fill="#F0B429" opacity=".2"/>` : ""}</g>`;
+  }
+  function townSVG(c) {
+    const s = c;
+    const lv = c.learn.level;
+    const jars = ["spend", "save", "grow", "give"].map((k) => {
+      const tot = s.money.jars.spend + s.money.jars.save + s.money.jars.grow + s.money.jars.give;
+      return tot > 0 ? s.money.jars[k] / Math.max(tot, 1) * 2 : 0;
+    });
+    const g = s.money.goals.find((x) => !x.done);
+    const prog = g ? Math.min(1, g.saved / g.target) : 0;
+    const up = s.market.lastMove >= 0;
+    const streak = s.streak.days.length;
+    const hour = (/* @__PURE__ */ new Date()).getHours();
+    const world = WORLDS[c.world || 0] || WORLDS[0];
+    const here = PLACES.filter((p) => world.places.includes(p.key));
+    const SPAN = 155, PAD = 130;
+    const W = Math.max(640, PAD * 2 + here.length * SPAN);
+    const startX = Math.max(PAD, (W - here.length * SPAN) / 2);
+    const xOf = (i) => startX + i * SPAN;
+    const lanterns = Array.from({ length: 7 }, (_, i) => lantern(70 + i * ((W - 140) / 6), i < Math.min(7, streak))).join("");
+    const build = (p, idx) => {
+      p = { ...p, x: xOf(idx) };
+      const on2 = isOpen(c, p.sub);
+      let art = "";
+      if (p.key === "place") art = dwelling(p.x, c.home && c.home.tier || 0);
+      else if (p.key === "wallet") art = stall(p.x, on2);
+      else if (p.key === "jars") art = shed(p.x, on2, jars);
+      else if (p.key === "goals") art = yard(p.x, on2, prog);
+      else if (p.key === "bank") art = bank(p.x, on2, hour);
+      else if (p.key === "exchange") art = exch(p.x, on2, up);
+      else art = shopN(p.x, on2);
+      return `<g class="hot" data-act="town" data-arg="${p.key}" role="button" tabindex="0"
+        aria-label="${esc(p.name)}${on2 ? "" : " \u2014 opens when you finish " + (needFor(p.sub) || "the chapter")}">
+      <rect class="bldg-glow" x="${p.x - 4}" y="${G - 190}" width="138" height="196" rx="10" fill="#F0B429" opacity="0"/>
+      <g opacity="${on2 ? 1 : 0.42}">${art}</g>
+      ${on2 ? "" : plaque(p.x, 130)}
+      ${label(p.x, 130, p.name, on2)}
+    </g>`;
+    };
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
+    <style>
+      .bob{animation:bzf-bob 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+      .glow{animation:bzf-glow 4.2s ease-in-out infinite}
+      .ping{animation:bzf-ping 1.9s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
+      @keyframes bzf-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+      @keyframes bzf-glow{0%,100%{opacity:.2}50%{opacity:.42}}
+      @keyframes bzf-ping{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+      @media (prefers-reduced-motion:reduce){.bob,.glow,.ping{animation:none}}
+    </style>
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/>
+      </linearGradient>
+    </defs>
+    <rect width="${W}" height="${H}" fill="url(#sky)"/>
+    <rect width="${W}" height="${G}" fill="${world.tint}" opacity=".22"/>
+    <circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
+    <g fill="rgba(255,255,255,.6)">
+      <ellipse cx="150" cy="70" rx="34" ry="15"/><ellipse cx="178" cy="62" rx="24" ry="17"/>
+      <ellipse cx="520" cy="52" rx="28" ry="13"/><ellipse cx="546" cy="46" rx="20" ry="14"/>
+    </g>
+    <g stroke="rgba(40,60,64,.35)" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M300 82 q7-6 14 0 q7-6 14 0"/><path d="M352 62 q6-5 12 0 q6-5 12 0"/>
+    </g>
+    <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>
+    ${lanterns}
+    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
+    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="${world.tint}" opacity=".3"/>
+    <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
+    <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="12" font-weight="800"
+      fill="var(--ink)" opacity=".45">${world.em} ${esc(world.name)}</text>
+    ${here.map(build).join("")}
+    ${here.some((p) => p.key === "wallet") ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === "wallet")) + 145},204) scale(.72)"><g class="bob">
+      <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
+      <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>
+      <ellipse cx="16" cy="44" rx="12" ry="14" fill="#D98338"/>
+      <ellipse cx="16" cy="48" rx="7" ry="8" fill="#F6DEBE"/>
+      <circle cx="16" cy="22" r="11" fill="#E29350"/>
+      <path d="M8 14c-2-4 0-7 3-6s4 5 2 7zM24 14c2-4 0-7-3-6s-4 5-2 7z" fill="#E29350"/>
+      <ellipse cx="16" cy="26" rx="7" ry="5" fill="#F6DEBE"/>
+      <circle cx="12" cy="20" r="2.2" fill="#25201C"/><circle cx="20" cy="20" r="2.2" fill="#25201C"/>
+      <path d="M16 25c-1.2 0-2-.8-2-1.5s.8-1.2 2-1.2 2 .5 2 1.2-.8 1.5-2 1.5z" fill="#2A2320"/>
+    </g></g>` : ""}
+    <g class="hot" data-act="postbox" role="button" tabindex="0" aria-label="Open the postbox">
+      <ellipse cx="52" cy="322" rx="28" ry="6" fill="rgba(0,0,0,.13)"/>
+      <rect x="48" y="288" width="7" height="34" rx="2" fill="#6B5B44"/>
+      <rect x="26" y="272" width="54" height="36" rx="10" fill="${s.postbox.answered ? "#9C978A" : "#C4453C"}"/>
+      <rect x="26" y="272" width="54" height="11" rx="5" fill="rgba(255,255,255,.2)"/>
+      <rect x="36" y="288" width="34" height="5" rx="2.5" fill="rgba(0,0,0,.42)"/>
+      ${s.postbox.answered ? "" : `<g class="ping"><circle cx="83" cy="272" r="11" fill="#F0B429"/>
+        <text x="83" y="277" text-anchor="middle" font-size="14" font-weight="800" fill="#5A3D00">1</text></g>`}
+      <text x="52" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" opacity=".7">Postbox</text>
+    </g>
+  </svg>`;
+  }
 
   // src/sim.js
   var sim_exports = {};
@@ -1776,9 +1908,12 @@ input{font:inherit; color:inherit}
     bizValue: () => bizValue,
     buyAsset: () => buyAsset,
     canMove: () => canMove,
+    canTravel: () => canTravel,
     changeCurrency: () => changeCurrency,
     checkIndependence: () => checkIndependence,
+    claimQuest: () => claimQuest,
     clockSuspect: () => clockSuspect,
+    currentWorld: () => currentWorld,
     daysToPay: () => daysToPay,
     debt: () => debt,
     doJob: () => doJob,
@@ -1805,9 +1940,13 @@ input{font:inherit; color:inherit}
     passiveWeekly: () => passiveWeekly,
     payDue: () => payDue,
     protoSkipWeek: () => protoSkipWeek,
+    questBonus: () => questBonus,
+    questList: () => questList,
+    questTick: () => questTick,
     raidGoal: () => raidGoal,
     refreshBills: () => refreshBills,
     repayLoan: () => repayLoan,
+    rollQuests: () => rollQuests,
     runPayDay: () => runPayDay,
     save: () => save,
     sellAsset: () => sellAsset,
@@ -1818,11 +1957,13 @@ input{font:inherit; color:inherit}
     takeLoan: () => takeLoan,
     toJar: () => toJar,
     touchDay: () => touchDay,
+    travel: () => travel,
     txn: () => txn,
     wageFor: () => wageFor,
     weeklyCost: () => weeklyCost,
     weeklyIncome: () => weeklyIncome,
     weeksToGoal: () => weeksToGoal,
+    worldsOpen: () => worldsOpen,
     xpBar: () => xpBar
   });
 
@@ -1947,6 +2088,8 @@ input{font:inherit; color:inherit}
       shop: { owned: [], cooling: {} },
       jobs: {},
       home: { tier: 0, since: now2, mortgage: null },
+      world: 0,
+      quests: { day: dayIndex(now2), list: [], prog: {}, claimed: {}, bonus: false },
       badges: [],
       history: [{ t: now2, v: price(12) }],
       family: { allowance: null, payWeekday: 5, chores: [], coolOff: false }
@@ -2072,6 +2215,7 @@ input{font:inherit; color:inherit}
     if (a <= 0) return 0;
     c.money.wallet += a;
     txn(c, "in", a, label2, cat || "wage");
+    if (cat !== "quest") questTick(c, "earn", a);
     badge(c, "first-coin");
     return a;
   }
@@ -2110,7 +2254,8 @@ input{font:inherit; color:inherit}
   }
   function jobsToday(c) {
     const d = dayIndex(Date.now());
-    return JOBS.filter((j) => !j.lv || c.learn.level >= j.lv).map((j) => ({ ...j, done: c.jobs[j.id] === d, amt: price(j.units) }));
+    const w = WORLDS[c.world || 0];
+    return JOBS.filter((j) => w.jobs.includes(j.id)).map((j) => ({ ...j, done: c.jobs[j.id] === d, amt: price(j.units) }));
   }
   function doJob(c, id) {
     const d = dayIndex(Date.now());
@@ -2118,6 +2263,75 @@ input{font:inherit; color:inherit}
     if (!j || c.jobs[id] === d) return 0;
     c.jobs[id] = d;
     const a = earn(c, price(j.units), j.name + " for " + j.who, "job");
+    questTick(c, "job", 1);
+    stamp(c);
+    return a;
+  }
+  function currentWorld(c) {
+    return WORLDS[c.world || 0];
+  }
+  function canTravel(c, i) {
+    if (i === (c.world || 0)) return { ok: false, why: "You are already here" };
+    if (worldOpen(c, i)) return { ok: true };
+    const prev = WORLDS[i - 1];
+    const left = prev.chapters.filter((ch) => !chapterDone(c, ch));
+    return { ok: false, why: left.length ? "Finish what you are learning in " + prev.name : "Not yet", need: left };
+  }
+  function travel(c, i) {
+    if (!canTravel(c, i).ok) return false;
+    c.world = i;
+    if (i > 0) badge(c, "traveller");
+    return true;
+  }
+  function worldsOpen(c) {
+    return WORLDS.filter((w, i) => worldOpen(c, i)).length;
+  }
+  function rollQuests(c) {
+    const d = dayIndex(Date.now());
+    if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
+    const pool = QUESTS.filter((q) => !q.needs || chapterDone(c, q.needs));
+    const picked = [];
+    let h = d * 2654435761 >>> 0;
+    const avail = pool.slice();
+    while (picked.length < Math.min(3, avail.length)) {
+      h = Math.imul(h ^ h >>> 15, 2246822507) >>> 0;
+      picked.push(avail.splice(h % avail.length, 1)[0]);
+    }
+    c.quests = { day: d, list: picked.map((q) => q.id), prog: {}, claimed: {}, bonus: false };
+    return c.quests;
+  }
+  function questList(c) {
+    const q = rollQuests(c);
+    return q.list.map((id) => {
+      const def = QUESTS.find((x) => x.id === id);
+      const at = q.prog[id] || 0;
+      return { ...def, at: Math.min(at, def.n), done: at >= def.n, claimed: !!q.claimed[id] };
+    });
+  }
+  function questTick(c, kind, amount) {
+    if (!c.quests || !c.quests.list) return;
+    c.quests.list.forEach((id) => {
+      const def = QUESTS.find((x) => x.id === id);
+      if (!def || def.kind !== kind) return;
+      c.quests.prog[id] = (c.quests.prog[id] || 0) + (amount || 1);
+    });
+  }
+  function claimQuest(c, id) {
+    const def = QUESTS.find((x) => x.id === id);
+    if (!def || !c.quests.list.includes(id)) return 0;
+    if (c.quests.claimed[id]) return 0;
+    if ((c.quests.prog[id] || 0) < def.n) return 0;
+    c.quests.claimed[id] = true;
+    const a = earn(c, price(def.pay), "Quest \u2014 " + def.t, "quest");
+    stamp(c);
+    return a;
+  }
+  function questBonus(c) {
+    const all = questList(c);
+    if (c.quests.bonus || !all.every((q) => q.claimed)) return 0;
+    c.quests.bonus = true;
+    const a = earn(c, price(12), "All three quests", "quest");
+    badge(c, "three-of-three");
     stamp(c);
     return a;
   }
@@ -2237,6 +2451,7 @@ input{font:inherit; color:inherit}
     if (a <= 0) return 0;
     c.money.wallet -= a;
     c.money.jars[jar] += a;
+    if (jar !== "spend") questTick(c, "jar", a);
     txn(c, "out", a, "Into the " + jar + " jar", "jar");
     stamp(c);
     return a;
@@ -2269,6 +2484,7 @@ input{font:inherit; color:inherit}
     c.money.jars.save -= a;
     g.saved += a;
     checkGoal(c, g);
+    questTick(c, "goal", 1);
     stamp(c);
     return a;
   }
@@ -2364,6 +2580,7 @@ input{font:inherit; color:inherit}
     const p = c.market.series[id][c.market.step];
     c.money.jars.grow -= a;
     c.market.holdings[id] = (c.market.holdings[id] || 0) + a / p;
+    questTick(c, "invest", 1);
     txn(c, "out", a, "Bought " + ASSETS.find((x) => x.id === id).name, "invest");
     stamp(c);
     return a;
@@ -2444,6 +2661,7 @@ input{font:inherit; color:inherit}
     b.day++;
     b.best = Math.max(b.best, profit);
     badge(c, "shopkeeper");
+    questTick(c, "trade", 1);
     if (profit > 0) badge(c, "profit-day");
     stamp(c);
     return { weather: w, revenue, rent, profit, sold, spoiled };
@@ -2496,6 +2714,7 @@ input{font:inherit; color:inherit}
       c.postbox.idx += 1;
       c.postbox.answered = false;
     }
+    rollQuests(c);
     return true;
   }
   function changeCurrency(c, to) {
@@ -2576,6 +2795,8 @@ input{font:inherit; color:inherit}
         c.home = { tier: 0, since: Date.now(), mortgage: null };
         refreshBills(c);
       }
+      if (c.world == null) c.world = 0;
+      if (!c.quests) c.quests = { day: -1, list: [], prog: {}, claimed: {}, bonus: false };
     });
     if (!s.ui) s.ui = { nav: "home", sub: "wallet" };
     if (s.active >= s.kids.length) s.active = 0;
@@ -2659,8 +2880,41 @@ input{font:inherit; color:inherit}
     const cost = weeklyCost(c);
     const passive = passiveWeekly(c);
     const home = homeOf(c);
+    const world = WORLDS[c.world || 0];
+    const quests = questList(c);
+    const allDone = quests.length && quests.every((q) => q.claimed);
     return `<div class="stack">
     ${strip}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:13px 15px;gap:11px">
+        <span style="font-size:26px">${world.em}</span>
+        <div class="grow"><div class="eyebrow">You are in \xB7 ${esc(world.rank)}</div>
+          <h3 style="font-size:17px;margin:1px 0">${esc(world.name)}</h3>
+          <p class="small muted">${esc(world.blurb)}</p></div>
+        <button class="btn ghost sm" data-act="nav" data-arg="worlds">Travel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
+        <p class="small muted">They pay wages into the same wallet as everything else.</p></div>
+        <span class="pill ${allDone ? "grow" : ""}">${quests.filter((q) => q.claimed).length}/3</span></div>
+      <div class="stack" style="gap:8px;margin-top:11px">
+        ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? "var(--grow-tint)" : "var(--surface2)"};
+          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+          <span style="font-size:20px;${q.claimed ? "opacity:.6" : ""}">${q.em}</span>
+          <span class="grow" style="min-width:0">
+            <b style="font-size:14px;${q.claimed ? "opacity:.6" : ""}">${esc(q.t)}</b>
+            <div class="small muted">${q.claimed ? "Claimed." : esc(q.sub)}</div>
+            ${q.claimed ? "" : `<div class="bar" style="height:5px;margin-top:5px"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
+          </span>
+          ${q.claimed ? '<span class="pill grow">\u2713</span>' : q.done ? `<button class="btn sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>` : `<span class="pill">${q.at}/${q.n}</span>`}
+        </div>`).join("")}
+      </div>
+      ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All three \u2014 take ${money(price(12))} more</button>` : ""}
+      ${c.quests.bonus ? '<p class="small muted" style="margin-top:9px">All three done. Fresh ones tomorrow.</p>' : ""}
+    </div>
+
     ${sprout ? "" : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
       <div class="row"><span style="font-size:24px">${home.em}</span><div class="grow">
         <div class="eyebrow">Independence \xB7 what your money earns \xF7 what your life costs</div>
@@ -2731,6 +2985,42 @@ input{font:inherit; color:inherit}
     if (!c.money.goals.length && c.learn.level >= 8) return { em: "\u{1F3D7}\uFE0F", title: "Name a goal", sub: "It becomes a building you can watch go up.", act: "sub", arg: "goals" };
     return { em: "\u{1F3AE}", title: "Play a round", sub: "Wages, straight into the same wallet.", act: "nav", arg: "arcade" };
   }
+  function viewWorlds() {
+    const c = K();
+    return `<div class="stack">
+    ${say("pip", "Five places, and you walk them in order. You move on when you have finished learning where you are \u2014 not when you have earned enough. That is the whole rule.")}
+    ${WORLDS.map((w, i) => {
+      const open = worldOpen(c, i);
+      const here = (c.world || 0) === i;
+      const left = w.chapters.filter((ch) => !chapterDone(c, ch));
+      const done = w.chapters.length - left.length;
+      return `<div class="card" style="${here ? "border-color:var(--action);box-shadow:var(--sh-raised)" : open ? "" : "opacity:.66"}">
+        <div class="row" style="gap:12px">
+          <span style="font-size:30px">${open ? w.em : "\u{1F512}"}</span>
+          <div class="grow">
+            <div class="eyebrow">${esc(w.rank)}${here ? " \xB7 you are here" : ""}</div>
+            <h3 style="font-size:18px;margin:1px 0 3px">${esc(w.name)}</h3>
+            <p class="small muted">${esc(w.blurb)}</p>
+          </div>
+          ${here ? '<span class="pill gold">here</span>' : open ? `<button class="btn sm" data-act="travel" data-arg="${i}">Go \u2192</button>` : ""}
+        </div>
+        <div class="row" style="margin-top:11px;gap:8px;flex-wrap:wrap">
+          <span class="pill">opens ${esc(w.opens)}</span>
+          <span class="grow"></span>
+          <span class="small muted">${done}/${w.chapters.length} chapters</span>
+        </div>
+        <div class="bar" style="margin-top:6px"><i style="width:${done / w.chapters.length * 100}%;background:${done === w.chapters.length ? "var(--grow)" : "var(--action)"}"></i></div>
+        ${!open && i > 0 ? `<p class="small muted" style="margin-top:8px">Finish
+          ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch)).map((ch) => "\u201C" + esc(CHAPTERS.find((x) => x.id === ch).title) + "\u201D").join(" and ") || "the last stretch"}
+          in ${esc(WORLDS[i - 1].name)} to walk on.</p>` : ""}
+        ${here && left.length ? `<p class="small muted" style="margin-top:8px">Still to learn here:
+          ${left.map((ch) => "<b>" + esc(CHAPTERS.find((x) => x.id === ch).title) + "</b>").join(", ")}.</p>` : ""}
+        ${here && !left.length && i < WORLDS.length - 1 ? `<p class="small" style="margin-top:8px;color:var(--grow);font-weight:700">
+          Everything here is learned. The road is open.</p>` : ""}
+      </div>`;
+    }).join("")}
+  </div>`;
+  }
   function viewLearn() {
     const c = K();
     if (c.learn.openCard) {
@@ -2769,7 +3059,9 @@ input{font:inherit; color:inherit}
           <div style="padding:14px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line-soft)">
             <span style="font-size:24px">${locked ? "\u{1F512}" : ch.em}</span>
             <div class="grow"><h3 style="font-size:18px">${esc(ch.title)}</h3>
-            <p class="small muted">${locked ? "Opens at level " + ch.lv + " \xB7 " + ch.rank : esc(ch.blurb)}</p></div>
+            <p class="small muted">${locked ? "Opens at level " + ch.lv + " \xB7 " + ch.rank : esc(ch.blurb)}</p>
+            ${opensWhat(ch.id) ? `<p class="small" style="color:var(--action);font-weight:700;margin-top:2px">
+              ${done === ch.cards.length ? "\u2713 opened " : "Finish this to open "}${esc(opensWhat(ch.id))}</p>` : ""}</div>
             <span class="pill ${done === ch.cards.length ? "grow" : ""}">${done}/${ch.cards.length}</span>
           </div>
           ${locked ? "" : ch.cards.map((x) => {
@@ -2783,6 +3075,16 @@ input{font:inherit; color:inherit}
     }).join("")}
     </div>
   </div>`;
+  }
+  var OPENS = {
+    c3: "the Jar Shed and the Build Yard",
+    c5: "the Bank",
+    c6: "borrowing",
+    c7: "the Exchange",
+    c8: "Bizz & Co"
+  };
+  function opensWhat(id) {
+    return OPENS[id];
   }
   function viewCard(card) {
     const c = K(), st = c.learn.drill;
@@ -2833,7 +3135,7 @@ input{font:inherit; color:inherit}
   </div>`;
   }
   function viewMoney() {
-    const c = K(), lv = c.learn.level;
+    const c = K();
     const NAMES = {
       place: "Home",
       wallet: "Wallet",
@@ -2843,17 +3145,17 @@ input{font:inherit; color:inherit}
       portfolio: "Exchange",
       business: "Your shop"
     };
-    const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name, lv: p.lv }));
+    const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name }));
     let sub = R.s.ui.sub;
-    if (!subs.find((x) => x.k === sub && lv >= x.lv)) sub = "wallet";
+    if (!subs.find((x) => x.k === sub && isOpen(c, x.k))) sub = "wallet";
     const strip = `<div style="display:flex;gap:7px;flex-wrap:wrap;padding:11px;background:var(--tint);border-radius:var(--r-md);border:1px solid var(--line-soft)">
     ${subs.map((x) => {
-      const open = lv >= x.lv;
-      return `<button data-act="${open ? "sub" : "locked"}" data-arg="${open ? x.k : x.lv}"
+      const open = isOpen(c, x.k);
+      return `<button data-act="${open ? "sub" : "lockedSub"}" data-arg="${x.k}"
         style="padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800;border:1px ${open ? "solid" : "dashed"} var(--line);
         background:${sub === x.k ? "var(--action)" : open ? "var(--surface)" : "transparent"};
         color:${sub === x.k ? "var(--action-ink)" : open ? "var(--ink)" : "var(--muted)"}">
-        ${open ? "" : "\u{1F512} "}${x.n}${open ? "" : ` <span style="font-family:var(--mono);font-size:11px">L${x.lv}</span>`}</button>`;
+        ${open ? "" : "\u{1F512} "}${x.n}</button>`;
     }).join("")}</div>`;
     const body = sub === "place" ? viewPlace() : sub === "jars" ? viewJars() : sub === "goals" ? viewGoals() : sub === "bank" ? viewBank() : sub === "portfolio" ? viewExchange() : sub === "business" ? viewBusiness() : viewWallet();
     return `<div class="stack">${strip}${body}</div>`;
@@ -3953,8 +4255,8 @@ input{font:inherit; color:inherit}
       em: "\u{1FA99}",
       name: "Change Rush",
       keys: "\u2190 \u2192",
-      lv: 1,
       kind: "action",
+      needs: null,
       blurb: "Coins are falling and you need exactly the right amount. Catch one too many and you have overpaid."
     },
     {
@@ -3962,8 +4264,8 @@ input{font:inherit; color:inherit}
       em: "\u2696\uFE0F",
       name: "Needs vs Wants",
       keys: "\u2190 \u2192",
-      lv: 1,
       kind: "action",
+      needs: null,
       blurb: "Sort it before the bell. Some are both, and those are the good ones."
     },
     {
@@ -3971,8 +4273,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F6E1}\uFE0F",
       name: "Scam Spotter",
       keys: "\u2190 \u2192",
-      lv: 1,
       kind: "action",
+      needs: null,
       blurb: "Real message or trap? They are designed to look identical."
     },
     {
@@ -3980,8 +4282,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F4B8}",
       name: "Budget Blitz",
       keys: "1 2",
-      lv: 6,
       kind: "action",
+      needs: "c3",
       blurb: "A month of money, and the bills arrive one at a time."
     },
     {
@@ -3989,8 +4291,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F5FC}",
       name: "Compound Climb",
       keys: "hold space",
-      lv: 11,
       kind: "action",
+      needs: "c6",
       blurb: "Hold to grow the tower. Hold longer for more \u2014 and past a point it can go backwards, and you can be wiped out."
     },
     {
@@ -3998,8 +4300,8 @@ input{font:inherit; color:inherit}
       em: "\u{1FAD6}",
       name: "Stall Rush",
       keys: "1\u20134 \xB7 R",
-      lv: 6,
       kind: "action",
+      needs: "c3",
       blurb: "Sixty seconds of customers. Serve them, restock, and find out whether busy and profitable are the same thing."
     },
     {
@@ -4007,8 +4309,8 @@ input{font:inherit; color:inherit}
       em: "\u26C8\uFE0F",
       name: "Market Storm",
       keys: "space",
-      lv: 16,
       kind: "action",
+      needs: "c7",
       blurb: "Everything is red and everyone is shouting sell. The winning move is to do nothing, and it is much harder than it sounds."
     },
     {
@@ -4016,8 +4318,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F3C6}",
       name: "The Market Cup",
       keys: "\u2191\u2193\u2190\u2192 \u23CE",
-      lv: 16,
       kind: "action",
+      needs: "c7",
       blurb: "Six weeks against Chaser, Panicker and Boring Bella. Bella is annoying."
     },
     {
@@ -4025,8 +4327,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F3B2}",
       name: "Main Street",
       keys: "\u23CE \xB7 Y/N",
-      lv: 8,
       kind: "board",
+      needs: "c1",
       blurb: "The board game. Buy the shops, collect the rent, and win when your street pays for your life \u2014 nobody goes bankrupt."
     },
     {
@@ -4034,8 +4336,8 @@ input{font:inherit; color:inherit}
       em: "\u{1F5D3}\uFE0F",
       name: "Times Twelve",
       keys: "1\u20134",
-      lv: 6,
       kind: "drill",
+      needs: "c4",
       blurb: "Small monthly numbers, turned into the number that is actually true."
     },
     {
@@ -4043,8 +4345,8 @@ input{font:inherit; color:inherit}
       em: "\u2744\uFE0F",
       name: "The Snowball",
       keys: "1\u20134",
-      lv: 11,
       kind: "drill",
+      needs: "c6",
       blurb: "Guess where compounding lands. Nobody guesses high enough."
     }
   ];
@@ -4052,12 +4354,13 @@ input{font:inherit; color:inherit}
     if (R.game) return R.game.view();
     const c = K3();
     const tile = (g) => {
-      const open = c.learn.level >= g.lv;
-      return `<button class="card" data-act="${open ? "game" : "locked"}" data-arg="${open ? g.id : g.lv}" style="text-align:left;width:100%;${open ? "" : "opacity:.6"}">
+      const open = !g.needs || chapterDone(c, g.needs);
+      const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
+      return `<button class="card" data-act="${open ? "game" : "lockedGame"}" data-arg="${g.id}" style="text-align:left;width:100%;${open ? "" : "opacity:.62"}">
       <div class="row"><span style="font-size:30px">${open ? g.em : "\u{1F512}"}</span>
         <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
-          <p class="small muted">${open ? esc(g.blurb) : "Opens at level " + g.lv}</p></div>
-        <span class="pill">${open ? g.keys : "L" + g.lv}</span></div></button>`;
+          <p class="small muted">${open ? esc(g.blurb) : "Finish \u201C" + esc(ch.title) + "\u201D to open this"}</p></div>
+        <span class="pill">${open ? g.keys : "learn first"}</span></div></button>`;
     };
     return `<div class="stack">
     ${say("pip", "Wages from in here land in the same wallet as everything else. There is no second, magic money \u2014 that is on purpose.")}
@@ -4722,7 +5025,7 @@ input{font:inherit; color:inherit}
     "mnEnd"
   ];
   function compoundClimb() {
-    const YEARS = 15, START = 100, TARGET = 420, W2 = 360, H2 = 320;
+    const YEARS = 15, START = 100, TARGET = 420, W = 360, H2 = 320;
     const st = {
       year: 0,
       money: START,
@@ -4796,9 +5099,9 @@ input{font:inherit; color:inherit}
       if (!ctx) return;
       const cs = getComputedStyle(document.documentElement);
       const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
-      ctx.clearRect(0, 0, W2, H2);
+      ctx.clearRect(0, 0, W, H2);
       ctx.fillStyle = tok("--tint", "#EDF2F2");
-      ctx.fillRect(0, 0, W2, H2);
+      ctx.fillRect(0, 0, W, H2);
       const top = Math.max(TARGET * 1.15, st.peak * 1.1);
       const y = (v) => H2 - 14 - v / top * (H2 - 40);
       ctx.setLineDash([5, 5]);
@@ -4806,14 +5109,14 @@ input{font:inherit; color:inherit}
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(0, y(TARGET));
-      ctx.lineTo(W2, y(TARGET));
+      ctx.lineTo(W, y(TARGET));
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = tok("--grow", "#178A4C");
       ctx.font = "600 11px system-ui";
       ctx.textAlign = "left";
       ctx.fillText("target", 6, y(TARGET) - 6);
-      const bw = Math.max(6, (W2 - 40) / YEARS);
+      const bw = Math.max(6, (W - 40) / YEARS);
       st.hist.forEach((v, i) => {
         const bx = 20 + i * bw;
         const grew = i === 0 || v >= st.hist[i - 1];
@@ -4825,7 +5128,7 @@ input{font:inherit; color:inherit}
       ctx.fillStyle = tok("--ink", "#16262A");
       ctx.font = "800 15px system-ui";
       ctx.textAlign = "right";
-      ctx.fillText(String(Math.round(st.money)), W2 - 8, Math.max(16, y(st.money) - 8));
+      ctx.fillText(String(Math.round(st.money)), W - 8, Math.max(16, y(st.money) - 8));
     };
     return {
       id: "cc",
@@ -4833,7 +5136,7 @@ input{font:inherit; color:inherit}
         cv = document.getElementById("ccCanvas");
         if (!cv) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        cv.width = W2 * dpr;
+        cv.width = W * dpr;
         cv.height = H2 * dpr;
         ctx = cv.getContext("2d");
         if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -4891,7 +5194,7 @@ input{font:inherit; color:inherit}
         return `<div class="stack">
         ${hud([`Year ${st.year + 1} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
         <div class="stage" style="min-height:0;padding:12px">
-          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W2}/${H2};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H2};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           ${l ? `<div style="background:${l.pct >= 0 ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:10px 12px;font-size:13.5px;text-align:center">
             Year ${st.year}: <b>${l.pct >= 0 ? "+" : ""}${(l.pct * 100).toFixed(1)}%</b> \xB7 ${Math.round(l.before)} \u2192 ${Math.round(l.after)}</div>` : ""}
           <div>
@@ -5100,7 +5403,7 @@ input{font:inherit; color:inherit}
   function changeRush() {
     const cur2 = CURRENCIES[currency()];
     const COINS = cur2.coins.slice(0, 5);
-    const LANES = 4, W2 = 360, H2 = 300;
+    const LANES = 4, W = 360, H2 = 300;
     const st = {
       target: 0,
       got: 0,
@@ -5186,19 +5489,19 @@ input{font:inherit; color:inherit}
       if (!ctx) return;
       const cs = getComputedStyle(document.documentElement);
       const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
-      ctx.clearRect(0, 0, W2, H2);
+      ctx.clearRect(0, 0, W, H2);
       ctx.fillStyle = tok("--tint", "#EDF2F2");
-      ctx.fillRect(0, 0, W2, H2);
+      ctx.fillRect(0, 0, W, H2);
       ctx.strokeStyle = tok("--line", "#DCE5E4");
       ctx.lineWidth = 1;
       for (let i = 1; i < LANES; i++) {
         ctx.beginPath();
-        ctx.moveTo(i * (W2 / LANES), 0);
-        ctx.lineTo(i * (W2 / LANES), H2);
+        ctx.moveTo(i * (W / LANES), 0);
+        ctx.lineTo(i * (W / LANES), H2);
         ctx.stroke();
       }
       st.drops.forEach((d) => {
-        const x = d.lane * (W2 / LANES) + W2 / LANES / 2;
+        const x = d.lane * (W / LANES) + W / LANES / 2;
         ctx.beginPath();
         ctx.arc(x, d.y, 15, 0, Math.PI * 2);
         ctx.fillStyle = tok("--treasure", "#F0B429");
@@ -5209,7 +5512,7 @@ input{font:inherit; color:inherit}
         ctx.textBaseline = "middle";
         ctx.fillText(String(d.v), x, d.y + 1);
       });
-      const bx = st.lane * (W2 / LANES) + W2 / LANES / 2;
+      const bx = st.lane * (W / LANES) + W / LANES / 2;
       ctx.fillStyle = st.flash > 0.1 ? tok("--grow", "#178A4C") : st.flash < -0.1 ? tok("--spend", "#C4453C") : tok("--action", "#0E6B78");
       ctx.beginPath();
       ctx.moveTo(bx - 34, H2 - 34);
@@ -5229,7 +5532,7 @@ input{font:inherit; color:inherit}
         cv = document.getElementById("crCanvas");
         if (!cv) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        cv.width = W2 * dpr;
+        cv.width = W * dpr;
         cv.height = H2 * dpr;
         ctx = cv.getContext("2d");
         if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -5272,7 +5575,7 @@ input{font:inherit; color:inherit}
         ${hud([`Need ${money(st.target)}`, `Got ${money(st.got)}`, "\u2764\uFE0F".repeat(Math.max(0, st.lives))])}
         <div class="stage" style="min-height:0;padding:12px">
           <div class="bar"><i style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? "var(--spend)" : "var(--action)"}"></i></div>
-          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W2}/${H2};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H2};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
             ${[0, 1, 2, 3].map((i) => `<button class="btn ${st.lane === i ? "" : "ghost"}" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join("")}
           </div>
@@ -5458,6 +5761,7 @@ input{font:inherit; color:inherit}
     { k: "progress", n: "Progress", g: "\u{1F4C8}" },
     { k: "collection", n: "Collection", g: "\u{1F3C5}" }
   ];
+  var EXTRA = [{ k: "worlds", n: "Worlds", g: "\u{1F5FA}\uFE0F" }, { k: "parents", n: "Grown-up's page", g: "\u{1F46A}" }];
   var SPROUT = ["home", "learn", "money", "arcade"];
   function writeHash() {
     if (!R.s || !R.s.kids.length) return;
@@ -5472,7 +5776,7 @@ input{font:inherit; color:inherit}
   function readHash() {
     const m = (location.hash || "").replace(/^#\/?/, "").split("/");
     if (!m[0]) return false;
-    const known = TABS.map((t) => t.k).concat(["parents"]);
+    const known = TABS.map((t) => t.k).concat(["parents", "worlds"]);
     if (known.indexOf(m[0]) < 0) return false;
     R.s.ui.nav = m[0];
     if (m[0] === "money" && m[1]) R.s.ui.sub = m[1];
@@ -5487,7 +5791,7 @@ input{font:inherit; color:inherit}
     const c = kid(s);
     const sprout = c.band === "sprout";
     const tabs = sprout ? TABS.filter((t) => SPROUT.includes(t.k)) : TABS;
-    const body = s.ui.nav === "learn" ? viewLearn() : s.ui.nav === "money" ? viewMoney() : s.ui.nav === "arcade" ? viewArcade() : s.ui.nav === "store" ? viewStore() : s.ui.nav === "progress" ? viewProgress() : s.ui.nav === "parents" ? viewParents() : s.ui.nav === "collection" ? viewCollection() : viewHome();
+    const body = s.ui.nav === "learn" ? viewLearn() : s.ui.nav === "money" ? viewMoney() : s.ui.nav === "arcade" ? viewArcade() : s.ui.nav === "store" ? viewStore() : s.ui.nav === "progress" ? viewProgress() : s.ui.nav === "parents" ? viewParents() : s.ui.nav === "worlds" ? viewWorlds() : s.ui.nav === "collection" ? viewCollection() : viewHome();
     const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: "more", n: "More", g: "\u22EF" }]);
     root.innerHTML = `
     <header class="topbar">
@@ -5618,8 +5922,31 @@ input{font:inherit; color:inherit}
       ${say("nana", left > 0 ? "Every room you add adds a bill behind it. That is not a warning \u2014 it is just the arithmetic, and now you have seen it." : "That is more going out than coming in. It is survivable for a while and it is not survivable forever. Worth knowing now.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in \u2192</button>`);
     }
+    if (o.kind === "world") {
+      const w = o.world;
+      return box(`
+      <div style="text-align:center"><div style="font-size:46px">${w.em}</div>
+        <div class="eyebrow">${esc(w.rank)}</div>
+        <h2 style="margin:4px 0 8px;font-size:27px">${esc(w.name)}</h2>
+        <p class="muted">${esc(w.blurb)}</p></div>
+      <div style="margin-top:14px;background:var(--action-tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px">
+        <b>Opens here:</b> ${esc(w.opens)}</div>
+      ${say("pip", "New street, new work going, new things to learn. You got here by finishing the last lot \u2014 that is the only way anybody gets anywhere in this town.")}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">Look around \u2192</button>`);
+    }
+    if (o.kind === "between") {
+      const card = o.card;
+      return box(`
+      <div class="eyebrow">While you're here</div>
+      <h3 style="font-size:19px;margin:4px 0 8px">${esc(card.title)}</h3>
+      ${say(card.who, "One card. Three minutes. Then back to it.")}
+      <div class="row" style="gap:8px;margin-top:14px">
+        <button class="btn grow" data-act="betweenGo" data-arg="${card.id}">Read it</button>
+        <button class="btn ghost" data-act="closeOv">Not now</button>
+      </div>`);
+    }
     if (o.kind === "more") {
-      const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat([{ k: "parents", n: "Grown-up's page", g: "\u{1F46A}" }]);
+      const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
       return box(`<div class="eyebrow" style="margin-bottom:10px">Everything else</div>
       <div class="stack" style="gap:8px">
         ${rest.map((t) => `<button class="opt" data-act="nav" data-arg="${t.k}">${t.g} &nbsp;${t.n}</button>`).join("")}
@@ -5665,6 +5992,50 @@ input{font:inherit; color:inherit}
   on("locked", (lv) => {
     toast(`Opens at level ${lv} \u2014 keep learning`);
     sfx.bad();
+  });
+  on("lockedSub", (k) => {
+    toast("Finish \u201C" + (needFor(k) || "the chapter") + "\u201D first");
+    sfx.bad();
+    fire("nav", "learn");
+  });
+  on("lockedGame", (id) => {
+    const g = GAMES.find((x) => x.id === id);
+    const ch = g && CHAPTERS.find((x) => x.id === g.needs);
+    toast("Finish \u201C" + (ch ? ch.title : "the chapter") + "\u201D to open " + (g ? g.name : "this"));
+    sfx.bad();
+    fire("nav", "learn");
+  });
+  on("travel", (i) => {
+    const c = C(), chk = canTravel(c, +i);
+    if (!chk.ok) {
+      toast(chk.why);
+      sfx.bad();
+      return;
+    }
+    travel(c, +i);
+    const w = WORLDS[+i];
+    sfx.level();
+    confetti(35);
+    R.overlay = { kind: "world", world: w };
+    R.s.ui.nav = "home";
+    render();
+  });
+  on("claim", (id) => {
+    const a = claimQuest(C(), id);
+    if (a) {
+      sfx.coin();
+      toast("+" + money(a));
+    } else toast("Not finished yet");
+    render();
+  });
+  on("questBonus", () => {
+    const a = questBonus(C());
+    if (a) {
+      sfx.level();
+      confetti(40);
+      toast("All three \u2014 " + money(a));
+    }
+    render();
   });
   on("mode", () => {
     R.mode = R.mode === "dark" ? "light" : "dark";
@@ -5720,9 +6091,8 @@ input{font:inherit; color:inherit}
   on("town", (key) => {
     const p = PLACES.find((x) => x.key === key);
     if (!p) return;
-    if (C().learn.level < p.lv) {
-      toast(`${p.name} opens at level ${p.lv}`);
-      sfx.bad();
+    if (!isOpen(C(), p.sub)) {
+      fire("lockedSub", p.sub);
       return;
     }
     fire("sub", p.sub);
@@ -5730,6 +6100,10 @@ input{font:inherit; color:inherit}
   on("goPlace", (key) => {
     R.overlay = null;
     fire("town", key);
+  });
+  on("betweenGo", (id) => {
+    R.overlay = null;
+    fire("card", id);
   });
   on("card", (id) => {
     R.s.ui.nav = "learn";
@@ -5761,6 +6135,7 @@ input{font:inherit; color:inherit}
     const right = !!(c.learn.drill && c.learn.drill.right);
     const first = !c.learn.done[id];
     c.learn.done[id] = true;
+    if (first) questTick(c, "lesson", 1);
     const res = addXP(c, first ? right ? 22 : 12 : 2);
     const ch = CHAPTERS.find((x) => x.id === card.ch);
     if (ch.cards.every((k) => c.learn.done[k.id])) badge(c, "chapter-" + ch.id);
@@ -5805,6 +6180,8 @@ input{font:inherit; color:inherit}
     if (ch.badge) badge(c, ch.badge);
     c.postbox.answered = true;
     c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
+    questTick(c, "letter", 1);
+    if (L.scam && ch.safe) questTick(c, "scam", 1);
     stamp(c);
     R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, good: !(L.scam && !ch.safe) };
     if (delta > 0) sfx.coin();
@@ -6131,11 +6508,17 @@ So it costs ${money(offer.cost)}.`)) return;
     }, 60);
   });
   on("game", (id) => {
+    const c = C();
+    questTick(c, "game", 1);
+    if (id === "mn") questTick(c, "board", 1);
     startGame(id);
     render();
   });
   on("gquit", () => {
     quitGame();
+    const c = C();
+    const next = ALL_CARDS.find((x) => !c.learn.done[x.id] && C().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
+    if (next && Math.random() < 0.7) R.overlay = { kind: "between", card: next };
     render();
   });
   GAME_ACTS.forEach((a) => {
@@ -6217,7 +6600,7 @@ So it costs ${money(offer.cost)}.`)) return;
       });
     });
   }
-  window.BZF = { R, sim: sim_exports, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
+  window.BZF = { R, sim: sim_exports, allCards: ALL_CARDS, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
 })();
 
 </script>
