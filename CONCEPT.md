@@ -117,6 +117,11 @@ insurance in Bizzopoly and the cracked-screen card is expensive.
 
 ## 4. The ladder
 
+> The rank table below is the *shape*. The teaching sequence underneath it — which arithmetic
+> each rung needs, and what a child does to clear it — is
+> [docs/03-the-teaching-ladder.md](docs/03-the-teaching-ladder.md), and that document is the
+> one to build from.
+
 Bizzing Bee's ladder is *Word → Set → Level → Champ → Library*. Ours:
 
 ```

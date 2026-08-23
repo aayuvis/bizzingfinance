@@ -94,6 +94,10 @@ not aspirational. The short version:
   money, ladder or town.
 - **Nothing gets taught without a place in the town** (docs/02 §1). If you can't point at
   the building, the feature isn't ready.
+- **Every screen declares the arithmetic it demands** (docs/03 §1). A surface may not open to
+  a child who has not met that maths — it waits, or it shows the same truth a different way.
+  Percentages are a *display format*, not a concept; anything shown as a percent must also be
+  sayable in coins. This is the rule the Jar Shed currently breaks.
 - **Option order is permuted from the card id** (`shuffledDrill`). Authoring answers by hand
   put 11 of 12 in slot B, and position leaks the answer as surely as the text does.
 - **The ladder is 30 levels and the unlocks are the doc's** (Jars 6, Goals 8, Bank 11,
