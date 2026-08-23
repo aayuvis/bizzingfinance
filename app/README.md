@@ -95,6 +95,12 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   then the tool — the Exchange cannot open before a child knows what a share is.
 - **Quests advance from exactly one call site per kind** (`questTick`), so a quest can never
   be advanced twice by the same action.
+- **A day has an end, and it is measured.** Closing time only appears once the day's
+  quests are claimed, and every line on it is arithmetic off today's ledger. If a number of
+  days cannot be measured, print the amount instead — never invent the days.
+- **A mended thing stands in the street with the child's name on it.** The deed verge is the
+  only permanent mark anyone leaves on the town; adding it makes the town taller, never
+  smaller.
 - **A perk names the job it creates.** `adds:` on a fix or a shop item, never "add the jobs
   this world already has" — that made the handcart a no-op the first time round.
 - **Backdrops are plates, buildings are SVG.** The buildings carry live state — jar levels,

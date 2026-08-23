@@ -203,6 +203,34 @@ Clear all three and there is a bonus. A **weekly** sits above them: one bigger c
 with a deadline, paying much more than a day's work, which is the first time a child has to
 plan across days rather than inside one.
 
+## 5. Closing time, and the deed
+
+Two things were missing at opposite ends of a session, and both are now built.
+
+**A day needs an end.** The app had a start (the day's three) and a middle (work, play,
+restore) and then simply ran out. Nothing marked the day as finished, so a child either
+played until they were bored or was pulled off by a grown-up mid-sentence — and neither is a
+good last impression. Once every quest is claimed, **Closing time** appears at the top of
+Home: what came in, what went out, what went into the town, and then **three named things
+waiting tomorrow**.
+
+Everything on it is measured, never encouraging. "About two more days at what you earned
+today" is a number a child can check and argue with; "come back soon!" is not. Where the app
+cannot measure a thing — a new player with no earnings yet — it says the amount that is left
+instead of inventing a number of days. `sim.js` returns the numbers; the view writes the
+sentence, as everywhere else.
+
+The order is deliberate, most concrete first: the restoration you are nearest to finishing,
+then the building that opens when you finish the chapter you are on, then pay day if it is
+inside two days, then the postbox. A reason to return should be a *thing with a name*.
+
+**A restoration needs to leave a mark.** A mended thing used to be a line in a list. Now it
+stands in the street on its own verge, on a brass plaque, with the child's name on it —
+`Mended by <name>`. It is the only permanent mark anyone leaves on Bizzington, it is drawn in
+front of the buildings because it is the part of the town that is theirs rather than the
+curriculum's, and it packs from the left so the first thing they ever mended is visible
+without panning. The town gets *taller* as they mend, never smaller.
+
 ## 5. What this is not
 
 - **Not a second currency.** Restorations and the Store are paid for out of the same wallet

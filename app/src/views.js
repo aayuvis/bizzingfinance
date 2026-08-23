@@ -1,7 +1,7 @@
 /* views.js — every screen. Pure string in, [data-act] out.
    Nothing here computes money; sim.js owns that and these render it. */
 
-import { esc, sparkline, clamp } from './ui.js';
+import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
@@ -98,7 +98,7 @@ export function viewHome() {
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
         <p class="small muted">They pay wages into the same wallet as everything else.</p></div>
-        <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/3</span></div>
+        <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
       <div class="stack" style="gap:8px;margin-top:11px">
         ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? 'var(--grow-tint)' : 'var(--surface2)'};
           border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
@@ -113,9 +113,11 @@ export function viewHome() {
             : `<span class="pill">${q.at}/${q.n}</span>`}
         </div>`).join('')}
       </div>
-      ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All three — take ${money(price(12))} more</button>` : ''}
-      ${c.quests.bonus ? '<p class="small muted" style="margin-top:9px">All three done. Fresh ones tomorrow.</p>' : ''}
+      ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
+      ${c.quests.bonus ? `<p class="small muted" style="margin-top:9px">All ${nWord(quests.length)} done. Fresh ones tomorrow.</p>` : ''}
     </div>
+
+    ${closingTime(c, quests)}
 
     ${(() => {
       const fx = sim.townFixes(c).filter((f) => !f.locked);
@@ -205,6 +207,54 @@ export function viewHome() {
     </button>` : ''}
 
     ${say('pip', hometalk(c))}
+  </div>`;
+}
+
+/* Closing time. The one card in the app that is about stopping, and it only
+   appears once the day's work is actually finished — a child who has not done
+   it does not get told what tomorrow is for. Every line is measured (sim.js
+   does the arithmetic, this only writes the sentence), because a number of
+   days you can check beats any amount of "come back soon!". */
+function closingTime(c, quests) {
+  if (!quests.length || !quests.every((q) => q.claimed)) return '';
+  const led = sim.dayLedger(c);
+  const f = sim.nearestFix(c);
+  const nx = sim.nextOpening(c);
+  const pay = sim.daysToPay(c);
+  const rows = [];
+  if (f) rows.push({ em: f.em, t: f.name, sub: f.days
+    ? `${money(f.left)} to go — about ${nWord(f.days)} more ${f.days === 1 ? 'day' : 'days'} at what you earned today.`
+    : `${money(f.left)} to go, in ${esc(f.where)}.` });
+  if (nx) rows.push({ em: nx.em, t: nx.t, sub: nx.chapter
+    ? `Opens when you finish ${esc(nx.chapter)} — ${nWord(nx.left)} ${nx.left === 1 ? 'card' : 'cards'} left.`
+    : 'Opens next.' });
+  if (pay <= 2) rows.push({ em: '🔔', t: pay === 0 ? 'Pay day — the bell is ready now'
+      : pay === 1 ? 'Pay day, tomorrow' : 'Pay day, the day after',
+    sub: `${money(c.money.wage)} in, the week's bills out, and your jars split what is left.` });
+  rows.push({ em: '📮', t: `A new letter, and ${nWord(quests.length)} new jobs`,
+    sub: 'The postbox refills overnight and the town asks for different help.' });
+
+  return `<div class="card" style="border-color:var(--gold);background:var(--gold-tint)">
+    <div class="row"><div class="grow"><div class="eyebrow">Closing time</div>
+      <h3 style="font-size:17px;margin:1px 0">That is today done</h3></div>
+      <span style="font-size:26px">🌙</span></div>
+    <div class="row" style="gap:14px;margin-top:10px;flex-wrap:wrap">
+      <span><div class="eyebrow">Came in</div><b style="font-size:16px">${money(led.in)}</b></span>
+      <span><div class="eyebrow">Went out</div><b style="font-size:16px">${money(led.out)}</b></span>
+      <span><div class="eyebrow">Into the town</div><b style="font-size:16px;color:var(--grow)">${money(led.put)}</b></span>
+    </div>
+    <p class="small muted" style="margin-top:10px">${led.net >= 0
+      ? `You kept ${money(led.net)} of it. The rest is either spent or working.`
+      : `You spent ${money(-led.net)} more than came in today. That happens — it is what the jars are for.`}</p>
+    <div class="eyebrow" style="margin-top:13px">Waiting for you tomorrow</div>
+    <div class="stack" style="gap:8px;margin-top:7px">
+      ${rows.slice(0, 3).map((r) => `<div class="row" style="gap:10px;background:var(--surface);
+        border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+        <span style="font-size:20px">${r.em}</span>
+        <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
+          <div class="small muted">${r.sub}</div></span></div>`).join('')}
+    </div>
+    ${say('pip', 'Stopping when the day is done is a money skill too. The town keeps going without you — the fountain does not un-mend overnight.')}
   </div>`;
 }
 

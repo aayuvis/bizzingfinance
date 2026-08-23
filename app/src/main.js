@@ -221,6 +221,9 @@ function overlay() {
         <p class="muted">${esc(f.fixed)}</p></div>
       <div style="margin-top:14px;background:var(--grow-tint);color:var(--grow);border-radius:var(--r-md);padding:12px 14px;font-weight:700">
         ⚙ ${esc(f.gives)}</div>
+      <div style="margin-top:10px;text-align:center"><div style="font-size:13px;font-weight:800;letter-spacing:.02em;
+        display:inline-block;background:#C9A227;color:#3A2C0A;border-radius:7px;padding:7px 15px">${esc(C().name || 'You')}</div>
+        <p class="small muted" style="margin-top:6px">Your name goes on it, out in the street, for good.</p></div>
       ${say('pip', 'That is yours now, and it stays. Every day from here it pays you back a little — which is the whole difference between spending on a thing and spending on a thing that <b>does</b> something.')}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Go and look →</button>`);
   }

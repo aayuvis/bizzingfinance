@@ -7,7 +7,7 @@
 import { Store } from './store.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
-  WORLDS, QUESTS, FIXES, SHOP, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
+  WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
 
@@ -742,4 +742,71 @@ export function load() {
   if (s.active >= s.kids.length) s.active = 0;
   if (s.kids[s.active]) setCurrency(s.kids[s.active].currency);
   return s;
+}
+
+/* ── closing time ─────────────────────────────────────────────────────────
+   A session needs an end, and the end is where a child decides whether there
+   is a tomorrow. "Come back soon" is not a reason to come back. "You are two
+   days off the shutters" is. Nothing here is encouragement — every line is
+   arithmetic off what actually happened today, and if we cannot measure a
+   thing we return 0 days and the view says the amount instead. Sim returns
+   numbers; the sentence is the view's job. */
+export function dayLedger(c, when) {
+  const d = dayIndex(when || Date.now());
+  const t = c.money.txns.filter((x) => dayIndex(x.t) === d);
+  const inn = t.filter((x) => x.kind === 'in').reduce((s, x) => s + x.amt, 0);
+  const out = t.filter((x) => x.kind === 'out').reduce((s, x) => s + x.amt, 0);
+  const put = t.filter((x) => x.cat === 'town').reduce((s, x) => s + x.amt, 0);
+  return { in: inn, out, put, net: inn - out, n: t.length };
+}
+/* What a day of yours is worth, measured — today if today has happened,
+   otherwise the mean of the last three days that earned anything. Returns 0
+   when there is no evidence, and callers must then not print days. */
+export function earnRate(c) {
+  const today = dayLedger(c).in;
+  if (today > 0) return today;
+  const days = {};
+  c.money.txns.filter((x) => x.kind === 'in').forEach((x) => {
+    const d = dayIndex(x.t); days[d] = (days[d] || 0) + x.amt;
+  });
+  const vals = Object.values(days).slice(-3);
+  return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+}
+/* The restoration you are closest to finishing, anywhere you can reach.
+   Prefer one already started — a thing half done pulls harder than a thing
+   not begun, and it is also the honest answer to "what is nearly mine". */
+export function nearestFix(c) {
+  const all = [];
+  WORLDS.forEach((w, i) => {
+    if (!worldOpen(c, i)) return;
+    townFixes(c, w.id).forEach((f) => { if (!f.done && !f.locked) all.push({ ...f, where: w.name }); });
+  });
+  if (!all.length) return null;
+  const started = all.filter((f) => f.put > 0);
+  const pool = started.length ? started : all;
+  const f = pool.reduce((a, b) => (b.left < a.left ? b : a));
+  const rate = earnRate(c);
+  return { ...f, rate, days: rate > 0 ? Math.max(1, Math.ceil(f.left / rate)) : 0 };
+}
+/* The next thing the ladder opens, and what must be finished to open it.
+   Named — a building and a chapter — never "keep going". */
+export function nextOpening(c) {
+  const PLACES = [
+    { key: 'jars', em: '🫙', t: 'The Jar Shed' }, { key: 'goals', em: '🏗️', t: 'The Build Yard' },
+    { key: 'bank', em: '🏛️', t: 'The Bank' }, { key: 'loans', em: '📜', t: 'Borrowing, and what it costs' },
+    { key: 'portfolio', em: '📈', t: 'The Exchange' }, { key: 'business', em: '🏪', t: "Nana Bizz's shop" },
+  ];
+  const p = PLACES.find((x) => !isOpen(c, x.key));
+  if (p) {
+    const ch = CHAPTERS.find((x) => x.id === UNLOCKS[p.key]);
+    return { em: p.em, t: p.t, chapter: ch ? ch.title : null,
+      left: ch ? ch.cards.filter((cd) => !c.learn.done[cd.id]).length : 0 };
+  }
+  const i = WORLDS.findIndex((w, n) => !worldOpen(c, n));
+  if (i > 0) {
+    const w = WORLDS[i]; const ch = CHAPTERS.find((x) => x.id === w.chapters[0]);
+    return { em: w.em, t: w.name, chapter: ch ? ch.title : null,
+      left: ch ? ch.cards.filter((cd) => !c.learn.done[cd.id]).length : 0 };
+  }
+  return null;
 }

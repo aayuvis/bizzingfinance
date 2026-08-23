@@ -4,7 +4,7 @@
    hidden — a child should see the whole road on their first afternoon. */
 
 import { esc } from './ui.js';
-import { WORLDS, isOpen as chapterOpen, needFor } from './content.js';
+import { WORLDS, FIXES, isOpen as chapterOpen, needFor } from './content.js';
 import { art } from './art-gen.js';
 
 export const PLACES = [
@@ -18,12 +18,30 @@ export const PLACES = [
 ];
 
 const H = 348, G = 250;
+const DEED_H = 84;   /* the verge the deeds stand on, added only when there are any */
 
 function plaque(x, w) {
   return `<g>
     <rect x="${x + w / 2 - 44}" y="${G - 54}" width="88" height="24" rx="12" fill="#1C2A2E" opacity=".82"/>
     <text x="${x + w / 2}" y="${G - 37}" text-anchor="middle" font-size="11.5" font-weight="700"
       fill="#EAE2CE">🔒 learn first</text>
+  </g>`;
+}
+/* A deed. When a restoration is finished it stops being a line in a list and
+   becomes a thing standing in the street with the child's name on it — the
+   only permanent mark anyone leaves on Bizzington. It is drawn on the verge,
+   in front of the buildings, because it is the part of the town that is
+   theirs and not the curriculum's. */
+function deed(x, em, who) {
+  const w = Math.max(58, Math.min(112, 24 + who.length * 8.5));
+  const y = H + 20;                    /* the verge, below the street proper */
+  return `<g aria-hidden="true">
+    <ellipse cx="${x}" cy="${y + 40}" rx="${w / 2 + 5}" ry="5" fill="rgba(0,0,0,.14)"/>
+    <rect x="${x - w / 2}" y="${y + 12}" width="${w}" height="26" rx="6" fill="#8A6A3E"/>
+    <rect x="${x - w / 2 + 2}" y="${y + 14}" width="${w - 4}" height="22" rx="5" fill="#C9A227"/>
+    <text x="${x}" y="${y + 30}" text-anchor="middle" font-size="11.5" font-weight="800"
+      fill="#3A2C0A">${esc(who)}</text>
+    <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="21">${em}</text>
   </g>`;
 }
 function label(x, w, text, on) {
@@ -215,7 +233,14 @@ export function townSVG(c) {
     </g>`;
   };
 
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
+  /* Only this world's mended things, and only ever the child's own name. */
+  const mine = FIXES.filter((f) => f.world === world.id && c.fix && c.fix.done.includes(f.id));
+  const VH = H + (mine.length ? DEED_H : 0);
+  /* Packed from the left, not spread across the scroll — on a phone the first
+     thing you ever mended must be visible without anyone panning to find it. */
+  const deeds = mine.map((f, i) => deed(96 + i * 132, f.em, c.name || 'You')).join('');
+
+  return `<svg viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
     <style>
       .bob{animation:bzf-bob 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
       .glow{animation:bzf-glow 4.2s ease-in-out infinite}
@@ -230,7 +255,7 @@ export function townSVG(c) {
         <stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/>
       </linearGradient>
     </defs>
-    <rect width="${W}" height="${H}" fill="url(#sky)"/>
+    <rect width="${W}" height="${VH}" fill="url(#sky)"/>
     ${plate ? `<image href="${plate}" x="0" y="0" width="${W}" height="${H}"
       preserveAspectRatio="xMidYMid slice" opacity=".96"/>` : ''}
     ${plate ? '' : `<rect width="${W}" height="${G}" fill="${world.tint}" opacity=".22"/>`}
@@ -244,12 +269,16 @@ export function townSVG(c) {
     </g>
     <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>`}
     ${lanterns}
-    ${plate ? '' : `<rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
-    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="${world.tint}" opacity=".3"/>`}
+    ${plate ? '' : `<rect x="0" y="${G}" width="${W}" height="${VH - G}" fill="var(--ground)"/>
+    <rect x="0" y="${G}" width="${W}" height="${VH - G}" fill="${world.tint}" opacity=".3"/>`}
+    ${mine.length ? `<rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="var(--ground)"/>
+    <rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
+    <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || 'you')}</text>` : ''}
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
-    <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="12" font-weight="800"
+    <text x="${W - 14}" y="${VH - 12}" text-anchor="end" font-size="12" font-weight="800"
       fill="var(--ink)" opacity=".45">${world.em} ${esc(world.name)}</text>
     ${here.map(build).join('')}
+    ${deeds}
     ${here.some((p) => p.key === 'wallet') ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === 'wallet')) + 145},204) scale(.72)"><g class="bob">
       <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
       <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>

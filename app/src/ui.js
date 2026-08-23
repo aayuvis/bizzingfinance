@@ -116,3 +116,9 @@ export function sparkline(vals, w, h, color) {
     <circle cx="${pts[pts.length - 1].split(',')[0]}" cy="${pts[pts.length - 1].split(',')[1]}" r="2.6" fill="${color}"></circle>
   </svg>`;
 }
+
+/* Small counts read better as words in a sentence a child reads aloud —
+   "all three done", not "all 3 done". Above twelve the digit is clearer. */
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+  'nine', 'ten', 'eleven', 'twelve'];
+export function nWord(n) { return WORDS[n] !== undefined ? WORDS[n] : String(n); }
