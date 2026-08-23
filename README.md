@@ -6,9 +6,12 @@ Financial literacy for kids **8+** — the third app in the Bizzing family, afte
 
 **Currently concept-stage.** Docs only, no application code yet.
 
-**The app is in [`app/`](app/)** — Bizzington: a town with jobs, four jars, a Build Yard, a
-bank that lends, an Exchange, a shop you run, six games and a grown-up's page. Installable,
-works offline. `cd app && npm install && npm run dev`.
+**Play it: <https://aayuvis.github.io/bizzingfinance/>**
+
+**The app is in [`app/`](app/)** — Bizzington: a town with your own front door, jobs, four
+jars, a Build Yard, a bank that lends, an Exchange, a shop you run, eleven games and a
+grown-up's page. Installable, works offline. `cd app && npm install && npm run dev`, and
+`npm run deploy` publishes it.
 
 Start here:
 

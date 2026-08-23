@@ -28,7 +28,14 @@ python3 -m http.server 8080
 ```bash
 npm run build          # -> build/    a static site for any host
 npm run single         # -> dist/bizzington.html   one self-contained file
+npm run deploy         # build + publish to the gh-pages branch
 ```
+
+**Live:** <https://aayuvis.github.io/bizzingfinance/> — served from the root of the
+`gh-pages` branch, the same way [bizzingindia.com](https://aayuvis.github.io/bizzingindia.com/)
+is. `deploy.sh` replaces that branch's contents wholesale each time, so stale hashed assets
+don't pile up, and drops a `.nojekyll` so GitHub serves `assets/` untouched. The one-file
+build rides along at `/bizzington.html`.
 
 ## What's in it
 

@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "single": "node build.mjs",
-    "serve": "python3 -m http.server 8080"
+    "serve": "python3 -m http.server 8080",
+    "deploy": "./deploy.sh"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

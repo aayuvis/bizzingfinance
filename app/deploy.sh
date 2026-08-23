@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# deploy.sh — build Bizzington and publish it to the gh-pages branch.
+#
+# GitHub Pages serves the site from the ROOT of gh-pages, so the build output
+# goes there unwrapped, exactly as bizzingindia.com does it. .nojekyll stops
+# Jekyll eating the assets/ directory.
+#
+#   ./deploy.sh            build and deploy
+#   ./deploy.sh --dry      build only, show what would be published
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+WORK="$(mktemp -d)"
+trap 'git -C "$ROOT" worktree remove --force "$WORK" 2>/dev/null || true; rm -rf "$WORK"' EXIT
+
+cd "$HERE"
+npm run build
+node build.mjs                          # the one-file version, published alongside
+cp dist/bizzington.html build/bizzington.html
+touch build/.nojekyll
+
+if [ "${1:-}" = "--dry" ]; then
+  echo "would publish:"; find build -type f | sed "s|build/|  |"; exit 0
+fi
+
+git -C "$ROOT" fetch origin gh-pages --quiet 2>/dev/null || true
+if git -C "$ROOT" show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+  git -C "$ROOT" worktree add --quiet "$WORK" origin/gh-pages
+  git -C "$WORK" checkout --quiet -B gh-pages
+else
+  git -C "$ROOT" worktree add --quiet --detach "$WORK"
+  git -C "$WORK" checkout --quiet --orphan gh-pages
+fi
+
+# replace the contents wholesale — stale hashed assets would pile up forever
+find "$WORK" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+cp -r build/. "$WORK"/
+
+cd "$WORK"
+git add -A
+if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
+git commit -q -m "Deploy Bizzington
+
+Built from $(git -C "$ROOT" rev-parse --short HEAD) on $(git -C "$ROOT" rev-parse --abbrev-ref HEAD).
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+git push -q origin gh-pages
+echo "published → https://aayuvis.github.io/bizzingfinance/"
