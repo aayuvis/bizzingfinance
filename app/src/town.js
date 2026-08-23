@@ -4,6 +4,7 @@
    hidden — a child should see the whole road on their first afternoon. */
 
 import { esc } from './ui.js';
+import { WORLDS, isOpen as chapterOpen, needFor } from './content.js';
 
 export const PLACES = [
   { key: 'place',    x: 20,  sub: 'place',     name: 'Your place',       lv: 1,  blurb: 'where you live, and what it costs you every single week' },
@@ -15,13 +16,13 @@ export const PLACES = [
   { key: 'shop',     x: 950, sub: 'business',  name: "Nana Bizz's shop", lv: 23, blurb: 'shuttered since she retired. Yours when you are ready' },
 ];
 
-const W = 1115, H = 348, G = 250;
+const H = 348, G = 250;
 
-function plaque(x, w, lv) {
+function plaque(x, w) {
   return `<g>
-    <rect x="${x + w / 2 - 30}" y="${G - 54}" width="60" height="24" rx="12" fill="#1C2A2E" opacity=".82"/>
-    <text x="${x + w / 2}" y="${G - 37}" text-anchor="middle" font-size="12.5" font-weight="700"
-      fill="#EAE2CE" font-family="ui-monospace,monospace">🔒 Lv ${lv}</text>
+    <rect x="${x + w / 2 - 44}" y="${G - 54}" width="88" height="24" rx="12" fill="#1C2A2E" opacity=".82"/>
+    <text x="${x + w / 2}" y="${G - 37}" text-anchor="middle" font-size="11.5" font-weight="700"
+      fill="#EAE2CE">🔒 learn first</text>
   </g>`;
 }
 function label(x, w, text, on) {
@@ -180,10 +181,21 @@ export function townSVG(c) {
   const streak = s.streak.days.length;
   const hour = new Date().getHours();
 
-  const lanterns = [0, 1, 2, 3, 4, 5, 6].map((i) => lantern(120 + i * 118, i < Math.min(7, streak))).join('');
+  const world = WORLDS[c.world || 0] || WORLDS[0];
+  const here = PLACES.filter((p) => world.places.includes(p.key));
+  /* Lay the world's own buildings out evenly instead of on fixed marks, so a
+     two-building world is a street rather than a corner of an empty one. */
+  const SPAN = 155, PAD = 130;      /* the postbox stands in the left margin */
+  const W = Math.max(640, PAD * 2 + here.length * SPAN);
+  const startX = Math.max(PAD, (W - here.length * SPAN) / 2);
+  const xOf = (i) => startX + i * SPAN;
 
-  const build = (p) => {
-    const on = isOpen(p, lv);
+  const lanterns = Array.from({ length: 7 }, (_, i) =>
+    lantern(70 + i * ((W - 140) / 6), i < Math.min(7, streak))).join('');
+
+  const build = (p, idx) => {
+    p = { ...p, x: xOf(idx) };
+    const on = chapterOpen(c, p.sub);
     let art = '';
     if (p.key === 'place') art = dwelling(p.x, (c.home && c.home.tier) || 0);
     else if (p.key === 'wallet') art = stall(p.x, on);
@@ -193,10 +205,10 @@ export function townSVG(c) {
     else if (p.key === 'exchange') art = exch(p.x, on, up);
     else art = shopN(p.x, on);
     return `<g class="hot" data-act="town" data-arg="${p.key}" role="button" tabindex="0"
-        aria-label="${esc(p.name)}${on ? '' : ' — locked until level ' + p.lv}">
+        aria-label="${esc(p.name)}${on ? '' : ' — opens when you finish ' + (needFor(p.sub) || 'the chapter')}">
       <rect class="bldg-glow" x="${p.x - 4}" y="${G - 190}" width="138" height="196" rx="10" fill="#F0B429" opacity="0"/>
       <g opacity="${on ? 1 : 0.42}">${art}</g>
-      ${on ? '' : plaque(p.x, 130, p.lv)}
+      ${on ? '' : plaque(p.x, 130)}
       ${label(p.x, 130, p.name, on)}
     </g>`;
   };
@@ -217,6 +229,7 @@ export function townSVG(c) {
       </linearGradient>
     </defs>
     <rect width="${W}" height="${H}" fill="url(#sky)"/>
+    <rect width="${W}" height="${G}" fill="${world.tint}" opacity=".22"/>
     <circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
     <g fill="rgba(255,255,255,.6)">
       <ellipse cx="150" cy="70" rx="34" ry="15"/><ellipse cx="178" cy="62" rx="24" ry="17"/>
@@ -228,9 +241,12 @@ export function townSVG(c) {
     <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>
     ${lanterns}
     <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
+    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="${world.tint}" opacity=".3"/>
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
-    ${PLACES.map(build).join('')}
-    <g aria-hidden="true" transform="translate(301,204) scale(.72)"><g class="bob">
+    <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="12" font-weight="800"
+      fill="var(--ink)" opacity=".45">${world.em} ${esc(world.name)}</text>
+    ${here.map(build).join('')}
+    ${here.some((p) => p.key === 'wallet') ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === 'wallet')) + 145},204) scale(.72)"><g class="bob">
       <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
       <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>
       <ellipse cx="16" cy="44" rx="12" ry="14" fill="#D98338"/>
@@ -240,7 +256,7 @@ export function townSVG(c) {
       <ellipse cx="16" cy="26" rx="7" ry="5" fill="#F6DEBE"/>
       <circle cx="12" cy="20" r="2.2" fill="#25201C"/><circle cx="20" cy="20" r="2.2" fill="#25201C"/>
       <path d="M16 25c-1.2 0-2-.8-2-1.5s.8-1.2 2-1.2 2 .5 2 1.2-.8 1.5-2 1.5z" fill="#2A2320"/>
-    </g></g>
+    </g></g>` : ''}
     <g class="hot" data-act="postbox" role="button" tabindex="0" aria-label="Open the postbox">
       <ellipse cx="52" cy="322" rx="28" ry="6" fill="rgba(0,0,0,.13)"/>
       <rect x="48" y="288" width="7" height="34" rx="2" fill="#6B5B44"/>

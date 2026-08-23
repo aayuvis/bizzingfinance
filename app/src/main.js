@@ -5,13 +5,13 @@ import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST } from './art.js';
 import { PLACES } from './town.js';
-import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES,
-  rankFor, rankObj, shuffledDrill } from './content.js';
+import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS,
+  rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection } from './views.js';
-import { viewArcade, startGame, quitGame, GAME_ACTS } from './arcade.js';
+  viewParents, viewCollection, viewWorlds } from './views.js';
+import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
 let draft = { step: 0 };
@@ -23,6 +23,7 @@ const TABS = [
   { k: 'store', n: 'Store', g: '🛒' }, { k: 'progress', n: 'Progress', g: '📈' },
   { k: 'collection', n: 'Collection', g: '🏅' },
 ];
+const EXTRA = [{ k: 'worlds', n: 'Worlds', g: '🗺️' }, { k: 'parents', n: "Grown-up's page", g: '👪' }];
 const SPROUT = ['home', 'learn', 'money', 'arcade'];
 
 /* ══ routing ══════════════════════════════════════════════════════════
@@ -37,7 +38,7 @@ function writeHash() {
 function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
-  const known = TABS.map((t) => t.k).concat(['parents']);
+  const known = TABS.map((t) => t.k).concat(['parents', 'worlds']);
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -59,6 +60,7 @@ function render() {
     s.ui.nav === 'store' ? viewStore() :
     s.ui.nav === 'progress' ? viewProgress() :
     s.ui.nav === 'parents' ? viewParents() :
+    s.ui.nav === 'worlds' ? viewWorlds() :
     s.ui.nav === 'collection' ? viewCollection() : viewHome();
 
   const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]);
@@ -210,8 +212,33 @@ function overlay() {
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in →</button>`);
   }
 
+  if (o.kind === 'world') {
+    const w = o.world;
+    return box(`
+      <div style="text-align:center"><div style="font-size:46px">${w.em}</div>
+        <div class="eyebrow">${esc(w.rank)}</div>
+        <h2 style="margin:4px 0 8px;font-size:27px">${esc(w.name)}</h2>
+        <p class="muted">${esc(w.blurb)}</p></div>
+      <div style="margin-top:14px;background:var(--action-tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px">
+        <b>Opens here:</b> ${esc(w.opens)}</div>
+      ${say('pip', 'New street, new work going, new things to learn. You got here by finishing the last lot — that is the only way anybody gets anywhere in this town.')}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">Look around →</button>`);
+  }
+
+  if (o.kind === 'between') {
+    const card = o.card;
+    return box(`
+      <div class="eyebrow">While you're here</div>
+      <h3 style="font-size:19px;margin:4px 0 8px">${esc(card.title)}</h3>
+      ${say(card.who, 'One card. Three minutes. Then back to it.')}
+      <div class="row" style="gap:8px;margin-top:14px">
+        <button class="btn grow" data-act="betweenGo" data-arg="${card.id}">Read it</button>
+        <button class="btn ghost" data-act="closeOv">Not now</button>
+      </div>`);
+  }
+
   if (o.kind === 'more') {
-    const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat([{ k: 'parents', n: "Grown-up's page", g: '👪' }]);
+    const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
     return box(`<div class="eyebrow" style="margin-bottom:10px">Everything else</div>
       <div class="stack" style="gap:8px">
         ${rest.map((t) => `<button class="opt" data-act="nav" data-arg="${t.k}">${t.g} &nbsp;${t.n}</button>`).join('')}
@@ -236,6 +263,32 @@ on('nav', (k) => {
 on('sub', (k) => { R.overlay = null; R.s.ui.nav = 'money'; R.s.ui.sub = k; sfx.click(); render(); window.scrollTo(0, 0); });
 on('shelf', (k) => { R.shelf = k || ''; R.query = ''; render(); window.scrollTo(0, 0); });
 on('locked', (lv) => { toast(`Opens at level ${lv} — keep learning`); sfx.bad(); });
+on('lockedSub', (k) => { toast('Finish “' + (needFor(k) || 'the chapter') + '” first'); sfx.bad(); fire('nav', 'learn'); });
+on('lockedGame', (id) => {
+  const g = GAMES.find((x) => x.id === id);
+  const ch = g && CHAPTERS.find((x) => x.id === g.needs);
+  toast('Finish “' + (ch ? ch.title : 'the chapter') + '” to open ' + (g ? g.name : 'this'));
+  sfx.bad(); fire('nav', 'learn');
+});
+on('travel', (i) => {
+  const c = C(), chk = sim.canTravel(c, +i);
+  if (!chk.ok) { toast(chk.why); sfx.bad(); return; }
+  sim.travel(c, +i);
+  const w = WORLDS[+i];
+  sfx.level(); confetti(35);
+  R.overlay = { kind: 'world', world: w };
+  R.s.ui.nav = 'home'; render();
+});
+on('claim', (id) => {
+  const a = sim.claimQuest(C(), id);
+  if (a) { sfx.coin(); toast('+' + money(a)); } else toast('Not finished yet');
+  render();
+});
+on('questBonus', () => {
+  const a = sim.questBonus(C());
+  if (a) { sfx.level(); confetti(40); toast('All three — ' + money(a)); }
+  render();
+});
 on('mode', () => {
   R.mode = R.mode === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-mode', R.mode);
@@ -267,10 +320,11 @@ on('obCur', (cur) => {
 on('town', (key) => {
   const p = PLACES.find((x) => x.key === key);
   if (!p) return;
-  if (C().learn.level < p.lv) { toast(`${p.name} opens at level ${p.lv}`); sfx.bad(); return; }
+  if (!chapterOpen(C(), p.sub)) { fire('lockedSub', p.sub); return; }
   fire('sub', p.sub);
 });
 on('goPlace', (key) => { R.overlay = null; fire('town', key); });
+on('betweenGo', (id) => { R.overlay = null; fire('card', id); });
 
 /* learn */
 on('card', (id) => {
@@ -294,6 +348,7 @@ on('cardDone', (id) => {
   const right = !!(c.learn.drill && c.learn.drill.right);
   const first = !c.learn.done[id];
   c.learn.done[id] = true;
+  if (first) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, first ? (right ? 22 : 12) : 2);
   const ch = CHAPTERS.find((x) => x.id === card.ch);
   if (ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
@@ -325,6 +380,8 @@ on('letterPick', (i) => {
   if (ch.badge) sim.badge(c, ch.badge);
   c.postbox.answered = true;
   c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
+  sim.questTick(c, 'letter', 1);
+  if (L.scam && ch.safe) sim.questTick(c, 'scam', 1);
   sim.stamp(c);
   R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, good: !(L.scam && !ch.safe) };
   if (delta > 0) sfx.coin(); else if (L.scam && !ch.safe) sfx.bad(); else sfx.good();
@@ -510,8 +567,22 @@ on('print', () => {
 });
 
 /* arcade */
-on('game', (id) => { startGame(id); render(); });
-on('gquit', () => { quitGame(); render(); });
+on('game', (id) => {
+  const c = C();
+  sim.questTick(c, 'game', 1);
+  if (id === 'mn') sim.questTick(c, 'board', 1);
+  startGame(id); render();
+});
+/* Leaving a game is when a child is most willing to read one card — so the
+   lesson is offered here rather than filed in a tab they have to remember. */
+on('gquit', () => {
+  quitGame();
+  const c = C();
+  const next = ALL_CARDS.find((x) => !c.learn.done[x.id]
+    && C().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
+  if (next && Math.random() < 0.7) R.overlay = { kind: 'between', card: next };
+  render();
+});
 GAME_ACTS.forEach((a) => { on(a, (arg) => { if (R.game && R.game.act) R.game.act(a, arg); }); });
 
 /* ══ input plumbing ═══════════════════════════════════════════════════ */
@@ -578,4 +649,4 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
   });
 }
 
-window.BZF = { R, sim, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
+window.BZF = { R, sim, allCards: ALL_CARDS, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };

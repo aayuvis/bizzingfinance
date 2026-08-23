@@ -6,7 +6,8 @@
 
 import { Store } from './store.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
-import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES } from './content.js';
+import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
+  WORLDS, QUESTS, chapterDone, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
 
@@ -36,6 +37,8 @@ export function newChild(name, band, cur) {
     shop: { owned: [], cooling: {} },
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },
+    world: 0,
+    quests: { day: dayIndex(now), list: [], prog: {}, claimed: {}, bonus: false },
     badges: [], history: [{ t: now, v: price(12) }],
     family: { allowance: null, payWeekday: 5, chores: [], coolOff: false },
   };
@@ -160,6 +163,7 @@ export function earn(c, amt, label, cat) {
   if (a <= 0) return 0;
   c.money.wallet += a;
   txn(c, 'in', a, label, cat || 'wage');
+  if (cat !== 'quest') questTick(c, 'earn', a);
   badge(c, 'first-coin');
   return a;
 }
@@ -197,7 +201,8 @@ export function stamp(c) {
 /* ── jobs on Market Row ──────────────────────────────────────────────── */
 export function jobsToday(c) {
   const d = dayIndex(Date.now());
-  return JOBS.filter((j) => !j.lv || c.learn.level >= j.lv)
+  const w = WORLDS[c.world || 0];
+  return JOBS.filter((j) => w.jobs.includes(j.id))
     .map((j) => ({ ...j, done: c.jobs[j.id] === d, amt: price(j.units) }));
 }
 export function doJob(c, id) {
@@ -206,6 +211,81 @@ export function doJob(c, id) {
   if (!j || c.jobs[id] === d) return 0;
   c.jobs[id] = d;
   const a = earn(c, price(j.units), j.name + ' for ' + j.who, 'job');
+  questTick(c, 'job', 1);
+  stamp(c);
+  return a;
+}
+
+/* ── worlds ──────────────────────────────────────────────────────────────
+   You may travel on once you have finished learning where you are. That is
+   the whole gate — no XP number, no paywall, just: read the chapters. */
+export function currentWorld(c) { return WORLDS[c.world || 0]; }
+export function canTravel(c, i) {
+  if (i === (c.world || 0)) return { ok: false, why: 'You are already here' };
+  if (worldOpen(c, i)) return { ok: true };
+  const prev = WORLDS[i - 1];
+  const left = prev.chapters.filter((ch) => !chapterDone(c, ch));
+  return { ok: false, why: left.length ? 'Finish what you are learning in ' + prev.name : 'Not yet', need: left };
+}
+export function travel(c, i) {
+  if (!canTravel(c, i).ok) return false;
+  c.world = i;
+  if (i > 0) badge(c, 'traveller');
+  return true;
+}
+export function worldsOpen(c) { return WORLDS.filter((w, i) => worldOpen(c, i)).length; }
+
+/* ── daily quests ────────────────────────────────────────────────────────
+   Three a day, the same three for every child in the house, paying WAGES —
+   not a second currency. Rolled from the date so they can be talked about at
+   breakfast and cannot be rerolled by closing the app. */
+export function rollQuests(c) {
+  const d = dayIndex(Date.now());
+  if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
+  const pool = QUESTS.filter((q) => !q.needs || chapterDone(c, q.needs));
+  const picked = [];
+  let h = (d * 2654435761) >>> 0;
+  const avail = pool.slice();
+  while (picked.length < Math.min(3, avail.length)) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    picked.push(avail.splice(h % avail.length, 1)[0]);
+  }
+  c.quests = { day: d, list: picked.map((q) => q.id), prog: {}, claimed: {}, bonus: false };
+  return c.quests;
+}
+export function questList(c) {
+  const q = rollQuests(c);
+  return q.list.map((id) => {
+    const def = QUESTS.find((x) => x.id === id);
+    const at = q.prog[id] || 0;
+    return { ...def, at: Math.min(at, def.n), done: at >= def.n, claimed: !!q.claimed[id] };
+  });
+}
+/* One call site per kind, so a quest can never be advanced twice by accident. */
+export function questTick(c, kind, amount) {
+  if (!c.quests || !c.quests.list) return;
+  c.quests.list.forEach((id) => {
+    const def = QUESTS.find((x) => x.id === id);
+    if (!def || def.kind !== kind) return;
+    c.quests.prog[id] = (c.quests.prog[id] || 0) + (amount || 1);
+  });
+}
+export function claimQuest(c, id) {
+  const def = QUESTS.find((x) => x.id === id);
+  if (!def || !c.quests.list.includes(id)) return 0;
+  if (c.quests.claimed[id]) return 0;
+  if ((c.quests.prog[id] || 0) < def.n) return 0;
+  c.quests.claimed[id] = true;
+  const a = earn(c, price(def.pay), 'Quest — ' + def.t, 'quest');
+  stamp(c);
+  return a;
+}
+export function questBonus(c) {
+  const all = questList(c);
+  if (c.quests.bonus || !all.every((q) => q.claimed)) return 0;
+  c.quests.bonus = true;
+  const a = earn(c, price(12), 'All three quests', 'quest');
+  badge(c, 'three-of-three');
   stamp(c);
   return a;
 }
@@ -320,6 +400,7 @@ export function toJar(c, jar, amt) {
   const a = Math.min(Math.round(amt), c.money.wallet);
   if (a <= 0) return 0;
   c.money.wallet -= a; c.money.jars[jar] += a;
+  if (jar !== 'spend') questTick(c, 'jar', a);
   txn(c, 'out', a, 'Into the ' + jar + ' jar', 'jar'); stamp(c); return a;
 }
 export function fromJar(c, jar, amt) {
@@ -336,7 +417,7 @@ export function fundGoal(c, id, amt) {
   const g = c.money.goals.find((x) => x.id === id); if (!g) return 0;
   const a = Math.min(Math.round(amt), c.money.jars.save);
   if (a <= 0) return 0;
-  c.money.jars.save -= a; g.saved += a; checkGoal(c, g); stamp(c); return a;
+  c.money.jars.save -= a; g.saved += a; checkGoal(c, g); questTick(c, 'goal', 1); stamp(c); return a;
 }
 export function raidGoal(c, id) {
   const g = c.money.goals.find((x) => x.id === id); if (!g || g.saved <= 0) return 0;
@@ -408,6 +489,7 @@ export function buyAsset(c, id, amt) {
   const p = c.market.series[id][c.market.step];
   c.money.jars.grow -= a;
   c.market.holdings[id] = (c.market.holdings[id] || 0) + a / p;
+  questTick(c, 'invest', 1);
   txn(c, 'out', a, 'Bought ' + ASSETS.find((x) => x.id === id).name, 'invest');
   stamp(c); return a;
 }
@@ -477,6 +559,7 @@ export function bizTrade(c) {
   b.day++;
   b.best = Math.max(b.best, profit);
   badge(c, 'shopkeeper');
+  questTick(c, 'trade', 1);
   if (profit > 0) badge(c, 'profit-day');
   stamp(c);
   return { weather: w, revenue, rent, profit, sold, spoiled };
@@ -521,6 +604,7 @@ export function touchDay(c) {
   else c.streak.days = [d];
   c.streak.last = d;
   if (c.postbox.day !== d) { c.postbox.day = d; c.postbox.idx += 1; c.postbox.answered = false; }
+  rollQuests(c);   /* so a job taken before Home is opened can't tick yesterday's three */
   return true;
 }
 
@@ -570,6 +654,8 @@ export function load() {
     if (!c.family) c.family = { allowance: null, payWeekday: 5, chores: [], coolOff: false };
     if (c.money.bank.trust == null) { c.money.bank.trust = 50; c.money.bank.repaid = 0; c.money.bank.loan = null; }
     if (!c.home) { c.home = { tier: 0, since: Date.now(), mortgage: null }; refreshBills(c); }
+    if (c.world == null) c.world = 0;
+    if (!c.quests) c.quests = { day: -1, list: [], prog: {}, claimed: {}, bonus: false };
   });
   if (!s.ui) s.ui = { nav: 'home', sub: 'wallet' };
   if (s.active >= s.kids.length) s.active = 0;

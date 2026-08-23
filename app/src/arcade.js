@@ -8,7 +8,7 @@
 import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
 import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say } from './art.js';
-import { ASSETS, STOCK } from './content.js';
+import { ASSETS, STOCK, CHAPTERS, chapterDone } from './content.js';
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -16,27 +16,27 @@ import { R } from './runtime.js';
 const K = () => sim.kid(R.s);
 
 export const GAMES = [
-  { id: 'cr', em: '🪙', name: 'Change Rush', keys: '← →', lv: 1, kind: 'action',
+  { id: 'cr', em: '🪙', name: 'Change Rush', keys: '← →', kind: 'action', needs: null,
     blurb: 'Coins are falling and you need exactly the right amount. Catch one too many and you have overpaid.' },
-  { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', lv: 1, kind: 'action',
+  { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', kind: 'action', needs: null,
     blurb: 'Sort it before the bell. Some are both, and those are the good ones.' },
-  { id: 'ss', em: '🛡️', name: 'Scam Spotter', keys: '← →', lv: 1, kind: 'action',
+  { id: 'ss', em: '🛡️', name: 'Scam Spotter', keys: '← →', kind: 'action', needs: null,
     blurb: 'Real message or trap? They are designed to look identical.' },
-  { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', lv: 6, kind: 'action',
+  { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', kind: 'action', needs: 'c3',
     blurb: 'A month of money, and the bills arrive one at a time.' },
-  { id: 'cc', em: '🗼', name: 'Compound Climb', keys: 'hold space', lv: 11, kind: 'action',
+  { id: 'cc', em: '🗼', name: 'Compound Climb', keys: 'hold space', kind: 'action', needs: 'c6',
     blurb: 'Hold to grow the tower. Hold longer for more — and past a point it can go backwards, and you can be wiped out.' },
-  { id: 'sr', em: '🫖', name: 'Stall Rush', keys: '1–4 · R', lv: 6, kind: 'action',
+  { id: 'sr', em: '🫖', name: 'Stall Rush', keys: '1–4 · R', kind: 'action', needs: 'c3',
     blurb: 'Sixty seconds of customers. Serve them, restock, and find out whether busy and profitable are the same thing.' },
-  { id: 'st', em: '⛈️', name: 'Market Storm', keys: 'space', lv: 16, kind: 'action',
+  { id: 'st', em: '⛈️', name: 'Market Storm', keys: 'space', kind: 'action', needs: 'c7',
     blurb: 'Everything is red and everyone is shouting sell. The winning move is to do nothing, and it is much harder than it sounds.' },
-  { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', lv: 16, kind: 'action',
+  { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', kind: 'action', needs: 'c7',
     blurb: 'Six weeks against Chaser, Panicker and Boring Bella. Bella is annoying.' },
-  { id: 'mn', em: '🎲', name: 'Main Street', keys: '⏎ · Y/N', lv: 8, kind: 'board',
+  { id: 'mn', em: '🎲', name: 'Main Street', keys: '⏎ · Y/N', kind: 'board', needs: 'c1',
     blurb: 'The board game. Buy the shops, collect the rent, and win when your street pays for your life — nobody goes bankrupt.' },
-  { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', lv: 6, kind: 'drill',
+  { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', kind: 'drill', needs: 'c4',
     blurb: 'Small monthly numbers, turned into the number that is actually true.' },
-  { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', lv: 11, kind: 'drill',
+  { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', kind: 'drill', needs: 'c6',
     blurb: 'Guess where compounding lands. Nobody guesses high enough.' },
 ];
 
@@ -44,12 +44,13 @@ export function viewArcade() {
   if (R.game) return R.game.view();
   const c = K();
   const tile = (g) => {
-    const open = c.learn.level >= g.lv;
-    return `<button class="card" data-act="${open ? 'game' : 'locked'}" data-arg="${open ? g.id : g.lv}" style="text-align:left;width:100%;${open ? '' : 'opacity:.6'}">
+    const open = !g.needs || chapterDone(c, g.needs);
+    const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
+    return `<button class="card" data-act="${open ? 'game' : 'lockedGame'}" data-arg="${g.id}" style="text-align:left;width:100%;${open ? '' : 'opacity:.62'}">
       <div class="row"><span style="font-size:30px">${open ? g.em : '🔒'}</span>
         <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
-          <p class="small muted">${open ? esc(g.blurb) : 'Opens at level ' + g.lv}</p></div>
-        <span class="pill">${open ? g.keys : 'L' + g.lv}</span></div></button>`;
+          <p class="small muted">${open ? esc(g.blurb) : 'Finish “' + esc(ch.title) + '” to open this'}</p></div>
+        <span class="pill">${open ? g.keys : 'learn first'}</span></div></button>`;
   };
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}

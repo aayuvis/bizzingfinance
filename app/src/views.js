@@ -6,7 +6,8 @@ import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
-  rankFor, rankObj, RANKS, shuffledDrill } from './content.js';
+  WORLDS, QUESTS, rankFor, rankObj, RANKS, shuffledDrill,
+  chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 
@@ -78,8 +79,44 @@ export function viewHome() {
   const passive = sim.passiveWeekly(c);
   const home = sim.homeOf(c);
 
+  const world = WORLDS[c.world || 0];
+  const quests = sim.questList(c);
+  const allDone = quests.length && quests.every((q) => q.claimed);
+
   return `<div class="stack">
     ${strip}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:13px 15px;gap:11px">
+        <span style="font-size:26px">${world.em}</span>
+        <div class="grow"><div class="eyebrow">You are in · ${esc(world.rank)}</div>
+          <h3 style="font-size:17px;margin:1px 0">${esc(world.name)}</h3>
+          <p class="small muted">${esc(world.blurb)}</p></div>
+        <button class="btn ghost sm" data-act="nav" data-arg="worlds">Travel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
+        <p class="small muted">They pay wages into the same wallet as everything else.</p></div>
+        <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/3</span></div>
+      <div class="stack" style="gap:8px;margin-top:11px">
+        ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? 'var(--grow-tint)' : 'var(--surface2)'};
+          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+          <span style="font-size:20px;${q.claimed ? 'opacity:.6' : ''}">${q.em}</span>
+          <span class="grow" style="min-width:0">
+            <b style="font-size:14px;${q.claimed ? 'opacity:.6' : ''}">${esc(q.t)}</b>
+            <div class="small muted">${q.claimed ? 'Claimed.' : esc(q.sub)}</div>
+            ${q.claimed ? '' : `<div class="bar" style="height:5px;margin-top:5px"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
+          </span>
+          ${q.claimed ? '<span class="pill grow">✓</span>'
+            : q.done ? `<button class="btn sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>`
+            : `<span class="pill">${q.at}/${q.n}</span>`}
+        </div>`).join('')}
+      </div>
+      ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All three — take ${money(price(12))} more</button>` : ''}
+      ${c.quests.bonus ? '<p class="small muted" style="margin-top:9px">All three done. Fresh ones tomorrow.</p>' : ''}
+    </div>
+
     ${sprout ? '' : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
       <div class="row"><span style="font-size:24px">${home.em}</span><div class="grow">
         <div class="eyebrow">Independence · what your money earns ÷ what your life costs</div>
@@ -159,6 +196,47 @@ function nextThing(c) {
   return { em: '🎮', title: 'Play a round', sub: 'Wages, straight into the same wallet.', act: 'nav', arg: 'arcade' };
 }
 
+/* ══ WORLDS — the road, and what opens at the end of each one ═════════ */
+export function viewWorlds() {
+  const c = K();
+  return `<div class="stack">
+    ${say('pip', 'Five places, and you walk them in order. You move on when you have finished learning where you are — not when you have earned enough. That is the whole rule.')}
+    ${WORLDS.map((w, i) => {
+      const open = worldOpen(c, i);
+      const here = (c.world || 0) === i;
+      const left = w.chapters.filter((ch) => !chapterDone(c, ch));
+      const done = w.chapters.length - left.length;
+      return `<div class="card" style="${here ? 'border-color:var(--action);box-shadow:var(--sh-raised)' : open ? '' : 'opacity:.66'}">
+        <div class="row" style="gap:12px">
+          <span style="font-size:30px">${open ? w.em : '🔒'}</span>
+          <div class="grow">
+            <div class="eyebrow">${esc(w.rank)}${here ? ' · you are here' : ''}</div>
+            <h3 style="font-size:18px;margin:1px 0 3px">${esc(w.name)}</h3>
+            <p class="small muted">${esc(w.blurb)}</p>
+          </div>
+          ${here ? '<span class="pill gold">here</span>'
+            : open ? `<button class="btn sm" data-act="travel" data-arg="${i}">Go →</button>`
+            : ''}
+        </div>
+        <div class="row" style="margin-top:11px;gap:8px;flex-wrap:wrap">
+          <span class="pill">opens ${esc(w.opens)}</span>
+          <span class="grow"></span>
+          <span class="small muted">${done}/${w.chapters.length} chapters</span>
+        </div>
+        <div class="bar" style="margin-top:6px"><i style="width:${done / w.chapters.length * 100}%;background:${done === w.chapters.length ? 'var(--grow)' : 'var(--action)'}"></i></div>
+        ${!open && i > 0 ? `<p class="small muted" style="margin-top:8px">Finish
+          ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch))
+            .map((ch) => '“' + esc(CHAPTERS.find((x) => x.id === ch).title) + '”').join(' and ') || 'the last stretch'}
+          in ${esc(WORLDS[i - 1].name)} to walk on.</p>` : ''}
+        ${here && left.length ? `<p class="small muted" style="margin-top:8px">Still to learn here:
+          ${left.map((ch) => '<b>' + esc(CHAPTERS.find((x) => x.id === ch).title) + '</b>').join(', ')}.</p>` : ''}
+        ${here && !left.length && i < WORLDS.length - 1 ? `<p class="small" style="margin-top:8px;color:var(--grow);font-weight:700">
+          Everything here is learned. The road is open.</p>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 /* ══ LEARN ════════════════════════════════════════════════════════════ */
 export function viewLearn() {
   const c = K();
@@ -199,7 +277,9 @@ export function viewLearn() {
           <div style="padding:14px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line-soft)">
             <span style="font-size:24px">${locked ? '🔒' : ch.em}</span>
             <div class="grow"><h3 style="font-size:18px">${esc(ch.title)}</h3>
-            <p class="small muted">${locked ? 'Opens at level ' + ch.lv + ' · ' + ch.rank : esc(ch.blurb)}</p></div>
+            <p class="small muted">${locked ? 'Opens at level ' + ch.lv + ' · ' + ch.rank : esc(ch.blurb)}</p>
+            ${opensWhat(ch.id) ? `<p class="small" style="color:var(--action);font-weight:700;margin-top:2px">
+              ${done === ch.cards.length ? '✓ opened ' : 'Finish this to open '}${esc(opensWhat(ch.id))}</p>` : ''}</div>
             <span class="pill ${done === ch.cards.length ? 'grow' : ''}">${done}/${ch.cards.length}</span>
           </div>
           ${locked ? '' : ch.cards.map((x) => {
@@ -214,6 +294,10 @@ export function viewLearn() {
     </div>
   </div>`;
 }
+
+const OPENS = { c3: 'the Jar Shed and the Build Yard', c5: 'the Bank',
+  c6: 'borrowing', c7: 'the Exchange', c8: 'Bizz & Co' };
+function opensWhat(id) { return OPENS[id]; }
 
 function viewCard(card) {
   const c = K(), st = c.learn.drill;
@@ -267,21 +351,21 @@ function viewGlossary() {
 
 /* ══ MONEY ════════════════════════════════════════════════════════════ */
 export function viewMoney() {
-  const c = K(), lv = c.learn.level;
+  const c = K();
   const NAMES = { place: 'Home', wallet: 'Wallet', jars: 'Jars', goals: 'Goals',
     bank: 'Bank', portfolio: 'Exchange', business: 'Your shop' };
-  const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name, lv: p.lv }));
+  const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name }));
   let sub = R.s.ui.sub;
-  if (!subs.find((x) => x.k === sub && lv >= x.lv)) sub = 'wallet';
+  if (!subs.find((x) => x.k === sub && chapterOpen(c, x.k))) sub = 'wallet';
 
   const strip = `<div style="display:flex;gap:7px;flex-wrap:wrap;padding:11px;background:var(--tint);border-radius:var(--r-md);border:1px solid var(--line-soft)">
     ${subs.map((x) => {
-      const open = lv >= x.lv;
-      return `<button data-act="${open ? 'sub' : 'locked'}" data-arg="${open ? x.k : x.lv}"
+      const open = chapterOpen(c, x.k);
+      return `<button data-act="${open ? 'sub' : 'lockedSub'}" data-arg="${x.k}"
         style="padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800;border:1px ${open ? 'solid' : 'dashed'} var(--line);
         background:${sub === x.k ? 'var(--action)' : (open ? 'var(--surface)' : 'transparent')};
         color:${sub === x.k ? 'var(--action-ink)' : (open ? 'var(--ink)' : 'var(--muted)')}">
-        ${open ? '' : '🔒 '}${x.n}${open ? '' : ` <span style="font-family:var(--mono);font-size:11px">L${x.lv}</span>`}</button>`;
+        ${open ? '' : '🔒 '}${x.n}</button>`;
     }).join('')}</div>`;
 
   const body = sub === 'place' ? viewPlace() : sub === 'jars' ? viewJars() : sub === 'goals' ? viewGoals()

@@ -330,6 +330,109 @@ export function shuffledDrill(card) {
   return { order: idx, opts: idx.map((i) => card.drill.opts[i]), answer: idx.indexOf(card.drill.a) };
 }
 
+/* ── the worlds ──────────────────────────────────────────────────────────
+   The game is a journey between places, not one street. Each world carries
+   its own chapters, its own work, its own games and exactly one new money
+   tool — and you cannot travel on until you have finished learning where you
+   are. That is "education first, then investment" as a rule the code keeps,
+   rather than a promise in a doc. */
+export const WORLDS = [
+  {
+    id: 'market', tint: '#E0A85C', name: 'Market Row', em: '🧺', rank: 'Saver',
+    blurb: 'Stalls, crates and your first room. Where money arrives because you went and got it.',
+    chapters: ['c1', 'c2'],
+    places: ['place', 'wallet'],
+    jobs: ['crates', 'flyers', 'sweep'],
+    sky: ['#CFE9EE', '#F6EFDC'], ground: '#DCCFA8', road: '#C9BE9C',
+    opens: 'Your stall, and a room above it.',
+  },
+  {
+    id: 'harbour', tint: '#3E86A8', name: 'The Old Harbour', em: '⚓', rank: 'Budgeter',
+    blurb: 'Cargo, tides and weather. Nothing here rewards a plan made on the day.',
+    chapters: ['c3', 'c4'],
+    places: ['jars', 'goals'],
+    jobs: ['nets', 'cargo', 'mend'],
+    sky: ['#BFDDE8', '#E9EEDF'], ground: '#B9C3A8', road: '#9FAE93',
+    opens: 'The Jar Shed and the Build Yard.',
+  },
+  {
+    id: 'clock', tint: '#6E6AA8', name: 'Clocktower Square', em: '🕰️', rank: 'Banker',
+    blurb: 'Stone, ledgers and a clock that strikes interest in public.',
+    chapters: ['c5', 'c6'],
+    places: ['bank'],
+    jobs: ['books', 'errands'],
+    sky: ['#D6DCE9', '#F1EEE4'], ground: '#C6BEB0', road: '#ADA595',
+    opens: 'The Bank — and, once you have read chapter six, borrowing.',
+  },
+  {
+    id: 'exchange', tint: '#2F9E8F', name: 'The Exchange Quarter', em: '📈', rank: 'Investor',
+    blurb: 'Chalkboards, arguments, and two animals who are each certain and often wrong.',
+    chapters: ['c7'],
+    places: ['exchange'],
+    jobs: ['runner', 'board'],
+    sky: ['#C9E0E4', '#EDE6DC'], ground: '#AFC0BE', road: '#96A8A6',
+    opens: 'The Exchange. Not before you have learned what a share is.',
+  },
+  {
+    id: 'works', tint: '#B4682F', name: 'The Works', em: '🏭', rank: 'Founder',
+    blurb: 'Where things get made, priced, and sold for more than they cost. Or not.',
+    chapters: ['c8'],
+    places: ['shop'],
+    jobs: ['crates', 'books'],
+    sky: ['#E4D9CD', '#F4EBDC'], ground: '#C3AE93', road: '#A8957D',
+    opens: 'Bizz & Co, and the shutters come off for good.',
+  },
+];
+export function worldOf(id) { return WORLDS.find((w) => w.id === id) || WORLDS[0]; }
+
+/* Every surface and every game names the chapter that opens it. Nothing is
+   gated on a raw XP number any more: you learn the thing, then you get the
+   tool that needs it. */
+export const UNLOCKS = {
+  place: null, wallet: null,
+  jars: 'c3', goals: 'c3',
+  bank: 'c5', loans: 'c6',
+  portfolio: 'c7',
+  business: 'c8',
+};
+export function chapterDone(c, id) {
+  const ch = CHAPTERS.find((x) => x.id === id);
+  return !!ch && ch.cards.every((k) => c.learn.done[k.id]);
+}
+export function isOpen(c, key) {
+  const need = UNLOCKS[key];
+  return !need || chapterDone(c, need);
+}
+export function needFor(key) {
+  const id = UNLOCKS[key];
+  const ch = id && CHAPTERS.find((x) => x.id === id);
+  return ch ? ch.title : null;
+}
+export function worldOpen(c, i) {
+  if (i <= 0) return true;
+  return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterDone(c, ch)));
+}
+
+/* ── daily quests ────────────────────────────────────────────────────────
+   Three a day, drawn deterministically from the date so every child in the
+   house gets the same three and can compare. They pay a WAGE into the same
+   wallet as everything else — there is no second currency here and there
+   never will be (CONCEPT §3.1). */
+export const QUESTS = [
+  { id: 'q-card',   em: '📗', kind: 'lesson', n: 1, pay: 5,  t: 'Learn one card',            sub: 'Any chapter that is open to you.' },
+  { id: 'q-card2',  em: '📘', kind: 'lesson', n: 2, pay: 9,  t: 'Learn two cards',           sub: 'Back to back. It is ten minutes.' },
+  { id: 'q-letter', em: '✉️', kind: 'letter', n: 1, pay: 4,  t: 'Empty the postbox',         sub: 'One letter. Thirty seconds.' },
+  { id: 'q-job',    em: '🧺', kind: 'job',    n: 2, pay: 6,  t: 'Take two jobs',             sub: 'Whatever is going on the Row.' },
+  { id: 'q-play',   em: '🎮', kind: 'game',   n: 2, pay: 7,  t: 'Play two games',            sub: 'Any two in the arcade.' },
+  { id: 'q-earn',   em: '🪙', kind: 'earn',   n: 40, pay: 6, t: 'Earn 40 today',             sub: 'Jobs, games, letters — it all counts.' },
+  { id: 'q-jar',    em: '🫙', kind: 'jar',    n: 20, pay: 7, t: 'Put 20 away',               sub: 'Into any jar that is not Spend.', needs: 'c3' },
+  { id: 'q-goal',   em: '🏗️', kind: 'goal',   n: 1, pay: 8,  t: 'Feed the Build Yard',       sub: 'Any goal, any amount.', needs: 'c3' },
+  { id: 'q-scam',   em: '🛡️', kind: 'scam',   n: 1, pay: 9,  t: 'Spot a scam',               sub: 'In the postbox or in Scam Spotter.' },
+  { id: 'q-board',  em: '🎲', kind: 'board',  n: 1, pay: 12, t: 'Finish a game of Main Street', sub: 'About ten minutes.', needs: 'c1' },
+  { id: 'q-invest', em: '📈', kind: 'invest', n: 1, pay: 10, t: 'Add to your holdings',      sub: 'From the Grow jar, as always.', needs: 'c7' },
+  { id: 'q-shop',   em: '🏪', kind: 'trade',  n: 1, pay: 10, t: 'Trade a day at Bizz & Co',  sub: 'Open the doors and count it honestly.', needs: 'c8' },
+];
+
 /* ── the postbox ─────────────────────────────────────────────────────────
    One letter a day. Roughly one in six is a scam, and it looks exactly like
    the rest — that IS the lesson (docs/02 §3). Amounts are in units; the sim
@@ -472,12 +575,20 @@ export const LETTERS = [
 ];
 
 /* ── jobs on Market Row — the way money arrives between pay days ───────── */
+/* Work belongs to a place. Each world lists the jobs going there, so
+   travelling somewhere new changes what you can earn as well as what you
+   can learn. */
 export const JOBS = [
-  { id: 'crates',  em: '📦', name: 'Stack crates',       units: 6,  who: 'the grain seller' },
-  { id: 'flyers',  em: '📄', name: 'Deliver flyers',     units: 5,  who: 'Mrs Rao' },
-  { id: 'sweep',   em: '🧹', name: 'Sweep Market Row',   units: 3,  who: 'the market office' },
-  { id: 'mend',    em: '🧵', name: 'Mend umbrellas',     units: 8,  who: 'Mags', lv: 6 },
-  { id: 'books',   em: '📒', name: "Do Nana's books",    units: 12, who: 'Nana Bizz', lv: 11 },
+  { id: 'crates',  em: '📦', name: 'Stack crates',      units: 6,  who: 'the grain seller' },
+  { id: 'flyers',  em: '📄', name: 'Deliver flyers',    units: 5,  who: 'Mrs Rao' },
+  { id: 'sweep',   em: '🧹', name: 'Sweep Market Row',  units: 3,  who: 'the market office' },
+  { id: 'nets',    em: '🕸️', name: 'Mend the nets',     units: 7,  who: 'the harbour master' },
+  { id: 'cargo',   em: '⚓', name: 'Unload the cargo',  units: 9,  who: 'a skipper in a hurry' },
+  { id: 'mend',    em: '🧵', name: 'Mend umbrellas',    units: 8,  who: 'Mags' },
+  { id: 'errands', em: '🏃', name: 'Run the errands',   units: 8,  who: 'the clerk at the bank' },
+  { id: 'books',   em: '📒', name: "Do Nana's books",   units: 12, who: 'Nana Bizz' },
+  { id: 'runner',  em: '📨', name: 'Run the orders',    units: 11, who: 'the floor manager' },
+  { id: 'board',   em: '🖍️', name: 'Chalk up the board', units: 13, who: 'Bo and Bea, arguing' },
 ];
 
 /* ── the housing ladder — where you live IS your level ───────────────────
@@ -646,4 +757,6 @@ export const BADGES = {
   'exact-change':      { em: '🪙', name: 'Exact change',      desc: 'Counted it right, at speed.' },
   'climbed':           { em: '🗼', name: 'Over the line',      desc: 'Fifteen years of compounding, and still standing.' },
   'main-street':       { em: '🎲', name: 'Main Street',        desc: 'Your shops paid for your life. Nobody went bankrupt.' },
+  'three-of-three':    { em: '⭐', name: 'All three',           desc: 'Cleared a whole day of quests.' },
+  'traveller':         { em: '🗺️', name: 'On the road',         desc: 'Left Market Row for somewhere new.' },
 };

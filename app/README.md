@@ -41,7 +41,9 @@ build rides along at `/bizzington.html`.
 
 | Surface | State |
 |---|---|
-| **The town** | Seven buildings, starting with your own front door, drawn locked or open from the child's level. Panning street on phones. |
+| **Five worlds** | Market Row → the Old Harbour → Clocktower Square → the Exchange Quarter → the Works. Each has its own light, its own jobs going, its own games and one new money tool. You travel on when you have **finished the chapters where you are** — not when you have earned enough. |
+| **The street** | Your own front door plus the buildings of the world you're standing in, drawn locked or open. Panning street on phones. |
+| **Today's three** | Three daily quests rolled from the date, so every child in the house gets the same three. They pay wages into the same wallet — never a second currency. Clear all three for a bonus. |
 | **Your place** | The housing ladder: room → room with a window → flat → flat with a kitchen → a house you buy. Rent, bills and food derive from where you live; moving shows the new weekly total *before* you commit. A kitchen costs more rent and less overall, because it halves the food line. |
 | **Independence** | "Rich" as a ratio, not a number: what your money earns each week ÷ what your life costs. At 100% you work because you choose to. Milestones at 10/25/50/100. |
 | **Learn** | 8 chapters · 32 cards · 30 levels · 5 ranks. Every card is a lesson, an example and one drill. |
@@ -84,6 +86,11 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   leaderboard sorted by return alone tells a child the luckiest bet was the best decision.
 - **One currency.** Games pay wages into the same wallet the store spends from.
 - **Both keyboard and touch** on every game.
+- **Nothing is gated on an XP number.** Every surface and every game names the chapter that
+  opens it (`UNLOCKS` in `content.js`), and the locked state says which one. Education first,
+  then the tool — the Exchange cannot open before a child knows what a share is.
+- **Quests advance from exactly one call site per kind** (`questTick`), so a quest can never
+  be advanced twice by the same action.
 - **Bills are derived from where you live**, never invented. `refreshBills()` is the only thing that writes them.
 - **Percentages are a display format.** The Jar Shed shows "1 coin in every 4" below level 11 and "25%" above it — same jar, same lesson, two ages (docs/03 §5).
 - **Option order is permuted from the card id** (`shuffledDrill`) — position leaks an answer

@@ -17,7 +17,29 @@ The rule that follows, and it governs every screen:
 > **No concept ships without a place.** If you can't point at where it lives in Bizzington,
 > it isn't ready to be taught.
 
-## 2. The town is the app
+## 2. Five worlds, walked in order
+
+Bizzington is not one street. It is **five places**, and you walk them in order — each with
+its own light, its own work going, its own games, and exactly one new money tool at the end
+of it.
+
+| | World | Rank | You learn | It opens |
+|---|---|---|---|---|
+| 1 | 🧺 **Market Row** | Saver | What money is · Earning it | your stall, and a room above it |
+| 2 | ⚓ **The Old Harbour** | Budgeter | Making a plan · Sellers and their tricks | the Jar Shed and the Build Yard |
+| 3 | 🕰️ **Clocktower Square** | Banker | Keeping it safe · Borrowing | the Bank, then borrowing |
+| 4 | 📈 **The Exchange Quarter** | Investor | Money that grows | the Exchange |
+| 5 | 🏭 **The Works** | Founder | Running something | Bizz & Co |
+
+**The gate is the chapters, and nothing else.** Not a level, not an XP number, not a
+payment: you may walk on when you have finished learning where you are. That is
+*education first, then the tool* as a rule the code keeps rather than a promise a document
+makes — and it is why the Exchange cannot open before a child knows what a share is.
+
+Travelling changes what you can earn as well as what you can learn: the jobs going on
+Market Row are not the jobs going at the Harbour.
+
+## 3. The street you are standing in
 
 Home is not a dashboard. **Home is your town**, drawn side-on like a picture book street,
 and it grows as you climb. The tab bar still exists — a 12-year-old wants a fast route to
@@ -36,7 +58,22 @@ Locked buildings are **drawn, not hidden** — greyed, boarded, with their rank 
 A child sees the whole road on their first afternoon. That is the aspiration, and it costs
 us nothing.
 
-## 3. The daily loop — the Postbox
+## 4. The day — three quests and a letter
+
+Every morning there are **three quests**, rolled from the date so every child in the house
+gets the same three and can argue about them at breakfast. They pay **wages into the same
+wallet as everything else** — there is no second currency here and there never will be
+(CONCEPT §3.1).
+
+They are drawn to fill about half an hour between them: one asks for a lesson, one for play,
+one for a decision — *learn a card · play two games · put 20 away · spot a scam · finish a
+game of Main Street · feed the Build Yard*. Clear all three and there is a bonus.
+
+The quests are also where the lessons stop being a tab you have to remember: finishing a
+game offers the next card there and then, while the child is already holding the thing it
+explains.
+
+## 5. The daily loop — the Postbox
 
 Every morning there is **one letter** in your postbox. Not a notification; a letter, with a
 stamp, from someone in town.
@@ -54,7 +91,7 @@ stamp, from someone in town.
 One letter a day. Thirty seconds. It always lands somewhere in the sim, and the town shows
 it: your jars move, a lantern lights, a stranger tips their hat next time you pass.
 
-## 4. The weekly loop — Pay Day
+## 6. The weekly loop — Pay Day
 
 Friday the bell rings and Bizzington has a market day: stalls out, townsfolk in the street,
 the whole town drawn in its busy state. Your wages land, your bills go out, your jar rules
@@ -67,7 +104,7 @@ The one exception stays the exception: the **Time Machine** in the Exchange, whi
 forwards a portfolio 1 / 5 / 10 / 30 years, because compounding cannot be felt at human
 speed and a child who never feels it has not learned it.
 
-## 5. The season — the Market Cup
+## 7. The season — the Market Cup
 
 Eight weeks. The town square gets a leaderboard and bunting, everyone enters, and you play
 **Beat the Market** against Bo, Bea and three bots: Chaser, Panicker, and **Boring Bella**,
@@ -76,7 +113,7 @@ who buys the whole market and then goes home.
 Bella usually wins. That is the design, not an accident — the leaderboard teaches what no
 lesson card can say without sounding like a grown-up.
 
-## 6. The cast
+## 8. The cast
 
 | Who | Role in the town |
 |---|---|
@@ -90,7 +127,7 @@ would have to be either poverty, debt, or a person who spends — and every one 
 lands on some child in the audience. The only opposing force is your own impulse, and she
 has feathers and good jokes.
 
-## 7. What makes it fun, listed honestly
+## 9. What makes it fun, listed honestly
 
 Engagement here has to come from the curriculum, because the rules forbid the usual levers
 — no loot boxes, no paid spins, no randomised rewards, no second currency (CONCEPT §6.3).
@@ -109,7 +146,7 @@ What's left is better anyway:
 8. **A number that is genuinely yours.** By year two the net-worth line goes back further
    than anything else the child owns.
 
-## 8. Two front doors onto one town
+## 10. Two front doors onto one town
 
 - **Sprout (8–10):** the street is bigger and closer, letters are read aloud, there are no
   percentages and no debt, and nothing can go negative. Four tabs.
