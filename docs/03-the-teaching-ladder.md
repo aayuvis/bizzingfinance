@@ -236,52 +236,69 @@ score than one who doubled a lucky single bet — and is told exactly why.
 
 ## 7. How a child runs a household budget
 
-A different, bigger thing than their own jars — and it comes with a hard constraint:
+The app is one long game, and the spine of it is this: **you have a place of your own in
+Bizzington, and you have to keep it.** Rent goes out every pay day whether the week went well
+or not. That is the budget curriculum, and it is not a worksheet — it is where you live.
 
-> **Never the child's own household.** No assumed income, no assumed rent, no questions about
-> what happens at home (CONCEPT §6.4). Some children are living the hard version of this and
-> must not be handed a worksheet about it.
+There is a distinction here the product must never blur:
 
-So the child does it for somebody else. **Nana's kitchen table**, a new place in town, opening
-at Stage 3.
+> **Your place in the game: yes.** A home the simulator gives you, with a rent it sets, in a
+> town that isn't real. You are the protagonist of it.
+>
+> **The child's actual household: never.** No question about what their family earns, what
+> their rent is, whether they have a garden or a car or two parents. Nothing is assumed and
+> nothing is asked (CONCEPT §6.4). Some children are living the hard version of this and must
+> not be handed a form about it.
 
-**The table.** Nana's income for the month, and eight envelopes:
+The fictional house is what makes the second rule keepable. A child who is managing *a* house
+learns everything a household budget teaches, and is never once asked about *their* house.
 
-`Home` · `Food` · `Getting about` · `Phone` · `School things` · `Health` · `Fun` · `Put by`
+### The housing ladder — this is the game
 
-Fixed envelopes are drawn with a padlock and cannot be moved. Variable ones have a slider.
-Learning which is which *by looking at the table* is half of Stage 3.
+Where you live **is** your level. Not an XP number: an address.
 
-**Run the month** and four weeks of events land — the electricity bill is higher than last
-year, the bus fare goes up, a school trip appears, a tooth needs fixing, a small bonus.
+| | Home | Weekly | What it changes |
+|---|---|---|---|
+| 0 | A room above the stall | rent only | Where everyone starts. Nothing to manage yet. |
+| 1 | A room with a window | rent + phone | Your first real bill, and it arrives whether or not you worked. |
+| 2 | A small flat | + power, water | Enough bills that a plan beats remembering. |
+| 3 | A flat with a kitchen | + internet | **A kitchen halves the food bill.** Spending money to lower a cost is a new idea, and it's the door to everything after it. |
+| 4 | A little house, bought | mortgage | Rent is forever; a mortgage ends. The first thing you own instead of rent. |
 
-**Three months, not three levels.** Difficulty comes from the income, not from more envelopes,
-because that is where it comes from in life:
+Each move needs a deposit saved up and shows the new weekly total **before** you commit. The
+app never blocks a move it thinks is a stretch — it shows what would be left over, and lets
+the child decide with the number in front of them.
 
-1. **A comfortable month.** Everything fits. The lesson is *Put by* — the envelope you can
-   only fill in a good month, which is exactly when nobody wants to.
-2. **A tight month.** It fits only if something gives. The app never says which. It shows the
-   trade-off and lets the child choose, then shows what that choice did in week four.
-3. **The month that doesn't add up.** Income is genuinely short of the fixed costs.
+### "Becoming rich", defined honestly
 
-The third month is the one that matters, and it must be handled with real care:
+The long game needs a finish line, and *a big number* is the wrong one — it teaches that more
+is the point and never arrives. So the meter is:
 
-- There is **no arrangement of the sliders that balances it.** A child who keeps trying is
-  right to keep trying, and the app tells them so.
-- What it teaches instead is **triage and voice**: which things must be paid first, which can
-  be talked about, and that *asking early* — the school about the trip, the provider about a
-  payment plan — is a financial skill and not an embarrassment.
-- It says plainly that a month that will not balance is **common, and happens to careful
-  people, and is not an arithmetic failure.** A finance app for children that never says this
-  is quietly telling every child in a stretched household that their family is bad at sums.
+> **Independence = what your money earns each week ÷ what your life costs each week.**
 
-Nana narrates it, because she is the one character who can say *"this happened to me"*
-without it being a lesson about the child.
+Bank interest, portfolio growth and shop profit on top; rent, bills and food underneath. At
+**100%** your money pays for your life and you never have to work another day unless you want
+to. That is the same win condition as Bizzopoly, and it is the honest definition of rich:
+*not a number, a ratio.* It also makes every earlier lesson matter — cutting a subscription
+moves the meter exactly as much as a good year in the market.
 
-**Capstone:** the child writes Nana's month as three sentences — what came in, what had to go
-out, and what they'd change. It prints, and it goes in the grown-up's weekly page.
+Milestones at 10%, 25%, 50%, 100%. The first one takes months, and it should.
 
----
+### Nana's table — the month that will not balance
+
+The hardest lesson survives, told about somebody else. Later in the ladder, Nana asks for help
+with **a month where the income is genuinely short of the fixed costs**. No arrangement of the
+envelopes balances it, and a child who keeps trying is right to keep trying — the app says so.
+
+What it teaches instead is **triage and voice**: what gets paid first, what can be talked
+about, and that asking early — the school about the trip, the provider about a payment plan —
+is a financial skill and not an embarrassment. It says plainly that a month that will not
+balance is common, happens to careful people, and is not an arithmetic failure. A finance app
+for children that never says this is quietly telling every child in a stretched household that
+their family is bad at sums.
+
+Nana narrates it, and it is *her* month, because that is the only way to teach it without
+pointing it at the child's own life.
 
 ## 8. Gating without walls
 
@@ -311,7 +328,7 @@ Ordered by how much of the above it unblocks.
 | 2 | **Every card and surface declares `needs: [M…]`**, and `content.js` carries the number spine | Nothing else here can be enforced until the prerequisites are data |
 | 3 | **Warm-ups + the fallback representation** (§8) | Turns the declarations into behaviour without building a wall |
 | 4 | **The portfolio builder** replaces the buy button (§6) | The single biggest gap between what we claim and what we teach |
-| 5 | **Nana's kitchen table** (§7) | The other named endpoint, and the strongest thing in this document |
+| 5 | **Your place** — the housing ladder and the Independence meter (§7) | Turns the app from a course into a game with a finish line |
 | 6 | Re-sequence the eight chapters onto the seven stages; write the missing Stage 0–1 cards | Current chapter 3 is doing two stages' work at once |
 | 7 | Rebalancing prompts, the plan card, the red-day quote-back | Makes the portfolio a habit rather than a purchase |
 

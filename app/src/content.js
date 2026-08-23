@@ -480,6 +480,35 @@ export const JOBS = [
   { id: 'books',   em: '📒', name: "Do Nana's books",    units: 12, who: 'Nana Bizz', lv: 11 },
 ];
 
+/* ── the housing ladder — where you live IS your level ───────────────────
+   The fictional house is what makes CONCEPT §6.4 keepable: a child manages
+   *a* household and is never once asked about *their* household. */
+export const HOMES = [
+  { id: 'room',   em: '🚪', name: 'A room above the stall', rent: 4,
+    bills: [], food: 10, deposit: 0,
+    blurb: 'Dry, small, and yours. Nothing to manage yet.' },
+  { id: 'window', em: '🪟', name: 'A room with a window', rent: 7,
+    bills: [{ name: 'Phone', units: 2 }], food: 10, deposit: 14,
+    blurb: 'Your first real bill — and it arrives whether or not you worked.' },
+  { id: 'flat',   em: '🏢', name: 'A small flat', rent: 12,
+    bills: [{ name: 'Phone', units: 2 }, { name: 'Power', units: 3 }, { name: 'Water', units: 1 }],
+    food: 10, deposit: 24,
+    blurb: 'Enough bills that a plan beats remembering.' },
+  /* Higher rent, four more bills — and CHEAPER overall, because the kitchen
+     halves the food line. Spending money to lower a cost is a new idea and it
+     only lands if the arithmetic actually rewards it. */
+  { id: 'kitchen', em: '🍳', name: 'A flat with a kitchen', rent: 15,
+    bills: [{ name: 'Phone', units: 2 }, { name: 'Power', units: 4 }, { name: 'Water', units: 2 }],
+    food: 4, deposit: 36, perk: 'kitchen',
+    blurb: 'Dearer rent, more bills — and it costs you less, because you can cook.' },
+  /* No rent at all. The mortgage is bigger than any single bill and it ends,
+     which is the whole difference between renting and owning. */
+  { id: 'house',  em: '🏡', name: 'A little house, bought', rent: 0,
+    bills: [{ name: 'Phone', units: 2 }, { name: 'Power', units: 5 }, { name: 'Water', units: 2 }, { name: 'Internet', units: 3 }, { name: 'Upkeep', units: 3 }],
+    food: 4, deposit: 120, perk: 'kitchen', owned: true, mortgage: { units: 320, weeks: 40 },
+    blurb: 'Rent is forever. A mortgage ends. The first thing you own instead of rent.' },
+];
+
 /* ── the store — the temptation engine ───────────────────────────────── */
 export const SHOP = [
   { id: 'lantern', em: '🏮', name: 'Festival lantern',   units: 8,  desc: 'Hangs over your stall. Purely lovely.' },
@@ -607,4 +636,12 @@ export const BADGES = {
   'chapter-c6':        { em: '📙', name: 'Borrowing',         desc: 'Chapter six, done.' },
   'chapter-c7':        { em: '📕', name: 'Money that grows',  desc: 'Chapter seven, done.' },
   'chapter-c8':        { em: '📕', name: 'Running something', desc: 'Chapter eight, done.' },
+  'moved-in':          { em: '🔑', name: 'Keys of your own',  desc: 'Moved somewhere better and could still afford Friday.' },
+  'homeowner':         { em: '🏡', name: 'Bought it',         desc: 'Stopped renting. A mortgage ends; rent does not.' },
+  'indep-10':          { em: '🌱', name: 'One tenth',         desc: 'A tenth of your life is paid for by your money.' },
+  'indep-25':          { em: '🌿', name: 'A quarter',         desc: 'Your money covers a quarter of your week.' },
+  'indep-50':          { em: '🌳', name: 'Halfway',           desc: 'Half your life, paid for without working.' },
+  'indep-100':         { em: '🏛️', name: 'Independent',       desc: 'Your money pays for your life. You work because you choose to.' },
+  'held-the-storm':    { em: '⛈️', name: 'Held through it',   desc: 'Sat still while everything was red.' },
+  'exact-change':      { em: '🪙', name: 'Exact change',      desc: 'Counted it right, at speed.' },
 };

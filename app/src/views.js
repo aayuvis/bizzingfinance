@@ -5,7 +5,7 @@ import { esc, sparkline, clamp } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
-import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER,
+import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   rankFor, rankObj, RANKS, shuffledDrill } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -73,8 +73,25 @@ export function viewHome() {
         <div><div class="k">Invested</div><div class="v">${money(c.money.bank.balance + sim.holdingsValue(c))}</div></div>
         <div><div class="k">Net worth</div><div class="v" style="color:var(--action)">${money(sim.netWorth(c))}</div></div></div>`;
 
+  const ind = sim.independence(c);
+  const cost = sim.weeklyCost(c);
+  const passive = sim.passiveWeekly(c);
+  const home = sim.homeOf(c);
+
   return `<div class="stack">
     ${strip}
+    ${sprout ? '' : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
+      <div class="row"><span style="font-size:24px">${home.em}</span><div class="grow">
+        <div class="eyebrow">Independence · what your money earns ÷ what your life costs</div>
+        <p style="font-weight:800;font-size:15px">${money(passive)} a week towards ${money(cost)}</p></div>
+        <div class="big" style="font-size:24px;color:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}">${Math.round(ind * 100)}%</div></div>
+      <div class="bar" style="margin-top:9px;height:11px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}"></i></div>
+      <p class="small muted" style="margin-top:7px">${ind >= 1
+        ? 'Your money pays for your life. You work because you choose to.'
+        : ind >= 0.5 ? 'Half your week is paid for without working. Keep going.'
+        : ind >= 0.1 ? 'A tenth of your life pays for itself. That first tenth is the slow one.'
+        : 'Nothing pays for itself yet. Every subscription you cancel moves this as much as a good year in the market.'}</p>
+    </button>`}
     <div class="town">
       <div class="town-scroll">${townSVG(c)}</div>
       <div class="town-cap"><span>🔥 ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
@@ -90,7 +107,7 @@ export function viewHome() {
       : `<div class="card row">
           <div class="grow"><div class="eyebrow">Pay day</div>
           <p style="font-weight:700">${d === 0 ? 'Later today' : d + ' day' + (d === 1 ? '' : 's') + ' — ' + weekday(c.money.nextPay)}</p>
-          <p class="small muted">${money(c.family.allowance != null ? c.family.allowance : c.money.wage)} in, ${money(c.money.bills.reduce((t, b) => t + b.amt, 0))} straight back out.</p></div>
+          <p class="small muted">${money(sim.weeklyIncome(c))} in, ${money(sim.weeklyCost(c))} straight back out.</p></div>
           <button class="btn ghost sm" data-act="sub" data-arg="jars">Check the jars</button>
         </div>`}
 
@@ -251,7 +268,9 @@ function viewGlossary() {
 /* ══ MONEY ════════════════════════════════════════════════════════════ */
 export function viewMoney() {
   const c = K(), lv = c.learn.level;
-  const subs = PLACES.map((p) => ({ k: p.sub, n: p.name.replace("Nana Bizz's shop", 'Your shop').replace('Your stall', 'Wallet').replace('The Jar Shed', 'Jars').replace('The Build Yard', 'Goals').replace('The Bank', 'Bank').replace('The Exchange', 'Exchange'), lv: p.lv }));
+  const NAMES = { place: 'Home', wallet: 'Wallet', jars: 'Jars', goals: 'Goals',
+    bank: 'Bank', portfolio: 'Exchange', business: 'Your shop' };
+  const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name, lv: p.lv }));
   let sub = R.s.ui.sub;
   if (!subs.find((x) => x.k === sub && lv >= x.lv)) sub = 'wallet';
 
@@ -265,7 +284,7 @@ export function viewMoney() {
         ${open ? '' : '🔒 '}${x.n}${open ? '' : ` <span style="font-family:var(--mono);font-size:11px">L${x.lv}</span>`}</button>`;
     }).join('')}</div>`;
 
-  const body = sub === 'jars' ? viewJars() : sub === 'goals' ? viewGoals()
+  const body = sub === 'place' ? viewPlace() : sub === 'jars' ? viewJars() : sub === 'goals' ? viewGoals()
     : sub === 'bank' ? viewBank() : sub === 'portfolio' ? viewExchange()
     : sub === 'business' ? viewBusiness() : viewWallet();
   return `<div class="stack">${strip}${body}</div>`;
@@ -307,6 +326,77 @@ function viewWallet() {
   </div>`;
 }
 
+function viewPlace() {
+  const c = K();
+  const h = sim.homeOf(c);
+  const bills = sim.refreshBills(c);
+  const cost = sim.weeklyCost(c);
+  const income = sim.weeklyIncome(c);
+  const left = income - cost;
+  const next = HOMES[c.home.tier + 1];
+  const chk = next ? sim.canMove(c, c.home.tier + 1) : null;
+  const M = c.home.mortgage;
+
+  return `<div class="stack">
+    <div class="card">
+      <div class="row"><span style="font-size:34px">${h.em}</span><div class="grow">
+        <div class="eyebrow">You live here</div>
+        <h2 style="font-size:21px;margin:2px 0 3px">${esc(h.name)}</h2>
+        <p class="small muted">${esc(h.blurb)}</p></div></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Every pay day, whether the week went well or not</div>
+      <div class="stack" style="gap:6px;margin-top:9px">
+        <div class="row"><span class="grow" style="font-weight:800;color:var(--grow)">Money in <span class="small muted" style="font-weight:600">· level ${c.learn.level} wage</span></span>
+          <b style="color:var(--grow)">+${money(income)}</b></div>
+        ${bills.map((b) => `<div class="row"><span class="grow muted">${esc(b.name)}</span><b>−${money(b.amt)}</b></div>`).join('')}
+        <div class="sep"></div>
+        <div class="row"><span class="grow" style="font-weight:800">What's left to live on</span>
+          <span class="big" style="font-size:22px;color:${left > 0 ? 'var(--ink)' : 'var(--spend)'}">${money(left)}</span></div>
+      </div>
+      <p class="small muted" style="margin-top:9px">${left > 0
+        ? 'That leftover is the only part you get to choose about. Everything above it already has a name.'
+        : 'Costs are bigger than income. That gap has to come from somewhere — savings, or somebody else.'}</p>
+    </div>
+
+    ${M ? `<div class="card" style="border-color:var(--save)">
+      <div class="eyebrow">Your mortgage</div>
+      <div class="row" style="margin-top:3px"><div class="grow">
+        <div class="big" style="font-size:24px">${money(M.owed)}</div>
+        <p class="small muted">left to pay · ${money(M.perWeek)} every pay day</p></div></div>
+      <div class="bar" style="margin-top:8px"><i style="width:${Math.round(M.paid / (M.paid + M.owed) * 100)}%;background:var(--save)"></i></div>
+      <p class="small muted" style="margin-top:7px">This one ends. Rent never does — that is the whole difference between renting and owning.</p>
+    </div>` : ''}
+
+    ${next ? `<div class="card">
+      <div class="eyebrow">Next along the street</div>
+      <div class="row" style="margin-top:4px"><span style="font-size:28px">${next.em}</span>
+        <div class="grow"><b style="font-size:16px">${esc(next.name)}</b>
+          <p class="small muted">${esc(next.blurb)}</p></div></div>
+      <div class="stack" style="gap:5px;margin-top:11px;font-size:14px">
+        <div class="row"><span class="grow muted">Deposit, once</span><b>${money(price(next.deposit))}</b></div>
+        <div class="row"><span class="grow muted">Every week after that</span>
+          <b>${money(price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food))}</b></div>
+        <div class="sep"></div>
+        <div class="row"><span class="grow" style="font-weight:800">Which would leave you</span>
+          <b style="color:${income - (price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food)) > 0 ? 'var(--ink)' : 'var(--spend)'}">
+            ${money(income - (price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food)))} a week</b></div>
+      </div>
+      <button class="btn wide" style="margin-top:12px" data-act="move" data-arg="${c.home.tier + 1}" ${chk.ok ? '' : 'disabled'}>
+        ${chk.ok ? 'Take it →' : 'Need ' + money(chk.deposit || 0) + ' for the deposit'}</button>
+      <p class="small muted" style="margin-top:8px">Nobody stops you moving somewhere you can barely afford. The number is right there, and the choice is yours.</p>
+    </div>` : `<div class="card" style="text-align:center;padding:24px">
+      <div style="font-size:34px">🏡</div>
+      <h3 style="margin:8px 0 4px">You own where you live</h3>
+      <p class="muted small">Top of the street. The only thing left to grow is what your money earns while you sleep.</p></div>`}
+
+    ${say('nana', c.home.tier === 0
+      ? 'A room of your own and rent going out on Friday. Everything else in this town is built on that one fact.'
+      : 'Notice what changed when you moved — not just the rent. Every room you add adds a bill behind it.')}
+  </div>`;
+}
+
 const JARMETA = { spend: ['Spend', 'var(--spend)', 'for now'], save: ['Save', 'var(--save)', 'for soon'],
   grow: ['Grow', 'var(--grow)', 'for far away'], give: ['Give', 'var(--give)', 'for someone else'] };
 function viewJars() {
@@ -327,7 +417,26 @@ function viewJars() {
       </div>
       <p class="small muted" style="margin-top:12px">Buttons move ${money(price(2))} at a time, out of your wallet (${money(c.money.wallet)}).</p>
     </div>
-    <div class="card stack">
+    ${c.learn.level < 11 ? `<div class="card stack">
+      <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
+      <p class="small muted">Every twenty coins that arrive, split like this:</p>
+      <div class="stack" style="gap:9px">
+        ${Object.keys(JARMETA).map((k) => {
+          const n = Math.round(r[k] / 5);
+          return `<div class="row" style="gap:9px">
+            <span style="width:58px;font-weight:800;font-size:13.5px;color:${JARMETA[k][1]}">${JARMETA[k][0]}</span>
+            <span class="grow" style="display:flex;gap:3px;flex-wrap:wrap">
+              ${Array.from({ length: 20 }, (_, i) => `<i style="width:13px;height:13px;border-radius:50%;display:block;background:${i < n ? JARMETA[k][1] : 'var(--line)'}"></i>`).join('')}
+            </span>
+            <div class="stepper"><button data-act="rule" data-arg="${k}:-5" aria-label="less ${JARMETA[k][0]}">−</button>
+            <span class="n">${n}</span>
+            <button data-act="rule" data-arg="${k}:5" aria-label="more ${JARMETA[k][0]}">+</button></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <p class="small ${tot === 100 ? 'muted' : ''}" style="${tot === 100 ? '' : 'color:var(--spend);font-weight:700'}">
+        ${tot === 100 ? 'Twenty coins, all spoken for. Good.' : 'That is ' + Math.round(tot / 5) + ' coins out of twenty. Every coin has to go somewhere.'}</p>
+    </div>` : `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
       ${Object.keys(JARMETA).map((k) => `<div class="row">
         <span style="width:58px;font-weight:800;font-size:13.5px;color:${JARMETA[k][1]}">${JARMETA[k][0]}</span>
@@ -338,7 +447,7 @@ function viewJars() {
       </div>`).join('')}
       <p class="small" style="${tot === 100 ? 'color:var(--muted)' : 'color:var(--spend);font-weight:700'}">
         ${tot === 100 ? 'Adds to 100%. Good.' : 'Adds to ' + tot + '%. It has to be 100 — the money has to go somewhere.'}</p>
-    </div>
+    </div>`}
   </div>`;
 }
 

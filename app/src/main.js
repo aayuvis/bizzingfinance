@@ -5,7 +5,7 @@ import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST } from './art.js';
 import { PLACES } from './town.js';
-import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK,
+import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES,
   rankFor, rankObj, shuffledDrill } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -84,6 +84,9 @@ function render() {
         aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${t.g}</span><span>${t.n}</span></button>`).join('')}
     </nav>
     ${R.overlay ? overlay() : ''}`;
+  /* string rendering blows the DOM away every frame, so a game with its own
+     loop re-attaches here rather than holding a stale node */
+  if (R.game && R.game.mount) R.game.mount();
   writeHash();
   sim.save(s);
 }
@@ -142,6 +145,9 @@ function overlay() {
       <div class="sep" style="margin:12px 0"></div>
       <div class="row"><span class="grow" style="font-weight:800">In your pocket now</span><span class="big" style="font-size:22px">${money(c.money.wallet)}</span></div>
       ${p.loanCleared ? '<div style="margin-top:10px;background:var(--grow-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px"><b>Loan cleared.</b> Your trust score went up, and the next one will be cheaper.</div>' : ''}
+      ${p.mortgageCleared ? '<div style="margin-top:10px;background:var(--grow-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px"><b>Mortgage cleared.</b> You own where you live outright. Rent would still be going out today.</div>' : ''}
+      ${(p.independence || []).map((id) => `<div style="margin-top:10px;background:var(--treasure-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px">
+        <b>${BADGES[id].em} ${esc(BADGES[id].name)}</b> — ${esc(BADGES[id].desc)}</div>`).join('')}
       ${say('pip', p.split ? 'Split before you could think about it. That is the point of a rule.' : 'Open the Jar Shed and set a rule — then this happens by itself.')}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market →</button>`);
   }
@@ -182,6 +188,26 @@ function overlay() {
         ? 'Revenue is the number people brag about. That one at the bottom is the one that decides whether you are open next year.'
         : 'A loss is information, not a verdict. Look at what the weather wanted and what you had on the counter.')}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Close up →</button>`);
+  }
+
+  if (o.kind === 'moved') {
+    const h = o.home;
+    const left = sim.weeklyIncome(c) - sim.weeklyCost(c);
+    return box(`
+      <div style="text-align:center"><div style="font-size:46px">${h.em}</div>
+        <div class="eyebrow">Keys</div>
+        <h2 style="margin:4px 0 8px;font-size:26px">${esc(h.name)}</h2>
+        <p class="muted">${esc(h.blurb)}</p></div>
+      <div class="stack" style="gap:6px;margin-top:14px">
+        ${c.money.bills.map((b) => `<div class="row"><span class="grow muted">${esc(b.name)}</span><b>−${money(b.amt)}</b></div>`).join('')}
+        <div class="sep"></div>
+        <div class="row"><span class="grow" style="font-weight:800">Left each week</span>
+          <span class="big" style="font-size:21px;color:${left > 0 ? 'var(--grow)' : 'var(--spend)'}">${money(left)}</span></div>
+      </div>
+      ${say('nana', left > 0
+        ? 'Every room you add adds a bill behind it. That is not a warning — it is just the arithmetic, and now you have seen it.'
+        : 'That is more going out than coming in. It is survivable for a while and it is not survivable forever. Worth knowing now.')}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in →</button>`);
   }
 
   if (o.kind === 'more') {
@@ -414,6 +440,17 @@ on('buyItem', (id) => {
   c.shop.owned.push(id);
   sim.stamp(c);
   sfx.coin(); toast(it.name + ' is yours'); render();
+});
+
+/* your place */
+on('move', (t) => {
+  const c = C(), tier = +t, h = HOMES[tier];
+  const chk = sim.canMove(c, tier);
+  if (!chk.ok) { toast(chk.why); sfx.bad(); return; }
+  if (!sim.moveHome(c, tier)) { toast('Could not move'); return; }
+  sfx.level(); confetti(45);
+  R.overlay = { kind: 'moved', home: h };
+  render();
 });
 
 /* the grown-up's page */

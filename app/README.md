@@ -1,8 +1,12 @@
 # app/ — Bizzington
 
-The Bizzing Finance web app. A town where a child earns, budgets, saves toward a building
-they can watch go up, banks, borrows, invests and runs a shop — all with money that is
-entirely simulated and entirely theirs.
+The Bizzing Finance web app. **You live in Bizzington.** You have a room of your own, rent
+that goes out on Friday whether the week went well or not, and a wage that grows as you
+learn. From there: budget it, save, bank it, borrow, invest, run a shop — and climb until
+your money pays for your life without you working.
+
+All of it simulated, all of it yours. The house is fictional, which is exactly what lets the
+app teach a household budget without ever asking a child about *their* household.
 
 ## Run it
 
@@ -30,7 +34,9 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 
 | Surface | State |
 |---|---|
-| **The town** | Six buildings, drawn locked or open from the child's level. Panning street on phones. |
+| **The town** | Seven buildings, starting with your own front door, drawn locked or open from the child's level. Panning street on phones. |
+| **Your place** | The housing ladder: room → room with a window → flat → flat with a kitchen → a house you buy. Rent, bills and food derive from where you live; moving shows the new weekly total *before* you commit. A kitchen costs more rent and less overall, because it halves the food line. |
+| **Independence** | "Rich" as a ratio, not a number: what your money earns each week ÷ what your life costs. At 100% you work because you choose to. Milestones at 10/25/50/100. |
 | **Learn** | 8 chapters · 32 cards · 30 levels · 5 ranks. Every card is a lesson, an example and one drill. |
 | **Money Words** | A searchable 44-term glossary in plain English. |
 | **Wallet** | Jobs on Market Row (one a day each), every movement dated, printable statement. |
@@ -40,7 +46,7 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 | **Exchange** | Four fictional companies replaying real market behaviour, an always-visible spread nudge, and the Time Machine. |
 | **Bizz & Co** | Stock, pricing with real demand elasticity, weather, spoilage, rent, and a daily profit statement. |
 | **Store** | Priced in the child's own money, every item showing its opportunity cost, optional 24-hour cooling-off. |
-| **Arcade** | Needs vs Wants · Scam Spotter · Budget Blitz · Times Twelve · The Snowball · The Market Cup. Keyboard **and** touch on all six. |
+| **Arcade** | Six action games — **Change Rush** (a real falling-coin game on canvas), Needs vs Wants, Scam Spotter, Budget Blitz, **Market Storm** (a game whose winning move is inaction) and The Market Cup — plus two quick drills. Keyboard **and** touch on all of them. |
 | **The postbox** | 22 letters; roughly one in six is a scam that looks exactly like the rest. |
 | **Grown-up's page** | What they learned, what they *decided*, talk-together prompts, a printable week, Family Mode, multiple children, currency, mode, sound. |
 | **PWA** | Manifest, icon, and a service worker that caches the shell. Installable, works offline. |
@@ -54,7 +60,7 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 | `src/content.js` | Curriculum, letters, jobs, glossary, shop, market, stock, badges — everything the app teaches. |
 | `src/town.js` | Bizzington, drawn from the child's level. |
 | `src/views.js` | Home · Learn · Money · Store · Progress · Parents · Collection. |
-| `src/arcade.js` | Six games. `twoChoice` and `quizGame` are shared shapes; the Market Cup is its own thing. |
+| `src/arcade.js` | Eight games. `twoChoice` and `quizGame` are shared shapes; Change Rush, Market Storm and the Market Cup each own their loop. Games with a loop implement `mount()` / `stop()` — string rendering replaces the DOM every frame, so a live game re-attaches after each render rather than holding a stale node. |
 | `src/main.js` | Shell, hash routing, overlays, and every `data-act` in one table. |
 | `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast in SVG. |
 
@@ -70,6 +76,8 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   leaderboard sorted by return alone tells a child the luckiest bet was the best decision.
 - **One currency.** Games pay wages into the same wallet the store spends from.
 - **Both keyboard and touch** on every game.
+- **Bills are derived from where you live**, never invented. `refreshBills()` is the only thing that writes them.
+- **Percentages are a display format.** The Jar Shed shows "1 coin in every 4" below level 11 and "25%" above it — same jar, same lesson, two ages (docs/03 §5).
 - **Option order is permuted from the card id** (`shuffledDrill`) — position leaks an answer
   as surely as text does.
 - **No number without a source.** Everything on screen is Bizzington's own arithmetic; no
@@ -87,3 +95,7 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 - Sprout mode hides the market and debt and cannot go negative, but the *reading level* is
   not yet differentiated.
 - The Market Cup replays one authored season. A shipping build wants many.
+- **Only the Jar Shed switches representation so far.** The bank rate, the store's ten-year
+  line and the Exchange's percentage moves still assume percent — docs/03 §1 says every one of
+  them must be sayable in coins.
+- The portfolio is still a Buy button, not the five-question builder in docs/03 §6.

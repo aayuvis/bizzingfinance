@@ -6,7 +6,7 @@
    magic money, and no randomised reward for money spent — anywhere. */
 
 import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
-import { money, price } from './fmt.js';
+import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say } from './art.js';
 import { ASSETS } from './content.js';
 import * as sim from './sim.js';
@@ -15,43 +15,51 @@ import { R } from './runtime.js';
 const K = () => sim.kid(R.s);
 
 export const GAMES = [
-  { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', lv: 1,
+  { id: 'cr', em: '🪙', name: 'Change Rush', keys: '← →', lv: 1, kind: 'action',
+    blurb: 'Coins are falling and you need exactly the right amount. Catch one too many and you have overpaid.' },
+  { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', lv: 1, kind: 'action',
     blurb: 'Sort it before the bell. Some are both, and those are the good ones.' },
-  { id: 'ss', em: '🛡️', name: 'Scam Spotter', keys: '← →', lv: 1,
+  { id: 'ss', em: '🛡️', name: 'Scam Spotter', keys: '← →', lv: 1, kind: 'action',
     blurb: 'Real message or trap? They are designed to look identical.' },
-  { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', lv: 6,
+  { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', lv: 6, kind: 'action',
     blurb: 'A month of money, and the bills arrive one at a time.' },
-  { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', lv: 6,
-    blurb: 'Small monthly numbers, turned into the number that is actually true.' },
-  { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', lv: 11,
-    blurb: 'Guess where compounding lands. Nobody guesses high enough.' },
-  { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', lv: 16,
+  { id: 'st', em: '⛈️', name: 'Market Storm', keys: 'space', lv: 16, kind: 'action',
+    blurb: 'Everything is red and everyone is shouting sell. The winning move is to do nothing, and it is much harder than it sounds.' },
+  { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', lv: 16, kind: 'action',
     blurb: 'Six weeks against Chaser, Panicker and Boring Bella. Bella is annoying.' },
+  { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', lv: 6, kind: 'drill',
+    blurb: 'Small monthly numbers, turned into the number that is actually true.' },
+  { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', lv: 11, kind: 'drill',
+    blurb: 'Guess where compounding lands. Nobody guesses high enough.' },
 ];
 
 export function viewArcade() {
   if (R.game) return R.game.view();
   const c = K();
+  const tile = (g) => {
+    const open = c.learn.level >= g.lv;
+    return `<button class="card" data-act="${open ? 'game' : 'locked'}" data-arg="${open ? g.id : g.lv}" style="text-align:left;width:100%;${open ? '' : 'opacity:.6'}">
+      <div class="row"><span style="font-size:30px">${open ? g.em : '🔒'}</span>
+        <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
+          <p class="small muted">${open ? esc(g.blurb) : 'Opens at level ' + g.lv}</p></div>
+        <span class="pill">${open ? g.keys : 'L' + g.lv}</span></div></button>`;
+  };
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
-    ${GAMES.map((g) => {
-      const open = c.learn.level >= g.lv;
-      return `<button class="card" data-act="${open ? 'game' : 'locked'}" data-arg="${open ? g.id : g.lv}" style="text-align:left;width:100%;${open ? '' : 'opacity:.6'}">
-        <div class="row"><span style="font-size:30px">${open ? g.em : '🔒'}</span>
-          <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
-            <p class="small muted">${open ? esc(g.blurb) : 'Opens at level ' + g.lv}</p></div>
-          <span class="pill">${open ? g.keys : 'L' + g.lv}</span></div></button>`;
-    }).join('')}
+    ${GAMES.filter((g) => g.kind === 'action').map(tile).join('')}
+    <div class="eyebrow" style="margin-top:6px">Quick drills — a minute each, no reflexes required</div>
+    ${GAMES.filter((g) => g.kind === 'drill').map(tile).join('')}
     ${c.market.best ? `<div class="card"><div class="eyebrow">Best Market Cup finish</div>
       <p style="font-weight:800">${esc(c.market.best)}</p></div>` : ''}
   </div>`;
 }
 
 export function startGame(id) {
-  const f = { nw: needsWants, ss: scamSpotter, bb: budgetBlitz, tt: timesTwelve, sn: snowball, mc: marketCup }[id];
-  if (f) { R.game = f(); sfx.click(); }
+  const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
+    st: marketStorm, tt: timesTwelve, sn: snowball, mc: marketCup }[id];
+  if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = f(); sfx.click(); }
 }
-export function quitGame() { R.game = null; }
+export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
 
 function hud(bits) {
   return `<div class="hud">${bits.map((b) => `<span class="box">${b}</span>`).join('')}
@@ -191,7 +199,7 @@ function scamSpotter() {
 /* ══ 3 · BUDGET BLITZ ═════════════════════════════════════════════════ */
 function budgetBlitz() {
   const c = K();
-  const pot = (c.family.allowance != null ? c.family.allowance : c.money.wage) * 4;
+  const pot = sim.weeklyIncome(c) * 4;
   const bills = [
     { n: 'Rent on the stall', u: 14, must: true }, { n: 'Food for the month', u: 22, must: true },
     { n: 'Bus pass', u: 8, must: true }, { n: 'A film with friends', u: 6, must: false },
@@ -521,4 +529,269 @@ function marketCup() {
 }
 
 export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSkip',
-  'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel'];
+  'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
+  'crLane', 'crGo', 'stSell', 'stPlan', 'stGo'];
+
+/* ══ CHANGE RUSH ══════════════════════════════════════════════════════
+   A real game loop, not a quiz with a hat on. Coins fall, you catch the
+   ones that make the amount exactly — and catching one too many is the
+   whole point: overpaying is a mistake you can feel. */
+function changeRush() {
+  const cur = CURRENCIES[currency()];
+  const COINS = cur.coins.slice(0, 5);
+  const LANES = 4, W = 360, H = 300;
+  const st = { target: 0, got: 0, lives: 3, round: 1, score: 0, lane: 1,
+    drops: [], t: 0, spawn: 0, done: false, flash: 0, msg: '' };
+  let raf = 0, last = 0, ctx = null, cv = null;
+
+  const newTarget = () => {
+    const n = 2 + Math.floor(Math.random() * 3);
+    let t = 0;
+    for (let i = 0; i < n; i++) t += COINS[Math.floor(Math.random() * COINS.length)];
+    st.target = t; st.got = 0; st.drops = []; st.spawn = 0;
+  };
+  newTarget();
+
+  const end = () => {
+    if (st.done) return;
+    st.done = true;
+    stop();
+    st.won = payout(Math.round(st.score * 0.5), 'Change Rush');
+    if (st.round > 4) sim.badge(K(), 'exact-change');
+    R.render();
+  };
+  const catchCoin = (v) => {
+    st.got += v;
+    if (st.got === st.target) {
+      st.score += 4 + st.round; st.round++; st.flash = 1; st.msg = 'Exact!';
+      sfx.coin(); newTarget();
+    } else if (st.got > st.target) {
+      st.lives--; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
+      sfx.bad(); newTarget();
+      if (st.lives <= 0) end();
+    } else { sfx.click(); }
+  };
+
+  const step = (ts) => {
+    if (st.done) return;
+    const dt = Math.min(50, ts - (last || ts)); last = ts;
+    st.t += dt;
+    st.spawn -= dt;
+    if (st.spawn <= 0) {
+      st.spawn = 620 - Math.min(320, st.round * 40);
+      const need = st.target - st.got;
+      /* always keep a coin on screen that can finish the job, or the game is
+         luck rather than arithmetic */
+      const usable = COINS.filter((v) => v <= need);
+      const v = (usable.length && Math.random() < 0.55)
+        ? usable[Math.floor(Math.random() * usable.length)]
+        : COINS[Math.floor(Math.random() * COINS.length)];
+      st.drops.push({ lane: Math.floor(Math.random() * LANES), y: -20, v });
+    }
+    const speed = 0.075 + st.round * 0.012;
+    st.drops.forEach((d) => { d.y += speed * dt; });
+    for (let i = st.drops.length - 1; i >= 0; i--) {
+      const d = st.drops[i];
+      if (d.y > H - 44 && d.y < H - 18 && d.lane === st.lane) { catchCoin(d.v); st.drops.splice(i, 1); }
+      else if (d.y > H + 24) st.drops.splice(i, 1);
+    }
+    if (st.flash) st.flash *= 0.93;
+    draw();
+    raf = requestAnimationFrame(step);
+  };
+
+  const draw = () => {
+    if (!ctx) return;
+    const cs = getComputedStyle(document.documentElement);
+    const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = tok('--tint', '#EDF2F2'); ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = tok('--line', '#DCE5E4'); ctx.lineWidth = 1;
+    for (let i = 1; i < LANES; i++) {
+      ctx.beginPath(); ctx.moveTo(i * (W / LANES), 0); ctx.lineTo(i * (W / LANES), H); ctx.stroke();
+    }
+    st.drops.forEach((d) => {
+      const x = d.lane * (W / LANES) + W / LANES / 2;
+      ctx.beginPath(); ctx.arc(x, d.y, 15, 0, Math.PI * 2);
+      ctx.fillStyle = tok('--treasure', '#F0B429'); ctx.fill();
+      ctx.fillStyle = '#5A3D00'; ctx.font = '700 13px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(d.v), x, d.y + 1);
+    });
+    const bx = st.lane * (W / LANES) + W / LANES / 2;
+    ctx.fillStyle = st.flash > 0.1 ? tok('--grow', '#178A4C') : st.flash < -0.1 ? tok('--spend', '#C4453C') : tok('--action', '#0E6B78');
+    ctx.beginPath();
+    ctx.moveTo(bx - 34, H - 34); ctx.lineTo(bx + 34, H - 34);
+    ctx.lineTo(bx + 26, H - 6); ctx.lineTo(bx - 26, H - 6); ctx.closePath(); ctx.fill();
+  };
+
+  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+
+  return {
+    id: 'cr',
+    mount() {
+      cv = document.getElementById('crCanvas');
+      if (!cv) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = W * dpr; cv.height = H * dpr;
+      ctx = cv.getContext('2d');
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!st.done) { last = 0; stop(); raf = requestAnimationFrame(step); }
+      cv.onpointerdown = (e) => {
+        const r = cv.getBoundingClientRect();
+        st.lane = clamp(Math.floor(((e.clientX - r.left) / r.width) * LANES), 0, LANES - 1);
+      };
+    },
+    stop,
+    key(e) {
+      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (e.key === 'ArrowLeft') st.lane = Math.max(0, st.lane - 1);
+      else if (e.key === 'ArrowRight') st.lane = Math.min(LANES - 1, st.lane + 1);
+    },
+    act(n, arg) { if (n === 'crLane') st.lane = clamp(+arg, 0, LANES - 1); },
+    view() {
+      if (st.done) return `<div class="stack">${hud(['Done'])}
+        ${endCard(st.round > 4 ? '🏅' : '🪙', st.round - 1 + ' exact', 'Score ' + st.score + '.', st.won,
+          'Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.', 'mags')}</div>`;
+      return `<div class="stack">
+        ${hud([`Need ${money(st.target)}`, `Got ${money(st.got)}`, '❤️'.repeat(Math.max(0, st.lives))])}
+        <div class="stage" style="min-height:0;padding:12px">
+          <div class="bar"><i style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? 'var(--spend)' : 'var(--action)'}"></i></div>
+          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
+            ${[0, 1, 2, 3].map((i) => `<button class="btn ${st.lane === i ? '' : 'ghost'}" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}
+          </div>
+          <p class="hint">${st.msg ? esc(st.msg) + ' · ' : ''}Arrow keys, or tap a lane. Stop at exactly the amount.</p>
+        </div></div>`;
+    },
+  };
+}
+
+/* ══ MARKET STORM ═════════════════════════════════════════════════════
+   A game whose winning move is inaction. The only big button sells; the
+   small one re-reads your own plan. Panic rises on its own and jumps every
+   time somebody shouts. Nothing else in the app can teach this. */
+const SHOUTS = [
+  ['bea', 'It is down again. I told you. GET OUT.'],
+  ['bea', 'Everyone is selling. Everyone.'],
+  ['mags', 'Sell me yours cheap and I will look after it for you.'],
+  ['bea', 'This one is not coming back. This one is different.'],
+  ['bo', 'I am buying more, but I would say that.'],
+  ['bea', 'Down eleven percent. ELEVEN.'],
+  ['mags', 'My cousin sold at the top. You could have been my cousin.'],
+  ['bea', 'It has never been this bad. Well — it has, but still.'],
+];
+function marketStorm() {
+  const START = 1000, LEN = 42000;
+  const st = { t: 0, panic: 0, val: START, low: START, line: [START, START, START], done: false,
+    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0 };
+  let iv = 0, last = 0;
+  const r = rng(4477);
+
+  const stop = () => { if (iv) cancelAnimationFrame(iv); iv = 0; };
+  const finish = (sold) => {
+    if (st.done) return;
+    st.done = true; st.sold = sold; stop();
+    /* the recovery is authored, not random: the lesson only lands if holding
+       is actually rewarded, and pretending otherwise would be a lie */
+    st.after = Math.round(START * 1.12);
+    st.soldAt = Math.round(st.val);
+    st.won = payout(sold ? 3 : 14, 'Market Storm');
+    if (!sold) sim.badge(K(), 'held-the-storm');
+    if (sold) sfx.bad(); else { sfx.level(); }
+    R.render();
+  };
+  const tick = (ts) => {
+    if (st.done) return;
+    const dt = Math.min(60, ts - (last || ts)); last = ts;
+    st.t += dt;
+    const p = st.t / LEN;
+    const wobble = (r() - 0.5) * 22;
+    st.val = Math.max(520, START * (1 - 0.34 * Math.sin(Math.min(1, p) * Math.PI * 0.92)) + wobble);
+    st.low = Math.min(st.low, st.val);
+    if (st.line.length < 120 && st.t - (st.lastPt || 0) > 350) { st.lastPt = st.t; st.line.push(Math.round(st.val)); }
+    st.panic = clamp(st.panic + dt * 0.0022, 0, 100);
+    st.shoutT -= dt; st.calmT = Math.max(0, st.calmT - dt);
+    if (st.shoutT <= 0) {
+      st.shoutT = 3400;
+      st.shout = SHOUTS[Math.floor(r() * SHOUTS.length)];
+      st.panic = clamp(st.panic + 11, 0, 100);
+      R.render();
+    }
+    if (st.panic >= 100) { finish(true); return; }
+    if (st.t >= LEN) { finish(false); return; }
+    const el = document.getElementById('stPanic');
+    if (el) el.style.width = st.panic.toFixed(1) + '%';
+    const vv = document.getElementById('stVal');
+    if (vv) vv.textContent = Math.round(st.val);
+    const tt = document.getElementById('stTime');
+    if (tt) tt.textContent = Math.ceil((LEN - st.t) / 1000);
+    /* the falling line is the emotional core, so it updates in the loop —
+       a full re-render every frame would thrash the whole document */
+    const ch = document.getElementById('stChart');
+    if (ch) ch.innerHTML = sparkline(st.line, 300, 62, 'var(--spend)');
+    iv = requestAnimationFrame(tick);
+  };
+  const calm = () => {
+    if (st.done || st.calmT > 0) return;
+    st.panic = clamp(st.panic - 26, 0, 100);
+    st.calmT = 2600;
+    sfx.good();
+    R.render();
+  };
+  return {
+    id: 'st',
+    mount() { if (!st.done && !iv) { last = 0; iv = requestAnimationFrame(tick); } },
+    stop,
+    key(e) {
+      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); calm(); }
+    },
+    act(n) { if (n === 'stSell') finish(true); else if (n === 'stPlan') calm(); },
+    view() {
+      if (st.done) {
+        return `<div class="stack">${hud(['Storm over'])}
+          <div class="stage" style="text-align:center;justify-content:center">
+            <div style="font-size:44px">${st.sold ? '📉' : '⛰️'}</div>
+            <h2>${st.sold ? 'You sold' : 'You held'}</h2>
+            <p class="muted">${st.sold
+              ? 'Locked in ' + st.soldAt + ' from ' + START + '. The fall became a loss the moment you sold.'
+              : 'It bottomed at ' + Math.round(st.low) + ' and came back to ' + st.after + '.'}</p>
+            <div class="card" style="box-shadow:none">
+              <div class="grid3">
+                <div><div class="small muted">Started</div><div style="font-weight:800">${START}</div></div>
+                <div><div class="small muted">Worst moment</div><div style="font-weight:800;color:var(--spend)">${Math.round(st.low)}</div></div>
+                <div><div class="small muted">${st.sold ? 'You got' : 'Ended'}</div>
+                  <div style="font-weight:800;color:${st.sold ? 'var(--spend)' : 'var(--grow)'}">${st.sold ? st.soldAt : st.after}</div></div>
+              </div>
+            </div>
+            ${say(st.sold ? 'bea' : 'nana', st.sold
+              ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go.'
+              : 'A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.')}
+            <p class="small muted">Earned ${money(st.won)}. Fictional market, real behaviour, nothing here is advice.</p>
+            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+          </div></div>`;
+      }
+      const sh = st.shout;
+      return `<div class="stack">
+        ${hud([`<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `<span id="stVal">${Math.round(st.val)}</span> / ${START}`])}
+        <div class="stage">
+          <div>
+            <div class="row"><span class="eyebrow grow">Panic</span>
+              <span class="small muted">${st.calmT > 0 ? 'reading your plan…' : 'space, or the small button'}</span></div>
+            <div class="bar" style="height:14px;margin-top:5px">
+              <i id="stPanic" style="width:${st.panic}%;background:linear-gradient(90deg,var(--treasure),var(--spend));transition:width .2s linear"></i></div>
+          </div>
+          <div id="stChart">${sparkline(st.line, 300, 62, 'var(--spend)')}</div>
+          ${sh ? say(sh[0], esc(sh[1])) : say('bo', 'It is going to be fine. Probably. I say that every week too.')}
+          <div class="card" style="box-shadow:none;border-style:dashed">
+            <div class="eyebrow">Your plan, in your words</div>
+            <p style="font-weight:650;font-size:14.5px">"I'm in for five years. I won't sell before then unless the company stops making anything."</p>
+          </div>
+          <div class="grow"></div>
+          <button class="btn wide" style="background:var(--spend)" data-act="stSell">SELL EVERYTHING</button>
+          <button class="btn ghost wide" data-act="stPlan" ${st.calmT > 0 ? 'disabled' : ''}>Re-read my plan · space</button>
+          <p class="hint">Doing nothing is the move. It will not feel like one.</p>
+        </div></div>`;
+    },
+  };
+}

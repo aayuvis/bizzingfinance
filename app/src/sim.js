@@ -6,7 +6,7 @@
 
 import { Store } from './store.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
-import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS } from './content.js';
+import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES } from './content.js';
 
 export const MARKET_STEPS = 60;
 
@@ -24,7 +24,7 @@ export function newChild(name, band, cur) {
       goals: [],
       txns: [{ id: 't0', t: now, kind: 'in', amt: price(12), label: 'Starting float from Nana', cat: 'gift' }],
       wage: price(20),
-      bills: [{ name: 'Phone plan', units: 6, amt: price(6) }, { name: 'Stall rent', units: 4, amt: price(4) }],
+      bills: [],
       nextPay: nextPayDay(now, 5),
       bank: { balance: 0, rate: 0.02, opened: false, loan: null, trust: 50, repaid: 0 },
     },
@@ -35,10 +35,90 @@ export function newChild(name, band, cur) {
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [] },
     shop: { owned: [], cooling: {} },
     jobs: {},
+    home: { tier: 0, since: now, mortgage: null },
     badges: [], history: [{ t: now, v: price(12) }],
     family: { allowance: null, payWeekday: 5, chores: [], coolOff: false },
   };
 }
+/* Bills are DERIVED from where you live. Nothing invents a cost out of the
+   air, and moving house changes the whole week at once — which is the lesson. */
+export function homeOf(c) { return HOMES[(c.home && c.home.tier) || 0]; }
+export function refreshBills(c) {
+  const h = homeOf(c);
+  const bills = [];
+  if (h.rent > 0) bills.push({ name: 'Rent', units: h.rent, amt: price(h.rent) });
+  h.bills.forEach((b) => bills.push({ name: b.name, units: b.units, amt: price(b.units) }));
+  bills.push({ name: h.perk === 'kitchen' ? 'Food (you cook)' : 'Food', units: h.food, amt: price(h.food) });
+  if (c.home.mortgage) bills.push({ name: 'Mortgage', units: 0, amt: c.home.mortgage.perWeek });
+  c.money.bills = bills;
+  return bills;
+}
+export function weeklyCost(c) { return refreshBills(c).reduce((t, b) => t + b.amt, 0); }
+/* What you know is what you're worth. A wage frozen at level 1 makes the top
+   of the housing ladder unreachable, which would teach that climbing is for
+   other people. Grows ~5.5% a rung: ₹200 at the start, ~₹520 by level 30. */
+export function wageFor(c) {
+  return Math.round(c.money.wage * (1 + (c.learn.level - 1) * 0.055));
+}
+export function weeklyIncome(c) { return c.family.allowance != null ? c.family.allowance : wageFor(c); }
+
+/* "Rich" is a ratio, not a number: what your money earns each week over what
+   your life costs each week. At 100% you work because you choose to. */
+export function passiveWeekly(c) {
+  const bank = c.money.bank.balance * c.money.bank.rate;
+  const invested = holdingsValue(c) * 0.0075;          // Bizzington's own simulated drift
+  const shop = c.biz && c.biz.log.length
+    ? c.biz.log.slice(0, 4).reduce((t, l) => t + l.profit, 0) / Math.min(4, c.biz.log.length) * 3
+    : 0;
+  return Math.max(0, Math.round(bank + invested + shop));
+}
+export function independence(c) {
+  const cost = weeklyCost(c);
+  if (cost <= 0) return 0;
+  return Math.min(2, passiveWeekly(c) / cost);
+}
+export function checkIndependence(c) {
+  const pct = independence(c) * 100;
+  const won = [];
+  [[10, 'indep-10'], [25, 'indep-25'], [50, 'indep-50'], [100, 'indep-100']].forEach(([at, id]) => {
+    if (pct >= at && badge(c, id)) won.push(id);
+  });
+  return won;
+}
+
+/* Moving never gets blocked — the app shows what would be left and lets the
+   child decide with the number in front of them. */
+export function canMove(c, tier) {
+  const h = HOMES[tier];
+  if (!h || tier !== (c.home.tier + 1)) return { ok: false, why: 'Not the next one along' };
+  const dep = price(h.deposit);
+  if (c.money.wallet + c.money.jars.save < dep) return { ok: false, why: 'Deposit is ' + dep, deposit: dep };
+  return { ok: true, deposit: dep };
+}
+export function moveHome(c, tier) {
+  const h = HOMES[tier];
+  const dep = price(h.deposit);
+  let short = dep - c.money.wallet;
+  if (short > 0) {
+    const take = Math.min(short, c.money.jars.save);
+    c.money.jars.save -= take; c.money.wallet += take; short -= take;
+  }
+  if (short > 0) return false;
+  c.money.wallet -= dep;
+  if (dep > 0) txn(c, 'out', dep, 'Deposit on ' + h.name, 'home');
+  if (h.mortgage) {
+    const total = price(h.mortgage.units);
+    c.home.mortgage = { owed: total, perWeek: Math.ceil(total / h.mortgage.weeks), weeks: h.mortgage.weeks, paid: 0 };
+    badge(c, 'homeowner');
+  }
+  c.home.tier = tier;
+  c.home.since = Date.now();
+  refreshBills(c);
+  badge(c, 'moved-in');
+  stamp(c);
+  return true;
+}
+
 export function newState() {
   return { v: 2, parent: { created: Date.now(), gate: false }, kids: [], active: 0,
     ui: { nav: 'home', sub: 'wallet' },
@@ -99,9 +179,14 @@ export function holdingsValue(c) {
 }
 export function bizValue(c) { return c.biz ? Math.round(c.biz.cash) : 0; }
 export function debt(c) { return c.money.bank.loan ? Math.round(c.money.bank.loan.owed) : 0; }
+export function homeEquity(c) {
+  const h = homeOf(c);
+  if (!h.owned) return 0;
+  return Math.round(price(h.mortgage ? h.mortgage.units : 0) * 1.15 - (c.home.mortgage ? c.home.mortgage.owed : 0));
+}
 export function netWorth(c) {
   return Math.round(c.money.wallet + jarTotal(c) + c.money.bank.balance
-    + holdingsValue(c) + bizValue(c) - debt(c));
+    + holdingsValue(c) + bizValue(c) + homeEquity(c) - debt(c));
 }
 export function stamp(c) {
   const h = c.history, v = netWorth(c);
@@ -134,7 +219,7 @@ export function runPayDay(c, state) {
 
   /* Family Mode: a parent mirrors a real allowance in, entirely by hand.
      No bank connection, ever (CONCEPT §8). */
-  const wage = c.family.allowance != null ? c.family.allowance : c.money.wage;
+  const wage = weeklyIncome(c);
   c.money.wallet += wage;
   txn(c, 'in', wage, 'Pay day — wages', 'wage');
   out.wage = wage;
@@ -201,6 +286,13 @@ export function runPayDay(c, state) {
     if (take > 0) { c.money.jars.save -= take; g.saved += take; checkGoal(c, g); }
   });
 
+  if (c.home.mortgage) {
+    const M = c.home.mortgage;
+    const bill = out.bills.find((b) => b.name === 'Mortgage');
+    if (bill) { M.owed = Math.max(0, M.owed - bill.amt); M.paid += bill.amt; }
+    if (M.owed <= 0) { c.home.mortgage = null; out.mortgageCleared = true; refreshBills(c); }
+  }
+  out.independence = checkIndependence(c);
   c.money.nextPay = nextPayDay(Date.now(), c.family.payWeekday == null ? 5 : c.family.payWeekday);
   c.market.step = Math.min(MARKET_STEPS, c.market.step + 1);
   c.market.lastMove = marketMove(c);
@@ -257,7 +349,7 @@ export function dropGoal(c, id) {
 }
 function checkGoal(c, g) { if (!g.done && g.saved >= g.target) { g.done = true; badge(c, 'goal-built'); } }
 export function weeksToGoal(c, g) {
-  const perWeek = Math.max(1, Math.round((c.family.allowance != null ? c.family.allowance : c.money.wage) * c.money.rules.save / 100));
+  const perWeek = Math.max(1, Math.round(weeklyIncome(c) * c.money.rules.save / 100));
   return Math.ceil(Math.max(0, g.target - g.saved) / perWeek);
 }
 
@@ -477,6 +569,7 @@ export function load() {
     if (!c.shop.cooling) c.shop.cooling = {};
     if (!c.family) c.family = { allowance: null, payWeekday: 5, chores: [], coolOff: false };
     if (c.money.bank.trust == null) { c.money.bank.trust = 50; c.money.bank.repaid = 0; c.money.bank.loan = null; }
+    if (!c.home) { c.home = { tier: 0, since: Date.now(), mortgage: null }; refreshBills(c); }
   });
   if (!s.ui) s.ui = { nav: 'home', sub: 'wallet' };
   if (s.active >= s.kids.length) s.active = 0;

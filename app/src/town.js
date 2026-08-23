@@ -6,15 +6,16 @@
 import { esc } from './ui.js';
 
 export const PLACES = [
-  { key: 'wallet',   x: 20,  sub: 'wallet',    name: 'Your stall',       lv: 1,  blurb: 'Market Row — where the money you earn actually sits' },
-  { key: 'jars',     x: 175, sub: 'jars',      name: 'The Jar Shed',     lv: 6,  blurb: 'four jars, and a rule that splits your pay day by itself' },
-  { key: 'goals',    x: 330, sub: 'goals',     name: 'The Build Yard',   lv: 8,  blurb: 'name a thing and watch it go up floor by floor' },
-  { key: 'bank',     x: 485, sub: 'bank',      name: 'The Bank',         lv: 11, blurb: 'the clock strikes interest, in public, every pay day' },
-  { key: 'exchange', x: 640, sub: 'portfolio', name: 'The Exchange',     lv: 16, blurb: 'Bo and Bea keep the board and neither of them knows' },
-  { key: 'shop',     x: 795, sub: 'business',  name: "Nana Bizz's shop", lv: 23, blurb: 'shuttered since she retired. Yours when you are ready' },
+  { key: 'place',    x: 20,  sub: 'place',     name: 'Your place',       lv: 1,  blurb: 'where you live, and what it costs you every single week' },
+  { key: 'wallet',   x: 175, sub: 'wallet',    name: 'Your stall',       lv: 1,  blurb: 'Market Row — where the money you earn actually sits' },
+  { key: 'jars',     x: 330, sub: 'jars',      name: 'The Jar Shed',     lv: 6,  blurb: 'four jars, and a rule that splits your pay day by itself' },
+  { key: 'goals',    x: 485, sub: 'goals',     name: 'The Build Yard',   lv: 8,  blurb: 'name a thing and watch it go up floor by floor' },
+  { key: 'bank',     x: 640, sub: 'bank',      name: 'The Bank',         lv: 11, blurb: 'the clock strikes interest, in public, every pay day' },
+  { key: 'exchange', x: 795, sub: 'portfolio', name: 'The Exchange',     lv: 16, blurb: 'Bo and Bea keep the board and neither of them knows' },
+  { key: 'shop',     x: 950, sub: 'business',  name: "Nana Bizz's shop", lv: 23, blurb: 'shuttered since she retired. Yours when you are ready' },
 ];
 
-const W = 960, H = 348, G = 250;
+const W = 1115, H = 348, G = 250;
 
 function plaque(x, w, lv) {
   return `<g>
@@ -28,6 +29,33 @@ function label(x, w, text, on) {
      hard-coded ink is readable on the tan ground and invisible on the dark. */
   return `<text x="${x + w / 2}" y="${G + 22}" text-anchor="middle" font-size="12.5" font-weight="800"
     fill="var(--ink)" opacity="${on ? '.85' : '.5'}">${esc(text)}</text>`;
+}
+
+function dwelling(x, tier) {
+  const walls = ['#B9A98C', '#C6B58F', '#D3BE96', '#E0C79E', '#E8CFA8'][tier] || '#B9A98C';
+  const roof = ['#8A6A4E', '#96745A', '#A57E5E', '#B0866A', '#B8563F'][tier] || '#8A6A4E';
+  const storeys = tier >= 2 ? 2 : 1;
+  const h = storeys === 2 ? 118 : 78;
+  let win = '';
+  const rows = storeys === 2 ? [G - 108, G - 62] : [G - 66];
+  rows.forEach((wy) => {
+    const n = tier >= 2 ? 3 : tier >= 1 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      win += `<rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="#F6E9C8"/>
+        <rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="none" stroke="${roof}" stroke-width="2"/>`;
+    }
+  });
+  return `<g>
+    <rect x="${x + 8}" y="${G - h}" width="114" height="${h}" fill="${walls}" rx="3"/>
+    <path d="M${x} ${G - h} L${x + 65} ${G - h - 34} L${x + 130} ${G - h} Z" fill="${roof}"/>
+    ${win}
+    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" rx="2" fill="${roof}"/>
+    <circle cx="${x + 73}" cy="${G - 17}" r="2" fill="#F0B429"/>
+    ${tier >= 3 ? `<rect x="${x + 96}" y="${G - h - 26}" width="12" height="26" fill="${roof}"/>
+      <ellipse cx="${x + 102}" cy="${G - h - 32}" rx="9" ry="6" fill="rgba(255,255,255,.5)"/>` : ''}
+    ${tier >= 4 ? `<rect x="${x + 6}" y="${G - 14}" width="118" height="14" rx="4" fill="#7FA86F"/>
+      <circle cx="${x + 22}" cy="${G - 16}" r="6" fill="#5F8A52"/><circle cx="${x + 110}" cy="${G - 16}" r="5" fill="#5F8A52"/>` : ''}
+  </g>`;
 }
 
 function stall(x, on) {
@@ -157,7 +185,8 @@ export function townSVG(c) {
   const build = (p) => {
     const on = isOpen(p, lv);
     let art = '';
-    if (p.key === 'wallet') art = stall(p.x, on);
+    if (p.key === 'place') art = dwelling(p.x, (c.home && c.home.tier) || 0);
+    else if (p.key === 'wallet') art = stall(p.x, on);
     else if (p.key === 'jars') art = shed(p.x, on, jars);
     else if (p.key === 'goals') art = yard(p.x, on, prog);
     else if (p.key === 'bank') art = bank(p.x, on, hour);
@@ -201,7 +230,7 @@ export function townSVG(c) {
     <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
     ${PLACES.map(build).join('')}
-    <g aria-hidden="true" transform="translate(146,204) scale(.72)"><g class="bob">
+    <g aria-hidden="true" transform="translate(301,204) scale(.72)"><g class="bob">
       <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
       <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>
       <ellipse cx="16" cy="44" rx="12" ry="14" fill="#D98338"/>
