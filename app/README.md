@@ -46,7 +46,7 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 | **Exchange** | Four fictional companies replaying real market behaviour, an always-visible spread nudge, and the Time Machine. |
 | **Bizz & Co** | Stock, pricing with real demand elasticity, weather, spoilage, rent, and a daily profit statement. |
 | **Store** | Priced in the child's own money, every item showing its opportunity cost, optional 24-hour cooling-off. |
-| **Arcade** | Six action games — **Change Rush** (a real falling-coin game on canvas), Needs vs Wants, Scam Spotter, Budget Blitz, **Market Storm** (a game whose winning move is inaction) and The Market Cup — plus two quick drills. Keyboard **and** touch on all of them. |
+| **Arcade** | Eleven games in three shelves. **Main Street** (the board game) · eight action games — Change Rush, Needs vs Wants, Scam Spotter, Budget Blitz, **Compound Climb** (hold to grow, and you can be wiped out), **Stall Rush** (sixty seconds of customers), **Market Storm** (a game whose winning move is inaction), The Market Cup · two quick drills. Keyboard **and** touch on every one. |
 | **The postbox** | 22 letters; roughly one in six is a scam that looks exactly like the rest. |
 | **Grown-up's page** | What they learned, what they *decided*, talk-together prompts, a printable week, Family Mode, multiple children, currency, mode, sound. |
 | **PWA** | Manifest, icon, and a service worker that caches the shell. Installable, works offline. |
@@ -60,7 +60,8 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 | `src/content.js` | Curriculum, letters, jobs, glossary, shop, market, stock, badges — everything the app teaches. |
 | `src/town.js` | Bizzington, drawn from the child's level. |
 | `src/views.js` | Home · Learn · Money · Store · Progress · Parents · Collection. |
-| `src/arcade.js` | Eight games. `twoChoice` and `quizGame` are shared shapes; Change Rush, Market Storm and the Market Cup each own their loop. Games with a loop implement `mount()` / `stop()` — string rendering replaces the DOM every frame, so a live game re-attaches after each render rather than holding a stale node. |
+| `src/arcade.js` | The hub and ten games. `twoChoice` and `quizGame` are shared shapes; Change Rush, Compound Climb, Stall Rush, Market Storm and the Market Cup each own their loop. Games with a loop implement `mount()` / `stop()` — string rendering replaces the DOM every frame, so a live game re-attaches after each render rather than holding a stale node. |
+| `src/board.js` | **Main Street** — the board game. Twenty squares, three players, chance cards that are real money events, and a win condition that is the Independence meter on a board: your shops pay for your life. Nobody goes bankrupt. |
 | `src/main.js` | Shell, hash routing, overlays, and every `data-act` in one table. |
 | `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast in SVG. |
 
@@ -95,6 +96,8 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 - Sprout mode hides the market and debt and cannot go negative, but the *reading level* is
   not yet differentiated.
 - The Market Cup replays one authored season. A shipping build wants many.
+- Main Street is you plus two bots. Pass-and-play for two to four humans is the
+  obvious next step and the rules already allow it.
 - **Only the Jar Shed switches representation so far.** The bank rate, the store's ten-year
   line and the Exchange's percentage moves still assume percent — docs/03 §1 says every one of
   them must be sayable in coins.

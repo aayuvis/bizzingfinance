@@ -321,7 +321,7 @@ first release needs rather than the depth a third one will:
 | The bank: interest, a loan whose total cost shows first, a trust score | Insurance, tax |
 | The Exchange, research nudges, the Time Machine | Company research cards as a collectible |
 | Bizz & Co: stock, pricing with real demand response, weather, spoilage, rent | Hiring, a second stall |
-| Six arcade games, keyboard and touch | Bizzopoly — the board game is the largest single unbuilt piece |
+| Eleven games: the board game, eight action games, two drills — keyboard and touch throughout | Pass-and-play for 2–4 humans on the board |
 | The postbox: 22 letters, roughly one in six a scam | — |
 | The grown-up's page: what they decided, Family Mode, several children, a printable week | Server-side entitlements; a parent gate |
 | Offline PWA, hash routing, currency conversion | Accounts, sync, and a server-authoritative clock |

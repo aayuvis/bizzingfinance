@@ -644,4 +644,6 @@ export const BADGES = {
   'indep-100':         { em: '🏛️', name: 'Independent',       desc: 'Your money pays for your life. You work because you choose to.' },
   'held-the-storm':    { em: '⛈️', name: 'Held through it',   desc: 'Sat still while everything was red.' },
   'exact-change':      { em: '🪙', name: 'Exact change',      desc: 'Counted it right, at speed.' },
+  'climbed':           { em: '🗼', name: 'Over the line',      desc: 'Fifteen years of compounding, and still standing.' },
+  'main-street':       { em: '🎲', name: 'Main Street',        desc: 'Your shops paid for your life. Nobody went bankrupt.' },
 };

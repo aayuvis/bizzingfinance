@@ -541,9 +541,12 @@ function requeue(field) {
   if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 }
 
+document.addEventListener('keyup', (e) => {
+  if (R.game && R.game.keyup && !R.overlay) R.game.keyup(e);
+});
 document.addEventListener('keydown', (e) => {
   if (R.game && R.game.key && !R.overlay) {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)
       && document.activeElement && document.activeElement.tagName !== 'INPUT') e.preventDefault();
     R.game.key(e);
     return;

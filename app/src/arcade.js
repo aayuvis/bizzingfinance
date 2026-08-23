@@ -8,7 +8,8 @@
 import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
 import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say } from './art.js';
-import { ASSETS } from './content.js';
+import { ASSETS, STOCK } from './content.js';
+import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 
@@ -23,10 +24,16 @@ export const GAMES = [
     blurb: 'Real message or trap? They are designed to look identical.' },
   { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', lv: 6, kind: 'action',
     blurb: 'A month of money, and the bills arrive one at a time.' },
+  { id: 'cc', em: '🗼', name: 'Compound Climb', keys: 'hold space', lv: 11, kind: 'action',
+    blurb: 'Hold to grow the tower. Hold longer for more — and past a point it can go backwards, and you can be wiped out.' },
+  { id: 'sr', em: '🫖', name: 'Stall Rush', keys: '1–4 · R', lv: 6, kind: 'action',
+    blurb: 'Sixty seconds of customers. Serve them, restock, and find out whether busy and profitable are the same thing.' },
   { id: 'st', em: '⛈️', name: 'Market Storm', keys: 'space', lv: 16, kind: 'action',
     blurb: 'Everything is red and everyone is shouting sell. The winning move is to do nothing, and it is much harder than it sounds.' },
   { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', lv: 16, kind: 'action',
     blurb: 'Six weeks against Chaser, Panicker and Boring Bella. Bella is annoying.' },
+  { id: 'mn', em: '🎲', name: 'Main Street', keys: '⏎ · Y/N', lv: 8, kind: 'board',
+    blurb: 'The board game. Buy the shops, collect the rent, and win when your street pays for your life — nobody goes bankrupt.' },
   { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', lv: 6, kind: 'drill',
     blurb: 'Small monthly numbers, turned into the number that is actually true.' },
   { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', lv: 11, kind: 'drill',
@@ -46,6 +53,9 @@ export function viewArcade() {
   };
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
+    <div class="eyebrow">The board game · about ten minutes, and nobody goes bankrupt</div>
+    ${GAMES.filter((g) => g.kind === 'board').map(tile).join('')}
+    <div class="eyebrow" style="margin-top:6px">A few minutes each</div>
     ${GAMES.filter((g) => g.kind === 'action').map(tile).join('')}
     <div class="eyebrow" style="margin-top:6px">Quick drills — a minute each, no reflexes required</div>
     ${GAMES.filter((g) => g.kind === 'drill').map(tile).join('')}
@@ -56,7 +66,8 @@ export function viewArcade() {
 
 export function startGame(id) {
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
-    st: marketStorm, tt: timesTwelve, sn: snowball, mc: marketCup }[id];
+    cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
+    mc: marketCup, mn: mainStreet }[id];
   if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = f(); sfx.click(); }
 }
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
@@ -530,7 +541,271 @@ function marketCup() {
 
 export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSkip',
   'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
-  'crLane', 'crGo', 'stSell', 'stPlan', 'stGo'];
+  'crLane', 'crGo', 'stSell', 'stPlan', 'stGo',
+  'ccHold', 'ccRelease', 'srServe', 'srStock',
+  'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd'];
+
+/* ══ COMPOUND CLIMB ═══════════════════════════════════════════════════
+   Risk and return as a physical feeling. Hold to charge the year's growth:
+   charge more for a higher average AND a wider swing, past a point wide
+   enough to go backwards. Fifteen years, and you can be wiped out — which
+   is the half of "high return" nobody puts on the poster. */
+function compoundClimb() {
+  const YEARS = 15, START = 100, TARGET = 420, W = 360, H = 320;
+  const st = { year: 0, money: START, charge: 0, holding: false, done: false,
+    hist: [START], last: null, ruined: false, peak: START };
+  let raf = 0, prev = 0, ctx = null, cv = null;
+  const r = rng(8821);
+
+  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+  const finish = () => {
+    if (st.done) return;
+    st.done = true; stop();
+    st.won = payout(Math.max(3, Math.round(st.money / 22)), 'Compound Climb');
+    if (st.money >= TARGET) sim.badge(K(), 'climbed');
+    sfx.level(); R.render();
+  };
+  const release = () => {
+    if (st.done || !st.holding) return;
+    st.holding = false;
+    const ch = st.charge / 100;
+    const mean = ch * 0.22;                     // 0 % → 22 % expected
+    const vol = ch * ch * 0.34;                 // and the swing grows faster than the return
+    const actual = mean + (r() + r() - 1) * vol;
+    const before = st.money;
+    st.money = Math.max(0, st.money * (1 + actual));
+    st.hist.push(Math.round(st.money));
+    st.peak = Math.max(st.peak, st.money);
+    st.last = { pct: actual, before, after: st.money };
+    st.year++;
+    st.charge = 0;
+    if (st.money < 20) { st.ruined = true; finish(); return; }
+    if (actual < 0) sfx.bad(); else sfx.coin();
+    if (st.year >= YEARS) { finish(); return; }
+    R.render();
+  };
+  const press = () => { if (!st.done && !st.holding) { st.holding = true; st.charge = 0; } };
+
+  const step = (ts) => {
+    if (st.done) return;
+    const dt = Math.min(60, ts - (prev || ts)); prev = ts;
+    if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075);
+    draw();
+    const bar = document.getElementById('ccCharge');
+    if (bar) bar.style.width = st.charge.toFixed(1) + '%';
+    raf = requestAnimationFrame(step);
+  };
+  const draw = () => {
+    if (!ctx) return;
+    const cs = getComputedStyle(document.documentElement);
+    const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = tok('--tint', '#EDF2F2'); ctx.fillRect(0, 0, W, H);
+    const top = Math.max(TARGET * 1.15, st.peak * 1.1);
+    const y = (v) => H - 14 - (v / top) * (H - 40);
+    // the line you are climbing towards
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = tok('--grow', '#178A4C'); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, y(TARGET)); ctx.lineTo(W, y(TARGET)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = tok('--grow', '#178A4C'); ctx.font = '600 11px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText('target', 6, y(TARGET) - 6);
+    // the tower: one block a year, so compounding is a shape rather than a claim
+    const bw = Math.max(6, (W - 40) / YEARS);
+    st.hist.forEach((v, i) => {
+      const bx = 20 + i * bw;
+      const grew = i === 0 || v >= st.hist[i - 1];
+      ctx.fillStyle = grew ? tok('--action', '#0E6B78') : tok('--spend', '#C4453C');
+      ctx.globalAlpha = i === st.hist.length - 1 ? 1 : 0.75;
+      ctx.fillRect(bx, y(v), bw - 3, H - 14 - y(v));
+    });
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = tok('--ink', '#16262A'); ctx.font = '800 15px system-ui'; ctx.textAlign = 'right';
+    ctx.fillText(String(Math.round(st.money)), W - 8, Math.max(16, y(st.money) - 8));
+  };
+
+  return {
+    id: 'cc',
+    mount() {
+      cv = document.getElementById('ccCanvas');
+      if (!cv) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = W * dpr; cv.height = H * dpr;
+      ctx = cv.getContext('2d');
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); }
+      const btn = document.getElementById('ccBtn');
+      if (btn) {
+        btn.onpointerdown = (e) => { e.preventDefault(); press(); };
+        btn.onpointerup = (e) => { e.preventDefault(); release(); };
+        btn.onpointerleave = () => { if (st.holding) release(); };
+      }
+    },
+    stop,
+    key(e) {
+      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if ((e.key === ' ' || e.key === 'Spacebar') && e.type === 'keydown') press();
+    },
+    keyup(e) { if (e.key === ' ' || e.key === 'Spacebar') release(); },
+    act(n) { if (n === 'ccHold') press(); else if (n === 'ccRelease') release(); },
+    view() {
+      if (st.done) {
+        const reached = st.money >= TARGET;
+        return `<div class="stack">${hud(['Fifteen years'])}
+          ${endCard(st.ruined ? '💀' : reached ? '🗼' : '📈',
+            st.ruined ? 'Wiped out in year ' + st.year : Math.round(st.money) + ' from ' + START,
+            st.ruined ? 'Nothing left to compound. That is the half of "high return" nobody puts on the poster.'
+              : reached ? 'Over the line.'
+                : 'Short of the line, and still ' + (st.money / START).toFixed(1) + '× what you started with.',
+            st.won,
+            st.ruined ? 'Growth needs something left to grow. A swing big enough to double you is big enough to end you.'
+              : 'The middle charge usually wins. Not the safe one, not the wild one — the one you can survive fifteen times in a row.',
+            'nana')}</div>`;
+      }
+      const l = st.last;
+      return `<div class="stack">
+        ${hud([`Year ${st.year + 1} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
+        <div class="stage" style="min-height:0;padding:12px">
+          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          ${l ? `<div style="background:${l.pct >= 0 ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:10px 12px;font-size:13.5px;text-align:center">
+            Year ${st.year}: <b>${l.pct >= 0 ? '+' : ''}${(l.pct * 100).toFixed(1)}%</b> · ${Math.round(l.before)} → ${Math.round(l.after)}</div>` : ''}
+          <div>
+            <div class="row"><span class="eyebrow grow">This year's growth</span>
+              <span class="small muted">longer = more, and wilder</span></div>
+            <div class="bar" style="height:16px;margin-top:5px">
+              <i id="ccCharge" style="width:${st.charge}%;background:linear-gradient(90deg,var(--grow),var(--treasure) 55%,var(--spend))"></i></div>
+          </div>
+          <button class="btn wide" id="ccBtn" style="padding:18px" data-act="noop">HOLD TO GROW</button>
+          <p class="hint">Hold space or the button, let go to lock the year in. Steady beats spectacular — usually.</p>
+        </div></div>`;
+    },
+  };
+}
+
+/* ══ STALL RUSH ═══════════════════════════════════════════════════════
+   Sixty seconds of customers, so that "busy" and "profitable" can come
+   apart in front of the child rather than in a sentence. */
+function stallRush() {
+  const LEN = 60000, MAXQ = 4;
+  const st = { t: 0, cash: 0, revenue: 0, spent: 0, served: 0, lost: 0,
+    stock: { chai: 3, ice: 3, umbrella: 2, rope: 2 }, q: [], done: false,
+    spawn: 900, restock: 0, msg: '' };
+  let raf = 0, prev = 0, nid = 0;
+  const r = rng(3312);
+  const items = STOCK.map((x) => x.id);
+
+  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+  const finish = () => {
+    if (st.done) return;
+    st.done = true; stop();
+    st.profit = st.revenue - st.spent;
+    st.won = payout(Math.max(2, Math.round(st.profit / 14)), 'Stall Rush');
+    if (st.profit > 0) sim.badge(K(), 'profit-day');
+    sfx.level(); R.render();
+  };
+  const serve = (id) => {
+    if (st.done) return;
+    const i = st.q.findIndex((c) => c.want === id);
+    if (i < 0) { sfx.bad(); st.msg = 'Nobody is waiting for that'; R.render(); return; }
+    if (!st.stock[id]) { sfx.bad(); st.msg = 'Out of ' + id + ' — restock costs time'; R.render(); return; }
+    const item = STOCK.find((x) => x.id === id);
+    st.stock[id]--; st.q.splice(i, 1);
+    st.revenue += price(item.sells); st.served++;
+    st.msg = ''; sfx.coin(); R.render();
+  };
+  const restock = () => {
+    if (st.done || st.restock > 0) return;
+    let cost = 0;
+    STOCK.forEach((x) => { const add = 3 - (st.stock[x.id] || 0); if (add > 0) { st.stock[x.id] += add; cost += price(x.cost) * add; } });
+    if (!cost) { st.msg = 'Everything is already stocked'; R.render(); return; }
+    st.spent += cost; st.restock = 2600;
+    st.msg = 'Restocked for ' + money(cost) + ' — and the queue did not wait';
+    sfx.click(); R.render();
+  };
+  const step = (ts) => {
+    if (st.done) return;
+    const dt = Math.min(60, ts - (prev || ts)); prev = ts;
+    st.t += dt;
+    st.restock = Math.max(0, st.restock - dt);
+    st.spawn -= dt;
+    let dirty = false;
+    if (st.spawn <= 0 && st.q.length < MAXQ) {
+      st.spawn = 900 + r() * 700;
+      st.q.push({ id: ++nid, want: items[Math.floor(r() * items.length)], patience: 1 });
+      dirty = true;
+    }
+    for (let i = st.q.length - 1; i >= 0; i--) {
+      st.q[i].patience -= dt / 9000;
+      if (st.q[i].patience <= 0) { st.q.splice(i, 1); st.lost++; dirty = true; sfx.bad(); }
+    }
+    if (st.t >= LEN) { finish(); return; }
+    const tl = document.getElementById('srTime');
+    if (tl) tl.textContent = Math.ceil((LEN - st.t) / 1000);
+    st.q.forEach((c) => { const b = document.getElementById('srP' + c.id); if (b) b.style.width = Math.max(0, c.patience * 100) + '%'; });
+    if (dirty) R.render();
+    raf = requestAnimationFrame(step);
+  };
+  return {
+    id: 'sr',
+    mount() { if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); } },
+    stop,
+    key(e) {
+      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= items.length) serve(items[n - 1]);
+      else if (e.key === 'r' || e.key === 'R') restock();
+    },
+    act(n, arg) { if (n === 'srServe') serve(arg); else if (n === 'srStock') restock(); },
+    view() {
+      if (st.done) {
+        return `<div class="stack">${hud(['Closed'])}
+          <div class="stage" style="justify-content:center;text-align:center">
+            <div style="font-size:44px">${st.profit > 0 ? '💹' : '📉'}</div>
+            <h2>${st.profit >= 0 ? '+' : '−'}${money(Math.abs(st.profit))} profit</h2>
+            <div class="card" style="box-shadow:none">
+              <div class="grid3">
+                <div><div class="small muted">Took</div><div style="font-weight:800;color:var(--grow)">${money(st.revenue)}</div></div>
+                <div><div class="small muted">Spent on stock</div><div style="font-weight:800">${money(st.spent)}</div></div>
+                <div><div class="small muted">Served</div><div style="font-weight:800">${st.served}</div></div>
+              </div>
+            </div>
+            <p class="small muted">${st.lost} customer${st.lost === 1 ? '' : 's'} gave up waiting.</p>
+            ${say('nana', st.revenue > 0 && st.profit <= 0
+              ? 'You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent.'
+              : 'Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.')}
+            <p class="small muted">Earned ${money(st.won)}.</p>
+            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+          </div></div>`;
+      }
+      return `<div class="stack">
+        ${hud([`<span id="srTime">${Math.ceil((LEN - st.t) / 1000)}</span>s`,
+          `took ${money(st.revenue)}`, `stock ${money(st.spent)}`, `lost ${st.lost}`])}
+        <div class="stage">
+          <div class="eyebrow">The queue</div>
+          <div class="stack" style="gap:7px;min-height:132px">
+            ${st.q.length ? st.q.map((c) => {
+              const item = STOCK.find((x) => x.id === c.want);
+              return `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+                <span style="font-size:22px">${item.em}</span>
+                <span class="grow"><b style="font-size:14px">${esc(item.name)}</b>
+                  <div class="bar" style="height:5px;margin-top:5px"><i id="srP${c.id}" style="width:${c.patience * 100}%;background:var(--treasure);transition:none"></i></div></span>
+                <span class="pill">${money(price(item.sells))}</span></div>`;
+            }).join('') : '<p class="small muted">Nobody yet. They come in waves.</p>'}
+          </div>
+          ${st.msg ? `<p class="small" style="color:var(--spend);font-weight:650;text-align:center">${esc(st.msg)}</p>` : ''}
+          <div class="choices" style="grid-template-columns:repeat(4,1fr)">
+            ${STOCK.map((x, i) => `<button class="btn ${st.stock[x.id] ? '' : 'ghost'}" data-act="srServe" data-arg="${x.id}"
+              style="flex-direction:column;gap:1px;padding:8px 3px;font-size:11px;line-height:1.15">
+              <span style="font-size:18px">${x.em}</span>
+              <span style="font-weight:800">${esc(x.name)}</span>
+              <span style="opacity:.75;font-family:var(--mono);font-size:10.5px">${i + 1} · ${st.stock[x.id] || 0} left</span></button>`).join('')}
+          </div>
+          <button class="btn ghost wide" data-act="srStock" ${st.restock > 0 ? 'disabled' : ''}>
+            ${st.restock > 0 ? 'Restocking…' : 'R · Restock everything'}</button>
+          <p class="hint">Number keys to serve, R to restock. Restocking costs money and takes time you do not have.</p>
+        </div></div>`;
+    },
+  };
+}
 
 /* ══ CHANGE RUSH ══════════════════════════════════════════════════════
    A real game loop, not a quiz with a hat on. Coins fall, you catch the
