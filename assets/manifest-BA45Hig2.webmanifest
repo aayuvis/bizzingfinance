@@ -1,0 +1,15 @@
+{
+  "name": "Bizzing Finance — Bizzington",
+  "short_name": "Bizzington",
+  "description": "A town where kids 8+ get a wallet, a budget, a bank and a portfolio that are entirely simulated and entirely theirs.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFCF5",
+  "theme_color": "#0E6B78",
+  "categories": ["education", "finance", "kids"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
