@@ -7,7 +7,7 @@
 import { Store } from './store.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
-  WORLDS, QUESTS, chapterDone, worldOpen, isOpen } from './content.js';
+  WORLDS, QUESTS, FIXES, SHOP, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
 
@@ -38,6 +38,7 @@ export function newChild(name, band, cur) {
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },
     world: 0,
+    fix: { prog: {}, done: [] },
     quests: { day: dayIndex(now), list: [], prog: {}, claimed: {}, bonus: false },
     badges: [], history: [{ t: now, v: price(12) }],
     family: { allowance: null, payWeekday: 5, chores: [], coolOff: false },
@@ -202,15 +203,29 @@ export function stamp(c) {
 export function jobsToday(c) {
   const d = dayIndex(Date.now());
   const w = WORLDS[c.world || 0];
-  return JOBS.filter((j) => w.jobs.includes(j.id))
-    .map((j) => ({ ...j, done: c.jobs[j.id] === d, amt: price(j.units) }));
+  let ids = w.jobs.slice();
+  /* Anything you mended or bought that creates work names the job it creates,
+     so a perk can never quietly grant a job the world already had. */
+  FIXES.forEach((f) => { if (f.adds && c.fix.done.includes(f.id)) ids.push(f.adds); });
+  SHOP.forEach((x) => { if (x.adds && c.shop.owned.includes(x.id)) ids.push(x.adds); });
+  /* and a bicycle reaches the next world's work a world early */
+  if (hasPerk(c, 'bicycle') && WORLDS[(c.world || 0) + 1]) ids = ids.concat(WORLDS[(c.world || 0) + 1].jobs);
+  ids = [...new Set(ids)];
+  return JOBS.filter((j) => ids.includes(j.id)).map((j) => {
+    let amt = price(j.units);
+    if (hasPerk(c, 'cargo') && j.id === 'cargo') amt = Math.round(amt * 1.5);
+    if (hasPerk(c, 'netpay') && j.id === 'nets') amt = Math.round(amt * 1.5);
+    if (hasPerk(c, 'rain') || hasPerk(c, 'coat')) amt = Math.round(amt * 1.15);
+    return { ...j, done: c.jobs[j.id] === d, amt };
+  });
 }
 export function doJob(c, id) {
   const d = dayIndex(Date.now());
   const j = JOBS.find((x) => x.id === id);
   if (!j || c.jobs[id] === d) return 0;
   c.jobs[id] = d;
-  const a = earn(c, price(j.units), j.name + ' for ' + j.who, 'job');
+  const row = jobsToday(c).find((x) => x.id === id);
+  const a = earn(c, row ? row.amt : price(j.units), j.name + ' for ' + j.who, 'job');
   questTick(c, 'job', 1);
   stamp(c);
   return a;
@@ -235,6 +250,52 @@ export function travel(c, i) {
 }
 export function worldsOpen(c) { return WORLDS.filter((w, i) => worldOpen(c, i)).length; }
 
+/* ── putting the town right ──────────────────────────────────────────────
+   You pay towards a broken thing a bit at a time, exactly like a goal — and
+   when it is finished the world changes and it pays you back every day
+   afterwards. That contrast is the point: money spent on something that
+   produces is not the same as money spent on something that doesn't, and a
+   child learns it by watching one choice keep paying and the other not. */
+export function fixState(c, f) {
+  const cost = price(f.units);
+  const put = (c.fix.prog[f.id] || 0);
+  return { cost, put, done: c.fix.done.includes(f.id), left: Math.max(0, cost - put),
+    pct: Math.min(1, put / cost), locked: !!(f.needs && !chapterDone(c, f.needs)) };
+}
+export function townFixes(c, worldId) {
+  return fixesIn(worldId || WORLDS[c.world || 0].id).map((f) => ({ ...f, ...fixState(c, f) }));
+}
+export function putRight(c, id, amount) {
+  const f = FIXES.find((x) => x.id === id);
+  if (!f || c.fix.done.includes(id)) return 0;
+  const st = fixState(c, f);
+  if (st.locked) return 0;
+  const a = Math.min(Math.round(amount), c.money.wallet, st.left);
+  if (a <= 0) return 0;
+  c.money.wallet -= a;
+  c.fix.prog[id] = (c.fix.prog[id] || 0) + a;
+  txn(c, 'out', a, 'Towards ' + f.name, 'town');
+  questTick(c, 'town', a);
+  if (c.fix.prog[id] >= st.cost) {
+    c.fix.done.push(id);
+    badge(c, 'put-right');
+    if (c.fix.done.length >= 4) badge(c, 'rebuilder');
+  }
+  stamp(c);
+  return a;
+}
+/* One question the whole app asks of a perk: have you got it? Fixes and shop
+   things answer it the same way, so nothing has to know where a perk came from. */
+export function hasPerk(c, perk) {
+  if (FIXES.some((f) => f.perk === perk && c.fix.done.includes(f.id))) return true;
+  return SHOP.some((s) => s.perk === perk && c.shop.owned.includes(s.id));
+}
+export function townProgress(c) {
+  const w = WORLDS[c.world || 0];
+  const all = fixesIn(w.id);
+  return { done: all.filter((f) => c.fix.done.includes(f.id)).length, all: all.length };
+}
+
 /* ── daily quests ────────────────────────────────────────────────────────
    Three a day, the same three for every child in the house, paying WAGES —
    not a second currency. Rolled from the date so they can be talked about at
@@ -243,10 +304,21 @@ export function rollQuests(c) {
   const d = dayIndex(Date.now());
   if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
   const pool = QUESTS.filter((q) => !q.needs || chapterDone(c, q.needs));
+  /* the town can only ask for help with something once it has something broken
+     you are allowed to touch */
+  if (!townFixes(c).some((f) => !f.done && !f.locked)) {
+    const i = pool.findIndex((q) => q.kind === 'town');
+    if (i >= 0) pool.splice(i, 1);
+  }
   const picked = [];
   let h = (d * 2654435761) >>> 0;
   const avail = pool.slice();
   while (picked.length < Math.min(3, avail.length)) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    picked.push(avail.splice(h % avail.length, 1)[0]);
+  }
+  const slots = hasPerk(c, 'quest') ? 4 : 3;
+  while (picked.length < Math.min(slots, avail.length + picked.length) && avail.length) {
     h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
     picked.push(avail.splice(h % avail.length, 1)[0]);
   }
@@ -318,6 +390,14 @@ export function runPayDay(c, state) {
     out.bills.push(b);
   });
 
+  if (hasPerk(c, 'lockbox') && c.money.jars.save > 0) {
+    const i = Math.round(c.money.jars.save * 0.01);
+    if (i > 0) { c.money.jars.save += i; txn(c, 'in', i, 'The lockbox', 'interest'); out.lockbox = i; }
+  }
+  if (hasPerk(c, 'cat')) {
+    const found = price(2);
+    c.money.wallet += found; txn(c, 'in', found, 'The cat turned something up', 'gift'); out.cat = found;
+  }
   if (c.money.bank.opened && c.money.bank.balance > 0) {
     const i = Math.round(c.money.bank.balance * c.money.bank.rate);
     if (i > 0) { c.money.bank.balance += i; txn(c, 'in', i, 'Bank interest', 'interest'); out.interest = i; }
@@ -655,6 +735,7 @@ export function load() {
     if (c.money.bank.trust == null) { c.money.bank.trust = 50; c.money.bank.repaid = 0; c.money.bank.loan = null; }
     if (!c.home) { c.home = { tier: 0, since: Date.now(), mortgage: null }; refreshBills(c); }
     if (c.world == null) c.world = 0;
+    if (!c.fix) c.fix = { prog: {}, done: [] };
     if (!c.quests) c.quests = { day: -1, list: [], prog: {}, claimed: {}, bonus: false };
   });
   if (!s.ui) s.ui = { nav: 'home', sub: 'wallet' };

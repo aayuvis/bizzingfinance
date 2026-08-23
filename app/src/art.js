@@ -2,6 +2,8 @@
    Warm, round, no teeth on anybody. Mags is drawn friendly on purpose:
    she is the impulse, not the villain (docs/02 §6). */
 
+import { art } from './art-gen.js';
+
 const F = (id, bg, body) =>
   `<svg viewBox="0 0 64 64" role="img" aria-label="${id}"><rect width="64" height="64" fill="${bg}"/>${body}</svg>`;
 
@@ -79,9 +81,21 @@ export const CAST = {
   },
 };
 
+/* The drawn portrait if we have one, the hand-authored SVG if we don't — so
+   a missing asset degrades to the old art instead of to a hole. */
 export function face(who, size) {
   const c = CAST[who] || CAST.pip;
-  return `<span class="who" style="${size ? `width:${size}px;height:${size}px` : ''}">${c.svg}</span>`;
+  const img = art('cast-' + who);
+  const inner = img
+    ? `<img src="${img}" alt="${c.name}" width="256" height="256" loading="lazy"
+        style="width:100%;height:100%;object-fit:cover;display:block">`
+    : c.svg;
+  return `<span class="who" style="${size ? `width:${size}px;height:${size}px` : ''}">${inner}</span>`;
+}
+export function portrait(who) {
+  const c = CAST[who] || CAST.pip;
+  const img = art('cast-' + who);
+  return img ? `<img src="${img}" alt="${c.name}" style="width:100%;height:100%;object-fit:cover;display:block">` : c.svg;
 }
 
 /* A line of dialogue. Everything the app teaches is said by somebody. */

@@ -3,3 +3,10 @@ app/node_modules
 app/dist/
 app/build/
 .DS_Store
+
+# never commit keys or generated source art
+.env
+.env.*
+*.gkey
+.gkey
+tools/art/*.png

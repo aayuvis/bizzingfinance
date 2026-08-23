@@ -5,6 +5,7 @@
 
 import { esc } from './ui.js';
 import { WORLDS, isOpen as chapterOpen, needFor } from './content.js';
+import { art } from './art-gen.js';
 
 export const PLACES = [
   { key: 'place',    x: 20,  sub: 'place',     name: 'Your place',       lv: 1,  blurb: 'where you live, and what it costs you every single week' },
@@ -190,6 +191,7 @@ export function townSVG(c) {
   const startX = Math.max(PAD, (W - here.length * SPAN) / 2);
   const xOf = (i) => startX + i * SPAN;
 
+  const plate = art('world-' + world.id);
   const lanterns = Array.from({ length: 7 }, (_, i) =>
     lantern(70 + i * ((W - 140) / 6), i < Math.min(7, streak))).join('');
 
@@ -229,8 +231,10 @@ export function townSVG(c) {
       </linearGradient>
     </defs>
     <rect width="${W}" height="${H}" fill="url(#sky)"/>
-    <rect width="${W}" height="${G}" fill="${world.tint}" opacity=".22"/>
-    <circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
+    ${plate ? `<image href="${plate}" x="0" y="0" width="${W}" height="${H}"
+      preserveAspectRatio="xMidYMid slice" opacity=".96"/>` : ''}
+    ${plate ? '' : `<rect width="${W}" height="${G}" fill="${world.tint}" opacity=".22"/>`}
+    ${plate ? '' : `<circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
     <g fill="rgba(255,255,255,.6)">
       <ellipse cx="150" cy="70" rx="34" ry="15"/><ellipse cx="178" cy="62" rx="24" ry="17"/>
       <ellipse cx="520" cy="52" rx="28" ry="13"/><ellipse cx="546" cy="46" rx="20" ry="14"/>
@@ -238,10 +242,10 @@ export function townSVG(c) {
     <g stroke="rgba(40,60,64,.35)" stroke-width="1.6" fill="none" stroke-linecap="round">
       <path d="M300 82 q7-6 14 0 q7-6 14 0"/><path d="M352 62 q6-5 12 0 q6-5 12 0"/>
     </g>
-    <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>
+    <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>`}
     ${lanterns}
-    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
-    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="${world.tint}" opacity=".3"/>
+    ${plate ? '' : `<rect x="0" y="${G}" width="${W}" height="${H - G}" fill="var(--ground)"/>
+    <rect x="0" y="${G}" width="${W}" height="${H - G}" fill="${world.tint}" opacity=".3"/>`}
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
     <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="12" font-weight="800"
       fill="var(--ink)" opacity=".45">${world.em} ${esc(world.name)}</text>

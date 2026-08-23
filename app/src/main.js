@@ -5,7 +5,7 @@ import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST } from './art.js';
 import { PLACES } from './town.js';
-import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS,
+import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -212,6 +212,19 @@ function overlay() {
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in →</button>`);
   }
 
+  if (o.kind === 'mended') {
+    const f = o.fix;
+    return box(`
+      <div style="text-align:center"><div style="font-size:48px">${f.em}</div>
+        <div class="eyebrow">Mended</div>
+        <h2 style="margin:4px 0 8px;font-size:26px">${esc(f.name)}</h2>
+        <p class="muted">${esc(f.fixed)}</p></div>
+      <div style="margin-top:14px;background:var(--grow-tint);color:var(--grow);border-radius:var(--r-md);padding:12px 14px;font-weight:700">
+        ⚙ ${esc(f.gives)}</div>
+      ${say('pip', 'That is yours now, and it stays. Every day from here it pays you back a little — which is the whole difference between spending on a thing and spending on a thing that <b>does</b> something.')}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">Go and look →</button>`);
+  }
+
   if (o.kind === 'world') {
     const w = o.world;
     return box(`
@@ -278,6 +291,17 @@ on('travel', (i) => {
   sfx.level(); confetti(35);
   R.overlay = { kind: 'world', world: w };
   R.s.ui.nav = 'home'; render();
+});
+on('putRight', (id) => {
+  const c = C();
+  const a = sim.putRight(c, id, price(10));
+  if (!a) { toast('Nothing in the wallet for it'); sfx.bad(); return; }
+  const f = FIXES.find((x) => x.id === id);
+  if (c.fix.done.includes(id)) {
+    sfx.level(); confetti(45);
+    R.overlay = { kind: 'mended', fix: f };
+  } else { sfx.coin(); toast('+' + money(a) + ' towards ' + f.name); }
+  render();
 });
 on('claim', (id) => {
   const a = sim.claimQuest(C(), id);

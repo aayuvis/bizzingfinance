@@ -430,6 +430,7 @@ export const QUESTS = [
   { id: 'q-scam',   em: '🛡️', kind: 'scam',   n: 1, pay: 9,  t: 'Spot a scam',               sub: 'In the postbox or in Scam Spotter.' },
   { id: 'q-board',  em: '🎲', kind: 'board',  n: 1, pay: 12, t: 'Finish a game of Main Street', sub: 'About ten minutes.', needs: 'c1' },
   { id: 'q-invest', em: '📈', kind: 'invest', n: 1, pay: 10, t: 'Add to your holdings',      sub: 'From the Grow jar, as always.', needs: 'c7' },
+  { id: 'q-town',   em: '🔧', kind: 'town',   n: 40, pay: 8,  t: 'Put 40 towards the town', sub: 'Whatever is broken where you are.' },
   { id: 'q-shop',   em: '🏪', kind: 'trade',  n: 1, pay: 10, t: 'Trade a day at Bizz & Co',  sub: 'Open the doors and count it honestly.', needs: 'c8' },
 ];
 
@@ -589,6 +590,11 @@ export const JOBS = [
   { id: 'books',   em: '📒', name: "Do Nana's books",   units: 12, who: 'Nana Bizz' },
   { id: 'runner',  em: '📨', name: 'Run the orders',    units: 11, who: 'the floor manager' },
   { id: 'board',   em: '🖍️', name: 'Chalk up the board', units: 13, who: 'Bo and Bea, arguing' },
+  /* These belong to nobody's world — they exist because you bought or mended
+     the thing that creates them. */
+  { id: 'haul',      em: '🛒', name: 'Haul for the Row',  units: 7,  who: 'anyone with too much to carry', perk: true },
+  { id: 'lamplight', em: '🏮', name: 'Work after dark',   units: 9,  who: 'the late boats', perk: true },
+  { id: 'counter',   em: '🏪', name: "Mind Nana's counter", units: 10, who: 'Nana Bizz', perk: true },
 ];
 
 /* ── the housing ladder — where you live IS your level ───────────────────
@@ -620,16 +626,114 @@ export const HOMES = [
     blurb: 'Rent is forever. A mortgage ends. The first thing you own instead of rent.' },
 ];
 
-/* ── the store — the temptation engine ───────────────────────────────── */
+/* ── restorations — the town is run down, and you put it right ───────────
+   The engine the app was missing. Every one of these costs real money out of
+   the same wallet the Store spends from, permanently changes the world, and
+   pays you back in capability rather than in a number. That is also the
+   sharpest money lesson in the product: spending on something that produces
+   is not the same as spending on something that doesn't — and a child learns
+   it by watching one choice pay them every day afterwards and the other not. */
+export const FIXES = [
+  // Market Row
+  { id: 'fountain', world: 'market', em: '⛲', name: 'The dry fountain', units: 120,
+    broken: 'Bone dry since before you got here. Nobody meets by it any more.',
+    fixed: 'Running again, and the Row has somewhere to gather.',
+    perk: 'quest', gives: 'The town can carry a fourth quest each day.' },
+  { id: 'boxes', world: 'market', em: '🌼', name: 'The flower boxes', units: 60,
+    broken: 'Empty, cracked, full of last year’s soil.',
+    fixed: 'Planted up. It is only flowers. It changes the whole street.',
+    perk: 'streak', gives: 'Your streak pays a little more every day.' },
+  { id: 'awnings', world: 'market', em: '⛱️', name: 'The stall awnings', units: 80,
+    broken: 'Torn down in a storm and never replaced. Rain stops trade.',
+    fixed: 'Striped canvas the length of the Row.',
+    perk: 'rain', gives: 'Work pays more on wet days.' },
+  { id: 'shutters', world: 'market', em: '🏪', name: "Nana's shutters", units: 200, needs: 'c2',
+    broken: 'Closed since she retired. Everyone still calls it Nana’s.',
+    fixed: 'Open, swept, and somebody is behind the counter.',
+    perk: 'job', adds: 'counter', gives: 'A new job on the Row, every day, for good.' },
+  // The Old Harbour
+  { id: 'crane', world: 'harbour', em: '🏗️', name: 'The seized crane', units: 180,
+    broken: 'Rusted solid. Cargo comes off by hand, slowly.',
+    fixed: 'Turning again, and a boat empties in an hour.',
+    perk: 'cargo', gives: 'Cargo work pays half as much again.' },
+  { id: 'tideboard', world: 'harbour', em: '🌊', name: 'The tide board', units: 120,
+    broken: 'Blank. Nobody knows when the boats land, so nobody is ready.',
+    fixed: 'Chalked up daily. You can see what is coming.',
+    perk: 'tide', gives: 'You can see when the boats land — and being ready pays double.' },
+  { id: 'loft', world: 'harbour', em: '🕸️', name: 'The net loft', units: 90,
+    broken: 'Roof gone. The nets rot faster than anyone can mend them.',
+    fixed: 'Dry, and full of work.',
+    perk: 'netpay', gives: 'Net work pays half as much again.' },
+  { id: 'pierlamp', world: 'harbour', em: '🏮', name: 'The lamp on the pier', units: 60,
+    broken: 'Dark by four in winter. Nothing happens after that.',
+    fixed: 'Lit. The quay keeps working after dark.',
+    perk: 'night', adds: 'lamplight', gives: 'A job that only exists after dark.' },
+  // Clocktower Square
+  { id: 'clock', world: 'clock', em: '🕰️', name: 'The stopped clock', units: 250,
+    broken: 'Stopped at ten past four. Nobody knows when anything falls due — and late costs more.',
+    fixed: 'Striking the hour again, and the whole square can see the date.',
+    perk: 'bills', gives: 'You can see every bill before it lands.' },
+  { id: 'steps', world: 'clock', em: '🏛️', name: 'The bank steps', units: 100,
+    broken: 'Cracked and roped off. You go in by the side door, apologetically.',
+    fixed: 'Swept stone and a front door you can walk through.',
+    perk: 'rate', gives: 'Borrowing costs you less.' },
+  { id: 'notices', world: 'clock', em: '📋', name: 'The notice board', units: 80,
+    broken: 'Bare. Anyone wanting help has no way to ask.',
+    fixed: 'Papered with jobs and requests.',
+    perk: 'requests', gives: 'Townspeople can ask you for things.' },
+  // The Exchange Quarter
+  { id: 'ticker', world: 'exchange', em: '📟', name: 'The ticker', units: 300,
+    broken: 'Silent. Prices reach the floor an hour late, which is worse than not at all.',
+    fixed: 'Chattering away. Everyone sees the same number at the same time.',
+    perk: 'prices', gives: 'Live prices instead of yesterday’s.' },
+  { id: 'reading', world: 'exchange', em: '📚', name: 'The reading room', units: 200,
+    broken: 'Locked. People buy things they have never read a word about.',
+    fixed: 'Open, quiet, and full of what companies actually do.',
+    perk: 'research', gives: 'A research card for everything on the board.' },
+  { id: 'bench', world: 'exchange', em: '🪑', name: "Bella's bench", units: 150,
+    broken: 'Broken. She has nowhere to sit, so she goes straight home.',
+    fixed: 'Mended. She stays, and she will talk to you.',
+    perk: 'bella', gives: 'Boring Bella will actually teach you.' },
+  // The Works
+  { id: 'kiln', world: 'works', em: '🔥', name: 'The cold kiln', units: 400,
+    broken: 'Out. Everything has to be bought in, at somebody else’s price.',
+    fixed: 'Lit. You can make instead of buy.',
+    perk: 'make', gives: 'Stock costs you less to make than to buy.' },
+  { id: 'sign', world: 'works', em: '🪧', name: 'The shop sign', units: 150,
+    broken: 'Fallen. People walk past because they do not know you are there.',
+    fixed: 'Up, painted, and visible from the corner.',
+    perk: 'trade', gives: 'More customers every trading day.' },
+  { id: 'cart', world: 'works', em: '🛒', name: 'The delivery cart', units: 250,
+    broken: 'A wheel off. Everything is carried.',
+    fixed: 'Rolling. You can sell further than you can walk.',
+    perk: 'trade', gives: 'More customers again.' },
+];
+export function fixesIn(world) { return FIXES.filter((f) => f.world === world); }
+
+/* ── the store — capability, not hats ────────────────────────────────────
+   Every item does something, because a reward that does nothing terminates
+   the loop in an abstraction and an eight-year-old correctly concludes that
+   nothing they did mattered. Two lovely useless things stay on purpose,
+   priced beside the useful ones with the opportunity cost under both — the
+   choice between useful and lovely is real and the app shouldn't pretend
+   otherwise. */
 export const SHOP = [
-  { id: 'lantern', em: '🏮', name: 'Festival lantern',   units: 8,  desc: 'Hangs over your stall. Purely lovely.' },
-  { id: 'cap',     em: '🧢', name: 'Market cap',         units: 12, desc: 'Pip has one. Pip thinks it suits him.' },
-  { id: 'awning',  em: '⛱️', name: 'Striped awning',     units: 16, desc: 'Your stall, but smarter.' },
-  { id: 'sign',    em: '🪧', name: 'Painted sign',       units: 24, desc: 'Your name, in gold leaf, above your own stall.' },
-  { id: 'cat',     em: '🐈', name: 'A shop cat',         units: 30, desc: 'Does nothing. Sits. Worth it, arguably.' },
-  { id: 'brass',   em: '🔆', name: "Mags's brass button", units: 60, desc: 'Previously owned by somebody important, probably.' },
-  { id: 'clock',   em: '🕰️', name: 'Brass stall clock',  units: 45, desc: 'Tells the time. Loudly, and slightly wrong.' },
-  { id: 'kite',    em: '🪁', name: 'A very good kite',   units: 20, desc: 'No financial merit whatsoever.' },
+  { id: 'handcart', em: '🛒', name: 'A handcart',      units: 26, perk: 'jobs', adds: 'haul',
+    desc: 'Carry more, in one trip.', gives: 'One extra job every day.' },
+  { id: 'lockbox',  em: '🔒', name: 'A lockbox',       units: 34, perk: 'lockbox',
+    desc: 'Heavy, dull, and it has a key.', gives: 'Your Save jar earns a little every pay day, bank or no bank.' },
+  { id: 'coat',     em: '🧥', name: 'A good coat',     units: 22, perk: 'coat',
+    desc: 'Nobody works well when they are cold.', gives: 'Work pays more when the weather is against you.' },
+  { id: 'ledger',   em: '📒', name: 'A ledger',        units: 30, perk: 'ledger',
+    desc: 'Ruled columns and a pencil on a string.', gives: 'See next week’s bills before pay day lands.' },
+  { id: 'bicycle',  em: '🚲', name: 'A bicycle',       units: 52, perk: 'bicycle',
+    desc: 'Gets you further than your legs do.', gives: 'Work the next world along, a world early.' },
+  { id: 'cat',      em: '🐈', name: 'A shop cat',      units: 44, perk: 'cat',
+    desc: 'Arrived on her own. Stayed.', gives: 'Turns up a little money some mornings.' },
+  { id: 'kite',     em: '🪁', name: 'A very good kite', units: 20,
+    desc: 'No financial merit whatsoever.', gives: null },
+  { id: 'brass',    em: '🔆', name: "Mags's brass button", units: 60,
+    desc: 'Previously owned by somebody important, probably.', gives: null },
 ];
 
 /* ── the market — fictional companies, honest volatility ─────────────────
@@ -759,4 +863,6 @@ export const BADGES = {
   'main-street':       { em: '🎲', name: 'Main Street',        desc: 'Your shops paid for your life. Nobody went bankrupt.' },
   'three-of-three':    { em: '⭐', name: 'All three',           desc: 'Cleared a whole day of quests.' },
   'traveller':         { em: '🗺️', name: 'On the road',         desc: 'Left Market Row for somewhere new.' },
+  'put-right':         { em: '🔧', name: 'Put something right',  desc: 'Paid to fix a broken thing, and it stayed fixed.' },
+  'rebuilder':         { em: '🏘️', name: 'Rebuilder',            desc: 'Four things in this town work again because of you.' },
 };

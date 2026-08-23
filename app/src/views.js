@@ -6,7 +6,7 @@ import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
-  WORLDS, QUESTS, rankFor, rankObj, RANKS, shuffledDrill,
+  WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -116,6 +116,38 @@ export function viewHome() {
       ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All three — take ${money(price(12))} more</button>` : ''}
       ${c.quests.bonus ? '<p class="small muted" style="margin-top:9px">All three done. Fresh ones tomorrow.</p>' : ''}
     </div>
+
+    ${(() => {
+      const fx = sim.townFixes(c).filter((f) => !f.locked);
+      const tp = sim.townProgress(c);
+      if (!fx.length) return '';
+      const next = fx.find((f) => !f.done) || fx[0];
+      return `<div class="card">
+        <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
+          <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
+          <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
+        <div class="stack" style="gap:9px;margin-top:11px">
+          ${fx.map((f) => `<div style="background:${f.done ? 'var(--grow-tint)' : 'var(--surface2)'};
+            border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px">
+            <div class="row" style="gap:10px">
+              <span style="font-size:21px;${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${f.em}</span>
+              <span class="grow" style="min-width:0">
+                <b style="font-size:14px">${esc(f.name)}</b>
+                <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div></span>
+              ${f.done ? '<span class="pill grow">mended</span>'
+                : `<span class="small muted tabnum">${money(f.put)} / ${money(f.cost)}</span>`}
+            </div>
+            ${f.done ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:6px">✓ ${esc(f.gives)}</p>`
+              : `<div class="bar" style="height:6px;margin-top:7px"><i style="width:${f.pct * 100}%;background:var(--treasure)"></i></div>
+                 <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+                   <span class="small muted grow">${esc(f.gives)}</span>
+                   <button class="btn sm" data-act="putRight" data-arg="${f.id}" ${c.money.wallet <= 0 ? 'disabled' : ''}>
+                     Put in ${money(Math.min(price(10), Math.max(0, c.money.wallet), f.left))}</button>
+                 </div>`}
+          </div>`).join('')}
+        </div>
+      </div>`;
+    })()}
 
     ${sprout ? '' : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
       <div class="row"><span style="font-size:24px">${home.em}</span><div class="grow">
@@ -767,7 +799,7 @@ export function viewStore() {
   const c = K();
   const nowT = Date.now();
   return `<div class="stack">
-    ${say('mags', 'Everything here is lovely and none of it is necessary. I have written what else the money could have been under each price, which my old boss said was commercial suicide.')}
+    ${say('mags', 'Some of this earns its keep and some of it is just lovely — and I have written which is which, plus what else the money could have been. My old boss called that commercial suicide.')}
     ${SHOP.map((it) => {
       const p = price(it.units);
       const owned = c.shop.owned.includes(it.id);
@@ -783,13 +815,15 @@ export function viewStore() {
           <div class="grow"><b style="font-size:15.5px">${esc(it.name)}</b>
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
-        <div style="background:var(--treasure-tint);color:var(--treasure-deep);border-radius:var(--r-md);padding:9px 12px;margin-top:10px;font-size:13px;font-weight:650">
-          That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.</div>
+        ${it.gives ? `<div style="background:var(--grow-tint);color:var(--grow);border-radius:var(--r-md);padding:9px 12px;margin-top:10px;font-size:13px;font-weight:700">
+          ⚙ ${esc(it.gives)}</div>` : ''}
+        <div style="background:var(--treasure-tint);color:var(--treasure-deep);border-radius:var(--r-md);padding:9px 12px;margin-top:8px;font-size:13px;font-weight:650">
+          That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</div>
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>'
             : waiting ? `<span class="pill">think it over · ${hrs}h left</span>`
             : c.family.coolOff && !cool ? `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}">Think it over →</button>`
-            : `<button class="btn sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>Buy it anyway</button>`}
+            : `<button class="btn sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
         </div></div>`;
     }).join('')}
     <p class="small muted" style="text-align:center">Nothing here costs real money, and there is no path from this screen to a payment form. That is a rule, not an oversight.</p>
@@ -934,6 +968,16 @@ export function viewParents() {
         <button class="btn ghost sm" data-act="band">${c.band === 'sprout' ? 'Sprout (8–10)' : 'Builder (11+)'}</button></div>
       <div class="row"><span class="small grow">Sound</span>
         <button class="btn ${s.settings.sound ? '' : 'ghost'} sm" data-act="sound">${s.settings.sound ? 'On' : 'Off'}</button></div>
+    </div>
+
+    <div class="card stack">
+      <div class="eyebrow">How this was made</div>
+      <p class="small muted">The characters and the painted backdrops were drawn with an AI image
+        model and then edited by hand. No AI writes to your child, scores them, or sees anything they
+        do — every lesson, letter and number in this app was written by a person, and nothing your
+        child types or taps leaves this device.</p>
+      <p class="small muted">Every figure on screen is Bizzington's own arithmetic. There are no real
+        interest rates, no real returns and no real companies anywhere in it.</p>
     </div>
 
     <div class="card stack">

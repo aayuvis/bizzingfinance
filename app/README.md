@@ -44,6 +44,9 @@ build rides along at `/bizzington.html`.
 | **Five worlds** | Market Row → the Old Harbour → Clocktower Square → the Exchange Quarter → the Works. Each has its own light, its own jobs going, its own games and one new money tool. You travel on when you have **finished the chapters where you are** — not when you have earned enough. |
 | **The street** | Your own front door plus the buildings of the world you're standing in, drawn locked or open. Panning street on phones. |
 | **Today's three** | Three daily quests rolled from the date, so every child in the house gets the same three. They pay wages into the same wallet — never a second currency. Clear all three for a bonus. |
+| **Put it right** | The town is run down. Seventeen broken things across the five worlds, each paid for a bit at a time out of the same wallet, each permanently changing what you can do: a mended fountain buys the town a fourth daily quest, a lit pier creates night work, Nana's shutters create a job that pays every day forever. |
+| **A store that sells capability** | A handcart is another job a day. A lockbox pays the Save jar before the bank exists. A coat makes bad weather pay. Two purely lovely useless things stay on purpose, priced beside them. |
+| **Drawn artwork** | Five character portraits and five painted world backdrops, generated and embedded as WebP data URIs — 96 kB for the lot. `tools/art/` regenerates them. |
 | **Your place** | The housing ladder: room → room with a window → flat → flat with a kitchen → a house you buy. Rent, bills and food derive from where you live; moving shows the new weekly total *before* you commit. A kitchen costs more rent and less overall, because it halves the food line. |
 | **Independence** | "Rich" as a ratio, not a number: what your money earns each week ÷ what your life costs. At 100% you work because you choose to. Milestones at 10/25/50/100. |
 | **Learn** | 8 chapters · 32 cards · 30 levels · 5 ranks. Every card is a lesson, an example and one drill. |
@@ -72,7 +75,8 @@ build rides along at `/bizzington.html`.
 | `src/arcade.js` | The hub and ten games. `twoChoice` and `quizGame` are shared shapes; Change Rush, Compound Climb, Stall Rush, Market Storm and the Market Cup each own their loop. Games with a loop implement `mount()` / `stop()` — string rendering replaces the DOM every frame, so a live game re-attaches after each render rather than holding a stale node. |
 | `src/board.js` | **Main Street** — the board game. Twenty squares, three players, chance cards that are real money events, and a win condition that is the Independence meter on a board: your shops pay for your life. Nobody goes bankrupt. |
 | `src/main.js` | Shell, hash routing, overlays, and every `data-act` in one table. |
-| `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast in SVG. |
+| `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast, drawn art with the hand-authored SVG as fallback. |
+| `src/art-gen.js` | Generated. Portraits and plates as data URIs. Rebuild with `tools/art/process.py`, never hand-edit. |
 
 `state → render()` returning a string, clicks dispatched by `[data-act]` — the Bizzing Bee
 idiom, kept deliberately. Views never compute money; `sim.js` does.
@@ -91,6 +95,12 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   then the tool — the Exchange cannot open before a child knows what a share is.
 - **Quests advance from exactly one call site per kind** (`questTick`), so a quest can never
   be advanced twice by the same action.
+- **A perk names the job it creates.** `adds:` on a fix or a shop item, never "add the jobs
+  this world already has" — that made the handcart a no-op the first time round.
+- **Backdrops are plates, buildings are SVG.** The buildings carry live state — jar levels,
+  goal progress, the bank clock — so they cannot be painted.
+- **The art tooling never sees a committed key.** `GKEY` is an env var; `tools/art/*.png` and
+  every key pattern are gitignored.
 - **Bills are derived from where you live**, never invented. `refreshBills()` is the only thing that writes them.
 - **Percentages are a display format.** The Jar Shed shows "1 coin in every 4" below level 11 and "25%" above it — same jar, same lesson, two ages (docs/03 §5).
 - **Option order is permuted from the card id** (`shuffledDrill`) — position leaks an answer
