@@ -9,6 +9,13 @@ basics → budgeting → banking → a stock portfolio → running a business. T
 Bizzing family, after [Bizzing Bee](https://github.com/aayuvis/Bizzing-Bee) (spelling, 8–15)
 and [Bizzing India](https://github.com/aayuvis/bizzingindia.com) (culture & Hindi, 4–12).
 
+**The gap to a product** is specified in
+[docs/05-making-it-a-product.md](docs/05-making-it-a-product.md): a real curriculum (objectives,
+prerequisites, assessment separated from teaching), a year of content that does not require
+authoring 182 hours, and parent reporting that reports learning rather than usage. One
+mechanism — a per-objective mastery record fed by spaced, transferred retrieval — serves all
+three. Read it before adding any feature, because most features are worth less than that one.
+
 **Concept plus a working app.** The docs are the spec; [`app/`](app/) is the app —
 Bizzington, with the full 30-level ladder, eight chapters, jobs, jars, goals, a bank that
 lends, the Exchange, a shop you run, six games, a grown-up's page and an offline PWA.

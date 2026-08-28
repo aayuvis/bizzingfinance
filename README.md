@@ -28,3 +28,5 @@ Start here:
 > **One line:** kids don't learn money from a lesson — they learn it from decisions that cost
 > something. So we give every child a town, a wallet, a budget, a bank and a portfolio that
 > are entirely simulated and entirely theirs, and let the consequences land.
+
+- [docs/05 — Making it a product](docs/05-making-it-a-product.md) — curriculum, the year of content, and parent reporting.
