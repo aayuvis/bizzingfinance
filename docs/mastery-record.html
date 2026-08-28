@@ -1,0 +1,770 @@
+<title>The Mastery Record</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+
+<style>
+  /* Bizzing Finance's own tokens (app/styles/app.css) — this document belongs
+     to the product it specifies, so it wears the product's palette:
+     intaglio teal as the one accent, gold for the thing being proposed,
+     green/coral strictly semantic (built / missing). */
+  :root {
+    --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F6F5; --tint:#EDF2F2;
+    --line:#DCE5E4; --line-soft:#E9EFEE;
+    --ink:#16262A; --muted:#5B7075;
+    --action:#0E6B78; --action-tint:#E2EFF1; --action-ink:#FFFFFF;
+    --gold:#F0B429; --gold-tint:#FFF3D6; --gold-deep:#8A5B00;
+    --grow:#178A4C; --grow-tint:#E3F3E9;
+    --spend:#C4453C; --spend-tint:#FBE9E7;
+    --rule:rgba(22,38,42,.10);
+    --display:"Fraunces",Georgia,serif;
+    --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"Sono",ui-monospace,SFMono-Regular,monospace;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+      --line:#24373D; --line-soft:#1C2C32;
+      --ink:#E4EDEE; --muted:#93A7AC;
+      --action:#3FAEBC; --action-tint:#12333A; --action-ink:#06262B;
+      --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+      --grow:#5BC98C; --grow-tint:#0F2E20;
+      --spend:#EC8B81; --spend-tint:#331916;
+      --rule:rgba(228,237,238,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+    --line:#24373D; --line-soft:#1C2C32;
+    --ink:#E4EDEE; --muted:#93A7AC;
+    --action:#3FAEBC; --action-tint:#12333A; --action-ink:#06262B;
+    --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+    --grow:#5BC98C; --grow-tint:#0F2E20;
+    --spend:#EC8B81; --spend-tint:#331916;
+    --rule:rgba(228,237,238,.14);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--ui); font-size:16.5px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 clamp(18px,4vw,40px) 96px; }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .mast { padding:clamp(44px,7vw,86px) 0 34px; border-bottom:2px solid var(--ink); }
+  .kicker {
+    font-family:var(--mono); font-size:12px; font-weight:600;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--action);
+    margin:0 0 18px;
+  }
+  h1 {
+    font-family:var(--display); font-weight:800; font-size:clamp(38px,7.2vw,68px);
+    line-height:1.02; letter-spacing:-.022em; margin:0; text-wrap:balance;
+  }
+  .dek {
+    font-size:clamp(17px,2.2vw,20.5px); color:var(--muted); margin:20px 0 0;
+    max-width:60ch; line-height:1.52;
+  }
+  .mast-meta {
+    display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:26px;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+  }
+  .mast-meta b { color:var(--ink); font-weight:600; }
+
+  /* ── thesis ───────────────────────────────────────────── */
+  .thesis { padding:44px 0 8px; }
+  .thesis p {
+    font-family:var(--display); font-size:clamp(20px,2.9vw,27px); line-height:1.42;
+    font-weight:400; margin:0; max-width:34ch; text-wrap:balance;
+  }
+  .thesis p em { font-style:normal; color:var(--action); font-weight:600; }
+  figure { margin:34px 0 0; }
+  figure svg { display:block; width:100%; height:auto; }
+  figcaption {
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    margin-top:14px; max-width:66ch; line-height:1.65;
+  }
+
+  /* ── parts ────────────────────────────────────────────── */
+  .part { padding-top:66px; }
+  .part-head {
+    display:grid; grid-template-columns:auto 1fr; gap:20px; align-items:baseline;
+    padding-bottom:10px; border-bottom:1px solid var(--rule); margin-bottom:30px;
+  }
+  .part-mark {
+    font-family:var(--display); font-weight:800; font-size:clamp(30px,4.4vw,46px);
+    line-height:1; color:var(--gold); letter-spacing:-.02em;
+  }
+  .part-head h2 {
+    font-family:var(--display); font-weight:800; font-size:clamp(24px,3.4vw,36px);
+    line-height:1.1; letter-spacing:-.018em; margin:0; text-wrap:balance;
+  }
+  .part-head .sub {
+    grid-column:2; font-family:var(--mono); font-size:12px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--muted); margin-top:6px;
+  }
+  h3 {
+    font-family:var(--display); font-weight:600; font-size:clamp(19px,2.4vw,23px);
+    line-height:1.25; letter-spacing:-.01em; margin:44px 0 12px; text-wrap:balance;
+  }
+  h3:first-of-type { margin-top:0; }
+  h4 {
+    font-family:var(--mono); font-weight:600; font-size:12px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); margin:30px 0 10px;
+  }
+  p, li { max-width:68ch; }
+  p { margin:0 0 15px; }
+  ul, ol { margin:0 0 15px; padding-left:22px; }
+  li { margin-bottom:9px; }
+  li::marker { color:var(--action); }
+  strong { font-weight:700; }
+  a { color:var(--action); text-decoration-thickness:1px; text-underline-offset:2px; }
+  a:focus-visible, .toc a:focus-visible {
+    outline:2px solid var(--action); outline-offset:3px; border-radius:3px;
+  }
+
+  /* ── tables ───────────────────────────────────────────── */
+  .scroll { overflow-x:auto; margin:0 0 24px; -webkit-overflow-scrolling:touch; }
+  table {
+    border-collapse:collapse; width:100%; min-width:520px;
+    font-size:15px; line-height:1.48;
+  }
+  caption {
+    text-align:left; font-family:var(--mono); font-size:12px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--muted); padding-bottom:10px;
+  }
+  th {
+    text-align:left; font-family:var(--mono); font-size:11.5px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    padding:0 14px 9px 0; border-bottom:1.5px solid var(--ink);
+    vertical-align:bottom;
+  }
+  td {
+    padding:12px 14px 12px 0; border-bottom:1px solid var(--rule);
+    vertical-align:top;
+  }
+  td:last-child, th:last-child { padding-right:0; }
+  .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tfoot td { border-bottom:none; border-top:1.5px solid var(--ink); font-weight:700; }
+
+  /* ── status chips ─────────────────────────────────────── */
+  .chip {
+    display:inline-block; font-family:var(--mono); font-size:11px; font-weight:600;
+    letter-spacing:.05em; text-transform:uppercase; padding:3px 9px;
+    border-radius:4px; white-space:nowrap;
+  }
+  .chip.built { background:var(--grow-tint); color:var(--grow); }
+  .chip.part  { background:var(--gold-tint); color:var(--gold-deep); }
+  .chip.gone  { background:var(--spend-tint); color:var(--spend); }
+
+  /* ── callouts ─────────────────────────────────────────── */
+  .note {
+    background:var(--surface2); border-left:3px solid var(--action);
+    padding:18px 20px; margin:0 0 26px; border-radius:0 8px 8px 0;
+  }
+  .note p:last-child { margin-bottom:0; }
+  .note.warn { border-left-color:var(--gold); background:var(--gold-tint); }
+  .note.warn p { color:var(--ink); }
+  .note-label {
+    font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--action); display:block; margin-bottom:7px;
+  }
+  .note.warn .note-label { color:var(--gold-deep); }
+
+  /* ── code ─────────────────────────────────────────────── */
+  pre {
+    font-family:var(--mono); font-size:13px; line-height:1.6;
+    background:var(--surface2); border:1px solid var(--line);
+    border-radius:8px; padding:16px 18px; overflow-x:auto; margin:0 0 24px;
+  }
+  code { font-family:var(--mono); font-size:.92em; }
+  p code, li code, td code {
+    background:var(--tint); padding:1.5px 5px; border-radius:4px;
+    border:1px solid var(--line-soft);
+  }
+  .cm { color:var(--muted); }
+  .ky { color:var(--action); }
+
+  /* ── the flow: unmet → transferred ────────────────────── */
+  .flow {
+    display:flex; flex-wrap:wrap; gap:9px; align-items:center;
+    margin:0 0 22px; font-family:var(--mono); font-size:12.5px;
+  }
+  .flow span {
+    padding:6px 12px; border-radius:5px; background:var(--surface2);
+    border:1px solid var(--line);
+  }
+  .flow span.peak { background:var(--action); color:var(--action-ink); border-color:var(--action); }
+  .flow span.bad  { background:var(--spend-tint); color:var(--spend); border-color:transparent; }
+  .flow i { color:var(--muted); font-style:normal; }
+
+  /* ── constraint list ──────────────────────────────────── */
+  .rules { list-style:none; padding:0; margin:0 0 24px; }
+  .rules li {
+    max-width:none; display:grid; grid-template-columns:auto 1fr; gap:14px;
+    padding:13px 0; border-bottom:1px solid var(--rule); margin:0;
+  }
+  .rules li::before {
+    content:""; width:7px; height:7px; border-radius:50%;
+    background:var(--gold); margin-top:9px;
+  }
+  .rules b { display:block; margin-bottom:2px; }
+  .rules span { color:var(--muted); font-size:15px; }
+
+  /* ── order of work ────────────────────────────────────── */
+  .steps { list-style:none; counter-reset:s; padding:0; margin:0 0 26px; }
+  .steps li {
+    max-width:none; counter-increment:s;
+    display:grid; grid-template-columns:auto 1fr; gap:16px;
+    padding:16px 0; border-bottom:1px solid var(--rule); margin:0;
+  }
+  .steps li::before {
+    content:counter(s); font-family:var(--display); font-weight:800; font-size:22px;
+    line-height:1.1; color:var(--action); min-width:24px;
+  }
+
+  footer {
+    margin-top:74px; padding-top:26px; border-top:2px solid var(--ink);
+    font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8;
+  }
+
+  @media (max-width:640px) {
+    body { font-size:16px; }
+    .part-head { grid-template-columns:1fr; gap:4px; }
+    .part-head .sub { grid-column:1; }
+    .thesis p { max-width:none; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="kicker">Bizzing Finance · Requirements</p>
+    <h1>The Mastery Record</h1>
+    <p class="dek">Three things stand between the prototype and something a parent would keep
+      paying for: a curriculum, a year of content, and a report worth reading. They are not
+      three projects.</p>
+    <div class="mast-meta">
+      <span><b>Repo</b> aayuvis/bizzingfinance</span>
+      <span><b>Spec</b> docs/05-making-it-a-product.md</span>
+      <span><b>Assumes</b> docs/03 — the teaching ladder</span>
+    </div>
+  </header>
+
+  <section class="thesis">
+    <p>One mechanism — a per-objective mastery record fed by <em>spaced, transferred
+      retrieval</em> — is the curriculum's assessment, the engine that generates a year of
+      daily content, and the only honest source of anything a parent report could say.</p>
+
+    <figure>
+      <svg viewBox="0 0 900 268" role="img" aria-label="A single mastery record, fed by spaced and transferred retrieval, feeding three outputs: the curriculum's assessment, a year of content, and the parent report.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--action)"/>
+          </marker>
+        </defs>
+
+        <!-- inputs -->
+        <g font-family="Sono, monospace" font-size="13" fill="var(--muted)">
+          <text x="0" y="52">retrieval · 1 · 3 · 7 · 21 · 60 days</text>
+          <text x="0" y="88">transfer · a surface it wasn't taught on</text>
+        </g>
+        <path d="M292 47 H352" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path d="M312 83 H352" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+
+        <!-- the record -->
+        <rect x="360" y="20" width="196" height="82" rx="9" fill="var(--gold-tint)" stroke="var(--gold)" stroke-width="2"/>
+        <text x="458" y="52" text-anchor="middle" font-family="Fraunces, serif" font-weight="800" font-size="19" fill="var(--ink)">mastery.js</text>
+        <text x="458" y="76" text-anchor="middle" font-family="Sono, monospace" font-size="12" fill="var(--gold-deep)">one record per objective</text>
+
+        <!-- fan out -->
+        <path d="M458 108 V140 H150 V170" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path d="M458 108 V170" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path d="M458 108 V140 H766 V170" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+
+        <!-- outputs -->
+        <g>
+          <rect x="20" y="176" width="260" height="76" rx="9" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="40" y="205" font-family="Sono, monospace" font-size="11" letter-spacing="1.4" fill="var(--action)">PART A</text>
+          <text x="40" y="230" font-family="Fraunces, serif" font-weight="600" font-size="17" fill="var(--ink)">The curriculum</text>
+
+          <rect x="328" y="176" width="260" height="76" rx="9" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="348" y="205" font-family="Sono, monospace" font-size="11" letter-spacing="1.4" fill="var(--action)">PART B</text>
+          <text x="348" y="230" font-family="Fraunces, serif" font-weight="600" font-size="17" fill="var(--ink)">A year of content</text>
+
+          <rect x="636" y="176" width="260" height="76" rx="9" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="656" y="205" font-family="Sono, monospace" font-size="11" letter-spacing="1.4" fill="var(--action)">PART C</text>
+          <text x="656" y="230" font-family="Fraunces, serif" font-weight="600" font-size="17" fill="var(--ink)">The parent report</text>
+        </g>
+      </svg>
+      <figcaption>Build it once and all three move. Build three separate things and none of
+        them will be true — the report will describe usage, the content will run out, and the
+        curriculum will have no evidence behind it.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ══ status ══ -->
+  <section class="part">
+    <div class="part-head">
+      <span class="part-mark">—</span>
+      <h2>Where it actually stands</h2>
+      <p class="sub">Measured from the code, not the docs</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Piece</th><th>State</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Scope &amp; sequence</td><td><span class="chip built">built</span></td><td>docs/03 §3–§4 — the M/C/D rung rule and the 17-skill number spine are real curriculum infrastructure</td></tr>
+          <tr><td>Objectives as observable behaviours</td><td><span class="chip gone">missing</span></td><td>No ids, no graph, nothing assessable</td></tr>
+          <tr><td>Prerequisite graph</td><td><span class="chip part">partial</span></td><td>Maths spine only; concepts have no ids</td></tr>
+          <tr><td>Assessment separate from teaching</td><td><span class="chip gone">missing</span></td><td>The drill <em>is</em> the lesson — it measures attention ninety seconds old</td></tr>
+          <tr><td>Content volume</td><td><span class="chip part">32 cards</span></td><td>Against a 365-day promise</td></tr>
+          <tr><td>Season / year structure</td><td><span class="chip gone">missing</span></td><td>There is a day and a week. There is no month two.</td></tr>
+          <tr><td>Parent reporting</td><td><span class="chip gone">missing</span></td><td>The Parents page exists and is good; nothing is generated between sessions</td></tr>
+          <tr><td>Adult gate</td><td><span class="chip gone">missing</span></td><td>Any child can reach <code>Jump to the next pay day</code> and <code>Add 200 XP</code></td></tr>
+          <tr><td>Server-authoritative clock</td><td><span class="chip gone">missing</span></td><td>Named a launch blocker in CLAUDE.md, and still client-side</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ PART A ══ -->
+  <section class="part">
+    <div class="part-head">
+      <span class="part-mark">A</span>
+      <h2>The curriculum</h2>
+      <p class="sub">Objectives · prerequisites · evidence</p>
+    </div>
+
+    <h3>A scope and a sequence is not a curriculum</h3>
+    <p>docs/03 gives what to teach and in what order. A curriculum is four things, and the
+      fourth is the one that matters commercially: <strong>evidence, separated from
+      teaching</strong>.</p>
+    <p>Today a card teaches a thing and then immediately asks about the thing. A child who
+      answers correctly has demonstrated that they were awake ninety seconds ago. That is not
+      evidence, it cannot be reported, and it is exactly why there is nothing honest to tell a
+      parent.</p>
+
+    <h3>Six strands, seventy-two objectives</h3>
+    <p>docs/03's M/C/D strands describe the <em>anatomy of a rung</em>, not the curriculum's
+      subject divisions. Those are:</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Strand</th><th>Covers</th><th>Why it stands alone</th></tr></thead>
+        <tbody>
+          <tr><td><code>EARN</code></td><td>Where money comes from; work, value, time-for-money, the skill premium, income that isn't wages</td><td>The only strand a child can act on from day one</td></tr>
+          <tr><td><code>CHOOSE</code></td><td>Scarcity, trade-off, opportunity cost, want vs need, unit price, advertising and dark patterns</td><td>Transfers to real life fastest</td></tr>
+          <tr><td><code>KEEP</code></td><td>Saving, allocation, goals, the buffer — and why a buffer exists before it is needed</td><td>Where habit beats knowledge</td></tr>
+          <tr><td><code>GROW</code></td><td>Interest, compounding, risk, diversification, time horizon, fees</td><td>Needs the most maths; arrives latest</td></tr>
+          <tr><td><code>OWE</code></td><td>Credit as a priced tool, the cost of borrowing, repayment, arrears without shame</td><td>Must be taught before it is met, not after</td></tr>
+          <tr><td><code>GUARD</code></td><td>Scams, phishing, purchase manipulation, gambling mechanics, privacy</td><td>The shortest path to real harm</td></tr>
+        </tbody>
+        <tfoot><tr><td>6 strands</td><td class="num">× 12 rungs = 72 objectives in year one</td><td>≈ 1.5 a week; the rest of the year is retrieval, doing and consequence</td></tr></tfoot>
+      </table>
+    </div>
+
+    <h3>The objective record</h3>
+    <p>Every objective is a data object, not a paragraph. This schema is the deliverable —
+      without it there is nothing to assess against and nothing to report.</p>
+
+<pre><code>{
+  <span class="ky">"id"</span>: "CHOOSE-4",
+  <span class="ky">"strand"</span>: "CHOOSE",
+  <span class="ky">"rung"</span>: 4,
+  <span class="ky">"objective"</span>: "Given two sizes of the same thing at different prices, works out
+                 which is cheaper per unit and can say why the bigger box is
+                 not always better value.",
+  <span class="ky">"needs_maths"</span>: ["M5", "M8"],      <span class="cm">// rungs of the number spine</span>
+  <span class="ky">"needs"</span>: ["CHOOSE-2"],           <span class="cm">// prerequisite objectives</span>
+  <span class="ky">"surface"</span>: "shop",               <span class="cm">// where in the town it is PRACTISED</span>
+  <span class="ky">"teach"</span>: "c4b",
+  <span class="ky">"assess"</span>: ["a-CHOOSE-4-a", "a-CHOOSE-4-b", "a-CHOOSE-4-c"],
+  <span class="ky">"transfer"</span>: ["market-stall", "exchange-fee", "subscription"],
+  <span class="ky">"parent_line"</span>: "Ask her which is better value at the shop this week — and
+                    let her be wrong once, because that is where it sticks.",
+  <span class="ky">"sources"</span>: []                    <span class="cm">// non-empty for any real-world claim</span>
+}</code></pre>
+
+    <ul>
+      <li><strong>An objective is written as a behaviour or it is not written.</strong>
+        "Understands opportunity cost" is not an objective — you cannot watch it, so you cannot
+        assess it and you must not report it. "Names what she gave up when she chose the kite
+        over the kit" is one.</li>
+      <li><strong><code>surface</code> is mandatory.</strong> CLAUDE.md's existing rule —
+        nothing is taught without a place in the town — promoted from a convention to a schema
+        constraint that fails a build.</li>
+    </ul>
+
+    <h3>Three kinds of question. Only two are evidence.</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Kind</th><th>When</th><th>Counts as</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Check</strong></td><td>Immediately after the card, as today</td><td>Attention. Never reported, never scored.</td></tr>
+          <tr><td><strong>Retrieval</strong></td><td class="num">1 · 3 · 7 · 21 · 60 days later, different question</td><td>Retention</td></tr>
+          <tr><td><strong>Transfer</strong></td><td>Applied unprompted on a surface it wasn't taught on</td><td>Understanding</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="note-label">The highest-value engineering task in this document</span>
+      <p>Transfer is worth the most and comes free from a simulation and from nothing else. A
+        child taught unit price at the shop who then, unprompted, compares two brokerage fees
+        at the Exchange has told you something no quiz can. <strong>Instrument the surfaces to
+        record it.</strong></p>
+    </div>
+
+    <h3>Mastery states</h3>
+    <div class="flow">
+      <span>unmet</span><i>→</i>
+      <span>introduced</span><i>→</i>
+      <span>practised</span><i>→</i>
+      <span>retained</span><i>→</i>
+      <span class="peak">transferred</span>
+      <i>·</i><span class="bad">lapsed</span>
+    </div>
+    <p><strong>Lapsed must be reportable and must not be hidden.</strong> A parent report that
+      only ever goes up is a marketing document, and parents can smell one.</p>
+
+    <h3>Mapping to something a parent or a school recognises</h3>
+    <p>A curriculum nobody recognises is a private hobby. Candidates, in rough order of value
+      to this audience:</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Framework</th><th>Why it matters here</th></tr></thead>
+        <tbody>
+          <tr><td><strong>NCFE / NFLAT</strong> <span class="chip part">India</span></td><td>RBI-backed and school-facing — the single most valuable mapping for the primary and diaspora market</td></tr>
+          <tr><td><strong>CFPB building-blocks youth model</strong> <span class="chip part">US</span></td><td>Developmental rather than topical. Its claim that executive function and habits matter more than knowledge at these ages is the intellectual basis for this whole app.</td></tr>
+          <tr><td><strong>Jump$tart K–12 standards</strong> <span class="chip part">US</span></td><td>What US schools and parents recognise</td></tr>
+          <tr><td><strong>OECD/INFE · PISA financial literacy</strong> <span class="chip part">Intl</span></td><td>Credibility in any schools conversation</td></tr>
+          <tr><td><strong>MaPS financial education framework</strong> <span class="chip part">UK</span></td><td>The UK diaspora market</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <span class="note-label">Research task, not a completed mapping</span>
+      <p>Every one of these must be read and verified before a single objective claims to map
+        to it, and long before any of it appears in a marketing claim. CONCEPT §6.6 — never
+        teach a number from memory — applies to a standards citation exactly as it applies to
+        an interest rate.</p>
+    </div>
+
+    <h3>Placement, not a test</h3>
+    <ul>
+      <li>Framed as <em>"let's find out where to start"</em>, never as a score.</li>
+      <li>Adaptive: about eight items, stopping as soon as a level is bracketed.</li>
+      <li>Assesses the <strong>number spine only</strong> — maths is the thing that genuinely
+        blocks a surface. Concepts start at rung one for everyone; nobody is told they are
+        behind on money at eight years old.</li>
+      <li>Re-run silently each season, so a child who has grown at school isn't held down by a
+        placement taken a year ago.</li>
+      <li>Its output is a starting rung and a set of open surfaces. Never shown as a number,
+        and never in the parent report as a score.</li>
+    </ul>
+  </section>
+
+  <!-- ══ PART B ══ -->
+  <section class="part">
+    <div class="part-head">
+      <span class="part-mark">B</span>
+      <h2>A year of content</h2>
+      <p class="sub">182 hours · and how not to author them</p>
+    </div>
+
+    <h3>The honest arithmetic</h3>
+    <p>Thirty minutes × 365 days is <strong>182 hours</strong>. Nobody authors 182 hours of
+      children's content, and any plan that implies it is a plan to fail in month three.</p>
+    <p>So the requirement is not "write more cards". It is: <strong>authored content is the
+      seed; the simulation generates the volume.</strong> The authored corpus for year one is
+      finite and costable.</p>
+
+    <div class="scroll">
+      <table>
+        <caption>Year one · authored items</caption>
+        <thead><tr><th>Item</th><th class="num">Count</th><th>Kind</th></tr></thead>
+        <tbody>
+          <tr><td>Teaching cards — one per objective</td><td class="num">72</td><td>authored</td></tr>
+          <tr><td>Assessment items — 3 contexts × objective</td><td class="num">216</td><td>authored</td></tr>
+          <tr><td>Townsfolk request templates</td><td class="num">40</td><td>authored, parameterised</td></tr>
+          <tr><td>Season arc beats — 4 × ~10</td><td class="num">40</td><td>authored</td></tr>
+          <tr><td>Family conversation cards — one a week</td><td class="num">52</td><td>authored</td></tr>
+          <tr><td>World events — weather, tide, shock, festival</td><td class="num">60</td><td>authored, parameterised</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total</td><td class="num">≈ 480</td><td>a real but finite job</td></tr></tfoot>
+      </table>
+    </div>
+
+    <p>Everything else — market days, job rolls, quest instances, request parameters, price
+      shocks, game difficulty variants — is <strong>generated from the child's own
+      economy</strong>, which is why it never runs out and why it is always the right size for
+      them.</p>
+
+    <h3>The five engines that make the volume</h3>
+    <ol>
+      <li><strong>The market.</strong> Deterministic replay of real historical <em>behaviour</em>
+        under fictional names, seeded per child. 365 market days a year, never identical, never
+        invented.</li>
+      <li><strong>Townsfolk requests.</strong> Templates whose numbers are drawn from the
+        child's own wage and costs, so "forty flyers by Friday" is always a meaningful ask and
+        never a trivial one.</li>
+      <li><strong>The Ledger.</strong> Every objective re-asked in a new context on the
+        retrieval schedule. Volume = objectives × contexts × the year — and it <em>is</em> the
+        assessment. This is the largest single source of legitimate daily content.</li>
+      <li><strong>The world state machine.</strong> Weather, tide, season, festival, a strike at
+        the harbour, a price rise: events that change the arithmetic of a familiar surface, so
+        a place the child knows poses a problem they don't.</li>
+      <li><strong>Difficulty tied to the number spine.</strong> Change Rush at M3 and Change
+        Rush at M11 are different games. Every game declares the rungs it plays at and rises
+        with the child instead of being replaced.</li>
+    </ol>
+
+    <h3>The shape of thirty minutes</h3>
+    <div class="scroll">
+      <table>
+        <caption>A session budget — because "30 minutes" is otherwise a wish</caption>
+        <thead><tr><th>Beat</th><th class="num">Min</th><th>What</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Arrival</strong></td><td class="num">4</td><td>What changed overnight; today's three</td></tr>
+          <tr><td><strong>Lesson beat</strong></td><td class="num">6</td><td>One new objective <em>or</em> a retrieval beat — never both</td></tr>
+          <tr><td><strong>Doing</strong></td><td class="num">12</td><td>Jobs, a game, the market, the shop, a restoration</td></tr>
+          <tr><td><strong>A decision with consequence</strong></td><td class="num">5</td><td>The part that is actually remembered</td></tr>
+          <tr><td><strong>Closing time</strong></td><td class="num">3</td><td>Today's ledger, and three named things waiting tomorrow <span class="chip built">built</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The year above the day</h3>
+    <p>Thirty minutes of the same five things dies in week three. The year needs structure at
+      three scales, and only the smallest exists today. <strong>The season — twelve weeks, four
+      a year</strong> — is what "month two" is made of: a district that opens or visibly
+      changes, one new instrument, a goal set in week one, and a finale that resolves it.</p>
+
+    <div class="scroll">
+      <table>
+        <caption>Year one · four seasons and a review</caption>
+        <thead><tr><th>Season</th><th class="num">Weeks</th><th>District</th><th>Strands</th><th>The arc</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1 · Getting started</strong></td><td class="num">1–12</td><td>Market Row</td><td><code>EARN</code> <code>CHOOSE</code></td><td>Arrive with nothing; earn, count, choose; the first jar; the first goal reached</td></tr>
+          <tr><td><strong>2 · The lean weeks</strong></td><td class="num">13–24</td><td>The Old Harbour</td><td><code>KEEP</code> <code>GUARD</code></td><td>Work that varies with the tide; a bill nobody planned for; the buffer that saves you; the first scam attempt</td></tr>
+          <tr><td><strong>3 · Borrowed</strong></td><td class="num">25–36</td><td>Mint Square</td><td><code>OWE</code> <code>KEEP</code></td><td>Something worth having costs more than you hold; credit priced honestly; a repayment kept; arrears met without shame</td></tr>
+          <tr><td><strong>4 · The long game</strong></td><td class="num">37–48</td><td>The Exchange</td><td><code>GROW</code></td><td>Risk, spread, time; a bad month survived; the boring diversified player finishes ahead</td></tr>
+          <tr><td><strong>Review</strong></td><td class="num">49–52</td><td>Whole town</td><td>all</td><td>The shop; the independence ratio; a season report worth keeping</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Years two and three re-run the same six strands at higher rungs of the number spine, on
+      the same map, with the child's own town as it now stands. <strong>The map is the constant;
+      the maths is what rises.</strong></p>
+
+    <h3>Constraints that keep it alive</h3>
+    <p>Testable rules, not aspirations. Each one should fail a build.</p>
+    <ul class="rules">
+      <li><div><b>No two consecutive sessions present the same <em>shape</em> of decision.</b>
+        <span>Not the same content — the same shape. Two "pick the cheaper one" days in a row is
+        the boredom failure.</span></div></li>
+      <li><div><b>Every session contains one thing never seen before.</b>
+        <span>Even if small.</span></div></li>
+      <li><div><b>Every session contains one thing exactly as it was left.</b>
+        <span>Continuity is comfort. A world that is entirely new every day is not a world.</span></div></li>
+      <li><div><b>Nothing is available only today.</b>
+        <span>Deadlines are good teaching. Disappearing rewards are engagement bait and are banned.</span></div></li>
+      <li><div><b>Missing a day costs nothing.</b>
+        <span>No streak loss, no decay, no catch-up penalty. A child anxious about a streak is a
+        cancelled subscription, and compulsion is not a money skill.</span></div></li>
+      <li><div><b>The curriculum advances on sessions; the world advances on the calendar.</b>
+        <span>A child who plays three days a week gets the whole curriculum, over more weeks.
+        Nothing is missed by not playing daily — only the town moves on without them, which is
+        true, and is the lesson.</span></div></li>
+      <li><div><b>Thirty minutes is a ceiling, not a floor to farm.</b>
+        <span>After about thirty-five minutes the day's paying work is genuinely done and the app
+        says so kindly. A children's money app that is honest about stopping is the one a parent
+        trusts — and it is a differentiator the ad-funded competition structurally cannot
+        copy.</span></div></li>
+    </ul>
+  </section>
+
+  <!-- ══ PART C ══ -->
+  <section class="part">
+    <div class="part-head">
+      <span class="part-mark">C</span>
+      <h2>The parent report</h2>
+      <p class="sub">The renewal engine</p>
+    </div>
+
+    <h3>Report learning, not usage</h3>
+    <p>"Ahana played 40 minutes, 5-day streak" is worthless and faintly insulting — it tells a
+      parent what they could see from the sofa. This is worth money:</p>
+
+    <div class="note">
+      <span class="note-label">What a weekly report should sound like</span>
+      <p><em>Ahana can now work out which of two sizes is better value. She chose correctly
+        seven times out of eight this week — including twice when the bigger box was the worse
+        deal, which is the one that catches most adults.</em></p>
+    </div>
+
+    <p>The first is a usage metric. The second is a claim about a child, it is defensible from
+      the mastery record, and it is the reason someone renews.</p>
+
+    <h3>Seven items, weekly, in this order</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">#</th><th>Item</th><th>Why it earns its place</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>One sentence at the top</strong></td><td>What changed this week, in human words. If nothing changed, it says so.</td></tr>
+          <tr><td class="num">2</td><td><strong>What moved</strong></td><td>Objectives that reached <em>retained</em> or <em>transferred</em>, in plain English — never codes, never a percentage of a syllabus</td></tr>
+          <tr><td class="num">3</td><td><strong>One decision, told as a story</strong></td><td>With the road not taken. The most-read item in the report — and impossible unless decisions are logged with their alternatives.</td></tr>
+          <tr><td class="num">4</td><td><strong>What she found hard</strong></td><td>Including anything lapsed. A report that only goes up is not believed.</td></tr>
+          <tr><td class="num">5</td><td><strong>The conversation card</strong></td><td>One question for the table, the answer the app would accept, and <em>why</em>. The highest-value item in the product: it makes the parent a teacher rather than an audience.</td></tr>
+          <tr><td class="num">6</td><td><strong>One thing to do in real life</strong></td><td>"Let her pay at the shop and count the change back."</td></tr>
+          <tr><td class="num">7</td><td><strong>What's next</strong></td><td>So a parent is never surprised by what their child was taught</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <span class="note-label">Never in the report</span>
+      <p>A streak. A leaderboard. A comparison with other children. A percentile. A nudge to
+        increase screen time. Any offer.</p>
+    </div>
+
+    <h3>Cadence</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Report</th><th>When</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Weekly digest</strong></td><td>Sunday</td><td>The habit. The renewal leading indicator.</td></tr>
+          <tr><td><strong>Monthly summary</strong></td><td>Month end</td><td>Progress across the mastery map</td></tr>
+          <tr><td><strong>Season report</strong></td><td>Every 12 weeks</td><td>The milestone. Printable, keepable, sendable to a grandparent — the strongest referral surface in the product.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>What must be logged for any of this to be writable</h3>
+    <p>The report cannot be written from the data the app keeps today. Every consequential
+      choice needs a record carrying <strong>the alternative not taken</strong> — that is what
+      makes a sentence worth reading.</p>
+
+<pre><code>{
+  <span class="ky">"t"</span>: 1756339200000,
+  <span class="ky">"objective"</span>: "OWE-3",
+  <span class="ky">"surface"</span>: "bank",
+  <span class="ky">"chose"</span>: "wait",
+  <span class="ky">"alternatives"</span>: [{ "id": "borrow", "cost": 340, "label": "Loan for the bicycle" }],
+  <span class="ky">"reversed"</span>: false,           <span class="cm">// did they change their mind, and how fast</span>
+  <span class="ky">"outcome_at"</span>: 1757548800000  <span class="cm">// when the consequence actually landed</span>
+}</code></pre>
+
+    <h3>Two things the app fails today</h3>
+    <ul>
+      <li><strong>There is no adult gate.</strong> Any child can open the Parents page and press
+        <code>Jump to the next pay day</code> and <code>Add 200 XP</code>. They are
+        honestly-labelled prototype tools, but while they are reachable the economy is
+        decorative and the app teaches that the way to get money is to cheat time — the exact
+        failure CLAUDE.md names.</li>
+      <li><strong>There is no read-only child view of their own record.</strong> A child should
+        be able to see what they have learned. They should not be able to change it.</li>
+    </ul>
+
+    <h3>Staying honest about evidence</h3>
+    <ul>
+      <li>A <strong>baseline</strong> at onboarding and a re-measure each season, so movement is
+        measurable.</li>
+      <li>Assessment <strong>separate from teaching</strong>, or the movement means nothing.</li>
+      <li>A <strong>season checkpoint</strong> producing one defensible statement per strand.</li>
+      <li><strong>Never</strong> a claim of the form "children using this improve X%" until
+        there is a study that says so. Nothing in the marketing may assert an outcome the
+        mastery record cannot demonstrate for that individual child.</li>
+    </ul>
+    <p>The report is generated from the child's own simulation state. It contains what happened
+      <em>in Bizzington</em> and nothing else — it never contains, infers or asks about the
+      family's real money, and no behavioural profile is built. That is a selling point, not
+      just compliance. Say it plainly on the parents page.</p>
+  </section>
+
+  <!-- ══ PART D ══ -->
+  <section class="part">
+    <div class="part-head">
+      <span class="part-mark">D</span>
+      <h2>What this means for the build</h2>
+      <p class="sub">Modules · metrics · order</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Module</th><th>Owns</th></tr></thead>
+        <tbody>
+          <tr><td><code>content/objectives.json</code></td><td>The 72-objective graph — ids, prerequisites, surfaces, parent lines. <strong>Nothing else can be built first.</strong></td></tr>
+          <tr><td><code>content/assess/*.json</code></td><td>Retrieval and transfer items, keyed to objectives</td></tr>
+          <tr><td><code>src/mastery.js</code></td><td>The per-objective state machine. Single source of truth for anything reported.</td></tr>
+          <tr><td><code>src/ledger.js</code></td><td>The spaced-retrieval scheduler — decides what today's lesson beat is</td></tr>
+          <tr><td><code>src/decisions.js</code></td><td>The consequential-choice log</td></tr>
+          <tr><td><code>src/season.js</code></td><td>The twelve-week arc state machine, world events, the weekly rhythm</td></tr>
+          <tr><td><code>src/report.js</code></td><td>Generates weekly / monthly / season reports from mastery + decisions</td></tr>
+          <tr><td><code>src/placement.js</code></td><td>Adaptive placement on the number spine</td></tr>
+          <tr><td>—</td><td>An adult gate on the Parents page, and the server clock. Small, and blocking.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Existing modules change as follows: every card in <code>content.js</code> gains an
+      <code>objective</code>; every game declares the M-rungs it plays at; every surface that can
+      demonstrate an objective calls into <code>mastery.js</code> when it does. <code>sim.js</code>
+      keeps owning the money and gains nothing here.</p>
+
+    <h3>What to measure</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Metric</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Objectives <strong>retained</strong> per active week</td><td>The only real product metric. Everything else is a proxy.</td></tr>
+          <tr><td>D30 / D90 retention of <em>sessions containing a lesson beat</em></td><td>Opens are not sessions</td></tr>
+          <tr><td>Parent report open rate</td><td>The leading indicator of renewal, by a distance</td></tr>
+          <tr><td>Conversation-card use (one-tap self-report)</td><td>Whether the app complements the parent or replaces them</td></tr>
+          <tr><td>Transfer events per child per month</td><td>Whether any of it is actually understood</td></tr>
+          <tr><td>Share of sessions over 45 minutes</td><td><strong>A warning metric, not a win.</strong> If it rises, something here has become compulsive and needs removing.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Order of work</h3>
+    <ol class="steps">
+      <li><div><code>objectives.json</code> for <strong>one strand</strong> — CHOOSE, twelve
+        rungs, end to end: objective, teaching card, three assessment contexts, transfer
+        surfaces, parent line.</div></li>
+      <li><div><code>mastery.js</code> and <code>ledger.js</code>, and instrument the shop and
+        the market for transfer.</div></li>
+      <li><div><code>report.js</code> — the weekly digest, generated for that one strand.</div></li>
+      <li><div>Read it as a parent. <strong>If the report is not worth reading for one strand,
+        six strands will not fix it</strong> — the shape is wrong and must be fixed before any
+        content volume is authored.</div></li>
+      <li><div>Only then author the other five strands and the season arcs.</div></li>
+    </ol>
+
+    <div class="note">
+      <span class="note-label">The bet</span>
+      <p>Steps 1–4 are perhaps a fifth of the work and settle whether the product is real.
+        Nothing about payments, accounts or acquisition should be touched until a parent has
+        read that one report and wanted the next one.</p>
+    </div>
+  </section>
+
+  <footer>
+    Bizzing Finance · docs/05-making-it-a-product.md · branch
+    <code>claude/bizzing-finance-webapp-s6tivd</code><br>
+    Assumes docs/03 (the teaching ladder) and CONCEPT §6 (the binding money rules).
+    Standards frameworks in Part A are a research task, not a completed mapping.
+  </footer>
+
+</div>
