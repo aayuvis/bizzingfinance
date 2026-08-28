@@ -40,6 +40,8 @@ export function newChild(name, band, cur) {
     world: 0,
     fix: { prog: {}, done: [] },
     quests: { day: dayIndex(now), list: [], prog: {}, claimed: {}, bonus: false },
+    mastery: { rec: {}, seen: [] },   /* the curriculum's record — mastery.js */
+    decisions: [],                    /* consequential choices — decisions.js */
     badges: [], history: [{ t: now, v: price(12) }],
     family: { allowance: null, payWeekday: 5, chores: [], coolOff: false },
   };
@@ -124,7 +126,7 @@ export function moveHome(c, tier) {
 }
 
 export function newState() {
-  return { v: 2, parent: { created: Date.now(), gate: false }, kids: [], active: 0,
+  return { v: 3, parent: { created: Date.now(), gate: false, pin: null }, kids: [], active: 0,
     ui: { nav: 'home', sub: 'wallet' },
     settings: { sound: true }, clock: { lastSeen: Date.now() } };
 }

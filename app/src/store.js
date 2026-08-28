@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -37,6 +37,7 @@ function migrate(blob) {
   if (!blob.v) blob.v = 1;
   while (blob.v < SCHEMA) {
     if (blob.v === 1) blob = v1_to_v2(blob);
+    else if (blob.v === 2) blob = v2_to_v3(blob);
     else break;
   }
   return blob;
@@ -60,4 +61,20 @@ function v1_to_v2(old) {
     settings: old.settings || { sound: true },
     clock: { lastSeen: Date.now() },
   };
+}
+
+/* v3 adds the curriculum's own record to each child: a per-objective mastery
+   state (mastery.js) and the consequential-choice log the parent report is
+   written from (decisions.js). Nothing is back-filled — a child who learned
+   things in v2 has no evidence that they did, and inventing some would be
+   exactly the kind of thing docs/05 exists to stop. They start unmet and
+   earn it. */
+function v2_to_v3(old) {
+  old.kids.forEach((k) => {
+    if (!k.mastery) k.mastery = { rec: {}, seen: [] };
+    if (!k.decisions) k.decisions = [];
+  });
+  if (old.parent && old.parent.pin === undefined) old.parent.pin = null;
+  old.v = 3;
+  return old;
 }

@@ -95,6 +95,18 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   then the tool — the Exchange cannot open before a child knows what a share is.
 - **Quests advance from exactly one call site per kind** (`questTick`), so a quest can never
   be advanced twice by the same action.
+- **The curriculum lives in `objectives.js`, and it is data.** An objective is written as a
+  behaviour you could watch. `surface` is mandatory and `validate()` fails the build without it.
+- **A check is not evidence.** The question straight after a teaching card measures attention
+  ninety seconds old and is never reported. Only retrieval at a gap of a week or more, and
+  transfer on a surface it was not taught on, count as learning — `ledger.answer()` keeps the
+  two doors apart and that separation is the point of the module.
+- **A declared `transfer` surface that nothing records is a lie.** `INSTRUMENTED` lists the
+  surfaces that actually call `mastery.transfer()`, and `validate()` fails on any objective
+  naming one that is not in it — so the data and the code cannot drift.
+- **Lapses are reported.** A parent report that only ever goes up is a marketing document.
+- **The parent report never contains a streak, a leaderboard, a percentile, a comparison with
+  another child, or anything asking for more screen time.**
 - **A day has an end, and it is measured.** Closing time only appears once the day's
   quests are claimed, and every line on it is arithmetic off today's ledger. If a number of
   days cannot be measured, print the amount instead — never invent the days.

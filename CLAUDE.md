@@ -105,6 +105,13 @@ not aspirational. The short version:
   a child who has not met that maths — it waits, or it shows the same truth a different way.
   Percentages are a *display format*, not a concept; anything shown as a percent must also be
   sayable in coins. This is the rule the Jar Shed currently breaks.
+- **`src/mastery.js` is the only module that may say a child has learned something.** If it is
+  not in the mastery record it does not go in a report. The immediate check after a card is
+  attention, not learning, and `ledger.answer()` routes it to a different door on purpose.
+- **A `transfer` surface must be instrumented before it is declared** (`INSTRUMENTED` in
+  objectives.js; `validate()` enforces it). An unreachable state is worse than a missing one.
+- **The grown-up's page is behind a PIN, and the PIN is a deterrent, not security.** Say so on
+  the screen. Real gating needs the server that is already a launch blocker.
 - **Option order is permuted from the card id** (`shuffledDrill`). Authoring answers by hand
   put 11 of 12 in slot B, and position leaks the answer as surely as the text does.
 - **The ladder is 30 levels and the unlocks are the doc's** (Jars 6, Goals 8, Bank 11,

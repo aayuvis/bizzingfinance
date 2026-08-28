@@ -8,9 +8,15 @@ import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
 import * as sim from './sim.js';
+import * as ledger from './ledger.js';
+import * as mastery from './mastery.js';
+import * as decisions from './decisions.js';
+import * as reportmod from './report.js';
+import { validate } from './objectives.js';
+import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection, viewWorlds } from './views.js';
+  viewParents, viewCollection, viewWorlds, viewGate, viewReport } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
@@ -38,7 +44,7 @@ function writeHash() {
 function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
-  const known = TABS.map((t) => t.k).concat(['parents', 'worlds']);
+  const known = TABS.map((t) => t.k).concat(['parents', 'worlds', 'report']);
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -59,7 +65,8 @@ function render() {
     s.ui.nav === 'arcade' ? viewArcade() :
     s.ui.nav === 'store' ? viewStore() :
     s.ui.nav === 'progress' ? viewProgress() :
-    s.ui.nav === 'parents' ? viewParents() :
+    s.ui.nav === 'parents' ? (s.parent.gate ? viewParents() : viewGate()) :
+    s.ui.nav === 'report' ? (s.parent.gate ? viewReport() : viewGate()) :
     s.ui.nav === 'worlds' ? viewWorlds() :
     s.ui.nav === 'collection' ? viewCollection() : viewHome();
 
@@ -359,9 +366,23 @@ on('card', (id) => {
   C().learn.openCard = id; C().learn.drill = null;
   sfx.click(); render(); window.scrollTo(0, 0);
 });
+/* Cards now come from three places: the chapters, the objectives file's own
+   teaching cards, and generated retrieval items (id "CHOOSE-4#1"). One
+   resolver so every caller stops caring which. */
+function cardById(id) {
+  if (!id) return null;
+  const chapter = ALL_CARDS.find((x) => x.id === id);
+  if (chapter) return chapter;
+  const extra = NEW_CARD_LIST.find((x) => x.id === id);
+  if (extra) return extra;
+  const m = /^(.+)#(\d+)$/.exec(id);
+  if (m) { const o = objective(m[1]); if (o) return assessCard(o, +m[2]); }
+  return null;
+}
+
 on('closeCard', () => { C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
-  const c = C(), card = ALL_CARDS.find((x) => x.id === c.learn.openCard);
+  const c = C(), card = cardById(c.learn.openCard);
   if (!card || (c.learn.drill && c.learn.drill.card === card.id)) return;
   const pick = +i;
   const right = pick === shuffledDrill(card).answer;
@@ -370,18 +391,57 @@ on('answer', (i) => {
   render();
 });
 on('cardDone', (id) => {
-  const c = C(), card = ALL_CARDS.find((x) => x.id === id);
+  const c = C(), card = cardById(id);
   if (!card) return;
   const right = !!(c.learn.drill && c.learn.drill.right);
   const first = !c.learn.done[id];
+
+  /* If this card WAS the day's beat, it goes into the mastery record — and
+     which door it goes through matters. A teaching card's question is the
+     immediate check and is attention; a retrieval item, days later in a
+     different context, is evidence. Collapsing the two is the exact mistake
+     the whole ledger exists to stop, so ledger.answer() keeps them apart. */
+  const bt = c.learn.beat;
+  if (bt && bt.cardId === id && !bt.answered) {
+    ledger.answer(c, { shape: bt.shape, objective: objective(bt.obj), card }, right);
+    bt.answered = true;
+    if (bt.shape === 'retrieve') sim.questTick(c, 'lesson', 1);
+  }
+
+  /* Chapter progress only exists for chapter cards. */
+  const ch = card.ch ? CHAPTERS.find((x) => x.id === card.ch) : null;
   c.learn.done[id] = true;
-  if (first) sim.questTick(c, 'lesson', 1);
+  if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, first ? (right ? 22 : 12) : 2);
-  const ch = CHAPTERS.find((x) => x.id === card.ch);
-  if (ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
+  if (ch && ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
   c.learn.openCard = null; c.learn.drill = null;
   if (res.leveled) levelUp(res); else { toast('+' + res.gained + ' XP'); render(); }
 });
+
+/* Open the day's beat. */
+on('beat', () => {
+  const c = C();
+  const bt = ledger.beat(c, ALL_CARDS, { mathsMet: ledger.mathsMet(c) });
+  if (!bt) { toast('Nothing due today'); return; }
+  if (bt.shape === 'teach') ledger.seen(c, bt.objective.id);
+  c.learn.beat = { shape: bt.shape, obj: bt.objective.id, cardId: bt.card.id, answered: false };
+  c.learn.openCard = bt.card.id;
+  c.learn.drill = null;
+  sfx.click(); render(); window.scrollTo(0, 0);
+});
+
+/* The adult gate. A deterrent on a device the child holds, not security —
+   see views.js. The PIN is set on first entry and checked here. */
+on('gateGo', () => {
+  const s = R.s;
+  const el = document.querySelector('[data-field="pin"]');
+  const v = (el && el.value || '').trim();
+  if (!/^\d{4}$/.test(v)) { R.gateWrong = true; toast('Four digits'); render(); return; }
+  if (!s.parent.pin) { s.parent.pin = v; s.parent.gate = true; R.gateWrong = false; sim.save(s); toast('PIN set'); render(); return; }
+  if (v === s.parent.pin) { s.parent.gate = true; R.gateWrong = false; render(); }
+  else { R.gateWrong = true; sfx.bad(); render(); }
+});
+on('lock', () => { R.s.parent.gate = false; R.s.ui.nav = 'home'; toast('Locked'); render(); });
 function levelUp(res) {
   sfx.level(); confetti(50);
   R.overlay = { kind: 'level', level: res.level, from: res.from };
@@ -478,7 +538,27 @@ on('bankOut', () => { sim.bankOut(C(), price(10)); sfx.click(); render(); });
 on('loan', () => {
   const c = C();
   const offer = sim.loanOffer(c, 40, 8);
-  if (!confirm(`Borrow ${money(offer.amount)}?\n\nYou pay back ${money(offer.perWeek)} every pay day for ${offer.weeks} pay days.\nYou hand over ${money(offer.total)} in total.\nSo it costs ${money(offer.cost)}.`)) return;
+  const took = confirm(`Borrow ${money(offer.amount)}?\n\nYou pay back ${money(offer.perWeek)} every pay day for ${offer.weeks} pay days.\nYou hand over ${money(offer.total)} in total.\nSo it costs ${money(offer.cost)}.`);
+
+  /* Both answers are logged, and neither is scored. Credit is a tool with a
+     price, never a moral failing (CONCEPT §6.7) — the report tells the story
+     and lets the grown-up read it. */
+  decisions.log(c, {
+    objective: 'CHOOSE-8', surface: 'loans',
+    chose: took ? 'borrow' : 'wait',
+    label: took ? 'borrowing ' + money(offer.amount) : 'waiting and saving up',
+    alternatives: [took
+      ? { id: 'wait', cost: offer.cost, label: 'waiting and saving up' }
+      : { id: 'borrow', cost: offer.cost, label: 'a loan of ' + money(offer.amount) }],
+  });
+
+  if (!took) {
+    /* Declining AFTER the cost was shown is the objective being used, on a
+       surface it was not taught on. That is transfer, and it is the only kind
+       of evidence a quiz cannot produce. */
+    mastery.transfer(c, 'CHOOSE-8', 'loans', 'turned down a loan after working out it cost ' + money(offer.cost));
+    sim.stamp(c); render(); return;
+  }
   sim.takeLoan(c, offer); sfx.coin(); toast('Borrowed — and you knew the cost first'); render();
 });
 on('repay', () => { const a = sim.repayLoan(C(), C().money.wallet); if (a) { sfx.coin(); toast('Repaid ' + money(a)); } render(); });
@@ -507,7 +587,13 @@ on('bizCashOut', () => { const a = sim.bizCashOut(C()); if (a) { sfx.coin(); toa
 
 /* store */
 on('cool', (id) => {
-  C().shop.cooling[id] = Date.now() + 24 * 3600000;
+  const c = C(), it = SHOP.find((x) => x.id === id);
+  c.shop.cooling[id] = Date.now() + 24 * 3600000;
+  if (it) {
+    decisions.log(c, { objective: 'CHOOSE-2', surface: 'store', chose: 'wait',
+      label: 'sleeping on it', alternatives: [{ id: it.id, cost: price(it.units), label: it.name }] });
+    mastery.transfer(c, 'CHOOSE-2', 'store', 'walked away from ' + it.name + ' to think about it');
+  }
   toast('Come back tomorrow — see if you still want it');
   sfx.click(); render();
 });
@@ -522,6 +608,9 @@ on('buyItem', (id) => {
   c.money.wallet -= p;
   sim.txn(c, 'out', p, it.name, 'shop');
   c.shop.owned.push(id);
+  const goal = (c.money.goals || []).find((g) => !g.done);
+  decisions.log(c, { objective: 'CHOOSE-2', surface: 'store', chose: 'buy', label: it.name,
+    alternatives: goal ? [{ id: goal.id, cost: p, label: goal.name }] : [] });
   sim.stamp(c);
   sfx.coin(); toast(it.name + ' is yours'); render();
 });
@@ -676,4 +765,5 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
   });
 }
 
-window.BZF = { R, sim, allCards: ALL_CARDS, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
+window.BZF = { R, sim, ledger, mastery, decisions, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+  cardById, allCards: ALL_CARDS, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };

@@ -9,6 +9,10 @@ import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HO
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
+import * as ledger from './ledger.js';
+import * as mastery from './mastery.js';
+import * as report from './report.js';
+import { OBJECTIVES, objective, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 
 const K = () => sim.kid(R.s);
@@ -94,6 +98,8 @@ export function viewHome() {
         <button class="btn ghost sm" data-act="nav" data-arg="worlds">Travel</button>
       </div>
     </div>
+
+    ${lessonBeat(c)}
 
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
@@ -256,6 +262,39 @@ function closingTime(c, quests) {
     </div>
     ${say('pip', 'Stopping when the day is done is a money skill too. The town keeps going without you — the fountain does not un-mend overnight.')}
   </div>`;
+}
+
+/* The day's lesson beat (docs/05 §B3). ONE new objective or ONE retrieval —
+   never both, and retrieval wins when anything is due, because the thing
+   about to be forgotten is worth more than the next new thing. */
+function lessonBeat(c) {
+  const bt = ledger.beat(c, ALL_CARDS, { mathsMet: ledger.mathsMet(c) });
+  if (!bt) {
+    return `<div class="card">
+      <div class="eyebrow">Today's lesson</div>
+      <p class="small muted" style="margin-top:6px">Nothing is due and there is nothing new to
+        meet yet — the next rung needs maths you have not got to. That is not a wall; it comes
+        on its own.</p></div>`;
+  }
+  const done = c.learn.beat && c.learn.beat.cardId === bt.card.id && c.learn.beat.answered;
+  const retr = bt.shape === 'retrieve';
+  return `<div class="card" style="border-color:var(--action)">
+    <div class="row"><div class="grow">
+      <div class="eyebrow">${retr ? 'Still know this?' : "Today's lesson"}</div>
+      <h3 style="font-size:17px;margin:1px 0">${esc(retr ? bt.objective.short : bt.card.title)}</h3>
+      <p class="small muted">${retr
+        ? `You met this ${daysAgo(mastery.lastSeen(c, bt.objective.id))}. One question, a different one.`
+        : esc(bt.objective.short)}</p></div>
+      <span style="font-size:26px">${retr ? '🔁' : '📘'}</span></div>
+    ${done
+      ? '<p class="small" style="margin-top:10px;color:var(--grow);font-weight:700">Done for today.</p>'
+      : `<button class="btn wide" style="margin-top:11px" data-act="beat">${retr ? 'One question' : 'Read it'}</button>`}
+  </div>`;
+}
+function daysAgo(t) {
+  if (!t) return 'a while back';
+  const d = Math.round((Date.now() - t) / 86400000);
+  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
 }
 
 function hometalk(c) {
@@ -872,8 +911,13 @@ export function viewStore() {
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>'
             : waiting ? `<span class="pill">think it over · ${hrs}h left</span>`
-            : c.family.coolOff && !cool ? `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}">Think it over →</button>`
-            : `<button class="btn sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
+            /* The pause is always on offer. The grown-up's cool-off setting makes it
+               COMPULSORY; with it off, waiting is still a thing a child can choose,
+               and choosing it is the objective being used rather than recited. */
+            : c.family.coolOff
+              ? `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}">Think it over →</button>`
+              : `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}" style="margin-right:8px">Think it over</button>
+                 <button class="btn sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
         </div></div>`;
     }).join('')}
     <p class="small muted" style="text-align:center">Nothing here costs real money, and there is no path from this screen to a payment form. That is a rule, not an oversight.</p>
@@ -921,6 +965,122 @@ export function viewProgress() {
 }
 
 /* ══ PARENTS ══════════════════════════════════════════════════════════ */
+/* The adult gate (docs/05 §C4). A four-digit PIN the grown-up sets the first
+   time they come here.
+
+   Be honest about what this is: a DETERRENT against an idle nine-year-old,
+   not security. It is a number in localStorage on a device the child holds,
+   and anyone who opens the console can read it. Real gating needs the server
+   that CLAUDE.md already calls a launch blocker. What it does buy today is
+   the thing that actually matters — the sim's own clock and ladder stop being
+   one tap from any child's thumb, so the economy is no longer decorative. */
+export function viewGate() {
+  const s = R.s, set = !!(s.parent && s.parent.pin);
+  const wrong = R.gateWrong;
+  return `<div class="stack">
+    <div class="card">
+      <div class="eyebrow">For the grown-up</div>
+      <h2 style="margin:2px 0 6px">${set ? 'Enter your PIN' : 'Set a PIN'}</h2>
+      <p class="small muted">${set
+        ? 'This page holds the settings and the tools that move the clock, so it asks first.'
+        : 'Four digits, chosen by you. It keeps this page — and the tools that move the pay-day clock — out of reach of an idle thumb.'}</p>
+      <input data-field="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+        style="margin-top:13px;width:100%;padding:13px 15px;border-radius:10px;border:1.5px solid ${wrong ? 'var(--spend)' : 'var(--line)'};
+        background:var(--surface2);font-family:var(--mono);font-size:22px;letter-spacing:.5em;text-align:center"
+        value="" aria-label="Four digit PIN">
+      ${wrong ? '<p class="small" style="color:var(--spend);font-weight:700;margin-top:8px">Not that one. Try again.</p>' : ''}
+      <button class="btn wide" style="margin-top:12px" data-act="gateGo">${set ? 'Open' : 'Set it and open'}</button>
+      <p class="small muted" style="margin-top:11px">This is a deterrent, not a lock — it lives on
+        this device and a determined child could get past it. It is here so the pay-day clock is
+        not one tap away.</p>
+    </div>
+    ${say('nana', 'There is nothing behind here a child needs. What they need is on the other side of that button — the town, the work, and the deciding.')}
+  </div>`;
+}
+
+/* The weekly report (docs/05 Part C). Learning, never usage. */
+export function viewReport() {
+  const c = K();
+  const r = report.weekly(c, { money });
+  const row = (em, label, body) => `<div class="row" style="gap:11px;align-items:flex-start;
+    background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px">
+    <span style="font-size:19px">${em}</span><span class="grow" style="min-width:0">
+    <b style="font-size:14px">${label}</b><div class="small muted">${body}</div></span></div>`;
+  return `<div class="stack">
+    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">← Grown-up's page</button>
+    <div class="card">
+      <div class="eyebrow">This week · ${shortDate(r.from)} – ${shortDate(r.to)}</div>
+      <h2 style="margin:3px 0 8px;font-size:22px">${esc(r.child)}</h2>
+      <p style="font-size:16px;line-height:1.5">${esc(r.headline)}</p>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">What moved</div>
+      ${r.moved.length
+        ? `<div class="stack" style="gap:8px;margin-top:10px">${r.moved.map((m) => row(
+            m.to === 'transferred' ? '🎯' : '✓', esc(m.name), esc(m.detail))).join('')}</div>`
+        : '<p class="small muted" style="margin-top:7px">Nothing reached the point of being worth reporting this week. Meeting something is not learning it; this line only moves when it survives a gap.</p>'}
+    </div>
+
+    ${r.story ? `<div class="card" style="border-color:var(--gold);background:var(--gold-tint)">
+      <div class="eyebrow">One decision</div>
+      <p style="margin-top:7px;font-size:15.5px;line-height:1.5">${esc(r.story.text)}</p>
+      ${r.story.reversed ? '<p class="small muted" style="margin-top:6px">She changed her mind within a minute or two — worth knowing, and not a bad sign. The pause is the skill.</p>' : ''}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">What she found hard</div>
+      ${r.hard.length
+        ? `<div class="stack" style="gap:8px;margin-top:10px">${r.hard.map((h) => row('•', esc(h.name), esc(h.why))).join('')}</div>`
+        : '<p class="small muted" style="margin-top:7px">Nothing slipped this week.</p>'}
+    </div>
+
+    ${r.conversation ? `<div class="card" style="border-color:var(--action)">
+      <div class="eyebrow">Ask at the table this week</div>
+      <p style="margin-top:7px;font-size:16px;font-weight:700;line-height:1.45">${esc(r.conversation.ask)}</p>
+      <div class="sep" style="margin:12px 0"></div>
+      <div class="eyebrow">What she should be able to do</div>
+      <p class="small" style="margin-top:5px">${esc(r.conversation.answer)}</p>
+      ${r.conversation.why ? `<div class="eyebrow" style="margin-top:11px">Why that is the answer</div>
+        <p class="small muted" style="margin-top:5px">${esc(r.conversation.why)}</p>` : ''}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">One thing to try in real life</div>
+      <p style="margin-top:7px">${esc(r.real)}</p>
+    </div>
+
+    ${r.next ? `<div class="card">
+      <div class="eyebrow">Coming next</div>
+      <p style="margin-top:6px;font-weight:700">${esc(r.next.name)}</p>
+      <p class="small muted" style="margin-top:3px">${esc(r.next.objective)}</p>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">The map so far</div>
+      <div class="stack" style="gap:9px;margin-top:11px">
+        ${r.strands.map((st) => `<div>
+          <div class="row"><b class="grow" style="font-size:14px">${st.strand}</b>
+            <span class="pill ${st.retained ? 'grow' : ''}">${st.retained}/${st.all} held</span></div>
+          <div class="bar" style="height:9px;margin-top:5px;position:relative">
+            <i style="width:${st.met / st.all * 100}%;background:var(--action);opacity:.28"></i>
+            <i style="width:${st.retained / st.all * 100}%;position:absolute;left:0;top:0"></i>
+          </div></div>`).join('')}
+      </div>
+      <p class="small muted" style="margin-top:11px">The pale bar is what she has met. The solid bar
+        is what she still had a week later. Only the second one is learning.</p>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">What is not in here, on purpose</div>
+      <p class="small muted" style="margin-top:6px">No streak, no leaderboard, no comparison with
+        another child, no percentile, and nothing asking either of you to spend longer on this.
+        Everything above is what happened in Bizzington — the app never asks about, infers or
+        records anything about your family's real money.</p>
+    </div>
+  </div>`;
+}
+
 export function viewParents() {
   const c = K(), s = R.s;
   const w = weekSummary(c);
@@ -929,6 +1089,10 @@ export function viewParents() {
       <div class="eyebrow">For the grown-up</div>
       <h2 style="margin:2px 0 4px">${esc(c.name)}'s week</h2>
       <p class="small muted">Observation, never a grade on the child. The simulator is a window into instincts no quiz gives you.</p>
+      <div class="row" style="margin-top:13px;gap:8px">
+        <button class="btn grow" data-act="nav" data-arg="report">📄 This week's report</button>
+        <button class="btn ghost sm" data-act="lock">Lock</button>
+      </div>
     </div>
 
     <div class="card">
