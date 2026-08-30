@@ -6814,6 +6814,8 @@ input{font:inherit; color:inherit}
 
     ${lessonBeat(c)}
 
+    ${todaysWork(c)}
+
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
         <p class="small muted">They pay wages into the same wallet as everything else.</p></div>
@@ -6982,6 +6984,34 @@ input{font:inherit; color:inherit}
     if (!t) return "a while back";
     const d = Math.round((Date.now() - t) / 864e5);
     return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago";
+  }
+  function todaysWork(c) {
+    const jobs = jobsToday(c);
+    if (!jobs.length) return "";
+    const left = jobs.filter((j) => !j.done).length;
+    const KIND = { stack: "stacking", trim: "balancing", sweep: "clearing", runner: "running" };
+    return `<div class="card">
+    <div class="row"><div class="grow"><div class="eyebrow">Today's work \xB7 ${esc(WORLDS[c.world || 0].name)}</div>
+      <p class="small muted">Each one is a shift you play. How well you do it is what it pays.</p></div>
+      <span class="pill ${left ? "" : "grow"}">${left ? left + " left" : "all done"}</span></div>
+    <div class="stack" style="gap:8px;margin-top:11px">
+      ${jobs.map((j) => {
+      const g = JOB_GAME[j.id];
+      const best2 = jobBest(c, j.id);
+      return `<div class="row" style="gap:10px;background:${j.done ? "var(--grow-tint)" : "var(--surface2)"};
+          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+          <span style="font-size:20px;${j.done ? "opacity:.6" : ""}">${j.em}</span>
+          <span class="grow" style="min-width:0">
+            <b style="font-size:14px;${j.done ? "opacity:.6" : ""}">${esc(j.name)}</b>
+            <div class="small muted">${j.done ? "Back tomorrow." : `${g ? esc(KIND[g.kind]) + " \xB7 " : ""}for ${esc(j.who)}${best2 ? " \xB7 best " + best2 : ""}`}</div>
+          </span>
+          ${j.done ? '<span class="pill grow">\u2713</span>' : `<button class="btn sm" data-act="job" data-arg="${j.id}">${g ? "Work" : money(j.amt)}</button>`}
+        </div>`;
+    }).join("")}
+    </div>
+    <p class="small muted" style="margin-top:10px">A poor shift still pays \u2014 you did the work.
+      A good one pays roughly double. It never pays more than that.</p>
+  </div>`;
   }
   function hometalk(c) {
     const lv = c.learn.level;
