@@ -628,10 +628,19 @@ export function sellAsset(c, id) {
   txn(c, 'in', v, 'Sold ' + (classById[id] || { name: id }).name, 'invest');
   stamp(c); return v;
 }
+/* How spread a child's money is. This counts POSITIONS, which is a crude
+   proxy for risk and is labelled as such wherever it is shown — four things
+   that all fall together are not four things. A real risk number needs the
+   volatility and the worst fall, which the engine computes and the app does
+   not yet show anybody. */
 export function spread(c) {
   const held = CLASSES.filter((a) => (c.market.holdings[a.id] || 0) > 0.0001);
   if (!held.length) return 0;
-  return held.some((a) => a.id === 'basket') ? Math.max(4, held.length) : held.length;
+  /* The index IS a spread — it holds twelve companies. It used to be checked
+     for under its old id 'basket', which stopped existing when the classes
+     were rebuilt on the world engine, so a child holding the one genuinely
+     diversified thing in the app was silently given no credit for it. */
+  return held.some((a) => a.id === 'index') ? Math.max(4, held.length) : held.length;
 }
 
 /* ── Bizz & Co (Founder) ─────────────────────────────────────────────── */
