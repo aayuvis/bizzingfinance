@@ -1,0 +1,358 @@
+<title>Three Visits, Not One Hour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F6F5; --tint:#EDF2F2;
+    --line:#DCE5E4; --ink:#16262A; --muted:#5B7075;
+    --action:#0E6B78; --action-tint:#E2EFF1;
+    --gold:#F0B429; --gold-tint:#FFF3D6; --gold-deep:#8A5B00;
+    --grow:#178A4C; --grow-tint:#E3F3E9;
+    --spend:#C4453C; --spend-tint:#FBE9E7;
+    --dawn:#E8A33D; --noon:#0E6B78; --dusk:#6B4E9E;
+    --rule:rgba(22,38,42,.10);
+    --display:"Fraunces",Georgia,serif;
+    --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"Sono",ui-monospace,SFMono-Regular,monospace;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+      --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+      --action:#3FAEBC; --action-tint:#12333A;
+      --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+      --grow:#5BC98C; --grow-tint:#0F2E20;
+      --spend:#EC8B81; --spend-tint:#331916;
+      --dawn:#E8B463; --noon:#3FAEBC; --dusk:#A98BD8;
+      --rule:rgba(228,237,238,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+    --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+    --action:#3FAEBC; --action-tint:#12333A;
+    --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+    --grow:#5BC98C; --grow-tint:#0F2E20;
+    --spend:#EC8B81; --spend-tint:#331916;
+    --dawn:#E8B463; --noon:#3FAEBC; --dusk:#A98BD8;
+    --rule:rgba(228,237,238,.14);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--ui); font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 clamp(18px,4vw,40px) 90px; }
+
+  .mast { padding:clamp(44px,7vw,80px) 0 30px; border-bottom:2px solid var(--ink); }
+  .kicker { font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--action); margin:0 0 18px; }
+  h1 { font-family:var(--display); font-weight:800; font-size:clamp(36px,6.6vw,62px);
+    line-height:1.03; letter-spacing:-.022em; margin:0; text-wrap:balance; }
+  .dek { font-size:clamp(17px,2.2vw,20px); color:var(--muted); margin:20px 0 0; max-width:60ch; }
+
+  section { padding-top:58px; }
+  h2 { font-family:var(--display); font-weight:800; font-size:clamp(24px,3.4vw,34px);
+    line-height:1.1; letter-spacing:-.018em; margin:0 0 6px; text-wrap:balance; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); margin:0 0 24px; }
+  p, li { max-width:68ch; }
+  p { margin:0 0 15px; }
+  ul { margin:0 0 15px; padding-left:22px; }
+  li { margin-bottom:8px; }
+  li::marker { color:var(--action); }
+  a { color:var(--action); }
+  a:focus-visible { outline:2px solid var(--action); outline-offset:3px; border-radius:3px; }
+  code { font-family:var(--mono); font-size:.9em; background:var(--tint); padding:1.5px 5px; border-radius:4px; }
+
+  .scroll { overflow-x:auto; margin:0 0 24px; }
+  table { border-collapse:collapse; width:100%; min-width:540px; font-size:15px; line-height:1.45; }
+  th { text-align:left; font-family:var(--mono); font-size:11.5px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    padding:0 14px 9px 0; border-bottom:1.5px solid var(--ink); vertical-align:bottom; }
+  td { padding:12px 14px 12px 0; border-bottom:1px solid var(--rule); vertical-align:top; }
+  td:last-child, th:last-child { padding-right:0; }
+  .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* the correction the whole thing turns on */
+  .thesis { background:var(--gold-tint); border:1.5px solid var(--gold);
+    border-radius:14px; padding:26px 28px; margin:34px 0 0; }
+  .thesis p:first-child { font-family:var(--display); font-size:clamp(20px,2.8vw,26px);
+    font-weight:600; line-height:1.32; margin:0 0 14px; max-width:30ch; }
+  .thesis p:last-child { margin:0; }
+
+  /* three visits */
+  .visits { display:grid; gap:14px; margin:0 0 10px; }
+  @media (min-width:820px) { .visits { grid-template-columns:repeat(3,1fr); } }
+  .visit { border:1.5px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); }
+  .visit header { padding:15px 18px 13px; border-bottom:1px solid var(--line); }
+  .visit .when { font-family:var(--mono); font-size:11px; letter-spacing:.11em;
+    text-transform:uppercase; margin-bottom:5px; }
+  .visit.dawn { border-color:var(--dawn); } .visit.dawn .when { color:var(--dawn); }
+  .visit.noon { border-color:var(--noon); } .visit.noon .when { color:var(--noon); }
+  .visit.dusk { border-color:var(--dusk); } .visit.dusk .when { color:var(--dusk); }
+  .visit h3 { font-family:var(--display); font-weight:800; font-size:20px; margin:0; }
+  .visit .mins { font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:3px; }
+  .visit ul { list-style:none; margin:0; padding:12px 18px 16px; }
+  .visit li { display:grid; grid-template-columns:1fr auto; gap:10px; max-width:none;
+    padding:8px 0; border-bottom:1px solid var(--rule); margin:0; font-size:14.5px; }
+  .visit li:last-child { border-bottom:none; }
+  .visit li b { font-weight:700; }
+  .visit li .m { font-family:var(--mono); font-size:12px; color:var(--muted); white-space:nowrap; }
+  .new { display:inline-block; font-family:var(--mono); font-size:9.5px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; background:var(--action); color:var(--paper);
+    padding:1px 5px; border-radius:3px; vertical-align:2px; margin-left:5px; }
+
+  /* hooks */
+  .hooks { display:grid; gap:13px; margin:0 0 24px; }
+  @media (min-width:760px) { .hooks { grid-template-columns:1fr 1fr; } }
+  .hook { border:1px solid var(--line); border-radius:12px; padding:18px 20px; background:var(--surface); }
+  .hook.gap { border-color:var(--spend); background:var(--spend-tint); }
+  .hook .id { font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--action); }
+  .hook.gap .id { color:var(--spend); }
+  .hook h3 { font-family:var(--display); font-weight:800; font-size:19px; margin:3px 0 8px; }
+  .hook p { font-size:14.5px; margin:0 0 10px; }
+  .hook .meta { font-family:var(--mono); font-size:11.5px; color:var(--muted); line-height:1.7; }
+  .hook .meta b { color:var(--ink); }
+
+  .banned { list-style:none; padding:0; margin:0 0 24px; }
+  .banned li { max-width:none; display:grid; grid-template-columns:auto 1fr; gap:13px;
+    padding:11px 0; border-bottom:1px solid var(--rule); margin:0; }
+  .banned li::before { content:"\\00d7"; color:var(--spend); font-weight:800; font-size:19px; line-height:1.2; }
+
+  .note { background:var(--surface2); border-left:3px solid var(--action);
+    padding:18px 20px; margin:0 0 24px; border-radius:0 8px 8px 0; }
+  .note.stop { border-left-color:var(--spend); background:var(--spend-tint); }
+  .note p:last-child { margin-bottom:0; }
+  .note-label { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.11em;
+    text-transform:uppercase; display:block; margin-bottom:7px; color:var(--action); }
+  .note.stop .note-label { color:var(--spend); }
+
+  footer { margin-top:70px; padding-top:24px; border-top:2px solid var(--ink);
+    font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="kicker">Bizzing Finance · Engagement</p>
+    <h1>Three Visits,<br>Not One Hour</h1>
+    <p class="dek">An hour a day for 365 days is 365 hours — more than almost any children's
+      app ever gets. This one has banned every cheap way of getting it. Here is what would
+      earn it honestly, and what I actually think is reachable.</p>
+  </header>
+
+  <div class="thesis">
+    <p>An hour a day is not one hour. It is three visits.</p>
+    <p>Morning: what happened overnight. After school: the work and the build. Evening:
+      something with someone else in the room. <strong>Design for visits, not sessions</strong> —
+      a single sixty-minute block is a thing a child does twice and then never again.</p>
+  </div>
+
+  <section>
+    <h2>Nine USPs</h2>
+    <p class="eyebrow">Not features — things a competitor cannot copy without becoming a different product</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">#</th><th>USP</th><th>Why nobody else has it</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>One currency, and it is the curriculum</strong></td><td>Every competitor has gems <em>and</em> coins. Here the money you earn playing is the money you spend, so the trade-off is the lesson. A second currency teaches that magic money arrives for showing up.</td></tr>
+          <tr><td class="num">2</td><td><strong>The simulator is closed. No real money, ever</strong></td><td>No card, no bank link, no cash-out. That is <em>why</em> it needs no financial licence in any market — and why a parent can hand over the phone without reading the terms.</td></tr>
+          <tr><td class="num">3</td><td><strong>Scored on the decision, never the return</strong></td><td>A game scored on returns has taught gambling. Here the boring diversified player wins the season — a thing an ad-funded competitor structurally cannot ship.</td></tr>
+          <tr><td class="num">4</td><td><strong>Honest about stopping</strong></td><td>The only money app for children that says the day's work is done. Unfakeable by anyone whose revenue is attention.</td></tr>
+          <tr><td class="num">5</td><td><strong>500 real companies</strong></td><td>The corpus, and the moat. Nobody hands a child the actual register with a ladder through it.</td></tr>
+          <tr><td class="num">6</td><td><strong>Reports learning, not usage</strong></td><td>“Ahana can compare unit prices — 7 of 8 this week, twice when the big box was worse”, not “40 minutes, 5-day streak”.</td></tr>
+          <tr><td class="num">7</td><td><strong>A town that permanently carries her name</strong></td><td>Restorations are irreversible and the deed is public. Progress you point at, not a number.</td></tr>
+          <tr><td class="num">8</td><td><strong>No ads, no tracking, minimal data by construction</strong></td><td>First name and an age band. DPDP/COPPA-native rather than retrofitted.</td></tr>
+          <tr><td class="num">9</td><td><strong>Family-shaped, not stranger-shaped</strong></td><td>The social layer is the household. No open chat, no global leaderboard, nobody to compare a child unfavourably with.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>The seven hooks</h2>
+    <p class="eyebrow">Each rated by minutes it can honestly hold · red = not built</p>
+    <div class="hooks">
+      <div class="hook"><div class="id">H1</div><h3>The overnight</h3>
+        <p>The oldest hook in tycoon games, and here it is not a trick because it is <em>true</em>:
+          interest accrued, the shop sold, the market moved, the tide came in. The child returns
+          to <strong>news</strong>, not a menu.</p>
+        <div class="meta"><b>Worth</b> 5–8 min, first visit · <b>Lasts</b> for ever<br>
+          <b>Status</b> partly built — the shop and market don't run overnight yet</div></div>
+
+      <div class="hook"><div class="id">H2</div><h3>Market rhythm</h3>
+        <p>The world has a clock and it isn't the child's. Markets open and close, the board is
+          chalked, Friday is pay day, Sunday is the report. Anticipation without a single
+          notification.</p>
+        <div class="meta"><b>Worth</b> the reason a morning visit exists · <b>Lasts</b> for ever<br>
+          <b>Status</b> pay day only</div></div>
+
+      <div class="hook gap"><div class="id">H3 · missing</div><h3>The collection</h3>
+        <p>“84 of 500 met.” Bizzing Bee's packs applied to the Register. Finite, countable,
+          canonical, years long — with sub-collections so it never feels infinite: a completed
+          sector, the ten oldest, the ones that make things in your own kitchen.</p>
+        <div class="meta"><b>Worth</b> 10 min a visit, endlessly · <b>Lasts</b> 2–3 years<br>
+          <b>Status</b> not built — the biggest missing engine</div></div>
+
+      <div class="hook"><div class="id">H4</div><h3>Mastery</h3>
+        <p>Personal bests per job, difficulty that climbs with the ladder, your own past run as
+          the ghost you race. <strong>Never another child's score</strong> — the competitor is you
+          last week.</p>
+        <div class="meta"><b>Worth</b> 10–15 min a visit · <b>Lasts</b> while the ceiling moves<br>
+          <b>Status</b> built for jobs; no ghosts yet</div></div>
+
+      <div class="hook gap"><div class="id">H5 · missing</div><h3>Ownership and expression</h3>
+        <p>The engine the app lacks entirely. Children give hours to Minecraft and Roblox because
+          they <strong>build</strong>. Bizzington has a town they <em>repair</em> but do not
+          <em>shape</em> — no placing, no naming, no choosing a sign, no laying out a shop floor.</p>
+        <div class="meta"><b>Worth</b> 15–20 min, the strongest weekend hook there is<br>
+          <b>Status</b> not built</div></div>
+
+      <div class="hook"><div class="id">H6</div><h3>Consequence with a delay</h3>
+        <p>A decision that resolves later is remembered; one that resolves instantly is a button.
+          The loan that costs you every pay day. The stock you panicked out of. The buffer that
+          saved you.</p>
+        <div class="meta"><b>Worth</b> not minutes — the reason the minutes matter<br>
+          <b>Status</b> the loan and the market do this; little else does</div></div>
+
+      <div class="hook gap"><div class="id">H7 · missing</div><h3>Someone else in the room</h3>
+        <p>The evening visit needs a second person. Pass-and-play Main Street. A household
+          net-worth board. A parent who can be beaten. A sibling's town you can visit and admire
+          but not touch.</p>
+        <div class="meta"><b>Worth</b> 15–25 min — the highest-retention block in the day<br>
+          <b>Status</b> Main Street exists but is single-player against bots</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The day, budgeted</h2>
+    <p class="eyebrow">Blue tags mark what is not yet built</p>
+    <div class="visits">
+      <div class="visit dawn">
+        <header><div class="when">Morning</div><h3>What happened</h3><div class="mins">~10 min · H1 H2</div></header>
+        <ul>
+          <li><span><b>The overnight card</b><span class="new">new</span><br>what moved, sold, landed</span><span class="m">3</span></li>
+          <li><span><b>Market open</b><span class="new">new</span><br>movers, delayed, unhurried</span><span class="m">4</span></li>
+          <li><span>The postbox<br>one letter</span><span class="m">2</span></li>
+          <li><span>Today's lesson beat<br>one card or one retrieval</span><span class="m">4</span></li>
+        </ul>
+      </div>
+      <div class="visit noon">
+        <header><div class="when">After school</div><h3>The work</h3><div class="mins">~30 min · H4 H5 H6</div></header>
+        <ul>
+          <li><span>The day's work<br>2–4 shifts, skill-scaled</span><span class="m">10</span></li>
+          <li><span><b>Build mode</b><span class="new">new</span><br>place, name, paint, lay out</span><span class="m">12</span></li>
+          <li><span>Put it right<br>a restoration, and the deed</span><span class="m">5</span></li>
+          <li><span><b>A commission</b><span class="new">new</span><br>multi-day, with a deadline</span><span class="m">5</span></li>
+          <li><span><b>Company of the day</b><span class="new">new</span><br>one deep dive, collected</span><span class="m">5</span></li>
+        </ul>
+      </div>
+      <div class="visit dusk">
+        <header><div class="when">Evening</div><h3>With someone</h3><div class="mins">~20 min · H7</div></header>
+        <ul>
+          <li><span><b>Main Street, pass-and-play</b><span class="new">new</span><br>2–4 humans in the room</span><span class="m">20</span></li>
+          <li><span><b>The household board</b><span class="new">new</span><br>net worth, no strangers</span><span class="m">2</span></li>
+          <li><span><b>An Almanac episode</b><span class="new">new</span><br>“it is 2008 — what now?”</span><span class="m">10</span></li>
+          <li><span>Closing time<br>today, and three things waiting</span><span class="m">3</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Six engines, in order of value per week of work</h2>
+    <p class="eyebrow">What to build, and why in this order</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">#</th><th>Engine</th><th>Why here</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>The Register + collection meter</strong> <span class="m">H3</span></td><td>The corpus. Nothing else compounds like it — and step one needs no backend at all: fifty companies, deep.</td></tr>
+          <tr><td class="num">2</td><td><strong>Build mode</strong> <span class="m">H5</span></td><td>The missing engine. Place buildings, name the shop, choose the sign. Kids give hours to building and none to browsing.</td></tr>
+          <tr><td class="num">3</td><td><strong>The overnight</strong> <span class="m">H1 H2</span></td><td>Make the shop, bank and market actually run while away, then open with the news. Cheap to build, immediate effect on the morning visit.</td></tr>
+          <tr><td class="num">4</td><td><strong>Pass-and-play + household board</strong> <span class="m">H7</span></td><td>Main Street already exists; seating 2–4 humans is small work for the highest-retention block in the day.</td></tr>
+          <tr><td class="num">5</td><td><strong>Commissions</strong> <span class="m">H6</span></td><td>Multi-day requests with deadlines, from named people who remember.</td></tr>
+          <tr><td class="num">6</td><td><strong>The Almanac</strong> <span class="m">H3 H6</span></td><td>Forty canonical market episodes, playable.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>The shape of a year</h2>
+    <p class="eyebrow">And the payoff it currently lacks</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Scale</th><th>What it is</th><th>Payoff</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Visit</strong></td><td>Three a day, each with its own job</td><td>Something happened; something is next</td></tr>
+          <tr><td><strong>Day</strong></td><td>Work · build · learn · decide · close</td><td>Closing time names three things waiting</td></tr>
+          <tr><td><strong>Week</strong></td><td>Pay day Friday · market days · one commission · Sunday report</td><td>A rhythm a child predicts and a parent plans around</td></tr>
+          <tr><td><strong>Season</strong></td><td>Twelve weeks: a district, an instrument, an arc, a finale</td><td>The reason there is a month two</td></tr>
+          <tr><td><strong>Year</strong></td><td>Four seasons and a review</td><td><strong>The Annual Report</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <span class="note-label">The 365-day payoff</span>
+      <p>On the anniversary the app prints the child's year: what they earned, what they built,
+        the town as it stands with their name on it, the companies they met, what they learned
+        and held. Printable, keepable, and the thing a grandparent gets sent.
+        <strong>Nothing else in the design makes a year feel like a thing that happened.</strong></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What we never do — and it is the USP</h2>
+    <p class="eyebrow">Eight competitor tools, all refused</p>
+    <ul class="banned">
+      <li><div><b>No streak that punishes.</b> Missing a day costs nothing. A child anxious about a streak is a cancelled subscription, and compulsion is not a money skill.</div></li>
+      <li><div><b>No loot boxes, paid spins, or randomised reward for money spent.</b></div></li>
+      <li><div><b>No second currency.</b> One wallet.</div></li>
+      <li><div><b>No notifications to a child.</b> The parent may opt into a weekly digest. The child is never pinged.</div></li>
+      <li><div><b>No global leaderboard, no comparison with other children, no percentile.</b></div></li>
+      <li><div><b>No limited-time anything.</b> Deadlines are good teaching; disappearing rewards are bait.</div></li>
+      <li><div><b>No ads. No behavioural tracking. Ever.</b></div></li>
+      <li><div><b>No live twitching ticker that rewards reacting</b> — the app spends a whole strand teaching that urgency is manufactured by sellers.</div></li>
+    </ul>
+    <p>Every one of these is a competitor's cheapest engagement tool. <strong>Refusing all eight
+      is precisely why a parent would pay</strong> — and the reason the hour has to be earned by
+      the world being worth an hour.</p>
+  </section>
+
+  <section>
+    <h2>What I actually believe about the hour</h2>
+    <p class="eyebrow">Rather than what was asked for</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th></th><th>Realistic today</th><th>With the six engines built</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Weekday</strong></td><td class="num">8–12 min, one visit</td><td class="num"><strong>25–35 min</strong>, two or three visits</td></tr>
+          <tr><td><strong>Weekend</strong></td><td class="num">15 min</td><td class="num"><strong>45–70 min</strong></td></tr>
+          <tr><td><strong>Weekly total</strong></td><td class="num">~1.5 h</td><td class="num"><strong>4–6 h</strong></td></tr>
+          <tr><td><strong>Days engaged / year</strong></td><td class="num">~60 before it thins</td><td class="num"><strong>180–240</strong>, peaking at season finales</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note stop">
+      <span class="note-label">The honest answer</span>
+      <p><strong>Sixty minutes a day, every day, for 365 days is above what this category
+        achieves, and I would not plan the business on it.</strong> The hour is reachable on the
+        days that matter — weekends, season finales, the week a child first opens their shop.
+        Chasing it on a wet Tuesday in February would mean building exactly the eight things
+        above that we have banned.</p>
+      <p>A child who gives this thirty honest minutes on a school day and two hours on a
+        Saturday is a child who has learned to run money — and a parent who renews.</p>
+    </div>
+    <p><strong>The one number to hold the design to is not minutes.</strong> It is
+      <em>objectives retained per active week</em>. An hour a day that teaches nothing is a
+      failure with good telemetry.</p>
+  </section>
+
+  <footer>
+    Bizzing Finance · docs/07-the-hour.md · branch <code>claude/bizzing-finance-webapp-s6tivd</code><br>
+    Builds on docs/05 (the mastery record) and docs/06 (the corpus). Bound by CONCEPT §6 and the editorial policy.
+  </footer>
+
+</div>
