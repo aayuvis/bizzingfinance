@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 3;
+export const SCHEMA = 4;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -38,6 +38,7 @@ function migrate(blob) {
   while (blob.v < SCHEMA) {
     if (blob.v === 1) blob = v1_to_v2(blob);
     else if (blob.v === 2) blob = v2_to_v3(blob);
+    else if (blob.v === 3) blob = v3_to_v4(blob);
     else break;
   }
   return blob;
@@ -76,5 +77,19 @@ function v2_to_v3(old) {
   });
   if (old.parent && old.parent.pin === undefined) old.parent.pin = null;
   old.v = 3;
+  return old;
+}
+
+/* v4 retires the four independent random walks. The old series cannot be
+   migrated — it was never an economy, so there is nothing in it to carry
+   forward — and sim.js rebuilds each child's market from the world engine on
+   next load. Holdings are dropped rather than re-priced onto classes that did
+   not exist: silently converting a child's Rocket Rickshaws into a bond fund
+   would be a worse lie than starting them again. */
+function v3_to_v4(old) {
+  old.kids.forEach((k) => {
+    if (k.market) { k.market.series = null; k.market.holdings = {}; k.market.step = 8; }
+  });
+  old.v = 4;
   return old;
 }

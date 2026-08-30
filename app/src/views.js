@@ -14,6 +14,8 @@ import * as mastery from './mastery.js';
 import * as report from './report.js';
 import { OBJECTIVES, objective, teachCard } from './objectives.js';
 import { JOB_GAME } from './jobgames.js';
+import { CLASSES } from './assetclasses.js';
+import { CAL } from './world.js';
 import { R } from './runtime.js';
 
 const K = () => sim.kid(R.s);
@@ -794,6 +796,35 @@ function viewBank() {
   </div>`;
 }
 
+/* The economy, on the screen where it matters. Every price in the Exchange is
+   a function of these three numbers (world.js), which is the entire reason a
+   child can be told WHY something moved instead of watching noise. */
+function worldCard(c) {
+  const w = sim.marketWorld(c);
+  const locked = CLASSES.filter((a) => !ledger.mathsMet(c)(a.needs));
+  const stat = (k, v, tone) => `<span><div class="eyebrow">${k}</div>
+    <b style="font-size:17px;font-variant-numeric:tabular-nums;${tone ? 'color:' + tone : ''}">${v}</b></span>`;
+  return `<div class="card" style="border-color:var(--action)">
+    <div class="row"><div class="grow"><div class="eyebrow">The town this week</div>
+      <h3 style="font-size:17px;margin:1px 0">${esc(sim.marketWhy(c))}</h3></div>
+      <span style="font-size:24px">${w.phase === 'boom' ? '🔥' : w.phase === 'contraction' ? '🥶' : w.phase === 'slowdown' ? '🌥️' : '🌤️'}</span></div>
+    <div class="row" style="gap:16px;margin-top:10px;flex-wrap:wrap">
+      ${stat('Bank rate', w.rate.toFixed(2) + '%', w.rate > CAL.rateNeutral ? 'var(--spend)' : 'var(--grow)')}
+      ${stat('Prices rising', w.inflation.toFixed(1) + '%', w.inflation > CAL.inflTarget ? 'var(--spend)' : '')}
+      ${stat('The town', (w.growth >= 0 ? '+' : '') + w.growth.toFixed(1) + '%', w.growth < 0 ? 'var(--spend)' : 'var(--grow)')}
+    </div>
+    <p class="small muted" style="margin-top:10px">Everything below is priced off these three
+      numbers — so when something moves there is always a reason, and it is usually the same
+      reason for more than one of them. This is Bizzington's own economy, not a forecast of
+      anybody's real one.</p>
+    ${locked.length ? `<div class="sep" style="margin:12px 0"></div>
+      <div class="eyebrow">Not yet — the maths comes first</div>
+      <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
+        ${locked.map((a) => `<span class="pill">${a.em} ${esc(a.name)} · ${a.needs}</span>`).join('')}
+      </div>` : ''}
+  </div>`;
+}
+
 function viewExchange() {
   const c = K(), step = c.market.step;
   const val = sim.holdingsValue(c);
@@ -811,18 +842,21 @@ function viewExchange() {
         : sp === 1 ? 'One thing. Your whole week now depends on somebody else’s Tuesday.'
         : 'Spread across ' + sp + '. Bad news in one can no longer sink the lot.'}</p>
     </div>
-    ${ASSETS.map((a) => {
+    ${worldCard(c)}
+    ${CLASSES.filter((a) => ledger.mathsMet(c)(a.needs)).map((a) => {
       const series = c.market.series[a.id];
+      if (!series) return '';
       const p = series[step], prev = series[Math.max(0, step - 1)];
       const mv = (p - prev) / prev;
       const u = c.market.holdings[a.id] || 0;
       return `<div class="card">
         <div class="row"><span style="font-size:22px">${a.em}</span>
           <div class="grow"><b style="font-size:15px">${esc(a.name)}</b>
-          <p class="small muted">${esc(a.desc)}</p></div>
+          <p class="small muted">${esc(a.one)}</p></div>
           <div style="text-align:right"><div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p)}</div>
           <div class="small" style="color:${mv >= 0 ? 'var(--grow)' : 'var(--spend)'};font-weight:700">${mv >= 0 ? '▲' : '▼'} ${Math.abs(mv * 100).toFixed(1)}%</div></div></div>
         ${sparkline(series.slice(0, step + 1), 300, 40, mv >= 0 ? 'var(--grow)' : 'var(--spend)')}
+        <p class="small muted" style="margin:2px 0 6px">${esc(a.why)}</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
           <span class="pill">${u > 0 ? 'you hold ' + money(u * p) : 'not held'}</span>
           <span class="grow"></span>

@@ -5,11 +5,23 @@
    Nothing outside this module computes money. Views render what is here. */
 
 import { Store } from './store.js';
+import { CLASSES, byId as classById, marketPath, classesFor } from './assetclasses.js';
+import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
   WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
+/* Seven years of weeks — the whole journey (docs/08), so a child's market
+   never runs out and the same seed always replays the same world. */
+export const MARKET_WEEKS = 7 * WEEKS_PER_YEAR;
+function newMarket(seed) {
+  const { series } = marketPath(seed, MARKET_WEEKS);
+  return { seed, series, step: 8, lastMove: 1, holdings: {}, best: null };
+}
+export function marketWorld(c) { return worldAt(c.market.seed, c.market.step, MARKET_WEEKS); }
+export function marketWhy(c) { return explainWorld(marketWorld(c)); }
+export function marketClasses(c, mathsMet) { return classesFor(mathsMet); }
 
 /* ── construction ────────────────────────────────────────────────────── */
 export function newChild(name, band, cur) {
@@ -30,7 +42,7 @@ export function newChild(name, band, cur) {
       bank: { balance: 0, rate: 0.02, opened: false, loan: null, trust: 50, repaid: 0 },
     },
     learn: { xp: 0, level: 1, done: {}, openCard: null, drill: null },
-    market: { series: makeSeries(MARKET_STEPS), step: 8, lastMove: 1, holdings: {}, best: null },
+    market: newMarket((now ^ 0x9e3779b9) >>> 0),
     biz: null,
     streak: { days: [dayIndex(now)], last: dayIndex(now) },
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [] },
@@ -181,8 +193,8 @@ export function spend(c, amt, label, cat) {
 
 export function jarTotal(c) { const j = c.money.jars; return j.spend + j.save + j.grow + j.give; }
 export function holdingsValue(c) {
-  return Math.round(ASSETS.reduce((t, a) =>
-    t + (c.market.holdings[a.id] || 0) * c.market.series[a.id][c.market.step], 0));
+  return Math.round(CLASSES.reduce((t, a) =>
+    t + (c.market.holdings[a.id] || 0) * (c.market.series[a.id] || [])[c.market.step], 0) || 0);
 }
 export function bizValue(c) { return c.biz ? Math.round(c.biz.cash) : 0; }
 export function debt(c) { return c.money.bank.loan ? Math.round(c.money.bank.loan.owed) : 0; }
@@ -473,14 +485,14 @@ export function runPayDay(c, state) {
   }
   out.independence = checkIndependence(c);
   c.money.nextPay = nextPayDay(Date.now(), c.family.payWeekday == null ? 5 : c.family.payWeekday);
-  c.market.step = Math.min(MARKET_STEPS, c.market.step + 1);
+  c.market.step = Math.min(MARKET_WEEKS - 1, c.market.step + 1);
   c.market.lastMove = marketMove(c);
   badge(c, 'payday');
   stamp(c);
   return out;
 }
 export function marketMove(c) {
-  const a = c.market.series.basket, i = c.market.step;
+  const a = c.market.series.index || c.market.series.basket, i = c.market.step;
   return i > 0 ? a[i] - a[i - 1] : 0;
 }
 export function setPayWeekday(c, wd) {
@@ -589,7 +601,7 @@ export function buyAsset(c, id, amt) {
   c.money.jars.grow -= a;
   c.market.holdings[id] = (c.market.holdings[id] || 0) + a / p;
   questTick(c, 'invest', 1);
-  txn(c, 'out', a, 'Bought ' + ASSETS.find((x) => x.id === id).name, 'invest');
+  txn(c, 'out', a, 'Bought ' + (classById[id] || { name: id }).name, 'invest');
   stamp(c); return a;
 }
 export function sellAsset(c, id) {
@@ -597,11 +609,11 @@ export function sellAsset(c, id) {
   if (u <= 0) return 0;
   const v = Math.round(u * c.market.series[id][c.market.step]);
   c.market.holdings[id] = 0; c.money.jars.grow += v;
-  txn(c, 'in', v, 'Sold ' + ASSETS.find((x) => x.id === id).name, 'invest');
+  txn(c, 'in', v, 'Sold ' + (classById[id] || { name: id }).name, 'invest');
   stamp(c); return v;
 }
 export function spread(c) {
-  const held = ASSETS.filter((a) => (c.market.holdings[a.id] || 0) > 0.0001);
+  const held = CLASSES.filter((a) => (c.market.holdings[a.id] || 0) > 0.0001);
   if (!held.length) return 0;
   return held.some((a) => a.id === 'basket') ? Math.max(4, held.length) : held.length;
 }
@@ -746,7 +758,7 @@ export function load() {
   if (!s) return null;
   if (!s.clock) s.clock = { lastSeen: Date.now() };
   s.kids.forEach((c) => {
-    if (!c.market || !c.market.series) c.market = { series: makeSeries(MARKET_STEPS), step: 8, lastMove: 1, holdings: {}, best: null };
+    if (!c.market || !c.market.series || !c.market.series.index) c.market = newMarket((c.created ^ 0x9e3779b9) >>> 0);
     if (!c.market.holdings) c.market.holdings = {};
     if (!c.jobs) c.jobs = {};
     if (!c.shop.cooling) c.shop.cooling = {};
