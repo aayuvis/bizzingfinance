@@ -13,6 +13,7 @@ import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as report from './report.js';
 import { OBJECTIVES, objective, teachCard } from './objectives.js';
+import { JOB_GAME } from './jobgames.js';
 import { R } from './runtime.js';
 
 const K = () => sim.kid(R.s);
@@ -100,6 +101,8 @@ export function viewHome() {
     </div>
 
     ${lessonBeat(c)}
+
+    ${todaysWork(c)}
 
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
@@ -295,6 +298,42 @@ function daysAgo(t) {
   if (!t) return 'a while back';
   const d = Math.round((Date.now() - t) / 86400000);
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
+}
+
+/* The day's work, on Home. It lived two taps deep in Money -> Wallet, which
+   is why turning every job into a game changed nothing anyone could see: the
+   most repeated action in the app was not on the screen the session starts
+   on. Each row now says what kind of work it is and what your best is, so a
+   job reads as a thing you play rather than a button that pays. */
+function todaysWork(c) {
+  const jobs = sim.jobsToday(c);
+  if (!jobs.length) return '';
+  const left = jobs.filter((j) => !j.done).length;
+  const KIND = { stack: 'stacking', trim: 'balancing', sweep: 'clearing', runner: 'running' };
+  return `<div class="card">
+    <div class="row"><div class="grow"><div class="eyebrow">Today's work · ${esc(WORLDS[c.world || 0].name)}</div>
+      <p class="small muted">Each one is a shift you play. How well you do it is what it pays.</p></div>
+      <span class="pill ${left ? '' : 'grow'}">${left ? left + ' left' : 'all done'}</span></div>
+    <div class="stack" style="gap:8px;margin-top:11px">
+      ${jobs.map((j) => {
+        const g = JOB_GAME[j.id];
+        const best = sim.jobBest(c, j.id);
+        return `<div class="row" style="gap:10px;background:${j.done ? 'var(--grow-tint)' : 'var(--surface2)'};
+          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+          <span style="font-size:20px;${j.done ? 'opacity:.6' : ''}">${j.em}</span>
+          <span class="grow" style="min-width:0">
+            <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
+            <div class="small muted">${j.done ? 'Back tomorrow.'
+              : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best : ''}`}</div>
+          </span>
+          ${j.done ? '<span class="pill grow">✓</span>'
+            : `<button class="btn sm" data-act="job" data-arg="${j.id}">${g ? 'Work' : money(j.amt)}</button>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="small muted" style="margin-top:10px">A poor shift still pays — you did the work.
+      A good one pays roughly double. It never pays more than that.</p>
+  </div>`;
 }
 
 function hometalk(c) {
