@@ -73,16 +73,16 @@ export function startGame(id) {
 }
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
 
-function hud(bits) {
+export function hud(bits) {
   return `<div class="hud">${bits.map((b) => `<span class="box">${b}</span>`).join('')}
     <span class="grow"></span><button class="btn ghost sm" data-act="gquit">Leave</button></div>`;
 }
-function payout(n, label) {
+export function payout(n, label) {
   const amt = price(n);
   if (amt > 0) { sim.earn(K(), amt, label, 'wage'); sim.stamp(K()); sfx.coin(); }
   return amt;
 }
-function endCard(em, title, sub, wage, line, who) {
+export function endCard(em, title, sub, wage, line, who) {
   return `<div class="stage" style="justify-content:center;text-align:center">
     <div style="font-size:44px">${em}</div>
     <h2>${esc(title)}</h2>
@@ -544,7 +544,9 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSk
   'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
   'crLane', 'crGo', 'stSell', 'stPlan', 'stGo',
   'ccHold', 'ccRelease', 'srServe', 'srStock',
-  'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd'];
+  'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
+  /* the job games (jobgames.js) — a job is a game now, not a button */
+  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane'];
 
 /* ══ COMPOUND CLIMB ═══════════════════════════════════════════════════
    Risk and return as a physical feeling. Hold to charge the year's growth:

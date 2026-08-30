@@ -221,16 +221,33 @@ export function jobsToday(c) {
     return { ...j, done: c.jobs[j.id] === d, amt };
   });
 }
-export function doJob(c, id) {
+/* A day's work. `quality` comes from how the job actually went — a job is a
+   game now, not a button, and doing it well is worth more than doing it. It
+   is clamped rather than unbounded: a bad shift still pays, because the child
+   did the work, and a brilliant one cannot become a jackpot, because a wage
+   that swings like a slot machine teaches the wrong thing (CONCEPT §6.3). */
+export const JOB_FLOOR = 0.45, JOB_CEIL = 1.9;
+export function doJob(c, id, quality) {
   const d = dayIndex(Date.now());
   const j = JOBS.find((x) => x.id === id);
   if (!j || c.jobs[id] === d) return 0;
   c.jobs[id] = d;
   const row = jobsToday(c).find((x) => x.id === id);
-  const a = earn(c, row ? row.amt : price(j.units), j.name + ' for ' + j.who, 'job');
+  const base = row ? row.amt : price(j.units);
+  const q = quality === undefined ? 1 : Math.max(JOB_FLOOR, Math.min(JOB_CEIL, quality));
+  const a = earn(c, Math.max(1, Math.round(base * q)), j.name + ' for ' + j.who, 'job');
   questTick(c, 'job', 1);
   stamp(c);
   return a;
+}
+/* Your own best at a job, so the thing you are competing with is yourself
+   last week and not another child. */
+export function jobBest(c, id) { return (c.jobs && c.jobs.best && c.jobs.best[id]) || 0; }
+export function setJobBest(c, id, score) {
+  if (!c.jobs.best) c.jobs.best = {};
+  const prev = c.jobs.best[id] || 0;
+  if (score > prev) { c.jobs.best[id] = score; return true; }
+  return false;
 }
 
 /* ── worlds ──────────────────────────────────────────────────────────────

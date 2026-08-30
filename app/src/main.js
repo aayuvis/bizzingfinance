@@ -12,6 +12,7 @@ import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
 import * as reportmod from './report.js';
+import { startJobGame, hasJobGame } from './jobgames.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
@@ -21,7 +22,13 @@ import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
 let draft = { step: 0 };
-let routing = false;
+/* The hash we wrote ourselves. `hashchange` fires ASYNCHRONOUSLY, so a flag
+   set and cleared inside writeHash() is already false by the time the event
+   arrives — the app then reads its own navigation as a back-button press.
+   Remembering the value instead survives the gap. This was invisible while
+   games could only start from the tab they lived in; the moment a job could
+   be started from Home it quit itself before the first frame. */
+let selfHash = null;
 
 const TABS = [
   { k: 'home', n: 'Home', g: '🏘️' }, { k: 'learn', n: 'Learn', g: '📗' },
@@ -39,7 +46,7 @@ function writeHash() {
   if (!R.s || !R.s.kids.length) return;
   const u = R.s.ui;
   const h = '#/' + u.nav + (u.nav === 'money' ? '/' + u.sub : '');
-  if (location.hash !== h) { routing = true; location.hash = h; routing = false; }
+  if (location.hash !== h) { selfHash = h; location.hash = h; }
 }
 function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
@@ -495,9 +502,25 @@ on('wipe', () => {
 });
 
 /* market row */
+/* A job is a game now, not a button. The pay comes out of how it went, and
+   sim.doJob does the earning at the end of it — so there is still exactly one
+   place that credits a day's work. A job with no game built yet falls back to
+   the old behaviour rather than being unavailable. */
 on('job', (id) => {
-  const a = sim.doJob(C(), id);
-  if (a) { sfx.coin(); toast('+' + money(a)); } else toast('Done that one today');
+  const c = C();
+  const row = sim.jobsToday(c).find((x) => x.id === id);
+  if (!row || row.done) { toast('Done that one today'); return; }
+  if (hasJobGame(id)) {
+    const g = startJobGame(id, () => { quitGame(); render(); });
+    if (g) {
+      if (R.game && R.game.stop) R.game.stop();
+      R.game = g; R.s.ui.nav = 'arcade';
+      sfx.click(); render(); window.scrollTo(0, 0);
+      return;
+    }
+  }
+  const a = sim.doJob(c, id);
+  if (a) { sfx.coin(); toast('+' + money(a)); }
   render();
 });
 
@@ -741,7 +764,10 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && R.overlay) { R.overlay = null; render(); }
 });
 window.addEventListener('hashchange', () => {
-  if (routing || !R.s || !R.s.kids.length) return;
+  if (!R.s || !R.s.kids.length) return;
+  /* Our own write, echoing back — not a person pressing back. */
+  if (selfHash !== null && location.hash === selfHash) { selfHash = null; return; }
+  selfHash = null;
   if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
 });
 
@@ -766,4 +792,4 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
 }
 
 window.BZF = { R, sim, ledger, mastery, decisions, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
-  cardById, allCards: ALL_CARDS, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
+  cardById, allCards: ALL_CARDS, fire, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
