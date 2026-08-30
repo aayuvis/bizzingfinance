@@ -1846,22 +1846,6 @@ input{font:inherit; color:inherit}
     { id: "chai", name: "Chai Chain Co", kind: "growth", em: "\u{1FAD6}", vol: 0.052, drift: 9e-3, desc: "Opening shops fast. Fast can go both ways." },
     { id: "rocket", name: "Rocket Rickshaws", kind: "wild", em: "\u{1F6FA}", vol: 0.105, drift: 0.0125, desc: "Might be the future. Might be a rickshaw." }
   ];
-  function makeSeries(steps) {
-    const out = {};
-    ASSETS.forEach((a, ai) => {
-      const r = rng(9301 + ai * 7919);
-      let p = 100;
-      const arr = [p];
-      for (let i = 0; i < steps; i++) {
-        const shock = (r() + r() + r() - 1.5) * 2 * a.vol;
-        const crash = i === Math.floor(steps * 0.55) ? -a.vol * 3.1 : 0;
-        p = Math.max(6, p * (1 + a.drift + shock + crash));
-        arr.push(p);
-      }
-      out[a.id] = arr;
-    });
-    return out;
-  }
   var STOCK = [
     { id: "chai", em: "\u{1FAD6}", name: "Chai", cost: 2, sells: 5, best: "cold", desc: "Sells all year. Sells twice as well when it is cold." },
     { id: "umbrella", em: "\u2602\uFE0F", name: "Umbrellas", cost: 8, sells: 20, best: "rain", desc: "Enormous margin, and only if it rains." },
@@ -2230,6 +2214,7 @@ input{font:inherit; color:inherit}
     JOB_CEIL: () => JOB_CEIL,
     JOB_FLOOR: () => JOB_FLOOR,
     MARKET_STEPS: () => MARKET_STEPS,
+    MARKET_WEEKS: () => MARKET_WEEKS,
     addGoal: () => addGoal,
     addXP: () => addXP,
     badge: () => badge,
@@ -2269,7 +2254,10 @@ input{font:inherit; color:inherit}
     kid: () => kid,
     load: () => load,
     loanOffer: () => loanOffer,
+    marketClasses: () => marketClasses,
     marketMove: () => marketMove,
+    marketWhy: () => marketWhy,
+    marketWorld: () => marketWorld,
     moveHome: () => moveHome,
     nearestFix: () => nearestFix,
     netWorth: () => netWorth,
@@ -2316,7 +2304,7 @@ input{font:inherit; color:inherit}
   var KEY = "bzf_profile";
   var OLD = "bzf_v1";
   var DEV = "bzf_device";
-  var SCHEMA = 3;
+  var SCHEMA = 4;
   function read(k, fallback) {
     try {
       const raw = localStorage.getItem(k);
@@ -2374,6 +2362,7 @@ input{font:inherit; color:inherit}
     while (blob.v < SCHEMA) {
       if (blob.v === 1) blob = v1_to_v2(blob);
       else if (blob.v === 2) blob = v2_to_v3(blob);
+      else if (blob.v === 3) blob = v3_to_v4(blob);
       else break;
     }
     return blob;
@@ -2412,9 +2401,298 @@ input{font:inherit; color:inherit}
     old.v = 3;
     return old;
   }
+  function v3_to_v4(old) {
+    old.kids.forEach((k) => {
+      if (k.market) {
+        k.market.series = null;
+        k.market.holdings = {};
+        k.market.step = 8;
+      }
+    });
+    old.v = 4;
+    return old;
+  }
+
+  // src/world.js
+  var WEEKS_PER_YEAR = 52;
+  var CAL = {
+    growthMean: 2.5,
+    /* % a year, the town's long-run trend            */
+    growthAmp: 4,
+    /* how far the cycle swings either side of it     */
+    cycleYears: 6,
+    /* boom to boom                                   */
+    growthNoise: 1.1,
+    inflTarget: 3,
+    /* what the bank is aiming at                     */
+    inflPull: 0.045,
+    /* how fast it returns to target, per week        */
+    inflFromGrowth: 0.055,
+    /* a hot town raises prices, with a lag           */
+    inflNoise: 0.55,
+    rateNeutral: 4,
+    /* the rate when everything is on target          */
+    rateOnInfl: 1.5,
+    /* raise this much for each point over target     */
+    rateOnGrowth: 0.5,
+    rateStep: 0.25,
+    /* the bank moves in quarter points               */
+    rateEveryWeeks: 6,
+    /* and not more often than this                   */
+    rateMin: 0.25,
+    rateMax: 14,
+    shockChance: 16e-4,
+    /* per week — rare, and never on a schedule       */
+    shockGrowth: -7,
+    shockWeeks: 30
+  };
+  var cache = /* @__PURE__ */ new Map();
+  function worldPath(seed, weeks) {
+    const key = seed + ":" + weeks;
+    if (cache.has(key)) return cache.get(key);
+    const r = rng(seed || 1);
+    const n = (r() + r() + r() - 1.5) * 2;
+    const noise = () => (r() + r() + r() - 1.5) * 2;
+    const path = [];
+    let infl = CAL.inflTarget;
+    let rate = CAL.rateNeutral;
+    let lastMove = -99;
+    let shockLeft = 0;
+    const cycleW = CAL.cycleYears * WEEKS_PER_YEAR;
+    void n;
+    for (let w = 0; w < weeks; w++) {
+      let growth = CAL.growthMean + CAL.growthAmp * Math.sin(2 * Math.PI * w / cycleW) + noise() * CAL.growthNoise;
+      if (shockLeft <= 0 && r() < CAL.shockChance) shockLeft = CAL.shockWeeks;
+      if (shockLeft > 0) {
+        growth += CAL.shockGrowth * (shockLeft / CAL.shockWeeks);
+        shockLeft--;
+      }
+      const gap = growth - CAL.growthMean;
+      infl += (CAL.inflTarget - infl) * CAL.inflPull + gap * CAL.inflFromGrowth + noise() * CAL.inflNoise * 0.12;
+      infl = Math.max(-2, Math.min(18, infl));
+      if (w - lastMove >= CAL.rateEveryWeeks) {
+        const want = CAL.rateNeutral + CAL.rateOnInfl * (infl - CAL.inflTarget) + CAL.rateOnGrowth * gap;
+        const diff = want - rate;
+        if (Math.abs(diff) >= CAL.rateStep) {
+          const steps = Math.max(-2, Math.min(2, Math.round(diff / CAL.rateStep)));
+          rate = Math.max(CAL.rateMin, Math.min(CAL.rateMax, rate + steps * CAL.rateStep));
+          lastMove = w;
+        }
+      }
+      path.push({
+        w,
+        growth,
+        inflation: infl,
+        rate,
+        real: rate - infl,
+        /* what the rate is worth after prices */
+        shock: shockLeft > 0,
+        phase: growth > CAL.growthMean + 1 ? "boom" : growth < 0 ? "contraction" : growth < CAL.growthMean ? "slowdown" : "recovery"
+      });
+    }
+    cache.set(key, path);
+    return path;
+  }
+  function worldAt(seed, week, weeks) {
+    const p = worldPath(seed, Math.max(weeks || 0, week + 1));
+    return p[Math.max(0, Math.min(p.length - 1, week))];
+  }
+  function explain(s) {
+    const bits = [];
+    if (s.rate >= CAL.rateNeutral + 1.5) bits.push("borrowing is dear");
+    else if (s.rate <= CAL.rateNeutral - 1) bits.push("borrowing is cheap");
+    if (s.inflation >= CAL.inflTarget + 2) bits.push("prices are climbing fast");
+    else if (s.inflation <= 1) bits.push("prices are barely moving");
+    if (s.phase === "contraction") bits.push("the town is shrinking");
+    else if (s.phase === "boom") bits.push("the town is busy");
+    return bits.length ? bits.join(", ") : "the town is steady";
+  }
+
+  // src/assetclasses.js
+  var wk = (annualPct) => annualPct / 100 / WEEKS_PER_YEAR;
+  var CLASSES = [
+    {
+      id: "cash",
+      name: "Cash",
+      em: "\u{1F4B5}",
+      age: 8,
+      needs: "M1",
+      one: "Safe, and it does nothing.",
+      why: "It never falls in number \u2014 and prices climb underneath it."
+    },
+    {
+      id: "deposit",
+      name: "The deposit",
+      em: "\u{1F3DB}\uFE0F",
+      age: 9,
+      needs: "M4",
+      one: "The bank pays you to leave it there.",
+      why: "Follows the bank rate, a little below it. The bank keeps the difference."
+    },
+    {
+      id: "bond",
+      name: "A loan you made",
+      em: "\u{1F4DC}",
+      age: 11,
+      needs: "M10",
+      one: "You are the lender. Somebody pays you a coupon.",
+      why: "When new loans pay more, yours is worth less \u2014 so the price falls when the rate rises."
+    },
+    {
+      id: "shares",
+      name: "One company",
+      em: "\u{1F3ED}",
+      age: 12,
+      needs: "M12",
+      one: "A piece of a business that earns.",
+      why: "Falls when the town slows AND when the rate rises. Two reasons, and they can arrive together."
+    },
+    {
+      id: "index",
+      name: "All of them",
+      em: "\u{1F9FA}",
+      age: 12,
+      needs: "M14",
+      one: "A slice of every company, for a small fee.",
+      why: "Calmer than any one of them, because the bad weeks are rarely the same weeks."
+    },
+    {
+      id: "gold",
+      name: "Gold",
+      em: "\u{1FA99}",
+      age: 12,
+      needs: "M13",
+      one: "It pays you nothing at all.",
+      why: "People want it when money is losing value \u2014 so it often rises when shares do not."
+    },
+    {
+      id: "property",
+      name: "A house to let",
+      em: "\u{1F3E0}",
+      age: 12,
+      needs: "M13",
+      one: "Rent comes in. You cannot sell half of it.",
+      why: "Tracks prices and the town, pays rent, and costs a fortune to buy and sell."
+    }
+  ];
+  var byId = Object.fromEntries(CLASSES.map((c) => [c.id, c]));
+  function classesFor(mathsMet2) {
+    return CLASSES.filter((c) => !mathsMet2 || mathsMet2(c.needs));
+  }
+  var P = {
+    depositBelowRate: 1,
+    /* the bank's cut, in points                     */
+    bondDuration: 6,
+    /* years — how hard a rate move hits the price   */
+    equityEarnBeta: 2.2,
+    /* earnings swing this much harder than the town */
+    equityMultiple: 15,
+    /* base price-to-earnings                        */
+    equityRateSens: 0.075,
+    /* how much the multiple shrinks per rate point  */
+    equityOwnVol: 0.028,
+    /* weekly, the part that is just this company    */
+    indexNames: 12,
+    /* how many companies are in the basket          */
+    indexFee: 0.4,
+    /* % a year, taken out                           */
+    /* Gold's DRIFT answers to the real rate: when money in the bank loses to
+       prices, the metal that pays nothing stops looking silly. The first cut of
+       this had the driver at 0.4% of gold's variance — a random walk wearing a
+       hat, which is the exact thing this module exists to kill. */
+    goldBase: 3,
+    /* % a year when the real rate is neutral        */
+    goldOnRealRate: 3.2,
+    /* subtract this much drift per point of real    */
+    goldVol: 8e-3,
+    /* quiet enough that the link is VISIBLE, not just
+       statistically detectable — a child has to be able
+       to see it over a season, or it teaches nothing  */
+    propYield: 4,
+    /* % a year of rent                              */
+    propOnGrowth: 0.35,
+    propVol: 6e-3
+    /* houses are quoted rarely and move slowly      */
+  };
+  function marketPath(seed, weeks) {
+    const world = worldPath(seed, weeks);
+    const r = rng((seed || 1) ^ 1542469173);
+    const n = () => (r() + r() + r() - 1.5) * 2;
+    const ids = CLASSES.map((c) => c.id);
+    const series = {}, weekly2 = {};
+    ids.forEach((id) => {
+      series[id] = [100];
+      weekly2[id] = [];
+    });
+    const names = Array.from({ length: P.indexNames }, () => ({ earn: 100, px: 100 }));
+    let prevRate = world[0].rate;
+    let bondCoupon = world[0].rate;
+    let price2 = 100;
+    const prices = [100];
+    for (let w = 0; w < weeks; w++) {
+      const s = world[w];
+      const dRate = s.rate - prevRate;
+      prevRate = s.rate;
+      const cashR = 0;
+      price2 *= 1 + wk(s.inflation);
+      const depR = wk(Math.max(0.05, s.rate - P.depositBelowRate));
+      const bondPriceR = -P.bondDuration * (dRate / 100);
+      const bondR = bondPriceR + wk(bondCoupon);
+      bondCoupon += (s.rate - bondCoupon) / (P.bondDuration * WEEKS_PER_YEAR);
+      const earnGrowth = wk(CAL.growthMean + s.inflation + (s.growth - CAL.growthMean) * P.equityEarnBeta);
+      const mult = P.equityMultiple / (1 + Math.max(-0.5, (s.rate - CAL.rateNeutral) * P.equityRateSens));
+      let basket = 0;
+      names.forEach((c, i) => {
+        c.earn *= 1 + earnGrowth + n() * 4e-3;
+        const px = c.earn * mult / P.equityMultiple;
+        c.ret = c.px ? px / c.px - 1 : 0;
+        c.ret += n() * P.equityOwnVol;
+        c.px = px * (1 + n() * 1e-4) || px;
+        basket += c.ret;
+        if (i === 0) weekly2.shares.push(c.ret);
+      });
+      const indexR = basket / names.length - wk(P.indexFee);
+      const goldR = wk(P.goldBase - P.goldOnRealRate * s.real) + n() * P.goldVol;
+      const propR = wk(P.propYield) + wk(s.inflation + (s.growth - CAL.growthMean) * P.propOnGrowth) + n() * P.propVol;
+      const step = {
+        cash: cashR,
+        deposit: depR,
+        bond: bondR,
+        index: indexR,
+        gold: goldR,
+        property: propR
+      };
+      step.shares = weekly2.shares[weekly2.shares.length - 1];
+      ids.forEach((id) => {
+        const rr = step[id];
+        if (id !== "shares") weekly2[id].push(rr);
+        series[id].push(Math.max(0.5, series[id][series[id].length - 1] * (1 + rr)));
+      });
+      prices.push(price2);
+    }
+    const real = {};
+    ids.forEach((id) => {
+      real[id] = series[id].map((v, i) => v / prices[i] * 100);
+    });
+    return { world, series, weekly: weekly2, prices, real };
+  }
 
   // src/sim.js
   var MARKET_STEPS = 60;
+  var MARKET_WEEKS = 7 * WEEKS_PER_YEAR;
+  function newMarket(seed) {
+    const { series } = marketPath(seed, MARKET_WEEKS);
+    return { seed, series, step: 8, lastMove: 1, holdings: {}, best: null };
+  }
+  function marketWorld(c) {
+    return worldAt(c.market.seed, c.market.step, MARKET_WEEKS);
+  }
+  function marketWhy(c) {
+    return explain(marketWorld(c));
+  }
+  function marketClasses(c, mathsMet2) {
+    return classesFor(mathsMet2);
+  }
   function newChild(name, band, cur2) {
     setCurrency(cur2);
     const now2 = Date.now();
@@ -2436,7 +2714,7 @@ input{font:inherit; color:inherit}
         bank: { balance: 0, rate: 0.02, opened: false, loan: null, trust: 50, repaid: 0 }
       },
       learn: { xp: 0, level: 1, done: {}, openCard: null, drill: null },
-      market: { series: makeSeries(MARKET_STEPS), step: 8, lastMove: 1, holdings: {}, best: null },
+      market: newMarket((now2 ^ 2654435769) >>> 0),
       biz: null,
       streak: { days: [dayIndex(now2)], last: dayIndex(now2) },
       postbox: { day: dayIndex(now2), idx: 0, answered: false, log: [] },
@@ -2591,7 +2869,7 @@ input{font:inherit; color:inherit}
     return j.spend + j.save + j.grow + j.give;
   }
   function holdingsValue(c) {
-    return Math.round(ASSETS.reduce((t, a) => t + (c.market.holdings[a.id] || 0) * c.market.series[a.id][c.market.step], 0));
+    return Math.round(CLASSES.reduce((t, a) => t + (c.market.holdings[a.id] || 0) * (c.market.series[a.id] || [])[c.market.step], 0) || 0);
   }
   function bizValue(c) {
     return c.biz ? Math.round(c.biz.cash) : 0;
@@ -2886,14 +3164,14 @@ input{font:inherit; color:inherit}
     }
     out.independence = checkIndependence(c);
     c.money.nextPay = nextPayDay(Date.now(), c.family.payWeekday == null ? 5 : c.family.payWeekday);
-    c.market.step = Math.min(MARKET_STEPS, c.market.step + 1);
+    c.market.step = Math.min(MARKET_WEEKS - 1, c.market.step + 1);
     c.market.lastMove = marketMove(c);
     badge(c, "payday");
     stamp(c);
     return out;
   }
   function marketMove(c) {
-    const a = c.market.series.basket, i = c.market.step;
+    const a = c.market.series.index || c.market.series.basket, i = c.market.step;
     return i > 0 ? a[i] - a[i - 1] : 0;
   }
   function setPayWeekday(c, wd) {
@@ -3039,7 +3317,7 @@ input{font:inherit; color:inherit}
     c.money.jars.grow -= a;
     c.market.holdings[id] = (c.market.holdings[id] || 0) + a / p;
     questTick(c, "invest", 1);
-    txn(c, "out", a, "Bought " + ASSETS.find((x) => x.id === id).name, "invest");
+    txn(c, "out", a, "Bought " + (byId[id] || { name: id }).name, "invest");
     stamp(c);
     return a;
   }
@@ -3049,12 +3327,12 @@ input{font:inherit; color:inherit}
     const v = Math.round(u * c.market.series[id][c.market.step]);
     c.market.holdings[id] = 0;
     c.money.jars.grow += v;
-    txn(c, "in", v, "Sold " + ASSETS.find((x) => x.id === id).name, "invest");
+    txn(c, "in", v, "Sold " + (byId[id] || { name: id }).name, "invest");
     stamp(c);
     return v;
   }
   function spread(c) {
-    const held = ASSETS.filter((a) => (c.market.holdings[a.id] || 0) > 1e-4);
+    const held = CLASSES.filter((a) => (c.market.holdings[a.id] || 0) > 1e-4);
     if (!held.length) return 0;
     return held.some((a) => a.id === "basket") ? Math.max(4, held.length) : held.length;
   }
@@ -3239,7 +3517,7 @@ input{font:inherit; color:inherit}
     if (!s) return null;
     if (!s.clock) s.clock = { lastSeen: Date.now() };
     s.kids.forEach((c) => {
-      if (!c.market || !c.market.series) c.market = { series: makeSeries(MARKET_STEPS), step: 8, lastMove: 1, holdings: {}, best: null };
+      if (!c.market || !c.market.series || !c.market.series.index) c.market = newMarket((c.created ^ 2654435769) >>> 0);
       if (!c.market.holdings) c.market.holdings = {};
       if (!c.jobs) c.jobs = {};
       if (!c.shop.cooling) c.shop.cooling = {};
@@ -7456,6 +7734,31 @@ input{font:inherit; color:inherit}
     </div>
   </div>`;
   }
+  function worldCard(c) {
+    const w = marketWorld(c);
+    const locked = CLASSES.filter((a) => !mathsMet(c)(a.needs));
+    const stat = (k, v, tone2) => `<span><div class="eyebrow">${k}</div>
+    <b style="font-size:17px;font-variant-numeric:tabular-nums;${tone2 ? "color:" + tone2 : ""}">${v}</b></span>`;
+    return `<div class="card" style="border-color:var(--action)">
+    <div class="row"><div class="grow"><div class="eyebrow">The town this week</div>
+      <h3 style="font-size:17px;margin:1px 0">${esc(marketWhy(c))}</h3></div>
+      <span style="font-size:24px">${w.phase === "boom" ? "\u{1F525}" : w.phase === "contraction" ? "\u{1F976}" : w.phase === "slowdown" ? "\u{1F325}\uFE0F" : "\u{1F324}\uFE0F"}</span></div>
+    <div class="row" style="gap:16px;margin-top:10px;flex-wrap:wrap">
+      ${stat("Bank rate", w.rate.toFixed(2) + "%", w.rate > CAL.rateNeutral ? "var(--spend)" : "var(--grow)")}
+      ${stat("Prices rising", w.inflation.toFixed(1) + "%", w.inflation > CAL.inflTarget ? "var(--spend)" : "")}
+      ${stat("The town", (w.growth >= 0 ? "+" : "") + w.growth.toFixed(1) + "%", w.growth < 0 ? "var(--spend)" : "var(--grow)")}
+    </div>
+    <p class="small muted" style="margin-top:10px">Everything below is priced off these three
+      numbers \u2014 so when something moves there is always a reason, and it is usually the same
+      reason for more than one of them. This is Bizzington's own economy, not a forecast of
+      anybody's real one.</p>
+    ${locked.length ? `<div class="sep" style="margin:12px 0"></div>
+      <div class="eyebrow">Not yet \u2014 the maths comes first</div>
+      <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
+        ${locked.map((a) => `<span class="pill">${a.em} ${esc(a.name)} \xB7 ${a.needs}</span>`).join("")}
+      </div>` : ""}
+  </div>`;
+  }
   function viewExchange() {
     const c = K4(), step = c.market.step;
     const val = holdingsValue(c);
@@ -7469,18 +7772,21 @@ input{font:inherit; color:inherit}
         <div class="big" style="font-size:20px">${money(c.money.jars.grow)}</div></div></div>
       <p class="small muted" style="margin-top:6px">${sp === 0 ? "Nothing owned yet. Buy from the Grow jar \u2014 that is money you will not need soon." : sp === 1 ? "One thing. Your whole week now depends on somebody else\u2019s Tuesday." : "Spread across " + sp + ". Bad news in one can no longer sink the lot."}</p>
     </div>
-    ${ASSETS.map((a) => {
+    ${worldCard(c)}
+    ${CLASSES.filter((a) => mathsMet(c)(a.needs)).map((a) => {
       const series = c.market.series[a.id];
+      if (!series) return "";
       const p = series[step], prev = series[Math.max(0, step - 1)];
       const mv = (p - prev) / prev;
       const u = c.market.holdings[a.id] || 0;
       return `<div class="card">
         <div class="row"><span style="font-size:22px">${a.em}</span>
           <div class="grow"><b style="font-size:15px">${esc(a.name)}</b>
-          <p class="small muted">${esc(a.desc)}</p></div>
+          <p class="small muted">${esc(a.one)}</p></div>
           <div style="text-align:right"><div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p)}</div>
           <div class="small" style="color:${mv >= 0 ? "var(--grow)" : "var(--spend)"};font-weight:700">${mv >= 0 ? "\u25B2" : "\u25BC"} ${Math.abs(mv * 100).toFixed(1)}%</div></div></div>
         ${sparkline(series.slice(0, step + 1), 300, 40, mv >= 0 ? "var(--grow)" : "var(--spend)")}
+        <p class="small muted" style="margin:2px 0 6px">${esc(a.why)}</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
           <span class="pill">${u > 0 ? "you hold " + money(u * p) : "not held"}</span>
           <span class="grow"></span>
