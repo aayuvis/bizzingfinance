@@ -6,6 +6,7 @@
 
 import { Store } from './store.js';
 import { CLASSES, byId as classById, marketPath, classesFor } from './assetclasses.js';
+import * as biz from './business.js';
 import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
@@ -22,6 +23,19 @@ function newMarket(seed) {
 export function marketWorld(c) { return worldAt(c.market.seed, c.market.step, MARKET_WEEKS); }
 export function marketWhy(c) { return explainWorld(marketWorld(c)); }
 export function marketClasses(c, mathsMet) { return classesFor(mathsMet); }
+
+/* Year 3 of the journey (docs/08): prices rise. Until now inflation existed
+   only in the Exchange, which meant a child could be told cash loses value
+   and never once feel it. This is the multiplier that puts it in their own
+   rent, their own food and their own shopping — the week the safe thing
+   stops being safe. Compounded from the world since they arrived. */
+export function priceLevel(c) {
+  if (!c.market) return 1;
+  const w = worldAt(c.market.seed, c.market.step, MARKET_WEEKS);
+  const weeks = Math.max(0, c.market.step - 8);
+  return Math.pow(1 + w.inflation / 100, weeks / WEEKS_PER_YEAR);
+}
+export function inflatedSince(c) { return Math.round((priceLevel(c) - 1) * 100); }
 
 /* ── construction ────────────────────────────────────────────────────── */
 export function newChild(name, band, cur) {
@@ -64,9 +78,11 @@ export function homeOf(c) { return HOMES[(c.home && c.home.tier) || 0]; }
 export function refreshBills(c) {
   const h = homeOf(c);
   const bills = [];
-  if (h.rent > 0) bills.push({ name: 'Rent', units: h.rent, amt: price(h.rent) });
-  h.bills.forEach((b) => bills.push({ name: b.name, units: b.units, amt: price(b.units) }));
-  bills.push({ name: h.perk === 'kitchen' ? 'Food (you cook)' : 'Food', units: h.food, amt: price(h.food) });
+  const lvl = priceLevel(c);          /* year 3: the bills rise with prices */
+  const at = (units) => Math.round(price(units) * lvl);
+  if (h.rent > 0) bills.push({ name: 'Rent', units: h.rent, amt: at(h.rent) });
+  h.bills.forEach((b) => bills.push({ name: b.name, units: b.units, amt: at(b.units) }));
+  bills.push({ name: h.perk === 'kitchen' ? 'Food (you cook)' : 'Food', units: h.food, amt: at(h.food) });
   if (c.home.mortgage) bills.push({ name: 'Mortgage', units: 0, amt: c.home.mortgage.perWeek });
   c.money.bills = bills;
   return bills;
@@ -841,3 +857,48 @@ export function nextOpening(c) {
   }
   return null;
 }
+
+/* ── years 6 and 7: the venture (business.js) ──────────────────────────── */
+export function openVenture(c, name) {
+  if (c.venture) return c.venture;
+  c.venture = biz.newVenture(name, c.market.step, c.market.seed);
+  badge(c, 'shopkeeper');
+  stamp(c);
+  return c.venture;
+}
+export function ventureWorld(c) { return worldAt(c.market.seed, c.market.step, MARKET_WEEKS); }
+export function ventureBuy(c, units) {
+  const spent = biz.buyStock(c.venture, units, ventureWorld(c));
+  if (spent) stamp(c);
+  return spent;
+}
+export function ventureWeek(c) {
+  const row = biz.tradeWeek(c.venture, c.market.seed, c.market.step);
+  questTick(c, 'trade', 1);
+  if (row.net > 0) badge(c, 'profit-day');
+  /* The shop's week IS a market week — one clock, or the child's bond and
+     their till would drift apart and the whole point of one world is lost. */
+  c.market.step = Math.min(MARKET_WEEKS - 1, c.market.step + 1);
+  c.market.lastMove = marketMove(c);
+  /* Running out is not a silent negative number. A business with no money is
+     a real event with a real name, and it is the moment the profit-is-not-cash
+     lesson stops being a paragraph — so it is surfaced, and an overdraft is
+     offered at a price rather than granted for free. */
+  row.brokeAt = c.venture.cash < 0 ? Math.round(-c.venture.cash) : 0;
+  if (row.brokeAt) badge(c, 'ran-dry');
+  stamp(c);
+  return row;
+}
+export function venturePrice(c, p) { c.venture.price = Math.max(1, Math.round(p)); stamp(c); }
+/* Drawing money out is a real transaction: it leaves the business and lands
+   in the child's own wallet, so the two ledgers stay separate and honest. */
+export function ventureDraw(c, amt) {
+  const v = c.venture;
+  const a = Math.min(Math.round(amt), Math.max(0, Math.floor(v.cash)));
+  if (a <= 0) return 0;
+  v.cash -= a; v.paidIn -= a;
+  earn(c, a, 'Drawn from ' + v.name, 'business');
+  stamp(c);
+  return a;
+}
+export const ventureLib = biz;

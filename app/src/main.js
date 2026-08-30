@@ -226,6 +226,33 @@ function overlay() {
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in →</button>`);
   }
 
+  if (o.kind === 'randry') {
+    const r = o.row;
+    return box(`
+      <div style="text-align:center"><div style="font-size:44px">🫙</div>
+        <div class="eyebrow">The till is empty</div>
+        <h2 style="margin:4px 0 8px;font-size:24px">And you were making money</h2></div>
+      <div style="margin-top:12px;background:var(--gold-tint);color:var(--treasure-deep);
+        border-radius:var(--r-md);padding:13px 15px;font-weight:650">
+        You earned <b>${money(r.net)}</b> this week. <b>${money(r.receivables)}</b> of your sales
+        has not been paid for yet, and the rent went out anyway.</div>
+      ${say('nana', 'This is the one that closes more shops than a bad idea ever did. Profit is what you earned. Cash is what turned up. You can be right about the first and still be shut on Friday because of the second — so from now on, watch the till, not the takings.')}
+      <div class="row" style="gap:8px;margin-top:14px">
+        <button class="btn ghost grow" data-act="closeOv">I see it</button>
+        <button class="btn grow" data-act="vBorrow" data-arg="500">Borrow ${money(500)}</button>
+      </div>`);
+  }
+  if (o.kind === 'raised') {
+    const d = o.deal;
+    return box(`
+      <div style="text-align:center"><div style="font-size:44px">🤝</div>
+        <div class="eyebrow">Sold a share</div>
+        <h2 style="margin:4px 0 8px;font-size:24px">${money(d.cash)} in the till</h2></div>
+      <div style="margin-top:12px;background:var(--spend-tint);color:var(--spend);border-radius:var(--r-md);padding:12px 14px;font-weight:700">
+        And ${money(d.costPerYear)} a year of profit is theirs now. For good.</div>
+      ${say('nana', 'That money did not come from nowhere. You did not borrow it, so there is nothing to repay — you sold a piece of every rupee this shop will ever make. Sometimes that is exactly right. Just never let anyone tell you it was free.')}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">I understand</button>`);
+  }
   if (o.kind === 'mended') {
     const f = o.fix;
     return box(`
@@ -594,6 +621,54 @@ on('buy', (id) => {
 on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
 
 /* bizz & co */
+/* years 6 and 7 — the venture (business.js via sim) */
+on('openVenture', () => { sim.openVenture(C(), "Your stall"); sfx.level(); confetti(30); render(); });
+on('vPrice', (d) => { const c = C(); sim.venturePrice(c, c.venture.price + (+d)); sfx.click(); render(); });
+on('vBuy', (u) => {
+  const a = sim.ventureBuy(C(), +u);
+  if (a) { sfx.coin(); toast('Stocked up — ' + money(a) + ' out of the till'); }
+  else toast('Not enough in the till');
+  render();
+});
+on('vWeek', () => {
+  const row = sim.ventureWeek(C());
+  if (row.brokeAt) {
+    sfx.bad();
+    R.overlay = { kind: 'randry', row };
+    render();
+    return;
+  }
+  if (row.net >= 0) sfx.coin(); else sfx.bad();
+  toast(row.net >= 0 ? 'Made ' + money(row.net) : 'Lost ' + money(-row.net));
+  render();
+});
+on('vBorrow', (amt) => {
+  const c = C();
+  const d = sim.ventureLib.borrow(c.venture, +amt, sim.ventureWorld(c));
+  sim.stamp(c); sfx.coin();
+  toast('Borrowed ' + money(d.amount) + ' · ' + money(d.weeklyInterest) + ' a week');
+  render();
+});
+on('vRepay', () => {
+  const c = C();
+  const a = sim.ventureLib.repay(c.venture, Math.min(c.venture.cash, c.venture.debt));
+  sim.stamp(c); if (a) { sfx.coin(); toast('Repaid ' + money(a)); }
+  render();
+});
+on('vRaise', (share) => {
+  const c = C();
+  const d = sim.ventureLib.raiseEquity(c.venture, +share, sim.ventureWorld(c));
+  if (!d) { toast('Not worth anything yet — trade a few weeks first'); return; }
+  sim.stamp(c); sfx.coin();
+  R.overlay = { kind: 'raised', deal: d };
+  render();
+});
+on('vDraw', (amt) => {
+  const a = sim.ventureDraw(C(), +amt);
+  if (a) { sfx.coin(); toast('Took ' + money(a) + ' home'); }
+  render();
+});
+
 on('openBiz', () => { sim.openBiz(C()); sfx.level(); confetti(30); render(); });
 on('bizBuy', (id) => { sim.bizBuy(C(), id, 5) ? sfx.coin() : toast('Not enough in the till'); render(); });
 on('bizPrice', (arg) => { const [id, d] = arg.split(':'); sim.bizPrice(C(), id, price(1) * +d); sfx.click(); render(); });

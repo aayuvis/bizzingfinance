@@ -11,7 +11,7 @@
     "single": "node build.mjs",
     "serve": "python3 -m http.server 8080",
     "deploy": "./deploy.sh",
-    "test": "node test/economy.mjs"
+    "test": "node test/economy.mjs && node test/business.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

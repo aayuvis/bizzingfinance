@@ -16,6 +16,7 @@ import { OBJECTIVES, objective, teachCard } from './objectives.js';
 import { JOB_GAME } from './jobgames.js';
 import { CLASSES } from './assetclasses.js';
 import { CAL } from './world.js';
+import * as biz from './business.js';
 import { R } from './runtime.js';
 
 const K = () => sim.kid(R.s);
@@ -878,81 +879,141 @@ function viewExchange() {
 }
 
 /* ══ BIZZ & CO ════════════════════════════════════════════════════════ */
+/* Years 6 and 7 (docs/08) — the shop, properly accounted.
+
+   Four things on one screen, because they are four halves of one truth: the
+   price you charge, the number you must sell, what you earned, and what you
+   actually have. A child who can hold those together at once is most of the
+   way to running something. */
 function viewBusiness() {
   const c = K();
-  if (!c.biz) {
+  if (!c.venture) {
     return `<div class="stack">
-      ${say('nana', 'Shutters are off. I have left you forty in the till and the rent is due whether anybody comes or not. Buy for less than you sell for, and count the difference honestly.')}
-      <div class="card" style="text-align:center;padding:26px">
-        <div style="font-size:40px">🏪</div>
-        <h3 style="margin:8px 0 4px">Bizz &amp; Co</h3>
-        <p class="muted small">Stock it, price it, open the doors, and find out what the weather thinks of your plan.</p>
-        <button class="btn wide" style="margin-top:14px" data-act="openBiz">Take the keys</button>
+      ${say('nana', 'A stall of your own. You set the price, you carry the cost, and you find out the difference between a good week and a week that only looked good.')}
+      <div class="card">
+        <div class="eyebrow">Open your own</div>
+        <h2 style="margin:3px 0 6px;font-size:22px">Start a stall</h2>
+        <p class="small muted">You put in ${money(price(150))} to begin. It buys stock and covers the
+          rent while you find your price. Nothing here is real money and none of it ever will be.</p>
+        <button class="btn wide" style="margin-top:12px" data-act="openVenture">Open it</button>
       </div></div>`;
   }
-  const b = c.biz;
-  const last = b.log[0];
-  const w = WEATHER.find((x) => x.id === b.weather);
-  const stockValue = STOCK.reduce((t, s) => t + (b.stock[s.id] || 0) * price(s.cost), 0);
+  const v = c.venture, w = sim.ventureWorld(c);
+  const be = biz.breakEven(v, w);
+  const best = biz.bestPrice(v, w);
+  const bs = biz.balanceSheet(v, w);
+  const pl = biz.profitAndLoss(v, 12);
+  const val = biz.valuation(v, w);
+  const last = v.weeks[0];
+  const cst = biz.costsAt(v, w);
+  const row = (k, val2, tone, small) => `<div class="row" style="padding:5px 0${small ? '' : ';border-bottom:1px solid var(--line-soft)'}">
+    <span class="grow ${small ? 'small muted' : ''}">${k}</span>
+    <b style="font-variant-numeric:tabular-nums;${tone ? 'color:' + tone : ''}">${val2}</b></div>`;
+
   return `<div class="stack">
     <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">Day ${b.day} · Bizz &amp; Co</div>
-        <div class="big" style="font-size:30px">${money(b.cash)}</div>
-        <p class="small muted">in the till · ${money(stockValue)} sitting in stock · rent ${money(b.rent)} a day</p></div></div>
-      <div class="row" style="margin-top:11px;gap:8px;flex-wrap:wrap">
-        <button class="btn" data-act="bizTrade">Open for the day →</button>
-        <button class="btn ghost sm" data-act="bizCashOut" ${b.cash <= price(20) ? 'disabled' : ''}>Take the profit home</button>
-      </div>
+      <div class="row"><div class="grow"><div class="eyebrow">${esc(v.name)} · week ${v.traded}</div>
+        <div class="big" style="font-size:28px">${money(val.yours)}</div>
+        <p class="small muted">what your share is worth${v.outsideEquity > 0
+          ? ' — you own ' + Math.round((1 - v.outsideEquity) * 100) + '%' : ''}</p></div>
+        <span style="font-size:30px">🏪</span></div>
     </div>
-    ${last ? `<div class="card" style="border-color:${last.profit >= 0 ? 'var(--grow)' : 'var(--spend)'}">
-      <div class="eyebrow">Yesterday · ${esc(WEATHER.find((x) => x.id === last.weather).name)} ${WEATHER.find((x) => x.id === last.weather).em}</div>
-      <div class="stack" style="gap:5px;margin-top:6px;font-size:14px">
-        <div class="row"><span class="grow muted">Revenue — everything that came in</span><b>${money(last.revenue)}</b></div>
-        <div class="row"><span class="grow muted">Rent — arrives whether you sold anything</span><b>−${money(last.rent)}</b></div>
-        <div class="sep"></div>
-        <div class="row"><span class="grow" style="font-weight:800">Profit</span>
-          <span class="big" style="font-size:20px;color:${last.profit >= 0 ? 'var(--grow)' : 'var(--spend)'}">${last.profit >= 0 ? '+' : '−'}${money(Math.abs(last.profit))}</span></div>
-      </div>
-      ${Object.keys(last.spoiled || {}).length ? `<p class="small" style="color:var(--spend);margin-top:8px;font-weight:650">
-        ${Object.keys(last.spoiled).map((k) => last.spoiled[k] + ' ' + STOCK.find((s) => s.id === k).name.toLowerCase() + ' melted').join(', ')} — stock you paid for and cannot sell.</p>` : ''}
-    </div>` : say('pip', 'Nothing has happened yet. Buy some stock, set your prices, then open the doors.')}
+
     <div class="card">
-      <div class="eyebrow">Stock and prices</div>
-      <p class="small muted" style="margin:3px 0 10px">Buy low, price it yourself. Put the price up and fewer people buy — the question is whether you end the day with more.</p>
-      <div class="stack" style="gap:10px">
-        ${STOCK.map((s) => {
-          const have = b.stock[s.id] || 0, cost = price(s.cost), p = b.prices[s.id];
-          const margin = p - cost;
-          return `<div style="background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px">
-            <div class="row"><span style="font-size:20px">${s.em}</span>
-              <span class="grow"><b style="font-size:14.5px">${esc(s.name)}</b><br>
-                <span class="small muted">${esc(s.desc)}</span></span>
-              <span class="pill">${have} in stock</span></div>
-            <div class="row" style="margin-top:9px;gap:8px;flex-wrap:wrap">
-              <button class="btn ghost sm" data-act="bizBuy" data-arg="${s.id}" ${cost * 5 > b.cash ? 'disabled' : ''}>Buy 5 for ${money(cost * 5)}</button>
-              <span class="small muted">${money(cost)} each</span>
-              <span class="grow"></span>
-              <span class="small muted">sell at</span>
-              <div class="stepper">
-                <button data-act="bizPrice" data-arg="${s.id}:-1" aria-label="lower the price of ${esc(s.name)}">−</button>
-                <span class="n">${money(p)}</span>
-                <button data-act="bizPrice" data-arg="${s.id}:1" aria-label="raise the price of ${esc(s.name)}">+</button></div>
-            </div>
-            <p class="small ${margin > 0 ? 'muted' : ''}" style="margin-top:6px;${margin > 0 ? '' : 'color:var(--spend);font-weight:700'}">
-              ${margin > 0 ? 'Margin ' + money(margin) + ' each — before the rent.' : 'You are selling below what it cost you.'}</p>
-          </div>`;
-        }).join('')}
+      <div class="eyebrow">The price you charge</div>
+      <div class="row" style="gap:10px;margin-top:8px">
+        <button class="btn ghost sm" data-act="vPrice" data-arg="-1">−</button>
+        <div class="grow" style="text-align:center">
+          <div class="big" style="font-size:26px">${money(v.price)}</div>
+          <div class="small muted">costs you ${money(cst.unitCost)} to buy</div></div>
+        <button class="btn ghost sm" data-act="vPrice" data-arg="1">+</button>
+      </div>
+      <div class="sep" style="margin:12px 0"></div>
+      ${row('Margin on one', money(be.margin), be.margin > 0 ? 'var(--grow)' : 'var(--spend)')}
+      ${row('Costs anyway, each week', money(be.fixed + be.interest))}
+      ${row('So you must sell', be.units === Infinity ? 'you cannot' : be.units + ' a week', 'var(--action)')}
+      <p class="small muted" style="margin-top:9px">At ${money(v.price)} the town wants
+        <b>${biz.demandAt(v, w, v.price)}</b> a week. Charge less and more people come; charge more
+        and each one is worth more. The best week is rarely at either end
+        — right now it is around <b>${money(best.price)}</b>.</p>
+    </div>
+
+    <div class="card">
+      <div class="row"><div class="grow"><div class="eyebrow">Stock on the shelf</div>
+        <b style="font-size:17px">${v.stock} units</b>
+        <div class="small muted">bought for ${money(v.stockCost)}</div></div>
+        <button class="btn sm" data-act="vBuy" data-arg="25"
+          ${v.cash < cst.unitCost * 25 ? 'disabled' : ''}>Buy 25 · ${money(cst.unitCost * 25)}</button></div>
+      <button class="btn wide" style="margin-top:11px" data-act="vWeek"
+        ${v.stock <= 0 ? 'disabled' : ''}>Open for the week →</button>
+      ${v.stock <= 0 ? '<p class="small muted" style="margin-top:7px">Nothing to sell. The rent arrives anyway — that is what fixed costs means.</p>' : ''}
+    </div>
+
+    ${last ? `<div class="card">
+      <div class="eyebrow">Last week</div>
+      ${row('Sold', last.units + ' of ' + last.want + ' wanted')}
+      ${row('Money earned (profit)', money(last.net), last.net >= 0 ? 'var(--grow)' : 'var(--spend)')}
+      ${row('Money that moved (cash)', money(last.cashDelta), last.cashDelta >= 0 ? 'var(--grow)' : 'var(--spend)')}
+      ${Math.abs(last.net - last.cashDelta) > 1 ? `<p class="small" style="margin-top:9px;background:var(--gold-tint);
+        color:var(--treasure-deep);padding:10px 12px;border-radius:var(--r-md);font-weight:650">
+        Those two numbers are not the same, and neither of them is wrong. You earned
+        ${money(last.net)} and ${money(last.cashDelta)} actually moved — because stock is paid for
+        when you buy it and customers pay weeks after they walk out. ${money(bs.receivables)} is
+        still owed to you.</p>` : ''}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">Profit and loss · last ${pl.weeks} weeks</div>
+      <div style="margin-top:8px">
+        ${row('Sales', money(pl.revenue))}
+        ${row('What they cost you', '−' + money(pl.cogs))}
+        ${row('Gross profit', money(pl.gross), 'var(--grow)')}
+        ${row('Rent and wages', '−' + money(pl.fixed))}
+        ${row('Interest', '−' + money(pl.interest))}
+        ${row('What you actually made', money(pl.net), pl.net >= 0 ? 'var(--grow)' : 'var(--spend)')}
       </div>
     </div>
-    ${b.log.length > 1 ? `<div class="card">
-      <div class="eyebrow">The last few days</div>
-      <div class="stack" style="gap:5px;margin-top:8px">
-        ${b.log.slice(0, 8).map((l) => `<div class="row" style="font-size:13.5px">
-          <span style="width:52px" class="muted">Day ${l.day}</span>
-          <span style="width:26px">${WEATHER.find((x) => x.id === l.weather).em}</span>
-          <span class="grow muted">${money(l.revenue)} in</span>
-          <b style="color:${l.profit >= 0 ? 'var(--grow)' : 'var(--spend)'}">${l.profit >= 0 ? '+' : '−'}${money(Math.abs(l.profit))}</b></div>`).join('')}
-      </div></div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">What you have · and who it belongs to</div>
+      <div style="margin-top:8px">
+        ${row('In the till', money(bs.cash))}
+        ${row('Stock on the shelf', money(bs.stock))}
+        ${row('Owed to you', money(bs.receivables))}
+        ${row('Everything you have', money(bs.assets), 'var(--action)')}
+        <div style="height:8px"></div>
+        ${row('Owed to the bank', money(bs.debt), bs.debt > 0 ? 'var(--spend)' : '')}
+        ${row('Yours', money(bs.equity), 'var(--grow)')}
+      </div>
+      <p class="small muted" style="margin-top:9px">Everything you have, minus everything you owe,
+        is yours. It always adds up — that is what a balance sheet is for.</p>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Money to grow with</div>
+      <p class="small muted" style="margin:4px 0 10px">Two ways, and they cost different things.
+        A loan costs interest until it is repaid. Selling a share costs a slice of every rupee
+        you ever make, for good.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn ghost sm grow" data-act="vBorrow" data-arg="500">Borrow ${money(500)} at ${cst.loanRate.toFixed(1)}%</button>
+        <button class="btn ghost sm grow" data-act="vRaise" data-arg="0.1"
+          ${val.equityValue <= 0 || v.outsideEquity >= 0.6 ? 'disabled' : ''}>Sell 10% for ${money(val.equityValue * 0.1)}</button>
+      </div>
+      ${v.debt > 0 ? `<p class="small" style="margin-top:9px">You owe ${money(v.debt)}, costing
+        ${money(v.debt * (cst.loanRate / 100) / 52)} a week.
+        <button class="btn ghost sm" data-act="vRepay" style="margin-left:6px">Repay some</button></p>` : ''}
+      ${v.outsideEquity > 0 ? `<p class="small muted" style="margin-top:7px">You sold
+        ${Math.round(v.outsideEquity * 100)}%. Of ${money(val.annualProfit)} a year,
+        ${money(val.annualProfit * v.outsideEquity)} is theirs now.</p>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="row"><div class="grow"><div class="eyebrow">Take some home</div>
+        <p class="small muted">Into your own wallet. It leaves the business.</p></div>
+        <button class="btn sm" data-act="vDraw" data-arg="200" ${v.cash < 200 ? 'disabled' : ''}>Draw ${money(200)}</button></div>
+    </div>
+
+    ${say('nana', 'The two numbers to keep your eye on are the one you must sell to stand still, and the gap between what you earned and what actually arrived. Everything else is detail.')}
   </div>`;
 }
 
