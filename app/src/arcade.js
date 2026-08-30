@@ -54,6 +54,12 @@ export function viewArcade() {
   };
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
+    <button class="card" data-act="nav" data-arg="market40" style="text-align:left;width:100%;border-color:var(--action)">
+      <div class="row"><span style="font-size:30px">📊</span>
+        <div class="grow"><b style="font-size:16px">The Market Game</b>
+          <p class="small muted">Forty companies that do not exist, forty years of things happening to them.
+            Study one, say what would hurt it, then put money behind your answer.</p></div>
+        <span class="pill">13+</span></div></button>
     <div class="eyebrow">The board game · about ten minutes, and nobody goes bankrupt</div>
     ${GAMES.filter((g) => g.kind === 'board').map(tile).join('')}
     <div class="eyebrow" style="margin-top:6px">A few minutes each</div>

@@ -13,6 +13,7 @@ import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
 import * as reportmod from './report.js';
 import { startJobGame, hasJobGame } from './jobgames.js';
+import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
@@ -51,7 +52,7 @@ function writeHash() {
 function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
-  const known = TABS.map((t) => t.k).concat(['parents', 'worlds', 'report']);
+  const known = TABS.map((t) => t.k).concat(['parents', 'worlds', 'report', 'market40']);
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -75,6 +76,7 @@ function render() {
     s.ui.nav === 'parents' ? (s.parent.gate ? viewParents() : viewGate()) :
     s.ui.nav === 'report' ? (s.parent.gate ? viewReport() : viewGate()) :
     s.ui.nav === 'worlds' ? viewWorlds() :
+    s.ui.nav === 'market40' ? viewMarketGame() :
     s.ui.nav === 'collection' ? viewCollection() : viewHome();
 
   const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]);
@@ -621,6 +623,28 @@ on('buy', (id) => {
 on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
 
 /* bizz & co */
+/* the Market Game (marketgame.js) */
+const G = () => { const c = C(); if (!c.game) c.game = newGame((c.market && c.market.seed) || 1); return c.game; };
+on('mgAct', (a) => { startAct(G(), +a); sfx.level(); render(); window.scrollTo(0, 0); });
+on('mgOpen', (id) => { const g = G(); study(g, id); g.opened = { co: id }; sfx.click(); render(); window.scrollTo(0, 0); });
+on('mgClose', () => { G().opened = {}; render(); window.scrollTo(0, 0); });
+on('mgAssess', (arg) => {
+  const [id, pick] = arg.split(':');
+  const r = assess(G(), id, pick);
+  if (r.right) sfx.good(); else sfx.bad();
+  render();
+});
+on('mgToInvest', () => { const g = G(); g.phase = 'invest'; g.opened = {}; sfx.click(); render(); window.scrollTo(0, 0); });
+on('mgBuy', (arg) => { const [id, amt] = arg.split(':'); const a = buy(G(), id, +amt); if (a) sfx.coin(); render(); });
+on('mgSell', (id) => { const v = sell(G(), id); if (v) { sfx.coin(); toast('Sold for ' + money(v)); } render(); });
+on('mgPlay', () => { G().phase = 'play'; sfx.level(); render(); window.scrollTo(0, 0); });
+on('mgNext', () => {
+  const r = advance(G());
+  if (!r) { sfx.level(); confetti(40); } else if (r.after >= r.before) sfx.coin(); else sfx.bad();
+  render(); window.scrollTo(0, 0);
+});
+on('mgPick', () => { const g = G(); g.phase = 'pick'; g.act = null; g.opened = {}; render(); window.scrollTo(0, 0); });
+
 /* years 6 and 7 — the venture (business.js via sim) */
 on('openVenture', () => { sim.openVenture(C(), "Your stall"); sfx.level(); confetti(30); render(); });
 on('vPrice', (d) => { const c = C(); sim.venturePrice(c, c.venture.price + (+d)); sfx.click(); render(); });
