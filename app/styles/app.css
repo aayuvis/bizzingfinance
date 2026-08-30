@@ -170,3 +170,23 @@ input{font:inherit; color:inherit}
   #printsheet ul{margin:0;padding-left:18px;font-size:13px;line-height:1.7}
   #printsheet p{font-size:13px}
 }
+
+/* ── card type, from Bizzing Bee's shipped system ──────────────────────
+   Nine cards each led by an .eyebrow gives a screen no hierarchy: every box
+   weighs the same and the eye has nowhere to land. Bee ships a card TITLE in
+   the display face and a quieter subtitle under it, and reserves the eyebrow
+   for a genuine section label. */
+.ct{font-family:var(--display);font-weight:800;font-size:17px;line-height:1.2;color:var(--ink);margin:1px 0 2px}
+.cs{font-size:13.5px;color:var(--muted);font-weight:500;line-height:1.45}
+.cn{font-size:12px;color:var(--muted);font-weight:600;line-height:1.4}
+
+/* A card that is the screen's one real action reads as raised; the rest sit
+   flat. This is what replaces seven filled teal buttons competing. */
+.card.lead{box-shadow:var(--sh-raised);border-color:color-mix(in srgb,var(--action) 40%,var(--line))}
+.card.quiet{box-shadow:none;background:transparent;border-color:var(--line-soft)}
+
+/* Section rule — cheaper than another card, and it groups. */
+.sect{display:flex;align-items:center;gap:10px;margin:22px 0 2px}
+.sect b{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.sect i{flex:1;height:1px;background:var(--line);display:block}

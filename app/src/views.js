@@ -108,8 +108,8 @@ export function viewHome() {
     ${todaysWork(c)}
 
     <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">Today's three</div>
-        <p class="small muted">They pay wages into the same wallet as everything else.</p></div>
+      <div class="row"><div class="grow"><div class="ct">Today's three</div>
+        <p class="cs">Wages into the same wallet as everything else.</p></div>
         <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
       <div class="stack" style="gap:8px;margin-top:11px">
         ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? 'var(--grow-tint)' : 'var(--surface2)'};
@@ -121,15 +121,17 @@ export function viewHome() {
             ${q.claimed ? '' : `<div class="bar" style="height:5px;margin-top:5px"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
           </span>
           ${q.claimed ? '<span class="pill grow">✓</span>'
-            : q.done ? `<button class="btn sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>`
+            : q.done ? `<button class="btn ghost sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>`
             : `<span class="pill">${q.at}/${q.n}</span>`}
         </div>`).join('')}
       </div>
-      ${allDone && !c.quests.bonus ? `<button class="btn wide" style="margin-top:11px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
+      ${allDone && !c.quests.bonus ? `<button class="btn ghost wide" style="margin-top:11px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
       ${c.quests.bonus ? `<p class="small muted" style="margin-top:9px">All ${nWord(quests.length)} done. Fresh ones tomorrow.</p>` : ''}
     </div>
 
     ${closingTime(c, quests)}
+
+    <div class="sect"><b>The town</b><i></i></div>
 
     ${(() => {
       const fx = sim.townFixes(c).filter((f) => !f.locked);
@@ -155,7 +157,7 @@ export function viewHome() {
               : `<div class="bar" style="height:6px;margin-top:7px"><i style="width:${f.pct * 100}%;background:var(--treasure)"></i></div>
                  <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
                    <span class="small muted grow">${esc(f.gives)}</span>
-                   <button class="btn sm" data-act="putRight" data-arg="${f.id}" ${c.money.wallet <= 0 ? 'disabled' : ''}>
+                   <button class="btn ghost sm" data-act="putRight" data-arg="${f.id}" ${c.money.wallet <= 0 ? 'disabled' : ''}>
                      Put in ${money(Math.min(price(10), Math.max(0, c.money.wallet), f.left))}</button>
                  </div>`}
           </div>`).join('')}
@@ -185,7 +187,7 @@ export function viewHome() {
           <div class="eyebrow" style="color:var(--treasure-deep)">The bell is ringing</div>
           <h3 style="margin:2px 0 4px">It's pay day in Bizzington</h3>
           <p class="small" style="color:var(--treasure-deep)">Wages in, bills out, jars filled. The whole street is busy.</p>
-          <button class="btn wide" style="margin-top:12px" data-act="payday">🔔 Ring the bell</button>
+          <button class="btn ghost wide" style="margin-top:12px" data-act="payday">🔔 Ring the bell</button>
         </div>`
       : `<div class="card row">
           <div class="grow"><div class="eyebrow">Pay day</div>
@@ -284,11 +286,11 @@ function lessonBeat(c) {
   }
   const done = c.learn.beat && c.learn.beat.cardId === bt.card.id && c.learn.beat.answered;
   const retr = bt.shape === 'retrieve';
-  return `<div class="card" style="border-color:var(--action)">
+  return `<div class="card lead">
     <div class="row"><div class="grow">
       <div class="eyebrow">${retr ? 'Still know this?' : "Today's lesson"}</div>
-      <h3 style="font-size:17px;margin:1px 0">${esc(retr ? bt.objective.short : bt.card.title)}</h3>
-      <p class="small muted">${retr
+      <div class="ct">${esc(retr ? bt.objective.short : bt.card.title)}</div>
+      <p class="cs">${retr
         ? `You met this ${daysAgo(mastery.lastSeen(c, bt.objective.id))}. One question, a different one.`
         : esc(bt.objective.short)}</p></div>
       <span style="font-size:26px">${retr ? '🔁' : '📘'}</span></div>
@@ -314,8 +316,8 @@ function todaysWork(c) {
   const left = jobs.filter((j) => !j.done).length;
   const KIND = { stack: 'stacking', trim: 'balancing', sweep: 'clearing', runner: 'running' };
   return `<div class="card">
-    <div class="row"><div class="grow"><div class="eyebrow">Today's work · ${esc(WORLDS[c.world || 0].name)}</div>
-      <p class="small muted">Each one is a shift you play. How well you do it is what it pays.</p></div>
+    <div class="row"><div class="grow"><div class="ct">Today's work</div>
+      <p class="cs">${esc(WORLDS[c.world || 0].name)} · each one is a shift you play, and how well you do it is what it pays</p></div>
       <span class="pill ${left ? '' : 'grow'}">${left ? left + ' left' : 'all done'}</span></div>
     <div class="stack" style="gap:8px;margin-top:11px">
       ${jobs.map((j) => {
@@ -330,7 +332,7 @@ function todaysWork(c) {
               : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best : ''}`}</div>
           </span>
           ${j.done ? '<span class="pill grow">✓</span>'
-            : `<button class="btn sm" data-act="job" data-arg="${j.id}">${g ? 'Work' : money(j.amt)}</button>`}
+            : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${g ? 'Work' : money(j.amt)}</button>`}
         </div>`;
       }).join('')}
     </div>
@@ -556,7 +558,7 @@ function viewWallet() {
           <span style="font-size:20px">${j.em}</span>
           <span class="grow"><b style="font-size:14px">${esc(j.name)}</b><br><span class="small muted">for ${esc(j.who)}</span></span>
           ${j.done ? '<span class="pill grow">done today</span>'
-            : `<button class="btn sm" data-act="job" data-arg="${j.id}">${money(j.amt)}</button>`}
+            : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${money(j.amt)}</button>`}
         </div>`).join('')}
       </div>
     </div>
@@ -810,9 +812,10 @@ function worldCard(c) {
       <h3 style="font-size:17px;margin:1px 0">${esc(sim.marketWhy(c))}</h3></div>
       <span style="font-size:24px">${w.phase === 'boom' ? '🔥' : w.phase === 'contraction' ? '🥶' : w.phase === 'slowdown' ? '🌥️' : '🌤️'}</span></div>
     <div class="row" style="gap:16px;margin-top:10px;flex-wrap:wrap">
-      ${stat('Bank rate', w.rate.toFixed(2) + '%', w.rate > CAL.rateNeutral ? 'var(--spend)' : 'var(--grow)')}
-      ${stat('Prices rising', w.inflation.toFixed(1) + '%', w.inflation > CAL.inflTarget ? 'var(--spend)' : '')}
-      ${stat('The town', (w.growth >= 0 ? '+' : '') + w.growth.toFixed(1) + '%', w.growth < 0 ? 'var(--spend)' : 'var(--grow)')}
+      ${stat('Bank rate', w.rate.toFixed(2) + '%')}
+      ${stat('Prices rising', w.inflation.toFixed(1) + '%')}
+      ${stat('The town', (w.growth >= 0 ? '+' : '') + w.growth.toFixed(1) + '%',
+        w.growth < 0 ? 'var(--spend)' : '')}
     </div>
     <p class="small muted" style="margin-top:10px">Everything below is priced off these three
       numbers — so when something moves there is always a reason, and it is usually the same
@@ -836,7 +839,7 @@ function viewExchange() {
       : 'Down on the week. I said so. I also say that every week — one of us is always right and neither of us knows.')}
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Your holdings</div>
-        <div class="big" style="font-size:30px;color:var(--grow)">${money(val)}</div></div>
+        <div class="big" style="font-size:30px">${money(val)}</div></div>
         <div style="text-align:right"><div class="eyebrow">Grow jar</div>
         <div class="big" style="font-size:20px">${money(c.money.jars.grow)}</div></div></div>
       <p class="small muted" style="margin-top:6px">${sp === 0 ? 'Nothing owned yet. Buy from the Grow jar — that is money you will not need soon.'
@@ -1051,7 +1054,7 @@ export function viewStore() {
             : c.family.coolOff
               ? `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}">Think it over →</button>`
               : `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}" style="margin-right:8px">Think it over</button>
-                 <button class="btn sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
+                 <button class="btn ghost sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
         </div></div>`;
     }).join('')}
     <p class="small muted" style="text-align:center">Nothing here costs real money, and there is no path from this screen to a payment form. That is a rule, not an oversight.</p>
