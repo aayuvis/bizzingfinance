@@ -1,0 +1,365 @@
+<title>Eight to Fourteen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F6F5; --tint:#EDF2F2;
+    --line:#DCE5E4; --ink:#16262A; --muted:#5B7075;
+    --action:#0E6B78; --action-tint:#E2EFF1;
+    --gold:#F0B429; --gold-tint:#FFF3D6; --gold-deep:#8A5B00;
+    --grow:#178A4C; --grow-tint:#E3F3E9;
+    --spend:#C4453C; --spend-tint:#FBE9E7;
+    --a1:#C97B2E; --a2:#0E6B78; --a3:#5B4B8A;
+    --rule:rgba(22,38,42,.10);
+    --display:"Fraunces",Georgia,serif;
+    --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"Sono",ui-monospace,SFMono-Regular,monospace;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+      --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+      --action:#3FAEBC; --action-tint:#12333A;
+      --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+      --grow:#5BC98C; --grow-tint:#0F2E20;
+      --spend:#EC8B81; --spend-tint:#331916;
+      --a1:#DFA063; --a2:#3FAEBC; --a3:#A192D8;
+      --rule:rgba(228,237,238,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+    --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+    --action:#3FAEBC; --action-tint:#12333A;
+    --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+    --grow:#5BC98C; --grow-tint:#0F2E20;
+    --spend:#EC8B81; --spend-tint:#331916;
+    --a1:#DFA063; --a2:#3FAEBC; --a3:#A192D8;
+    --rule:rgba(228,237,238,.14);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--ui); font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 clamp(18px,4vw,40px) 90px; }
+
+  .mast { padding:clamp(44px,7vw,80px) 0 28px; border-bottom:2px solid var(--ink); }
+  .kicker { font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--action); margin:0 0 18px; }
+  h1 { font-family:var(--display); font-weight:800; font-size:clamp(40px,8vw,74px);
+    line-height:1; letter-spacing:-.025em; margin:0; text-wrap:balance; }
+  .dek { font-size:clamp(17px,2.2vw,20px); color:var(--muted); margin:20px 0 0; max-width:58ch; }
+
+  .spine { font-family:var(--display); font-size:clamp(21px,3.2vw,30px); font-weight:600;
+    line-height:1.32; margin:36px 0 0; padding:26px 30px; max-width:none;
+    background:var(--gold-tint); border:1.5px solid var(--gold); border-radius:14px; }
+  .spine b { font-weight:800; }
+
+  section { padding-top:58px; }
+  h2 { font-family:var(--display); font-weight:800; font-size:clamp(24px,3.4vw,34px);
+    line-height:1.1; letter-spacing:-.018em; margin:0 0 6px; text-wrap:balance; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); margin:0 0 24px; }
+  h3 { font-family:var(--display); font-weight:600; font-size:clamp(19px,2.3vw,22px);
+    margin:34px 0 10px; }
+  p, li { max-width:68ch; }
+  p { margin:0 0 15px; }
+  ul { margin:0 0 15px; padding-left:22px; }
+  li { margin-bottom:8px; }
+  li::marker { color:var(--action); }
+  code { font-family:var(--mono); font-size:.9em; background:var(--tint); padding:1.5px 5px; border-radius:4px; }
+  a { color:var(--action); }
+  a:focus-visible { outline:2px solid var(--action); outline-offset:3px; border-radius:3px; }
+
+  .scroll { overflow-x:auto; margin:0 0 24px; }
+  table { border-collapse:collapse; width:100%; min-width:560px; font-size:15px; line-height:1.45; }
+  th { text-align:left; font-family:var(--mono); font-size:11.5px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    padding:0 14px 9px 0; border-bottom:1.5px solid var(--ink); vertical-align:bottom; }
+  td { padding:12px 14px 12px 0; border-bottom:1px solid var(--rule); vertical-align:top; }
+  td:last-child, th:last-child { padding-right:0; }
+  .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .age { font-family:var(--display); font-weight:800; font-size:19px; letter-spacing:-.01em; }
+
+  /* the world model — one driver, many consequences */
+  figure { margin:0 0 24px; }
+  figure svg { display:block; width:100%; height:auto; }
+  figcaption { font-family:var(--mono); font-size:12px; color:var(--muted);
+    margin-top:12px; max-width:66ch; line-height:1.65; }
+
+  /* the years */
+  .act { font-family:var(--mono); font-size:12px; letter-spacing:.13em; text-transform:uppercase;
+    padding:8px 0 6px; margin:34px 0 14px; border-bottom:1.5px solid currentColor; }
+  .act.a1 { color:var(--a1); } .act.a2 { color:var(--a2); } .act.a3 { color:var(--a3); }
+  .years { display:grid; gap:13px; margin:0 0 8px; }
+  @media (min-width:760px) { .years { grid-template-columns:1fr 1fr; } }
+  .yr { border:1px solid var(--line); border-left-width:4px; border-radius:10px;
+    padding:17px 20px; background:var(--surface); }
+  .yr.a1 { border-left-color:var(--a1); } .yr.a2 { border-left-color:var(--a2); }
+  .yr.a3 { border-left-color:var(--a3); }
+  .yr .n { font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); }
+  .yr h4 { font-family:var(--display); font-weight:800; font-size:21px; margin:2px 0 10px; }
+  .yr dl { margin:0; font-size:14.5px; }
+  .yr dt { font-family:var(--mono); font-size:10.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--muted); margin-top:10px; }
+  .yr dd { margin:2px 0 0; }
+  .yr .q { margin-top:13px; padding-top:12px; border-top:1px solid var(--rule);
+    font-family:var(--display); font-size:16.5px; font-style:italic; }
+
+  .checks { list-style:none; counter-reset:c; padding:0; margin:0 0 24px; }
+  .checks li { max-width:none; counter-increment:c; display:grid;
+    grid-template-columns:auto 1fr; gap:14px; padding:13px 0;
+    border-bottom:1px solid var(--rule); margin:0; }
+  .checks li::before { content:counter(c); font-family:var(--mono); font-size:12px;
+    font-weight:600; color:var(--action); background:var(--action-tint);
+    width:24px; height:24px; border-radius:50%; display:grid; place-items:center; margin-top:2px; }
+  .checks b { display:block; }
+  .checks span { color:var(--muted); font-size:14.5px; }
+  .checks li.key { background:var(--gold-tint); border-radius:8px; padding:14px 16px; border-bottom:none; }
+  .checks li.key::before { background:var(--gold); color:#3A2C0A; }
+
+  .note { background:var(--surface2); border-left:3px solid var(--action);
+    padding:18px 20px; margin:0 0 24px; border-radius:0 8px 8px 0; }
+  .note.stop { border-left-color:var(--spend); background:var(--spend-tint); }
+  .note.warn { border-left-color:var(--gold); background:var(--gold-tint); }
+  .note p:last-child { margin-bottom:0; }
+  .note-label { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.11em;
+    text-transform:uppercase; display:block; margin-bottom:7px; color:var(--action); }
+  .note.stop .note-label { color:var(--spend); }
+  .note.warn .note-label { color:var(--gold-deep); }
+
+  .pill { display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:600;
+    letter-spacing:.05em; text-transform:uppercase; padding:2px 8px; border-radius:4px; }
+  .pill.ok { background:var(--grow-tint); color:var(--grow); }
+  .pill.part { background:var(--gold-tint); color:var(--gold-deep); }
+  .pill.no { background:var(--spend-tint); color:var(--spend); }
+
+  footer { margin-top:70px; padding-top:24px; border-top:2px solid var(--ink);
+    font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="kicker">Bizzing Finance · The Journey</p>
+    <h1>Eight to<br>Fourteen</h1>
+    <p class="dek">Not a set of features and not a library of artwork. One journey, seven years
+      long — and the defendable asset is the simulation that makes it true.</p>
+  </header>
+
+  <p class="spine">You work for money.<br>Then <b>your money works</b>.<br>Then you build the
+    thing that works without you.</p>
+
+  <section>
+    <h2>The engine that has to exist first</h2>
+    <p class="eyebrow">Today: four independent random walks and a crash hard-coded at 55%</p>
+    <p>Four coin flips are not an economy, and nothing built on them can teach the only lesson
+      that matters at the top of this ladder:</p>
+    <div class="note stop">
+      <span class="note-label">What four random walks can never show</span>
+      <p><strong>Rates went up. My bond fell, my mortgage got dearer, and my shop's loan cost
+        more — all at once, for <em>one</em> reason.</strong></p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 900 300" role="img" aria-label="One world model — inflation, policy rate and the business cycle — driving every asset class and every part of the town, rather than each having its own private randomness.">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--action)"/>
+          </marker>
+        </defs>
+        <rect x="300" y="16" width="300" height="96" rx="10" fill="var(--gold-tint)" stroke="var(--gold)" stroke-width="2"/>
+        <text x="450" y="48" text-anchor="middle" font-family="Fraunces, serif" font-weight="800" font-size="21" fill="var(--ink)">One world</text>
+        <text x="450" y="72" text-anchor="middle" font-family="Sono, monospace" font-size="12.5" fill="var(--gold-deep)">inflation · policy rate · cycle</text>
+        <text x="450" y="94" text-anchor="middle" font-family="Sono, monospace" font-size="11" fill="var(--muted)">seeded per child · replays exactly</text>
+
+        <path d="M450 118 V142 H90 V172"  stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+        <path d="M450 118 V142 H270 V172" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+        <path d="M450 118 V172"           stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+        <path d="M450 118 V142 H630 V172" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+        <path d="M450 118 V142 H810 V172" stroke="var(--action)" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+
+        <g font-family="Sono, monospace" font-size="12" fill="var(--ink)" text-anchor="middle">
+          <rect x="20" y="178" width="140" height="58" rx="8" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="90" y="202">cash</text><text x="90" y="222" font-size="10.5" fill="var(--muted)">loses, quietly</text>
+
+          <rect x="200" y="178" width="140" height="58" rx="8" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="270" y="202">bonds</text><text x="270" y="222" font-size="10.5" fill="var(--muted)">rate up, price down</text>
+
+          <rect x="380" y="178" width="140" height="58" rx="8" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="450" y="202">equities</text><text x="450" y="222" font-size="10.5" fill="var(--muted)">earnings, cycle</text>
+
+          <rect x="560" y="178" width="140" height="58" rx="8" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="630" y="202">the mortgage</text><text x="630" y="222" font-size="10.5" fill="var(--muted)">costs more</text>
+
+          <rect x="740" y="178" width="140" height="58" rx="8" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="810" y="202">your shop</text><text x="810" y="222" font-size="10.5" fill="var(--muted)">footfall, loan</text>
+        </g>
+        <text x="450" y="272" text-anchor="middle" font-family="Sono, monospace" font-size="12" fill="var(--muted)">no asset class gets its own private randomness</text>
+      </svg>
+      <figcaption>Three rules make it an asset rather than a random-number generator: one world
+        that everything derives from, deterministic per child so a season replays and a bug
+        reproduces, and explicitly Bizzington's own economy — calibrated to resemble real
+        behaviour and never presented as a prediction of it.</figcaption>
+    </figure>
+
+    <div class="note">
+      <span class="note-label">This is the defendable asset</span>
+      <p>Not artwork, not blurbs. <strong>An internally coherent economy that behaves
+        correctly</strong> — testable, and something a language model cannot produce in an
+        afternoon, because it has to be <em>right</em> rather than plausible.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The asset-class ladder</h2>
+    <p class="eyebrow">Each class arrives when the maths that makes it comprehensible arrives — not on a birthday</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Age</th><th>Unlocks</th><th>What it teaches</th><th class="num">Maths</th></tr></thead>
+        <tbody>
+          <tr><td class="age">8</td><td><strong>Cash</strong></td><td>It is safe and it does nothing. The first asset class is the one in your hand.</td><td class="num">M1–M3</td></tr>
+          <tr><td class="age">9</td><td><strong>Deposit</strong></td><td>Interest — the first time money moves without you working</td><td class="num">M4–M6</td></tr>
+          <tr><td class="age">10</td><td><strong>Inflation</strong></td><td>Cash was never safe. It just loses quietly.</td><td class="num">M7–M9</td></tr>
+          <tr><td class="age">11</td><td><strong>Bonds</strong></td><td>You can be the lender. A coupon is somebody else's cost.</td><td class="num">M10</td></tr>
+          <tr><td class="age">11</td><td><strong>Debt</strong></td><td>The same machine pointed the other way — priced honestly, never shamed</td><td class="num">M10</td></tr>
+          <tr><td class="age">12</td><td><strong>Equities</strong></td><td>Owning a piece of something that earns</td><td class="num">M12</td></tr>
+          <tr><td class="age">12</td><td><strong>Index funds</strong></td><td>Owning all of it, cheaply. Fees are a return you hand away.</td><td class="num">M14, M16</td></tr>
+          <tr><td class="age">12</td><td><strong>Gold</strong></td><td>A store of value that pays nothing — and why you might still want it</td><td class="num">M13</td></tr>
+          <tr><td class="age">12</td><td><strong>Property</strong></td><td>Leverage, rent, transaction cost, and you cannot sell half a house</td><td class="num">M13</td></tr>
+          <tr><td class="age">13</td><td><strong>Your own business</strong></td><td>The illiquid one you control — the only one whose returns you can change</td><td class="num">M17</td></tr>
+          <tr><td class="age">14</td><td><strong>Capital</strong></td><td>What a thing is worth, and to whom</td><td class="num">all</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note warn">
+      <span class="note-label">The idea that closes the loop</span>
+      <p>At 14, <strong>the child's business is a position in their own portfolio.</strong> The
+        entrepreneur endpoint is not outside the investing curriculum — it is the last asset
+        class, and the one where diversification finally gets uncomfortable.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The seven years</h2>
+    <p class="eyebrow">A maths gate · an asset class · a capability · a question they can now answer</p>
+
+    <div class="act a1">Act I · You work for money</div>
+    <div class="years">
+      <div class="yr a1"><div class="n">Year 1 · age 8</div><h4>Where money comes from</h4>
+        <dl><dt>Maths gate</dt><dd>M1–M3 · coins, ± within 100, skip-count</dd>
+        <dt>Unlocks</dt><dd>Cash · the wallet · jobs on Market Row</dd>
+        <dt>Can do by the end</dt><dd>Earns, counts change, and names the thing they gave up</dd></dl>
+        <p class="q">“What did that cost you, apart from the money?”</p></div>
+
+      <div class="yr a1"><div class="n">Year 2 · age 9</div><h4>Keeping it</h4>
+        <dl><dt>Maths gate</dt><dd>M4–M6 · halves and quarters, × ÷, remainders</dd>
+        <dt>Unlocks</dt><dd>The deposit account · jars · a named goal</dd>
+        <dt>Can do by the end</dt><dd>Splits income by a rule they set, reaches a goal they named</dd></dl>
+        <p class="q">“How many weeks?”</p></div>
+
+      <div class="yr a1" style="grid-column:1/-1"><div class="n">Year 3 · age 10</div><h4>The plan</h4>
+        <dl><dt>Maths gate</dt><dd>M7–M9 · ×12 and ×52, decimals, percent as per-hundred</dd>
+        <dt>Unlocks</dt><dd>A weekly budget · the buffer · <strong>inflation</strong></dd>
+        <dt>Can do by the end</dt><dd>Runs a budget that survives a bill nobody planned for</dd>
+        <dt>The turn</dt><dd>This is where cash stops being the safe thing — the first time the app takes away something the child thought they had.</dd></dl>
+        <p class="q">“What does this cost in a year?”</p></div>
+    </div>
+
+    <div class="act a2">Act II · Your money works</div>
+    <div class="years">
+      <div class="yr a2"><div class="n">Year 4 · age 11</div><h4>Money that works</h4>
+        <dl><dt>Maths gate</dt><dd>M10–M11 · percent <em>of</em>, repeated percent</dd>
+        <dt>Unlocks</dt><dd>Bonds · borrowing · the rate/price link</dd>
+        <dt>Can do by the end</dt><dd>Explains compounding <em>in coins</em>, and says what a loan costs before taking it</dd></dl>
+        <p class="q">“Who is paying whom, and how much?”</p></div>
+
+      <div class="yr a2"><div class="n">Year 5 · age 12</div><h4>Risk and spread</h4>
+        <dl><dt>Maths gate</dt><dd>M12–M15 · % change, ratio, average and spread, charts</dd>
+        <dt>Unlocks</dt><dd>Equities · index funds · gold · property. The whole board.</dd>
+        <dt>Can do by the end</dt><dd>Builds a mix, writes the rule down, holds it through a bad month</dd>
+        <dt>The big idea</dt><dd><strong>Correlation.</strong> Things move together or they do not — and that, not “lots of different things”, is what diversification actually is. It needs the world model to be true at all.</dd></dl>
+        <p class="q">“What happens to this in a bad year?”</p></div>
+    </div>
+
+    <div class="act a3">Act III · You build the thing that works</div>
+    <div class="years">
+      <div class="yr a3"><div class="n">Year 6 · age 13</div><h4>Making something</h4>
+        <dl><dt>Maths gate</dt><dd>M16–M17 · weighted average, division back to a threshold</dd>
+        <dt>Unlocks</dt><dd>The shop run properly · unit economics · pricing</dd>
+        <dt>Can do by the end</dt><dd>Prices from unit cost, finds break-even, survives a month where profit and cash disagree</dd></dl>
+        <p class="q">“How many do I have to sell?”</p></div>
+
+      <div class="yr a3"><div class="n">Year 7 · age 14</div><h4>Capital</h4>
+        <dl><dt>Maths gate</dt><dd>All of it, applied together</dd>
+        <dt>Unlocks</dt><dd>The P&amp;L · the balance sheet · raising money · valuation</dd>
+        <dt>Can do by the end</dt><dd>The eight capabilities below</dd></dl>
+        <p class="q">“What is this worth, and to whom?”</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What “an entrepreneur at 14” actually means</h2>
+    <p class="eyebrow">A slogan unless it is a checklist — eight observable, assessable things</p>
+    <ol class="checks">
+      <li><div><b>Price a thing from unit cost</b><span>Knows COGS, margin, break-even · demonstrated in the shop</span></div></li>
+      <li><div><b>Explain why a profitable business dies</b><span>Cash is not profit, and working capital is the reason · a month where the P&amp;L is green and the till is empty</span></div></li>
+      <li><div><b>Read a P&amp;L and a balance sheet</b><span>And say what each one is for</span></div></li>
+      <li><div><b>Build a twelve-week cash-flow forecast</b><span>And be wrong in a way they can explain</span></div></li>
+      <li><div><b>Choose between debt and equity</b><span>And say what each costs — including the half you gave away</span></div></li>
+      <li><div><b>Run a business through a downturn and survive it</b><span>A season where the cycle turns</span></div></li>
+      <li><div><b>Value something roughly and defend the number</b><span>Buying out a rival's stall</span></div></li>
+      <li class="key"><div><b>Hold a diversified portfolio and defend the mix</b><span>Including the awkward fact that most of their wealth is now one illiquid business they control. <strong>This is the one that makes the whole journey cohere</strong> — a child who has built a business and also learned diversification arrives at exactly the tension every real founder lives in.</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Where the app actually is</h2>
+    <p class="eyebrow">Two of the seven years do not exist and one is a random-number generator</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Year</th><th>State</th><th>What is there</th></tr></thead>
+        <tbody>
+          <tr><td class="age">1 · 8</td><td><span class="pill ok">mostly built</span></td><td>Wallet, jobs (now games), needs vs wants</td></tr>
+          <tr><td class="age">2 · 9</td><td><span class="pill ok">built</span></td><td>Jars, goals, the deposit account</td></tr>
+          <tr><td class="age">3 · 10</td><td><span class="pill part">partly</span></td><td>Budget and bills exist. <strong>Inflation does not exist at all.</strong></td></tr>
+          <tr><td class="age">4 · 11</td><td><span class="pill part">partly</span></td><td>The bank lends and prices it honestly. No bonds, no rate/price link.</td></tr>
+          <tr><td class="age">5 · 12</td><td><span class="pill no">weak</span></td><td>Four fictional assets on independent random walks. No correlation, no gold, no property, no index, no fees. <strong>The biggest gap.</strong></td></tr>
+          <tr><td class="age">6 · 13</td><td><span class="pill no">thin</span></td><td>A shop exists. No unit economics, no break-even, no working capital.</td></tr>
+          <tr><td class="age">7 · 14</td><td><span class="pill no">absent</span></td><td>No P&amp;L, no balance sheet, no raising, no valuation.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>The journey is roughly 40% built, and the missing 60% is the half a parent would
+      pay for</strong> — because it is the half that ends with a fourteen-year-old who can run
+      something.</p>
+  </section>
+
+  <section>
+    <h2>Order of work</h2>
+    <p class="eyebrow">Nothing above year 3 is honest until step one exists</p>
+    <ol class="checks">
+      <li><div><b>The world model</b><span>Inflation, policy rate, cycle. Everything else derives from it.</span></div></li>
+      <li><div><b>Rebuild the asset classes on it — bonds first</b><span>The rate/price link is the clearest proof the engine works, and the thing four random walks can never show</span></div></li>
+      <li><div><b>Add the missing classes</b><span>Index with a fee drag, gold, property with leverage</span></div></li>
+      <li><div><b>Year 6</b><span>Unit economics, break-even, and a month where profit and cash disagree</span></div></li>
+      <li><div><b>Year 7</b><span>The P&amp;L, the balance sheet, raising, valuation</span></div></li>
+      <li class="key"><div><b>Assert the whole thing</b><span>Run a simulated child through seven years and check the world stayed coherent: rates up and bonds fell; cash lost to inflation over a decade; the diversified player beat the concentrated one on risk-adjusted terms across a full cycle; the boring player won the season.</span></div></li>
+    </ol>
+    <div class="note">
+      <span class="note-label">What turns the plan into an asset</span>
+      <p><strong>A simulation nobody has tested across seven years is a claim. One with those
+        assertions is a product.</strong></p>
+    </div>
+  </section>
+
+  <footer>
+    Bizzing Finance · docs/08-the-journey.md · branch <code>claude/bizzing-finance-webapp-s6tivd</code><br>
+    The age column is a design assumption, not a cited fact — check it against the real curricula of the markets we ship to before it appears in any marketing claim.<br>
+    Entry is by placement, never by birthday. The end is capability, not a business: no real money ever changes hands.
+  </footer>
+
+</div>
