@@ -1,0 +1,340 @@
+<title>Five Hundred Companies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F6F5; --tint:#EDF2F2;
+    --line:#DCE5E4; --ink:#16262A; --muted:#5B7075;
+    --action:#0E6B78; --action-tint:#E2EFF1;
+    --gold:#F0B429; --gold-tint:#FFF3D6; --gold-deep:#8A5B00;
+    --grow:#178A4C; --grow-tint:#E3F3E9;
+    --spend:#C4453C; --spend-tint:#FBE9E7;
+    --rule:rgba(22,38,42,.10);
+    --display:"Fraunces",Georgia,serif;
+    --ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"Sono",ui-monospace,SFMono-Regular,monospace;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+      --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+      --action:#3FAEBC; --action-tint:#12333A;
+      --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+      --grow:#5BC98C; --grow-tint:#0F2E20;
+      --spend:#EC8B81; --spend-tint:#331916;
+      --rule:rgba(228,237,238,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34; --tint:#132025;
+    --line:#24373D; --ink:#E4EDEE; --muted:#93A7AC;
+    --action:#3FAEBC; --action-tint:#12333A;
+    --gold:#F0C25A; --gold-tint:#33280F; --gold-deep:#F0C25A;
+    --grow:#5BC98C; --grow-tint:#0F2E20;
+    --spend:#EC8B81; --spend-tint:#331916;
+    --rule:rgba(228,237,238,.14);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--ui); font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 clamp(18px,4vw,40px) 90px; }
+
+  .mast { padding:clamp(44px,7vw,80px) 0 30px; border-bottom:2px solid var(--ink); }
+  .kicker { font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--action); margin:0 0 18px; }
+  h1 { font-family:var(--display); font-weight:800; font-size:clamp(38px,7vw,66px);
+    line-height:1.02; letter-spacing:-.022em; margin:0; text-wrap:balance; }
+  .dek { font-size:clamp(17px,2.2vw,20px); color:var(--muted); margin:20px 0 0; max-width:58ch; }
+
+  section { padding-top:60px; }
+  h2 { font-family:var(--display); font-weight:800; font-size:clamp(24px,3.4vw,34px);
+    line-height:1.1; letter-spacing:-.018em; margin:0 0 8px; text-wrap:balance; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); margin:0 0 24px; }
+  h3 { font-family:var(--display); font-weight:600; font-size:clamp(19px,2.3vw,22px);
+    margin:38px 0 10px; text-wrap:balance; }
+  p, li { max-width:68ch; }
+  p { margin:0 0 15px; }
+  ul, ol { margin:0 0 15px; padding-left:22px; }
+  li { margin-bottom:8px; }
+  li::marker { color:var(--action); }
+  a { color:var(--action); }
+  a:focus-visible { outline:2px solid var(--action); outline-offset:3px; border-radius:3px; }
+
+  .scroll { overflow-x:auto; margin:0 0 24px; }
+  table { border-collapse:collapse; width:100%; min-width:540px; font-size:15px; line-height:1.45; }
+  th { text-align:left; font-family:var(--mono); font-size:11.5px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    padding:0 14px 9px 0; border-bottom:1.5px solid var(--ink); vertical-align:bottom; }
+  td { padding:12px 14px 12px 0; border-bottom:1px solid var(--rule); vertical-align:top; }
+  td:last-child, th:last-child { padding-right:0; }
+  .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .big { font-family:var(--display); font-weight:800; font-size:19px; letter-spacing:-.01em; }
+
+  /* the three-app comparison — the whole argument in one strip */
+  .compare { display:grid; gap:0; border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; margin:0 0 8px; }
+  .compare > div { padding:20px 22px; border-bottom:1px solid var(--line); background:var(--surface); }
+  .compare > div:last-child { border-bottom:none; background:var(--spend-tint); }
+  .compare .app { font-family:var(--mono); font-size:11.5px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .compare .count { font-family:var(--display); font-weight:800; font-size:clamp(22px,3.2vw,30px);
+    letter-spacing:-.02em; line-height:1.15; }
+  .compare .atom { font-size:14px; color:var(--muted); margin-top:4px; }
+  .compare > div:last-child .count { color:var(--spend); }
+  @media (min-width:760px) { .compare { grid-template-columns:1fr 1fr 1fr; }
+    .compare > div { border-bottom:none; border-right:1px solid var(--line); }
+    .compare > div:last-child { border-right:none; } }
+
+  .wall { display:grid; gap:14px; margin:0 0 24px; }
+  @media (min-width:720px) { .wall { grid-template-columns:1fr 1fr; } }
+  .wall > div { border:1.5px solid var(--line); border-radius:12px; padding:20px 22px; background:var(--surface); }
+  .wall .real { border-color:var(--action); }
+  .wall .fake { border-color:var(--gold); }
+  .wall h4 { font-family:var(--display); font-weight:800; font-size:20px; margin:0 0 4px; }
+  .wall .tag { font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; margin-bottom:10px; }
+  .wall .real .tag { color:var(--action); }
+  .wall .fake .tag { color:var(--gold-deep); }
+  .wall dl { margin:0; font-size:14.5px; }
+  .wall dt { font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted); margin-top:12px; }
+  .wall dd { margin:2px 0 0; }
+  .wall .no { color:var(--spend); font-weight:700; }
+
+  .note { background:var(--surface2); border-left:3px solid var(--action);
+    padding:18px 20px; margin:0 0 26px; border-radius:0 8px 8px 0; }
+  .note.warn { border-left-color:var(--gold); background:var(--gold-tint); }
+  .note.stop { border-left-color:var(--spend); background:var(--spend-tint); }
+  .note p:last-child { margin-bottom:0; }
+  .note-label { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.11em;
+    text-transform:uppercase; display:block; margin-bottom:7px; color:var(--action); }
+  .note.warn .note-label { color:var(--gold-deep); }
+  .note.stop .note-label { color:var(--spend); }
+
+  .steps { list-style:none; counter-reset:s; padding:0; margin:0 0 26px; }
+  .steps li { max-width:none; counter-increment:s; display:grid;
+    grid-template-columns:auto 1fr; gap:16px; padding:15px 0;
+    border-bottom:1px solid var(--rule); margin:0; }
+  .steps li::before { content:counter(s); font-family:var(--display); font-weight:800;
+    font-size:21px; color:var(--action); min-width:22px; }
+
+  footer { margin-top:70px; padding-top:24px; border-top:2px solid var(--ink);
+    font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8; }
+  code { font-family:var(--mono); font-size:.9em; background:var(--tint);
+    padding:1.5px 5px; border-radius:4px; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="kicker">Bizzing Finance · Architecture</p>
+    <h1>Five Hundred Companies</h1>
+    <p class="dek">Bizzing Bee sells a corpus, not a spelling game. Bizzing India sells a
+      corpus, not a quiz. Bizzing Finance has never had one — and that, not the games, is why
+      nobody stays.</p>
+  </header>
+
+  <section>
+    <h2>The question the family already asks</h2>
+    <p class="eyebrow">From Bizzing India's docs/10 — the corpus</p>
+    <p>“The corpus is the moat. Anyone can build a spelling game; nobody else hands you the
+      whole championship word list with a ladder through it. <strong>So the question is not
+      ‘what features?’ It is: what is our 128,040?</strong>”</p>
+
+    <div class="compare">
+      <div><div class="app">Bizzing Bee</div>
+        <div class="count">128,040 words</div>
+        <div class="atom">Atom: one word — say it, spell it, know its origin</div></div>
+      <div><div class="app">Bizzing India</div>
+        <div class="count">1,008 stories<br>2,500 verses</div>
+        <div class="atom">Atom: one story, one verse, one place</div></div>
+      <div><div class="app">Bizzing Finance</div>
+        <div class="count">32 cards<br>11 games</div>
+        <div class="atom">No corpus. No atom. Features only.</div></div>
+    </div>
+    <p>Bizzing Bee is not engaging because spelling is fun. It is engaging because a child who
+      loves words is handed the <em>real</em> championship list, with etymology, with a voice
+      that pronounces it properly, and a promise that nothing is skipped. Finance has games
+      bolted to a syllabus. <strong>A corpus is the only thing here that compounds.</strong></p>
+  </section>
+
+  <section>
+    <h2>The answer: one real company</h2>
+    <p class="eyebrow">What it makes · who pays it · how it earns · what could hurt it</p>
+    <p>It passes every test the family already uses — finite, countable, canonical (an index
+      defines the set), ownable, endlessly deep, and <em>already loved</em>. Children ask who
+      makes things. Every object in a child's house was made by a company and they can name
+      almost none of them.</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Corpus</th><th class="num">Count</th><th>Atom</th><th>Why it works</th></tr></thead>
+        <tbody>
+          <tr><td class="big">The Register</td><td class="num big">500</td><td>one company</td><td>The moat. Index-defined, deep, and every one connects to something the child already owns</td></tr>
+          <tr><td>Asset classes</td><td class="num">12</td><td>one class</td><td>What it is, what it pays, what it does in a bad year — what actually decides outcomes</td></tr>
+          <tr><td>The Almanac</td><td class="num">~40</td><td>one episode</td><td>1929 · 1987 · 2000 · 2008 · 2020 · India's 1991 reforms. Finite, canonical, dramatic</td></tr>
+          <tr><td>Money Words</td><td class="num">500</td><td>one term</td><td>Already started — 44 of them</td></tr>
+          <tr><td>Business models</td><td class="num">24</td><td>one pattern</td><td>Subscription, marketplace, razor-and-blade, franchise, toll booth</td></tr>
+          <tr><td>Currencies</td><td class="num">180</td><td>one currency</td><td>Already a setting; barely a corpus yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>500 companies. 12 asset classes. 100 years of markets. One town.</strong></p>
+    <p>Build <em>deep, not wide</em>: fifty companies fully made beats five hundred stubs.</p>
+  </section>
+
+  <section>
+    <h2>The wall</h2>
+    <p class="eyebrow">CONCEPT §6.2 is binding — two markets, and the wall is a code invariant</p>
+
+    <div class="wall">
+      <div class="real">
+        <div class="tag">Real · read-only</div>
+        <h4>The Register</h4>
+        <dl>
+          <dt>Names</dt><dd>Real companies</dd>
+          <dt>Prices</dt><dd>Delayed or end-of-day</dd>
+          <dt>You can</dt><dd>Follow, study, form a view, complete the collection</dd>
+          <dt>You cannot</dt><dd class="no">Buy. A <code>real: true</code> record has no buy path, and a test asserts it.</dd>
+        </dl>
+      </div>
+      <div class="fake">
+        <div class="tag">Fictional · tradeable</div>
+        <h4>The Exchange</h4>
+        <dl>
+          <dt>Names</dt><dd>Invented</dd>
+          <dt>Prices</dt><dd>Real historical <em>behaviour</em>, replayed</dd>
+          <dt>You can</dt><dd>Buy, hold, panic, compound, lose</dd>
+          <dt>You cannot</dt><dd class="no">Mistake it for the real world — the screen says so</dd>
+        </dl>
+      </div>
+    </div>
+
+    <p><strong>Paper trading belongs at asset-class and index level, on real data</strong> — not
+      individual named securities. That is inside the rule, and it is better teaching: a child
+      should learn diversification, not stock-picking. §6.3's own corollary already says the
+      boring diversified player should win the season.</p>
+
+    <div class="note stop">
+      <span class="note-label">A decision only the owner can make</span>
+      <p>Paper trading individual real names would need §6.2 changed. It is the single feature
+        that turns “educational simulator” into something an app-store reviewer or a regulator
+        reads as a brokerage demo, and for an 8–12 audience it teaches the one behaviour the
+        rest of the app argues against. My recommendation is don't — but it is a product call,
+        not mine.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Real data, honestly</h2>
+    <p class="eyebrow">Three constraints, none of them optional</p>
+    <ol>
+      <li><strong>Real-time exchange data is licensed.</strong> Redistributing live NSE/BSE/NYSE/Nasdaq prices needs agreements and real money. <strong>15-minute delayed and end-of-day</strong> are the affordable, redistributable tiers — and here they are also the right ones. Verify the specific vendor's terms before shipping any of it.</li>
+      <li><strong>No API key may ever reach the client.</strong> The key lives in a service — the backend already named a launch blocker. This is what finally forces it.</li>
+      <li><strong>Offline-first is a hard rule.</strong> Everything caches and degrades to <em>“as of Tuesday”</em>, never to a spinner.</li>
+    </ol>
+
+    <div class="note warn">
+      <span class="note-label">One disagreement, stated once</span>
+      <p>A flowing <em>live</em> ticker fights this curriculum. The app spends a whole strand —
+        GUARD, and CHOOSE-5, <em>“hurry is a tool”</em> — teaching a child that urgency is
+        something sellers manufacture, then puts a number on screen that twitches for
+        attention. Build the Market Window as a place you <strong>study</strong>, on delayed
+        data, that never rewards reacting. It can still flow and still be beautiful. It must
+        not be a slot machine.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The re-architecture</h2>
+    <p class="eyebrow">Six layers · the bottom one is the moat</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Layer</th><th>What it is</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td class="big">L0</td><td><strong>The data spine</strong> — <code>content/register/*.json</code>: companies, sectors, asset classes, episodes. Versioned, CDN, bundled offline fallback</td><td><strong>The moat, and it is authoring, not engineering.</strong> Nothing above it matters until it exists</td></tr>
+          <tr><td class="big">L1</td><td><strong>The feed</strong> — a thin service holding the vendor key: fetch, normalise, cache, serve a small payload</td><td>Never the client. Forces the backend</td></tr>
+          <tr><td class="big">L2</td><td><strong>Two markets</strong> — Register (real, read-only) ‖ Exchange (fictional, tradeable)</td><td>The wall is a code invariant with a test, not a convention</td></tr>
+          <tr><td class="big">L3</td><td><strong>Paper portfolios</strong> — asset-class allocation on real index data, seasons</td><td>Scored on the <em>decision</em>: diversification, rule-keeping, not panic-selling. Never return alone</td></tr>
+          <tr><td class="big">L4</td><td><strong>The ladder</strong> — Company → Sector → Index → Asset class → Portfolio</td><td>Gated by the maths spine; driven by <code>mastery.js</code>, which already exists</td></tr>
+          <tr><td class="big">L5</td><td><strong>Surfaces</strong> — a new district, The Trading Floor, plus the Register as a browsable collection</td><td>“84 of 500 met” is the multi-year long game</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <span class="note-label">The memory engine is already built</span>
+      <p><code>mastery.js</code> and <code>ledger.js</code> are this app's equivalent of Bizzing
+        Bee's spaced repetition. A company is an objective like any other — met, retained,
+        transferred. The corpus plugs straight into it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The tools that fall out of it</h2>
+    <p class="eyebrow">The answer to “there must be more”</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Tool</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><strong>The Register</strong></td><td>500 company cards; browse, search, filter by sector or by what they make. Completion meter.</td></tr>
+          <tr><td><strong>Deep dive</strong></td><td>What it makes · who pays · how it earns · what could hurt it · who competes · ten-year chart · six numbers in plain English</td></tr>
+          <tr><td><strong>The Market Window</strong></td><td>Delayed tickers, sector heatmap, movers. Read-only, labelled, unhurried.</td></tr>
+          <tr><td><strong>Paper portfolios</strong></td><td>Across asset classes, real index data, seasons, scored on decisions</td></tr>
+          <tr><td><strong>The Almanac</strong></td><td>~40 playable episodes. <em>“It is 2008. Here is what you know. What do you do?”</em> Then the reveal.</td></tr>
+          <tr><td><strong>Guess the business</strong></td><td>Products and a revenue split — name the company. Bizzing Bee's pack mechanic, applied to the Register.</td></tr>
+          <tr><td><strong>Teardown</strong></td><td>24 business models; work out which one a company runs on</td></tr>
+          <tr><td><strong>FX desk · Rates &amp; bonds · Report reader</strong></td><td>One real filing, reduced to six numbers</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Banding, because 8 and 13 are not the same child</h2>
+    <p class="eyebrow">The single biggest thing the current design gets wrong</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Band</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sprout</strong> 8–10</td><td>The town, jobs, jars, goals. <strong>No tickers, no real companies.</strong></td></tr>
+          <tr><td><strong>Builder</strong> 11–12</td><td>The Register and deep dives. The Exchange (fictional). No live prices.</td></tr>
+          <tr><td><strong>Floor</strong> 13+ <em>(new)</em></td><td>The Market Window, paper portfolios, the Almanac, the FX desk</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The town and the job games stay — they are the earning loop, and they are what makes the
+      younger band work. <strong>The Register is what makes the older one worth a
+      subscription.</strong></p>
+  </section>
+
+  <section>
+    <h2>Order of work</h2>
+    <p class="eyebrow">Step one needs no backend, no keys and no licence</p>
+    <ol class="steps">
+      <li><div><strong>Fifty companies, fully built.</strong> Deep, not wide. Prove the atom is worth a child's time.</div></li>
+      <li><div><strong>Deep dive and the collection meter</strong> — offline, no feed at all.</div></li>
+      <li><div><strong>The feed service</strong> — end-of-day first, delayed later.</div></li>
+      <li><div><strong>The Market Window.</strong></div></li>
+      <li><div><strong>Paper portfolios.</strong></div></li>
+      <li><div><strong>The Almanac.</strong></div></li>
+    </ol>
+    <div class="note">
+      <span class="note-label">The test</span>
+      <p>If fifty company cards are not something a child will read, five hundred will not save
+        it — the same test docs/05 applies to the parent report. Find that out for a fiftieth
+        of the cost.</p>
+    </div>
+  </section>
+
+  <footer>
+    Bizzing Finance · docs/06-the-corpus.md · branch <code>claude/bizzing-finance-webapp-s6tivd</code><br>
+    Assumes CONCEPT §6 (binding money rules), docs/03 (the teaching ladder) and docs/05 (the mastery record).<br>
+    Market-data tiers and licensing terms named here are a research task, not a citation — verify with the vendor before shipping.
+  </footer>
+
+</div>
