@@ -32,3 +32,4 @@ Start here:
 - [docs/05 — Making it a product](docs/05-making-it-a-product.md) — curriculum, the year of content, and parent reporting.
 - [docs/06 — The Corpus](docs/06-the-corpus.md) — what Bizzing Finance's 128,040 is: 500 real companies, two markets, and the wall between them.
 - [docs/07 — The Hour](docs/07-the-hour.md) — the USPs, the seven hooks, and the features that would earn an hour a day for a year.
+- [docs/08 — The Journey](docs/08-the-journey.md) — arithmetic at 8 to an entrepreneur at 14: the seven years, the asset-class ladder, and the world model that has to exist first.
