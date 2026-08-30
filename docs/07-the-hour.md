@@ -16,23 +16,53 @@ Everything here follows from one correction:
 
 ---
 
-## 1. The nine USPs
+## 1. There are no USPs yet — there is an asset ledger, and it is empty
 
-Not features — the things a competitor cannot copy without becoming a different product.
+The nine "USPs" that stood here were bullshit. Audited honestly, eight of the nine were
+**policy choices** a competitor changes in a sprint, and the ninth described something that
+does not exist.
 
-| # | USP | Why nobody else has it |
-|---|---|---|
-| 1 | **One currency, and it is the curriculum** | Every competitor has gems *and* coins. Here the money you earn playing is the money you spend, so the trade-off is the lesson. A second currency would quietly teach that magic money arrives for showing up. |
-| 2 | **The simulator is closed. No real money, ever** | No card, no bank link, no cash-out. That is *why* it needs no financial licence in any market, and why a parent can hand over the phone without reading the terms. |
-| 3 | **Scored on the decision, never the return** | A game scored on returns has taught gambling. Here the boring diversified player wins the season — which is both the honest lesson and a thing an ad-funded competitor structurally cannot ship. |
-| 4 | **Honest about stopping** | The only money app for children that tells you the day's work is done. This is what a parent buys, and it is unfakeable by anyone whose revenue is attention. |
-| 5 | **500 real companies** (docs/06) | The corpus, and the moat. Nobody hands a child the actual register with a ladder through it. |
-| 6 | **Reports learning, not usage** (docs/05) | "Ahana can compare unit prices; 7 of 8 this week, twice when the big box was worse" — not "40 minutes, 5-day streak". |
-| 7 | **A town that permanently changes and carries the child's name** | Restorations are irreversible and the deed is public. Progress you can point at, not a number. |
-| 8 | **No ads, no tracking, minimal data by construction** | First name and an age band. DPDP/COPPA-native rather than retrofitted. |
-| 9 | **Family-shaped, not stranger-shaped** | The social layer is the household. No open chat, no global leaderboard, nobody to compare a child unfavourably with. |
+| The claim | What it actually is |
+|---|---|
+| One currency | A policy choice. Reversible in an afternoon. |
+| No real money, ever | **Table stakes.** Every kids' finance app is a closed simulator. |
+| Scored on the decision | A design opinion. Copyable. |
+| Honest about stopping | A policy choice — and a *negative* feature. Nobody buys "we show you less". |
+| 500 real companies | **Does not exist.** Claiming a plan as a USP is the tell. |
+| Reports learning, not usage | An engineering choice. Anyone can build a mastery record; we did it in a day. |
+| A town with her name on it | A feature. Copyable. |
+| No ads, minimal data | Table stakes plus a policy. Every kids' app claims it. |
+| Family-shaped | A policy choice. |
 
----
+**A defendable USP is an asset somebody had to produce, license or earn — not a decision
+somebody made.** By that test the family divides sharply:
+
+| | Audio | Images | Corpus | Repo |
+|---|---|---|---|---|
+| **Bizzing India** | **11,506 narration clips** | 952 master photographs · 149 images | 1,008 stories authored | **2.7 GB** |
+| **Bizzing Bee** | **743 voice recordings** | ~200 art assets, 17 packs | **61 MB of word data** | ~70 MB |
+| **Bizzing Finance** | **0** | **0** | **0** | **7.5 MB** |
+
+Bizzing Finance owns 23 JavaScript files, 12 markdown files and three stylesheets. **It has
+produced nothing.** Bee and India are defensible because somebody sat down and *made* 12,249
+audio files and 61 MB of compiled word lists. Finance has opinions and a prototype.
+
+### The assets that could actually exist, ranked by defensibility per rupee
+
+| # | Asset | Real? | Honest note |
+|---|---|---|---|
+| 1 | **Bee and India's installed base and brand** | ✅ **already owned** | The only genuine asset Finance has today, and it was missing from the list of nine entirely. A third app sold to families who already trust two is defensible against any new entrant. |
+| 2 | **A narrated Bizzington** | Buildable | The family's proven playbook, twice over. Known cost, known pipeline, and it is the thing that makes Bee feel finished. |
+| 3 | **Outcome evidence** | Buildable, slow | A real study showing children improved on an independent measure. **The strongest genuine moat available to any education product, and nobody in kids' fintech has one.** Expensive, slow, and unfakeable — which is the point. |
+| 4 | **The company register, verified** | Buildable, eroding | ⚠️ Be honest: a language model writes 500 company blurbs in an afternoon, so *generation is not a moat any more*. The asset is the **verification trail, the house voice, and keeping it current** — not the words. |
+| 5 | **Commissioned original art and cast** | Buildable | India commissions named folk artists — ownable and licensable. Finance's art is generated and inlined in a JS file, which is the opposite of an asset. |
+| 6 | **Institutional recognition** (NCFE/NFLAT, schools) | Earnable | A distribution moat, not a product one. Slow, and worth more than any feature. |
+| 7 | **The longitudinal family record** | Accrues | A child's multi-year mastery and net-worth history. Worthless on day one, a real switching cost in year two. |
+| 8 | **Licensed market data** | Rentable | ❌ **Not a moat.** A competitor rents the same feed. It is a cost barrier and nothing more. |
+
+**The honest bottom line: Bizzing Finance's only defendable asset today is that it is the
+third app of a family that already has assets and users.** Everything else on this page is a
+plan, and plans are not USPs.
 
 ## 2. The hooks
 
