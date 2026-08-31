@@ -7,7 +7,7 @@ import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { lessonBlock } from './lessonplayer.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
-  WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill,
+  WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
@@ -538,7 +538,6 @@ function opensWhat(id) { return OPENS[id]; }
 
 function viewCard(card) {
   const c = K(), st = c.learn.drill;
-  const d = shuffledDrill(card);
   return `<div class="stack">
     <button class="small muted" data-act="closeCard">← All chapters</button>
     ${lessonBlock(card.id)}
@@ -549,21 +548,31 @@ function viewCard(card) {
       <div style="background:var(--tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px;border-left:3px solid var(--action)">
         <span class="eyebrow">For instance</span><br>${esc(card.eg)}</div>
     </div>
-    <div class="card stack">
-      <div class="eyebrow">One question</div>
-      <h3 style="font-size:18px">${esc(card.drill.q)}</h3>
+    ${(() => {
+      /* One question at a time, permuted independently, the verdict at the
+         end. A stale drill from the one-question era just starts over. */
+      const total = drillCount(card);
+      const live = st && st.card === card.id && st.picks ? st : null;
+      const qi = live ? Math.min(live.qi, total - 1) : 0;
+      const dq = shuffledDrill(card, qi);
+      const p = live && live.picks[qi];
+      const last = qi === total - 1;
+      return `<div class="card stack">
+      <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : 'One question'}</div>
+      <h3 style="font-size:18px">${esc(dq.q)}</h3>
       <div class="stack" style="gap:8px">
-        ${d.opts.map((o, i) => {
+        ${dq.opts.map((o, i) => {
           let k = '';
-          if (st && st.card === card.id) k = (i === d.answer) ? ' ok' : (i === st.pick ? ' no' : '');
-          return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${st && st.card === card.id ? 'disabled' : ''}>
+          if (p) k = (i === dq.answer) ? ' ok' : (i === p.pick ? ' no' : '');
+          return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${p ? 'disabled' : ''}>
             <span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`;
         }).join('')}
       </div>
-      ${st && st.card === card.id ? `<div style="background:${st.right ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px">
-          <b>${st.right ? 'That’s it.' : 'Not quite — and this is the useful bit:'}</b> ${esc(card.drill.why)}</div>
-        <button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
-    </div>
+      ${p ? `<div style="background:${p.right ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px">
+          <b>${p.right ? 'That’s it.' : 'Not quite — and this is the useful bit:'}</b> ${esc(dq.why)}</div>` : ''}
+      ${p && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
+      ${p && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
+    </div>`; })()}
   </div>`;
 }
 

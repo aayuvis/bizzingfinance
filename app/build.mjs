@@ -15,6 +15,17 @@ mkdirSync(out, { recursive: true });
 const res = await build({
   entryPoints: [join(here, 'src/main.js')],
   bundle: true, format: 'iife', minify: false, write: false, target: 'es2020',
+  /* the one-file build swaps in the lite lesson list: chapter 1 speaks, the
+     rest teach in captions on the measured clock. Without this the "single"
+     file would carry five megabytes of narration. */
+  plugins: [{
+    name: 'lite-lessons',
+    setup(b) {
+      b.onResolve({ filter: /lessonindex-list\.js$/ }, (args) => ({
+        path: join(args.resolveDir, 'lessonindex-lite.js'),
+      }));
+    },
+  }],
 });
 const js = res.outputFiles[0].text;
 const css = ['styles/fonts.css', 'styles/tokens.css', 'styles/app.css']

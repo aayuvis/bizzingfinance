@@ -1,57 +1,281 @@
-"""scripts.py — the voice scripts for the animated lessons.
+"""scripts.py — the voice scripts for the animated lessons, all 32 cards.
 
 The Bizzing Bee treatment, kept whole: a concept gets a narrated animated
 explainer FIRST, then the reading card, then the drill. The rules these
 scripts keep, inherited from the family's production brief:
 
-  · the script teaches EXACTLY what the card teaches — same claim, same
-    example, same words where it matters. A video that teaches a better
-    lesson than the card is a bug in the card; go fix the card.
-  · the audio is the clock. Every beat below carries the LINE it follows,
-    never a hard-coded second count — the renderer times beats from the
-    generated narration, so a re-recorded voice moves its own cues.
-  · no invented numbers, no invented facts. The rain, the umbrella and the
-    birthday cake are the card's own.
+  · a script teaches EXACTLY what its card teaches — same claim, same
+    example, same numbers. A video that teaches a better lesson than the
+    card is a bug in the card; go fix the card.
+  · the audio is the clock. Beats carry no second counts — the renderer
+    times each beat from its generated clip, so a re-recorded line moves
+    its own cue.
+  · no invented numbers, no invented facts. Every figure below is the
+    card's own.
+  · one narrator, Nana Bizz, in a NEUTRAL storybook voice (the product
+    owner's call: Finance is the family's global app and its narrator
+    carries no region). She quotes the others where the cards do.
 
-Each beat: (line of narration, scene direction for the SVG stage).
-Scene directions name STAGE ACTIONS the player knows how to draw — they are
-a vocabulary, not free text: avatar(pose), show(thing), sort(thing, side),
-swap(a, b), banner(text).
+Stage directions are a fixed vocabulary the player enforces — an unknown
+action THROWS: avatar(pose) · show(item) · cols(A,B) · sweep(a|b) ·
+sort(item, a|b) · swap(item) · banner(TEXT) · weather(rain|sun).
 """
 
+L = lambda title, *beats: {'title': title, 'beats': list(beats)}
+
 LESSONS = {
-  'c1b': {
-    'title': 'Needs and wants',
-    'voice_note': 'warm, unhurried, a grandmother explaining at a kitchen table',
-    'beats': [
-      ("Here is a question that looks easy and isn't.",
-       "avatar(talk)"),
-      ("Some things, you would be in real trouble without. Food. A roof. Medicine when you are ill. Those are needs.",
-       "show(roti); show(roof); show(medicine); banner(NEEDS)"),
-      ("Some things just make life nicer. A birthday cake. A video game. A gold chain, if you like that sort of thing.",
-       "show(cake); show(game); show(chain); banner(WANTS)"),
-      ("Both are allowed. Nobody is in trouble for wanting things — wanting things is most of the fun.",
-       "avatar(smile)"),
-      ("The trick is knowing which one you are looking at, before you pay.",
-       "avatar(point); banner(BEFORE YOU PAY)"),
-      ("But watch this. Rain is coming.",
-       "avatar(talk); weather(rain)"),
-      ("Today, an umbrella is a need. In dry May, the very same umbrella is a want.",
-       "show(umbrella); sort(umbrella, needs); weather(sun); sort(umbrella, wants)"),
-      ("Same umbrella. Different day. Lots of things move between the two columns like that.",
-       "swap(umbrella)"),
-      ("So needs versus wants is not a list you memorise. It is a question you ask — every time, just before the money leaves your hand.",
-       "avatar(point); banner(IT'S A QUESTION, NOT A LIST)"),
-    ],
-  },
+
+# ── Chapter 1 · What money even is ─────────────────────────────────────
+'c1a': L('Money is an agreement',
+  ("Take a note out of your pocket and really look at it. It is a piece of paper.", "avatar(talk); show(coin)"),
+  ("It buys bread because everyone agrees it does — not because the paper is worth anything by itself.", "show(roti); banner(EVERYONE AGREES)"),
+  ("Different places agree on different money. Cross a border, and the notes change.", "avatar(point); cols(Here,There); sort(coin, a)"),
+  ("The same slice of cake costs a different number in every country. The cake did not change.", "show(cake); sort(cake, b); swap(cake)"),
+  ("The agreement changed. That is all money is — the biggest agreement in the world.", "avatar(smile); banner(THE BIGGEST AGREEMENT)"),
+),
+'c1b': L('Needs and wants',
+  ("Here is a question that looks easy and isn't.", "avatar(talk)"),
+  ("Some things, you would be in real trouble without. Food. A roof. Medicine when you are ill. Those are needs.", "cols(Needs,Wants); show(roti); show(roof); show(medicine); sweep(a)"),
+  ("Some things just make life nicer. A birthday cake. A video game. A gold chain, if you like that sort of thing.", "show(cake); show(game); show(chain); sweep(b)"),
+  ("Both are allowed. Nobody is in trouble for wanting things — wanting things is most of the fun.", "avatar(smile)"),
+  ("The trick is knowing which one you are looking at, before you pay.", "avatar(point); banner(BEFORE YOU PAY)"),
+  ("But watch this. Rain is coming.", "avatar(talk); weather(rain)"),
+  ("Today, an umbrella is a need. In dry May, the very same umbrella is a want.", "show(umbrella); sort(umbrella, a); weather(sun); sort(umbrella, b)"),
+  ("Same umbrella. Different day. Lots of things move between the two columns like that.", "swap(umbrella)"),
+  ("So needs versus wants is not a list you memorise. It is a question you ask — every time, just before the money leaves your hand.", "avatar(point); banner(A QUESTION, NOT A LIST)"),
+),
+'c1c': L('Where money comes from',
+  ("Money arrives because somebody traded something they had for something they wanted.", "avatar(talk); show(deal)"),
+  ("Usually, that something is time and skill. You do work; someone pays.", "cols(You give,You get); show(box); sort(box, a); show(coin); sort(coin, b)"),
+  ("Pip carries crates for the grain seller. The grain seller has money and no time. Both of them end up better off.", "avatar(point); banner(BOTH BETTER OFF)"),
+  ("Nobody is given money for nothing.", "avatar(talk)"),
+  ("And if a message ever tells you they will — read chapter five. Twice.", "show(letter); banner(NOBODY PAYS FOR NOTHING); avatar(point)"),
+),
+'c1d': L('Price is not value',
+  ("Two numbers hide inside everything you buy, and they are almost never the same.", "avatar(talk); cols(Price,Value)"),
+  ("The price is what the seller asks. It is printed, public, and real.", "show(receipt); sort(receipt, a)"),
+  ("The value is what the thing is worth to you — and only you can know it.", "show(goal); sort(goal, b)"),
+  ("Mags will sell you a shiny button for a whole week of wages. The price is real. The value is up to you.", "avatar(point); show(chain); sort(chain, a); swap(chain)"),
+  ("The gap between those two numbers is where every good decision lives — and every bad one too.", "avatar(smile); banner(MIND THE GAP)"),
+),
+
+# ── Chapter 2 · Earning it ─────────────────────────────────────────────
+'c2a': L('You are selling time',
+  ("Nearly every job is the same trade underneath.", "avatar(talk); show(deal)"),
+  ("Somebody has money and not enough time. You have time and not enough money.", "cols(They have,You have); show(coin); sort(coin, a); show(calendar); sort(calendar, b)"),
+  ("Two hours stacking crates pays the same whether it felt long or short. The clock is the product.", "avatar(point); show(box); banner(THE CLOCK IS THE PRODUCT)"),
+  ("So the price of a job is what your hour is worth to them — not what it feels like to you.", "avatar(talk)"),
+  ("Sell your hours well. They are the first thing you ever have to sell.", "avatar(smile); banner(SELL YOUR HOURS WELL)"),
+),
+'c2b': L('Being worth asking twice',
+  ("The first job comes from luck. The second job comes from how you did the first.", "avatar(talk); cols(First job,Second job); show(dice); sort(dice, a)"),
+  ("Turning up. Finishing. Saying what went wrong, out loud, before anyone asks.", "show(tick); sort(tick, b); show(medal); sort(medal, b)"),
+  ("Over a year, those are worth more than being the fastest.", "avatar(point); banner(WORTH MORE THAN FAST)"),
+  ("I rehired the same boy for eleven years. He was never the quickest.", "avatar(talk)"),
+  ("He always said when a crate was cracked. That is why he was asked twice.", "avatar(smile); show(box); banner(ASKED TWICE)"),
+),
+'c2c': L('Gifts are not wages',
+  ("Money you were given and money you earned spend exactly the same. But they are not the same to plan with.", "avatar(talk); cols(Gift,Wage)"),
+  ("A gift arrives once.", "show(cake); sort(cake, a)"),
+  ("A wage arrives again — as long as you keep doing the thing.", "show(repeat); sort(repeat, b)"),
+  ("A birthday five hundred is lovely. It is not an income.", "avatar(point); show(coin); sort(coin, a)"),
+  ("And a plan built on it falls over next month. Build your plan on what comes back.", "avatar(talk); banner(BUILD ON WHAT COMES BACK)"),
+),
+'c2d': L('More than one tap',
+  ("People who only have one way of getting money are one bad week away from having none.", "avatar(talk); show(coin); weather(rain)"),
+  ("Extra taps are everywhere. Selling something you no longer use. A second small job. Being paid for a thing you would do anyway.", "cols(One tap,Many taps); show(cart); sort(cart, b); show(box); sort(box, b); show(broom); sort(broom, b)"),
+  ("Mags sells buttons, mends umbrellas, and finds things.", "avatar(point); show(umbrella); sort(umbrella, b)"),
+  ("Two of those go badly most months. She is never broke.", "weather(sun); banner(NEVER BROKE)"),
+  ("One tap can be turned off. Three taps is a plan.", "avatar(smile); banner(THREE TAPS IS A PLAN)"),
+),
+
+# ── Chapter 3 · Making a plan ──────────────────────────────────────────
+'c3a': L('In, out, and what is left',
+  ("A budget sounds grand. It is only two columns.", "avatar(talk); cols(In,Out)"),
+  ("Money in. Two hundred on pay day.", "show(coin); sort(coin, a)"),
+  ("Money out. Sixty for the phone. Forty for the bus.", "show(receipt); sort(receipt, b); show(runner); sort(runner, b)"),
+  ("What is left is one hundred — and that is the only part you get to choose about.", "avatar(point); banner(LEFT: 100 — YOURS TO CHOOSE)"),
+  ("If out grows bigger than in, the difference has to come from somewhere. Savings. Or someone else.", "avatar(talk); weather(rain)"),
+  ("So watch the leftover number. It is the interesting one.", "avatar(smile); weather(sun); banner(THE INTERESTING NUMBER)"),
+),
+'c3b': L('The four jars',
+  ("Here is the whole trick of managing money, and it happens in the first minute.", "avatar(talk); show(jars)"),
+  ("Split what comes in, the moment it arrives. Spend, for now. Save, for something soon. Grow, for far away. Give, for someone else.", "cols(One pile,Four jars); show(coin); sort(coin, b); banner(SPLIT IT FIRST)"),
+  ("Splitting first is everything — because anything left in one pile gets spent as one pile.", "avatar(point); show(wallet); sort(wallet, a)"),
+  ("I have done forty, thirty, twenty, ten for sixty years.", "avatar(talk); banner(40 · 30 · 20 · 10)"),
+  ("And I have never once made a spreadsheet.", "avatar(smile)"),
+),
+'c3c': L('What it really cost',
+  ("Every yes is also a no. That is the whole lesson, so I will say it again slowly.", "avatar(talk); banner(EVERY YES IS A NO)"),
+  ("Buying the shiny thing is not just minus six hundred.", "show(chain); cols(You got,You gave up)"),
+  ("It is also the trip you now cannot take. The goal that just moved three weeks further away.", "sort(chain, a); show(goal); sort(goal, b); show(calendar); sort(calendar, b)"),
+  ("Grown-ups call that opportunity cost. The second half of the price.", "avatar(point); banner(OPPORTUNITY COST)"),
+  ("Mags never mentions that half. That is not lying — it is just selling. Remembering it is your job.", "avatar(smile)"),
+),
+'c3d': L('How many weeks?',
+  ("A goal turns into a plan the moment you divide.", "avatar(talk); show(goal)"),
+  ("The skateboard is nine hundred. You save sixty a week. Nine hundred divided by sixty is fifteen.", "banner(900 ÷ 60 = 15 WEEKS); show(calendar)"),
+  ("Not someday. Fifteen weeks. You can circle the day it lands.", "avatar(point); banner(NOT SOMEDAY — FIFTEEN)"),
+  ("If the answer is horrifying, you have exactly three honest choices.", "avatar(talk); cols(Change the plan,Change the goal)"),
+  ("Save more each week. Want something cheaper. Or wait longer. Everything else is just hoping.", "show(coin); sort(coin, a); show(cart); sort(cart, b); banner(SAVE MORE · CHEAPER · WAIT)"),
+),
+
+# ── Chapter 4 · Sellers and their tricks ───────────────────────────────
+'c4a': L('Hurry is a tool',
+  ("Today only. Last one. Ends at midnight.", "avatar(talk); banner(TODAY ONLY!)"),
+  ("Listen carefully: none of those are facts about the thing. They are tools that stop you thinking.", "avatar(point); cols(About the thing,About YOU)"),
+  ("A decision made fast feels like a decision made bravely. That is exactly what the hurry is for.", "show(flame); sort(flame, b); banner(HURRY WORKS ON FEELINGS)"),
+  ("Mags has said 'the last one' about the same tray of buttons for six years.", "avatar(smile); show(chain); sort(chain, a)"),
+  ("When you feel the rush, that is the moment to slow down. The cake shop will still be there tomorrow. So will the buttons.", "avatar(talk); banner(SLOW IS THE MOVE)"),
+),
+'c4b': L('Free is never free',
+  ("If you are not paying money, something else is being paid.", "avatar(talk); banner(SOMETHING IS BEING PAID)"),
+  ("Your attention. Your details. Your time. Or a much bigger payment, later.", "cols(You pay now,You pay later); show(gear); sort(gear, a); show(page); sort(page, a); show(coin); sort(coin, b)"),
+  ("Free samples, free games, free trials — all real, and all paid for somehow.", "avatar(point); show(game)"),
+  ("The free trial that needs your card is not selling you a trial.", "avatar(talk); show(receipt); sort(receipt, b)"),
+  ("It is selling you the forgetting. Remember that, and free gets a lot cheaper.", "avatar(smile); banner(IT SELLS THE FORGETTING)"),
+),
+'c4c': L('The small monthly one',
+  ("A subscription is a decision you make once — and pay for forever.", "avatar(talk); show(repeat); banner(DECIDE ONCE, PAY FOREVER)"),
+  ("The small number is the point. Thirty a month does not feel like three hundred and sixty a year.", "avatar(point); cols(Feels like,Actually is); show(coin); sort(coin, a); show(receipt); sort(receipt, b); banner(30/MONTH = 360/YEAR)"),
+  ("But that is exactly what it is.", "avatar(talk)"),
+  ("Four small monthly things nobody remembers signing up for — that is most of a week of wages, every year.", "show(page); show(game); show(bell); show(gear); sweep(b)"),
+  ("Once a month, read the list. Cross one off. That is the whole defence.", "avatar(smile); banner(READ THE LIST, CROSS ONE OFF)"),
+),
+'c4d': L('The shop is a machine',
+  ("Sweets at the till. Milk at the very back. The dearest thing exactly at eye height.", "avatar(talk); show(shop)"),
+  ("None of that is an accident.", "avatar(point); banner(NONE OF IT IS AN ACCIDENT)"),
+  ("A shop is arranged to make buying easy. Which is fine — so long as you know that is what it is.", "avatar(talk); cols(You went for,You walked past); show(roti); sort(roti, a)"),
+  ("You walked past eleven things to reach the bread. That was the plan.", "show(cake); show(game); show(chain); sweep(b); banner(THAT WAS THE PLAN)"),
+  ("Walk in with a list. The machine is very good, but it cannot read.", "avatar(smile); show(page); banner(THE MACHINE CANNOT READ)"),
+),
+
+# ── Chapter 5 · Keeping it safe ────────────────────────────────────────
+'c5a': L('What a bank is for',
+  ("A bank does three things a tin under the bed cannot.", "avatar(talk); show(bank)"),
+  ("It keeps money safer than any hiding place. It lets you pay without carrying notes. And it pays you a little, just for leaving money there.", "cols(The tin,The bank); show(lock); sort(lock, b); show(coin); sort(coin, b)"),
+  ("Why would a bank pay YOU? Because while your money sits, the bank lends it to somebody else.", "avatar(point); show(deal); sort(deal, b); banner(YOUR MONEY GOES OUT WORKING)"),
+  ("Your money does not sit in a drawer with your name on it.", "avatar(talk)"),
+  ("It is out working — and the bank owes you it back. Every coin.", "avatar(smile); banner(THE BANK OWES YOU)"),
+),
+'c5b': L('The three secrets',
+  ("Three things are yours and yours alone. A PIN. A password. A one-time code.", "avatar(talk); show(lock); banner(PIN · PASSWORD · CODE)"),
+  ("Now the strange part: nobody real ever needs them.", "avatar(point); cols(Never asks,Might ask)"),
+  ("Not the bank. Not the police. Not a helpful stranger. Not a friend.", "show(bank); sort(bank, a); show(shield); sort(shield, a); show(family); sort(family, a)"),
+  ("The real bank already knows your account. That is how it is your bank.", "avatar(talk); banner(THE BANK ALREADY KNOWS)"),
+  ("So anybody asking for a secret is telling you exactly what they are. Believe them.", "avatar(smile); banner(ASKING = TELLING)"),
+),
+'c5c': L('The shape of a scam',
+  ("Scams all tell different stories. And they are all exactly the same shape.", "avatar(talk); banner(SAME SHAPE, EVERY TIME)"),
+  ("A reward, or a fright. You have won! Your account is at risk!", "cols(The bait,The squeeze); show(trophy); sort(trophy, a); show(bell); sort(bell, a)"),
+  ("Then a hurry. Reply in two hours.", "show(flame); sort(flame, b)"),
+  ("Then a secret. Don't tell anyone.", "avatar(point); show(lock); sort(lock, b); banner(REWARD + HURRY + SECRET)"),
+  ("Prize, panic, or a friend in trouble — once you see the shape, the story stops mattering.", "avatar(smile); banner(SEE THE SHAPE)"),
+),
+'c5d': L('Telling someone is the answer',
+  ("Here is why scams work on grown-ups too: embarrassment.", "avatar(talk)"),
+  ("The instruction 'don't tell anyone' is not protecting you. It is protecting them.", "avatar(point); banner(WHO DOES THE SECRET PROTECT?)"),
+  ("So telling somebody is not what you do after failing. Telling somebody IS the move.", "show(family); banner(TELLING IS THE MOVE)"),
+  ("A friend who really needs help can wait sixty seconds while you check with an adult.", "avatar(talk); show(calendar)"),
+  ("Someone who cannot wait sixty seconds — is not your friend.", "avatar(smile); banner(SIXTY SECONDS)"),
+),
+
+# ── Chapter 6 · Borrowing ──────────────────────────────────────────────
+'c6a': L('Interest, both ways',
+  ("Interest is rent — rent on money. And it runs both ways.", "avatar(talk); banner(RENT ON MONEY)"),
+  ("Leave money with a bank, and they pay you rent for using it.", "cols(They pay you,You pay them); show(bank); show(coin); sort(coin, a)"),
+  ("Borrow money, and you pay rent for using theirs.", "show(receipt); sort(receipt, b)"),
+  ("Same idea. Which side you stand on makes all the difference.", "avatar(point); banner(SAME IDEA, TWO SIDES)"),
+  ("Borrowing is not shameful. It is a tool with a price on it — and you always, always find the price before you agree.", "avatar(smile); banner(FIND THE PRICE FIRST)"),
+),
+'c6b': L('The number that matters',
+  ("Sellers quote the monthly payment, because the monthly payment is small.", "avatar(talk); show(receipt); banner(ONLY 110 A MONTH!)"),
+  ("The number that tells the truth is bigger and quieter: everything you will hand over, minus what you borrowed.", "avatar(point); cols(You borrowed,You hand over)"),
+  ("Borrow a thousand. Pay back one hundred and ten a month, for a year.", "show(coin); sort(coin, a); show(calendar); sort(calendar, b)"),
+  ("You handed over one thousand, three hundred and twenty.", "banner(1,000 → 1,320)"),
+  ("It cost three hundred and twenty. THAT is the number. Ask for it by name.", "avatar(smile); banner(IT COST 320)"),
+),
+'c6c': L('Good reasons and bad ones',
+  ("Borrowing has good reasons and bad ones, and there is a simple way to tell them apart.", "avatar(talk); cols(Still here later,Gone by Friday)"),
+  ("A tool. A course. A roof. Things that earn, or last — borrowing for those can be sensible, even with the rent on top.", "show(gear); show(book); show(roof); sweep(a)"),
+  ("A feast that is gone by Friday means paying rent on a memory.", "avatar(point); show(cake); sort(cake, b); banner(RENT ON A MEMORY)"),
+  ("A loan for umbrella stock made me money. A loan for the festival did not.", "show(umbrella); sort(umbrella, a)"),
+  ("And I would take the festival one again anyway. Just — knowingly.", "avatar(smile); banner(KNOWINGLY IS THE WORD)"),
+),
+'c6d': L('Trust is a memory',
+  ("Lenders keep a record of one thing only: whether people paid them back.", "avatar(talk); show(page)"),
+  ("A good record makes borrowing cheaper later. A bad one makes it dearer.", "cols(Repaid,Didn't); show(tick); sort(tick, a); show(cross); sort(cross, b)"),
+  ("Bizzington calls it a trust score. It goes up every time you repay.", "avatar(point); show(medal); sort(medal, a); banner(UP EVERY REPAYMENT)"),
+  ("It is a memory of what happened — not a score of what kind of person you are.", "avatar(talk); banner(A MEMORY, NOT A JUDGEMENT)"),
+  ("And a memory can be rebuilt. One repayment at a time.", "avatar(smile)"),
+),
+
+# ── Chapter 7 · Money that grows ───────────────────────────────────────
+'c7a': L('The snowball',
+  ("Interest lands on your money. You know that part.", "avatar(talk); show(coin)"),
+  ("Here is the part that changes everything: next time, it lands on your money PLUS the interest.", "avatar(point); banner(INTEREST ON THE INTEREST)"),
+  ("One hundred, growing ten percent a year. One hundred and ten. Then one hundred and twenty-one. Then one hundred and thirty-three.", "cols(Year,You have); show(seed); sort(seed, a); show(chart); sort(chart, b); banner(110 → 121 → 133)"),
+  ("The steps get bigger while you do nothing at all. That is compounding.", "avatar(talk); banner(THE STEPS GET BIGGER)"),
+  ("It is boring for a year. And then it is not boring at all.", "avatar(smile)"),
+),
+'c7b': L('Risk and return',
+  ("Things that might grow a lot can also fall a lot.", "avatar(talk); cols(Might grow,Might fall); show(chart); sort(chart, a); show(chartdown); sort(chartdown, b)"),
+  ("Hear it properly: that is one sentence, not two. The same sentence.", "avatar(point); banner(THE SAME SENTENCE)"),
+  ("Safe things grow slowly. That is their half of the deal.", "show(shield); show(seed)"),
+  ("Bo says it will go up. Bea says it will go down. Neither of them knows — and both of them are certain.", "avatar(talk); swap(chart)"),
+  ("So when somebody promises big returns with no risk, they are either confused or lying. There is no third kind.", "avatar(smile); banner(NO THIRD KIND)"),
+),
+'c7c': L('Never just one',
+  ("Own one thing, and your whole week depends on somebody else's Tuesday.", "avatar(talk); show(factory); weather(rain)"),
+  ("Own a slice of many things, and no single piece of bad news can wreck you.", "avatar(point); cols(Just one,A slice of many); show(factory); sort(factory, a); show(basket); sort(basket, b); weather(sun)"),
+  ("A basket of the whole market is dull.", "show(cart); sort(cart, b); banner(DULL)"),
+  ("And dull wins more often than exciting does.", "avatar(smile); banner(DULL WINS)"),
+  ("Spreading out is the only free thing in this entire subject. Take it.", "avatar(talk); banner(THE ONLY FREE THING)"),
+),
+'c7d': L('Time is the ingredient',
+  ("Where money should live depends on one question: when will you need it back?", "avatar(talk); banner(WHEN DO YOU NEED IT?)"),
+  ("Money you need next month must sit somewhere safe — even if it grows by almost nothing.", "cols(Next month,Ten years); show(shield); sort(shield, a)"),
+  ("Money you will not touch for ten years can sit through bad weather. It has time to come back.", "avatar(point); show(seed); sort(seed, b); weather(rain)"),
+  ("The bus fare and the retirement fund are not the same money.", "weather(sun); show(runner); sort(runner, a); show(chart); sort(chart, b)"),
+  ("And they must not live in the same place.", "avatar(smile); banner(DIFFERENT MONEY, DIFFERENT HOMES)"),
+),
+
+# ── Chapter 8 · Running something ──────────────────────────────────────
+'c8a': L('Three different words',
+  ("Revenue. Cost. Profit. Three words shopkeepers refuse to mix up.", "avatar(talk); show(shop); banner(REVENUE · COST · PROFIT)"),
+  ("Revenue is everything that came in. Forty umbrellas at twenty each — eight hundred in.", "cols(In,Out); show(umbrella); sort(umbrella, a); banner(REVENUE: 800)"),
+  ("Cost is what you paid to make that happen. The umbrellas cost eight each — three hundred and twenty out.", "show(receipt); sort(receipt, b); banner(COST: 320)"),
+  ("Profit is what is left. Four hundred and eighty.", "avatar(point); banner(PROFIT: 480)"),
+  ("A busy shop with no profit is not a business. It is a very tiring hobby.", "avatar(smile); banner(BUSY ≠ PROFITABLE)"),
+),
+'c8b': L('Setting a price',
+  ("Price too low, and you sell out by lunch and earn nothing.", "avatar(talk); cols(Too low,Too high); show(cart); sort(cart, a)"),
+  ("Price too high, and you carry the stock home again.", "show(box); sort(box, b)"),
+  ("The right price is not 'cost plus a bit'. It is the most people will happily pay.", "avatar(point); banner(WHAT PEOPLE HAPPILY PAY)"),
+  ("And you only find it by trying. Mags raised her buttons from eight to twelve — and sold two fewer.", "show(chain); banner(8 → 12, TWO FEWER SOLD)"),
+  ("She made more money and went home earlier. Try prices like a scientist.", "avatar(smile); banner(TRY IT LIKE A SCIENTIST)"),
+),
+'c8c': L('Cash is not profit',
+  ("Here is the strangest true thing in this whole chapter: you can be profitable and broke at the same time.", "avatar(talk); banner(PROFITABLE AND BROKE)"),
+  ("Profit lives on paper, over a month.", "cols(On paper,In your hand); show(page); sort(page, a)"),
+  ("Cash is what is actually in your hand on Tuesday — when the stock must be paid for and the customers have not come yet.", "avatar(point); show(coin); sort(coin, b); show(calendar); sort(calendar, b)"),
+  ("My best-ever month nearly closed the shop. The restock was due before the sales landed.", "weather(rain); banner(THE RESTOCK CAME FIRST)"),
+  ("Watch the paper once a month. Watch your hand every day.", "avatar(smile); weather(sun); banner(WATCH YOUR HAND DAILY)"),
+),
+'c8d': L('The stuff that arrives anyway',
+  ("Some costs arrive whether you sold anything or not. Rent. Licences. Those are fixed.", "avatar(talk); cols(Fixed,Variable); show(roof); sort(roof, a); show(page); sort(page, a)"),
+  ("Some costs only arrive when you sell. Stock. Those are variable.", "show(box); sort(box, b)"),
+  ("A quiet week hurts because the fixed ones do not care that it was quiet.", "avatar(point); weather(rain); banner(FIXED COSTS DON'T CARE)"),
+  ("Two hundred rent a month is seven a day — before you have sold a single thing.", "banner(7 A DAY, RAIN OR SHINE)"),
+  ("Know your seven. Every shopkeeper who lasts does.", "avatar(smile); weather(sun); banner(KNOW YOUR SEVEN)"),
+),
 }
 
 if __name__ == '__main__':
-    import json, sys
-    lid = sys.argv[1] if len(sys.argv) > 1 else 'c1b'
-    L = LESSONS[lid]
-    print(f"{lid} — {L['title']}: {len(L['beats'])} beats, "
-          f"{sum(len(b[0].split()) for b in L['beats'])} words "
-          f"(~{sum(len(b[0].split()) for b in L['beats']) / 2.3:.0f}s at a teaching pace)")
-    for line, stage in L['beats']:
-        print(f"  · {line}\n      → {stage}")
+    import sys
+    tot_w = 0
+    for lid, LS in (LESSONS.items() if len(sys.argv) < 2 else [(sys.argv[1], LESSONS[sys.argv[1]])]):
+        w = sum(len(b[0].split()) for b in LS['beats'])
+        tot_w += w
+        print(f"{lid}  {LS['title']:32} {len(LS['beats'])} beats  {w:4} words  ~{w/2.3:3.0f}s")
+    print(f"\n{len(LESSONS)} lessons · {tot_w} words · ~{tot_w/2.3/60:.0f} min narration")

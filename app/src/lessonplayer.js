@@ -23,24 +23,43 @@
    (the family's rule about fields with no effect), so mount() THROWS on an
    unknown action rather than shrugging. */
 
-import { POSES, LESSON_MEDIA } from './lessons-gen.js';
+import { POSES } from './lessons-poses.js';
+import { LOADERS } from './lessonindex-list.js';
+
+/* Loaded lessons, by id. The loaders are dynamic imports, so the PWA fetches
+   a lesson the first time it is watched (its own chunk, then cached by the
+   worker); the single file inlines a lite list at build time instead. */
+const MEDIA = {};
+function loadLesson(id) {
+  if (MEDIA[id]) return Promise.resolve(MEDIA[id]);
+  return LOADERS[id]().then((m) => (MEDIA[id] = m.default));
+}
 import { ico } from './art.js';
 import { esc } from './ui.js';
 
-const ITEM_ICON = { roti: 'roti', roof: 'home', medicine: 'medicine',
-  cake: 'cake', game: 'arcade', chain: 'chain', umbrella: 'parasol' };
+export const ITEM_ICON = { roti: 'roti', roof: 'home', medicine: 'medicine',
+  cake: 'cake', game: 'arcade', chain: 'chain', umbrella: 'parasol',
+  coin: 'coin', coin2: 'coin', wallet: 'wallet', jars: 'jars', bank: 'bank',
+  chart: 'chartUp', chartdown: 'chartDown', shop: 'shop', cart: 'cart',
+  shield: 'shield', letter: 'envelope', deal: 'handshake', factory: 'factory',
+  seed: 'seed', lock: 'lock', bell: 'bell', receipt: 'receipt', medal: 'medal',
+  trophy: 'trophy', calendar: 'calendar', dice: 'dice', basket: 'basket',
+  door: 'door', postbox: 'postbox', box: 'box', page: 'page', broom: 'broom',
+  runner: 'run', printer: 'printer', home: 'home', town: 'town', goal: 'goal',
+  repeat: 'repeat', book: 'lesson', star: 'quest', tick: 'check', cross: 'close',
+  flame: 'streak', sun: 'sun', moon: 'moon', family: 'family', gear: 'gear' };
 
 let P = null;   /* the one live player: { lid, i, audio, playing, done } */
 
-export function hasLesson(id) { return !!LESSON_MEDIA[id]; }
+export function hasLesson(id) { return !!LOADERS[id]; }
 
 export function lessonBlock(id) {
-  const L = LESSON_MEDIA[id];
-  if (!L) return '';
+  if (!LOADERS[id]) return '';
+  const L = MEDIA[id];
   return `<div class="card lesson" id="lessonstage" data-lesson="${id}">
     <div class="row"><div class="grow"><div class="eyebrow">Nana Bizz explains</div>
-      <h3 style="font-size:17px">${esc(L.title)}</h3></div>
-      <span class="pill">${Math.round(L.beats.reduce((t, b) => t + b.dur, 0))}s</span></div>
+      <h3 style="font-size:17px">${L ? esc(L.title) : '…'}</h3></div>
+      <span class="pill">${L ? Math.round(L.beats.reduce((t, b) => t + b.dur, 0)) + 's' : '…'}</span></div>
     <div class="lstage-holder"></div>
     <p class="lcap small"></p>
     <div class="row" style="gap:8px;margin-top:4px">
@@ -53,7 +72,7 @@ export function lessonBlock(id) {
 
 /* ── stage state, rebuilt cumulatively so any beat can be re-entered ──── */
 function freshState() {
-  return { pose: 'talk', weather: null, banner: null, cols: false,
+  return { pose: 'talk', weather: null, banner: null, cols: null,
            items: {}, order: [], swapping: null };
 }
 function apply(st, stage) {
@@ -64,13 +83,10 @@ function apply(st, stage) {
     const a = args.split(',').map((s) => s.trim());
     if (op === 'avatar') st.pose = a[0];
     else if (op === 'show') { if (!st.items[a[0]]) { st.items[a[0]] = 'tray'; st.order.push(a[0]); } st.swapping = null; }
-    else if (op === 'banner') {
-      st.banner = args.trim();
-      /* NEEDS/WANTS name a column: the tray becomes that column */
-      const side = args.trim() === 'NEEDS' ? 'needs' : args.trim() === 'WANTS' ? 'wants' : null;
-      if (side) { st.cols = true; for (const k of st.order) if (st.items[k] === 'tray') st.items[k] = side; }
-    }
-    else if (op === 'sort') { st.cols = true; st.items[a[0]] = a[1]; st.swapping = null; }
+    else if (op === 'cols') st.cols = [a[0], a[1]];
+    else if (op === 'sweep') { for (const k of st.order) if (st.items[k] === 'tray') st.items[k] = a[0]; }
+    else if (op === 'banner') st.banner = args.trim();
+    else if (op === 'sort') { st.items[a[0]] = a[1]; st.swapping = null; }
     else if (op === 'swap') st.swapping = a[0];
     else if (op === 'weather') st.weather = a[0] === 'rain' ? 'rain' : 'sun';
     else throw new Error('lesson stage: unknown action "' + op + '"');
@@ -90,15 +106,15 @@ function stateAt(L, upto) {
 
 /* ── drawing ──────────────────────────────────────────────────────────── */
 function itemHTML(k, place, swapping) {
-  const x = { tray: 150, needs: 118, wants: 258 }[place] || 150;
+  const x = { tray: 150, a: 118, b: 258 }[place] || 150;
   return `<div class="litem${swapping === k ? ' lswap' : ''}" data-k="${k}" style="--x:${x}px">
     ${ico(ITEM_ICON[k] || k, '❔', 30)}</div>`;
 }
 function drawStage(holder, st) {
   const pose = POSES['nana-' + st.pose] ? 'nana-' + st.pose : st.pose;
   const pv = POSES[pose] || POSES['talk'] || Object.values(POSES)[0];
-  const needs = st.order.filter((k) => st.items[k] === 'needs');
-  const wants = st.order.filter((k) => st.items[k] === 'wants');
+  const colA = st.order.filter((k) => st.items[k] === 'a');
+  const colB = st.order.filter((k) => st.items[k] === 'b');
   const tray = st.order.filter((k) => st.items[k] === 'tray');
   holder.innerHTML = `
     <div class="lstage${st.weather ? ' w-' + st.weather : ''}">
@@ -107,8 +123,8 @@ function drawStage(holder, st) {
       <img class="lnana lnana-${st.pose}" src="${pv.src}" alt="" style="height:78%">
       <div class="lright">
         ${st.cols ? `<div class="lcols">
-          <div class="lcol"><b>Needs</b><div class="lslot">${needs.map((k) => itemHTML(k, 'needs', st.swapping)).join('')}</div></div>
-          <div class="lcol"><b>Wants</b><div class="lslot">${wants.map((k) => itemHTML(k, 'wants', st.swapping)).join('')}</div></div>
+          <div class="lcol"><b>${esc(st.cols[0])}</b><div class="lslot">${colA.map((k) => itemHTML(k, 'a', st.swapping)).join('')}</div></div>
+          <div class="lcol"><b>${esc(st.cols[1])}</b><div class="lslot">${colB.map((k) => itemHTML(k, 'b', st.swapping)).join('')}</div></div>
         </div>` : ''}
         <div class="ltray">${tray.map((k) => itemHTML(k, 'tray', st.swapping)).join('')}</div>
       </div>
@@ -120,7 +136,7 @@ function drawStage(holder, st) {
 function el() { return document.getElementById('lessonstage'); }
 function refresh() {
   const root = el(); if (!root || !P) return;
-  const L = LESSON_MEDIA[P.lid];
+  const L = MEDIA[P.lid];
   drawStage(root.querySelector('.lstage-holder'), stateAt(L, P.i));
   root.querySelector('.lcap').textContent = L.beats[P.i].line;
   root.querySelector('.ldots').innerHTML = L.beats.map((_, i) =>
@@ -130,25 +146,30 @@ function refresh() {
   root.querySelector('[data-l="restart"]').hidden = !(P.playing || P.done || P.i > 0);
 }
 function playBeat() {
-  const L = LESSON_MEDIA[P.lid], b = L.beats[P.i];
+  const L = MEDIA[P.lid], b = L.beats[P.i];
   clearTimeout(P.timer);
   if (P.audio) { P.audio.onended = null; P.audio.pause(); }
+  if (!b.src) {
+    /* a lite lesson (or a browser with no audio): the measured duration is
+       still the clock, so the teaching still walks at the narrated pace */
+    P.audio = null; refresh();
+    P.timer = setTimeout(() => advance(), b.dur * 1000);
+    return;
+  }
   P.audio = new Audio(b.src);
   P.audio.onended = () => advance();
   refresh();
   P.audio.play().catch(() => {
-    /* a browser that refuses audio still gets the lesson: the measured
-       duration stands in as the clock it can no longer be */
     P.timer = setTimeout(() => advance(), b.dur * 1000);
   });
 }
 function advance() {
-  const L = LESSON_MEDIA[P.lid];
+  const L = MEDIA[P.lid];
   if (P.i + 1 >= L.beats.length) { P.playing = false; P.done = true; refresh(); return; }
   P.i += 1; playBeat();
 }
 function toggle() {
-  const L = LESSON_MEDIA[P.lid];
+  const L = MEDIA[P.lid];
   if (P.done) { P.done = false; P.i = 0; P.playing = true; playBeat(); return; }
   if (P.playing) { P.playing = false; P.audio && P.audio.pause(); clearTimeout(P.timer); refresh(); return; }
   P.playing = true;
@@ -170,6 +191,10 @@ export function mountLesson() {
   const root = el();
   if (!root) { stop(); return; }
   const lid = root.dataset.lesson;
+  if (!MEDIA[lid]) {
+    loadLesson(lid).then(() => { if (el() && el().dataset.lesson === lid) { const R2 = window.BZF && window.BZF.R; if (R2) R2.render(); else mountLesson(); } });
+    return;
+  }
   if (P && P.lid === lid) { refresh(); wire(root); return; }
   stop();
   P = { lid, i: 0, audio: null, playing: false, done: false, timer: 0,

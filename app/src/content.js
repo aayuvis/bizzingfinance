@@ -7,6 +7,7 @@
      from the card id (`shuffledDrill`) so position can't leak it either. */
 
 import { rng } from './ui.js';
+import { EXTRA_QS } from './content-extra.js';
 
 /* ── the ladder ──────────────────────────────────────────────────────────
    Thirty levels, five ranks. The rank is what opens the next building. */
@@ -315,19 +316,28 @@ export const CHAPTERS = [
 ];
 export const ALL_CARDS = CHAPTERS.flatMap((c) => c.cards.map((k) => ({ ...k, ch: c.id })));
 
+/* The second and third questions live in content-extra.js — merged here so
+   every consumer keeps a single ALL_CARDS and drillCount() is the only
+   arbiter of how many questions a card carries. */
+ALL_CARDS.forEach((c) => { if (EXTRA_QS[c.id]) c.qs = EXTRA_QS[c.id]; });
+
 /* Position must never leak the answer. Options are permuted deterministically
    from the card id, so the order is stable for a given card but is not the
    order they were authored in — otherwise "always pick B" beats the drill. */
-export function shuffledDrill(card) {
+export function drillCount(card) { return 1 + ((card.qs && card.qs.length) || 0); }
+export function drillAt(card, qi) { return qi ? card.qs[qi - 1] : card.drill; }
+export function shuffledDrill(card, qi = 0) {
+  const d = drillAt(card, qi);
+  const seed = card.id + '#' + qi;   /* each question permutes independently */
   let h = 2166136261;
-  for (let i = 0; i < card.id.length; i++) { h ^= card.id.charCodeAt(i); h = Math.imul(h, 16777619); }
-  const idx = card.drill.opts.map((_, i) => i);
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const idx = d.opts.map((_, i) => i);
   for (let i = idx.length - 1; i > 0; i--) {
     h = Math.imul(h ^ (h >>> 15), 2246822507); h >>>= 0;
     const j = h % (i + 1);
     const t = idx[i]; idx[i] = idx[j]; idx[j] = t;
   }
-  return { order: idx, opts: idx.map((i) => card.drill.opts[i]), answer: idx.indexOf(card.drill.a) };
+  return { order: idx, opts: idx.map((i) => d.opts[i]), answer: idx.indexOf(d.a), q: d.q, why: d.why };
 }
 
 /* ── the worlds ──────────────────────────────────────────────────────────

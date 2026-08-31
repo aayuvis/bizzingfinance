@@ -20,9 +20,14 @@ from scripts import LESSONS
 KEY = os.environ['GKEY']
 MODEL = 'gemini-2.5-flash-preview-tts'
 URL = f'https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent'
-STYLE = ('Speak as a warm, unhurried Indian English narrator — a kind grandmother '
-         'explaining something to a nine-year-old at a kitchen table. Natural, clear, '
-         'gently amused, never rushed. Say exactly this and nothing else: ')
+# Neutral by request of the product owner: Bizzing Finance is the family's
+# global app (five currencies, "never assume a family's money"), and its
+# narrator carries no region — a deliberate divergence from Bizzing India's
+# channel voice, which is Indian because THERE that is the point.
+STYLE = ('Speak as a warm, unhurried storybook narrator with a neutral, accent-free '
+         'delivery — a kind grandmother explaining something to a nine-year-old at a '
+         'kitchen table. Natural, clear, gently amused, never rushed. '
+         'Say exactly this and nothing else: ')
 VOICE = 'Aoede'
 RATE = 24000
 
@@ -61,6 +66,14 @@ def measure(pcm):
     return dur, 20 * math.log10(max(rms, 1) / 32768)
 
 if __name__ == '__main__':
+    if sys.argv[1:] == ['--all']:
+        import subprocess as sp
+        for k in LESSONS:
+            if os.path.exists(f'run-{k}/manifest.json'):
+                print(f'skip {k} (recorded)'); continue
+            r = sp.run([sys.executable, 'voice.py', k])
+            if r.returncode: print(f'{k}: FAILED RUN')
+        sys.exit(0)
     lid = sys.argv[1]
     L = LESSONS[lid]
     run = f'run-{lid}'

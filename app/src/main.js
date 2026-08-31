@@ -7,7 +7,7 @@ import { say, CAST, ico, mark } from './art.js';
 import { mountLesson } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
@@ -435,12 +435,25 @@ function cardById(id) {
 on('closeCard', () => { C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
   const c = C(), card = cardById(c.learn.openCard);
-  if (!card || (c.learn.drill && c.learn.drill.card === card.id)) return;
+  if (!card) return;
+  let st = c.learn.drill;
+  if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
+  if (st.picks[st.qi]) return;                       /* this question is answered */
   const pick = +i;
-  const right = pick === shuffledDrill(card).answer;
-  c.learn.drill = { card: card.id, pick, right };
+  const right = pick === shuffledDrill(card, st.qi).answer;
+  st.picks[st.qi] = { pick, right };
+  /* the card counts as RIGHT only when every question was right first try —
+     three questions answered by elimination is attention, not three passes */
+  const total = drillCount(card);
+  st.done = st.picks.filter(Boolean).length === total;
+  st.right = st.done && st.picks.every((p) => p && p.right);
   if (right) sfx.good(); else sfx.bad();
   render();
+});
+on('nextQ', () => {
+  const c = C(), st = c.learn.drill;
+  if (!st || !st.picks || !st.picks[st.qi]) return;
+  st.qi += 1; sfx.click(); render();
 });
 on('cardDone', (id) => {
   const c = C(), card = cardById(id);
@@ -926,4 +939,4 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
 }
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
-  cardById, allCards: ALL_CARDS, fire, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };
+  cardById, allCards: ALL_CARDS, fire, key: (id, qi) => shuffledDrill(ALL_CARDS.find((c) => c.id === id), qi || 0).answer };

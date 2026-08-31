@@ -9,14 +9,19 @@ grandmother, round spectacles, silver bun, warm shawl.
 import os, sys, time
 from gen import call, BIBLE
 
-BASE = ("Half-body illustration of one kind elderly Indian grandmother, warm brown skin, "
-        "round wire spectacles, silver hair in a neat bun, a soft teal shawl over a warm "
-        "cream kurta, small gold earrings. Centred on a plain flat solid cream background "
-        "#FFFCF5 with nothing else. She faces the viewer, shown from the waist up, "
-        "storybook-warm and gentle. ")
+# The cast are ANIMALS — Nana Bizz's portrait is a kindly old TORTOISE in
+# round spectacles. The first cut of these poses drew a human grandmother,
+# which diverged from the app's own art AND made the teacher carry an
+# ethnicity the cast deliberately doesn't. The tortoise carries none.
+BASE = ("Half-body illustration of one kindly elderly tortoise character, standing upright "
+        "like a storybook grandmother: a warm wrinkled friendly face, round wire spectacles, "
+        "a patterned tortoise shell in warm browns and olive greens on her back, wearing a "
+        "soft teal knitted shawl around her shoulders. Centred on a plain flat solid cream "
+        "background #FFFCF5 with nothing else. She faces the viewer, shown from the waist up, "
+        "storybook-warm and gentle, matching a soft gouache picture-book style. ")
 POSES = [
-  ('nana-talk',  "Her hands are settled together in front of her, expression kind and attentive, mid-sentence."),
-  ('nana-point', "One hand raised to her side at shoulder height, palm open, presenting something beside her; delighted, eyebrows raised."),
+  ('nana-talk',  "Her small hands settled together in front of her shawl, expression kind and attentive, mid-sentence."),
+  ('nana-point', "One arm raised to her side at shoulder height, palm open, presenting something beside her; delighted, eyebrows raised over her spectacles."),
   ('nana-smile', "Both hands pressed together with joy, eyes nearly closed with a broad warm smile."),
 ]
 if __name__ == '__main__':
