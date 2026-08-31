@@ -34,6 +34,33 @@ def content_box(im, tol=14):
         return (0, 0, w, h)
     return (min(xs)*4, min(ys)*4, max(xs)*4 + 4, max(ys)*4 + 4)
 
+def dealpha(im, tol=26):
+    """Key the flat background field out to transparent.
+
+    The model draws on a cream field. Pasted onto a white card that field is a
+    visible square behind every icon — exactly what a sticker must not have.
+    Flood from the four corners so only the OUTSIDE goes clear and a cream
+    highlight inside the drawing survives.
+    """
+    im = im.convert('RGBA')
+    w, h = im.size
+    px = im.load()
+    bg = px[1, 1][:3]
+    def near(p):
+        return abs(p[0]-bg[0]) + abs(p[1]-bg[1]) + abs(p[2]-bg[2]) <= tol
+    seen = bytearray(w * h)
+    stack = [(0, 0), (w-1, 0), (0, h-1), (w-1, h-1)]
+    while stack:
+        x, y = stack.pop()
+        if x < 0 or y < 0 or x >= w or y >= h: continue
+        i = y * w + x
+        if seen[i]: continue
+        if not near(px[x, y]): continue
+        seen[i] = 1
+        px[x, y] = (255, 255, 255, 0)
+        stack.extend(((x+1, y), (x-1, y), (x, y+1), (x, y-1)))
+    return im
+
 def square(im, box, pad=0.10):
     x0, y0, x1, y1 = box
     bw, bh = x1 - x0, y1 - y0
@@ -50,9 +77,10 @@ def main():
     out, total = {}, 0
     for f in files:
         key = os.path.basename(f)[5:-4]          # icon-foo.png -> foo
-        im = Image.open(f).convert('RGB')
-        im = square(im, content_box(im)).resize((SIZE, SIZE), Image.LANCZOS)
-        b = io.BytesIO(); im.save(b, 'WEBP', quality=82, method=6)
+        src = Image.open(f).convert('RGB')
+        im = square(src, content_box(src)).resize((SIZE, SIZE), Image.LANCZOS)
+        im = dealpha(im)
+        b = io.BytesIO(); im.save(b, 'WEBP', quality=84, method=6)
         data = b.getvalue(); total += len(data)
         out[key] = 'data:image/webp;base64,' + base64.b64encode(data).decode()
         print(f'  {key:14s} {len(data)//1024:3d} kB')

@@ -18,7 +18,7 @@
 
 import { esc, sfx, toast, clamp, sparkline } from './ui.js';
 import { money, price } from './fmt.js';
-import { say } from './art.js';
+import { say, ico } from './art.js';
 import { COMPANIES, SECTORS, byId as coById } from '../content/companies.js';
 import { simulate, priceSeries, explainYear, GAME_YEARS } from './gamemarket.js';
 import { annualReport, shareholderLetter } from './reports.js';
@@ -190,7 +190,7 @@ function viewStudy(g) {
       const a = g.assessed[co.id];
       const sec = SECTORS.find((x) => x.id === co.sector);
       return `<button class="card" data-act="mgOpen" data-arg="${co.id}" style="text-align:left;width:100%">
-        <div class="row"><span style="font-size:22px">${sec.em}</span>
+        <div class="row">${ico('sec-' + co.sector, sec.em, 28)}
           <div class="grow"><b style="font-size:15px">${esc(co.name)}</b>
             <span class="pill" style="margin-left:6px">${co.ticker}</span>
             <p class="small muted">${esc(co.what)}</p></div>
@@ -213,7 +213,7 @@ function companySheet(g, co, s) {
 
   return `
     <div class="card">
-      <div class="row"><span style="font-size:26px">${sec.em}</span>
+      <div class="row">${ico('sec-' + co.sector, sec.em, 34)}
         <div class="grow"><h3 style="font-size:19px;margin:0">${esc(co.name)}</h3>
           <span class="pill">${co.ticker}</span> <span class="small muted">${esc(sec.name)}</span></div></div>
       <p style="margin-top:10px">${esc(co.what)}</p>

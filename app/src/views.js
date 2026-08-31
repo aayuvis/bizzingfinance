@@ -3,7 +3,7 @@
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
-import { say, face, CAST } from './art.js';
+import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill,
@@ -114,7 +114,7 @@ export function viewHome() {
       <div class="stack" style="gap:8px;margin-top:11px">
         ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? 'var(--grow-tint)' : 'var(--surface2)'};
           border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="font-size:20px;${q.claimed ? 'opacity:.6' : ''}">${q.em}</span>
+          <span style="${q.claimed ? 'opacity:.5' : ''}">${ico('quest', q.em, 26)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${q.claimed ? 'opacity:.6' : ''}">${esc(q.t)}</b>
             <div class="small muted">${q.claimed ? 'Claimed.' : esc(q.sub)}</div>
@@ -251,7 +251,7 @@ function closingTime(c, quests) {
   return `<div class="card" style="border-color:var(--gold);background:var(--gold-tint)">
     <div class="row"><div class="grow"><div class="eyebrow">Closing time</div>
       <h3 style="font-size:17px;margin:1px 0">That is today done</h3></div>
-      <span style="font-size:26px">🌙</span></div>
+      ${ico('closing', '🌙', 32)}</div>
     <div class="row" style="gap:14px;margin-top:10px;flex-wrap:wrap">
       <span><div class="eyebrow">Came in</div><b style="font-size:16px">${money(led.in)}</b></span>
       <span><div class="eyebrow">Went out</div><b style="font-size:16px">${money(led.out)}</b></span>
@@ -293,7 +293,7 @@ function lessonBeat(c) {
       <p class="cs">${retr
         ? `You met this ${daysAgo(mastery.lastSeen(c, bt.objective.id))}. One question, a different one.`
         : esc(bt.objective.short)}</p></div>
-      <span style="font-size:26px">${retr ? '🔁' : '📘'}</span></div>
+      ${ico(retr ? 'quest' : 'lesson', retr ? '🔁' : '📘', 34)}</div>
     ${done
       ? '<p class="small" style="margin-top:10px;color:var(--grow);font-weight:700">Done for today.</p>'
       : `<button class="btn wide" style="margin-top:11px" data-act="beat">${retr ? 'One question' : 'Read it'}</button>`}
@@ -325,7 +325,7 @@ function todaysWork(c) {
         const best = sim.jobBest(c, j.id);
         return `<div class="row" style="gap:10px;background:${j.done ? 'var(--grow-tint)' : 'var(--surface2)'};
           border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="font-size:20px;${j.done ? 'opacity:.6' : ''}">${j.em}</span>
+          <span style="${j.done ? 'opacity:.5' : ''}">${ico('work', j.em, 26)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
             <div class="small muted">${j.done ? 'Back tomorrow.'
@@ -810,7 +810,7 @@ function worldCard(c) {
   return `<div class="card" style="border-color:var(--action)">
     <div class="row"><div class="grow"><div class="eyebrow">The town this week</div>
       <h3 style="font-size:17px;margin:1px 0">${esc(sim.marketWhy(c))}</h3></div>
-      <span style="font-size:24px">${w.phase === 'boom' ? '🔥' : w.phase === 'contraction' ? '🥶' : w.phase === 'slowdown' ? '🌥️' : '🌤️'}</span></div>
+      ${ico('market', '📊', 30)}</div>
     <div class="row" style="gap:16px;margin-top:10px;flex-wrap:wrap">
       ${stat('Bank rate', w.rate.toFixed(2) + '%')}
       ${stat('Prices rising', w.inflation.toFixed(1) + '%')}

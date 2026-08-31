@@ -103,3 +103,19 @@ export function say(who, text) {
   const c = CAST[who] || CAST.pip;
   return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
 }
+
+/* ── the drawn icon set ────────────────────────────────────────────────
+   `ico()` returns an <img> for a drawn icon, and FALLS BACK to the emoji it
+   replaces when there is no drawing for that key. A missing icon must leave
+   the old glyph rather than a hole: the set is generated, so a regeneration
+   that drops one should degrade, never break the screen. */
+import { ICONS } from './icons-gen.js';
+
+export function ico(name, fallback, size) {
+  const s = size || 24;
+  const src = ICONS[name];
+  if (!src) return `<span style="font-size:${Math.round(s * 0.92)}px;line-height:1">${fallback || ''}</span>`;
+  return `<img src="${src}" alt="" width="${s}" height="${s}" loading="lazy" decoding="async"
+    style="width:${s}px;height:${s}px;display:block;flex:0 0 auto;object-fit:contain">`;
+}
+export function hasIcon(name) { return !!ICONS[name]; }
