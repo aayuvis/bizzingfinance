@@ -418,6 +418,20 @@ input{font:inherit; color:inherit}
 .town::before{left:0;background:linear-gradient(90deg,var(--paper),transparent);opacity:.0}
 .town::after{right:0;background:linear-gradient(270deg,var(--paper),transparent);opacity:.55}
 
+/* ── the three journeys (docs/09) ────────────────────────────────────────
+   One card per journey, its accent on the spine. The beats inside share the
+   quest rows' language on purpose: to the child they are the same kind of
+   thing — the day, in pieces. */
+.jny{border-left:4px solid var(--ja);padding-left:14px}
+.jstack{display:flex;flex-direction:column;gap:8px;margin-top:11px}
+.jbeat{display:flex;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:9px 11px;width:100%;font:inherit;color:inherit}
+.jbeat b{font-size:14px}
+.jbeat.hot2{background:var(--surface);border-color:color-mix(in srgb,var(--ja) 45%,var(--line));box-shadow:var(--sh)}
+.jbeat:active{transform:translateY(1px)}
+.jfoot{display:flex;gap:10px;align-items:center;width:100%;margin-top:11px;padding:2px 0;font:inherit;color:inherit}
+.pill.spendp{background:var(--spend-tint);color:var(--spend)}
+
 </style>
 </head>
 <body>
@@ -9534,6 +9548,134 @@ input{font:inherit; color:inherit}
         <span class="small muted"> \xB7 ${new Intl.NumberFormat(CURRENCIES[k].locale).format(12e5)}</span></button>`).join("")}
     </div>`);
   }
+  function beat2(act, arg, icon, title, sub2, right, hot) {
+    return `<button class="jbeat${hot ? " hot2" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>
+    ${ico(icon, icon, 22)}
+    <span class="grow" style="min-width:0;text-align:left">
+      <b>${title}</b><span class="small muted" style="display:block">${sub2}</span></span>
+    ${right || ""}
+  </button>`;
+  }
+  function journeys(c) {
+    const due2 = payDue(c, R.s);
+    const d = daysToPay(c);
+    const g = c.money.goals.find((x) => !x.done);
+    const inc = weeklyIncome(c), cost = weeklyCost(c);
+    const left = inc - cost;
+    const ind = independence(c);
+    const hhBeats = [
+      c.postbox.answered ? beat2("postbox", "", "postbox", "Postbox emptied", "Another letter tomorrow.") : beat2("postbox", "", "postbox", "There's a letter", "One a day. Thirty seconds.", '<span class="pill spendp">1</span>', true),
+      due2 ? beat2("payday", "", "bell", "It's pay day \u2014 ring the bell", "Wages in, bills out, jars filled.", "", true) : beat2(
+        "sub",
+        "jars",
+        "jars",
+        d === 0 ? "Pay day later today" : `Pay day in ${nWord(d)} ${d === 1 ? "day" : "days"}`,
+        `${money(inc)} in, ${money(cost)} straight back out.`
+      ),
+      g ? beat2(
+        "sub",
+        "goals",
+        "goal",
+        esc(g.name),
+        `${money(g.saved)} of ${money(g.target)} \u2014 ${g.saved >= g.target ? "the roof is on" : ((w) => w + " more pay " + (w === 1 ? "day" : "days") + " at your Save rate")(weeksToGoal(c, g))}`,
+        `<span class="small muted tabnum">${Math.round(g.saved / g.target * 100)}%</span>`
+      ) : ""
+    ].join("");
+    const household = `<div class="card jny" style="--ja:var(--save)">
+    <div class="row">
+      <div class="grow"><div class="eyebrow">The Household</div>
+        <p class="cs">Can you cover your life \u2014 and what's left over?</p></div>
+      <div style="text-align:right"><div class="big" style="color:${left >= 0 ? "var(--ink)" : "var(--spend)"}">${money(left)}</div>
+        <div class="small muted">left over / week</div></div>
+    </div>
+    <div class="jstack">${hhBeats}</div>
+    <button class="jfoot" data-act="sub" data-arg="place">
+      <span class="bar grow" style="height:6px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? "var(--grow)" : "var(--action)"}"></i></span>
+      <span class="small muted tabnum">${Math.round(ind * 100)}% of your life pays for itself</span>
+    </button>
+  </div>`;
+    const jobs = jobsToday(c);
+    const jleft = jobs.filter((j) => !j.done).length;
+    const bizOpen = isOpen(c, "business") && c.biz;
+    const KIND = { stack: "stacking", trim: "balancing", sweep: "clearing", runner: "running" };
+    const lvBeats = [
+      ...jobs.slice(0, 3).map((j) => {
+        const gm = JOB_GAME[j.id];
+        return j.done ? beat2("sub", "wallet", j.em, esc(j.name), "Done \u2014 back tomorrow.", '<span class="pill grow">\u2713</span>') : beat2(
+          "job",
+          j.id,
+          j.em,
+          esc(j.name),
+          `${gm ? esc(KIND[gm.kind]) + " \xB7 " : ""}for ${esc(j.who)}${jobBest(c, j.id) ? " \xB7 best " + money(jobBest(c, j.id)) : ""}`,
+          '<span class="pill">Work</span>',
+          true
+        );
+      }),
+      bizOpen ? beat2(
+        "sub",
+        "business",
+        "shop",
+        "Your shop",
+        "Stock, prices, and what the till took.",
+        `<span class="small muted tabnum">${money(bizValue(c))}</span>`,
+        true
+      ) : ""
+    ].join("");
+    const livelihood = `<div class="card jny" style="--ja:var(--treasure)">
+    <div class="row">
+      <div class="grow"><div class="eyebrow">The Livelihood</div>
+        <p class="cs">What is your time worth \u2014 and can you make it worth more?</p></div>
+      <div style="text-align:right"><div class="big">${jobs.length - jleft}/${jobs.length}</div>
+        <div class="small muted">shifts today</div></div>
+    </div>
+    <div class="jstack">${lvBeats || `<p class="small muted">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>`}</div>
+  </div>`;
+    const bankOpen = isOpen(c, "bank"), exOpen = isOpen(c, "portfolio");
+    let portfolio;
+    if (!bankOpen && !exOpen) {
+      portfolio = `<div class="card jny" style="--ja:var(--grow)">
+      <div class="row">
+        <div class="grow"><div class="eyebrow">The Portfolio</div>
+          <p class="cs">Where does the left-over live \u2014 and what is it doing?</p></div>
+        ${ico("lock", "\u{1F512}", 22)}
+      </div>
+      <div class="jstack">${beat2(
+        "nav",
+        "learn",
+        "lesson",
+        "Opens with " + esc(needFor("bank") || "the Banking chapter"),
+        "The Bank takes deposits the day you understand what it does with them."
+      )}</div>
+    </div>`;
+    } else {
+      const invested = c.money.bank.balance + holdingsValue(c);
+      const up = c.market.lastMove >= 0;
+      const pfBeats = [
+        bankOpen ? beat2("sub", "bank", "bank", "The Bank", `${money(c.money.bank.balance)} on deposit, earning while you sleep.`) : "",
+        exOpen ? beat2(
+          "sub",
+          "portfolio",
+          "chartUp",
+          "The Exchange",
+          `Market day \u2014 see what moved. Most days the right move is nothing.`,
+          `<span class="pill ${up ? "grow" : "spendp"}">${up ? "\u25B2" : "\u25BC"}</span>`,
+          true
+        ) : "",
+        c.learn.level >= 16 ? beat2("nav", "market40", "company", "The Market Game", "Forty companies, forty years, one decade at a time.") : ""
+      ].join("");
+      portfolio = `<div class="card jny" style="--ja:var(--grow)">
+      <div class="row">
+        <div class="grow"><div class="eyebrow">The Portfolio</div>
+          <p class="cs">Where does the left-over live \u2014 and what is it doing?</p></div>
+        <div style="text-align:right"><div class="big">${money(invested)}</div>
+          <div class="small muted">invested</div></div>
+      </div>
+      <div class="jstack">${pfBeats}</div>
+    </div>`;
+    }
+    return `<div class="sect"><b>Your three journeys</b><i></i></div>
+    ${household}${livelihood}${portfolio}`;
+  }
   function viewHome() {
     const c = K5();
     const due2 = payDue(c, R.s);
@@ -9567,9 +9709,9 @@ input{font:inherit; color:inherit}
 
     ${strip}
 
-    ${lessonBeat(c)}
+    ${journeys(c)}
 
-    ${todaysWork(c)}
+    ${lessonBeat(c)}
 
     <div class="card">
       <div class="row"><div class="grow"><div class="ct">Today's three</div>
@@ -9625,49 +9767,10 @@ input{font:inherit; color:inherit}
       </div>`;
     })()}
 
-    ${sprout ? "" : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
-      <div class="row">${ico(home.em, home.em, 24)}<div class="grow">
-        <div class="eyebrow">Independence \xB7 what your money earns \xF7 what your life costs</div>
-        <p style="font-weight:800;font-size:15px">${money(passive)} a week towards ${money(cost)}</p></div>
-        <div class="big" style="font-size:24px;color:${ind >= 1 ? "var(--grow)" : "var(--action)"}">${Math.round(ind * 100)}%</div></div>
-      <div class="bar" style="margin-top:9px;height:11px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? "var(--grow)" : "var(--action)"}"></i></div>
-      <p class="small muted" style="margin-top:7px">${ind >= 1 ? "Your money pays for your life. You work because you choose to." : ind >= 0.5 ? "Half your week is paid for without working. Keep going." : ind >= 0.1 ? "A tenth of your life pays for itself. That first tenth is the slow one." : "Nothing pays for itself yet. Every subscription you cancel moves this as much as a good year in the market."}</p>
-    </button>`}
-    ${due2 ? `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint)">
-          <div class="eyebrow" style="color:var(--treasure-deep)">The bell is ringing</div>
-          <h3 style="margin:2px 0 4px">It's pay day in Bizzington</h3>
-          <p class="small" style="color:var(--treasure-deep)">Wages in, bills out, jars filled. The whole street is busy.</p>
-          <button class="btn ghost wide" style="margin-top:12px" data-act="payday">\u{1F514} Ring the bell</button>
-        </div>` : `<div class="card row">
-          <div class="grow"><div class="eyebrow">Pay day</div>
-          <p style="font-weight:700">${d === 0 ? "Later today" : d + " day" + (d === 1 ? "" : "s") + " \u2014 " + weekday(c.money.nextPay)}</p>
-          <p class="small muted">${money(weeklyIncome(c))} in, ${money(weeklyCost(c))} straight back out.</p></div>
-          <button class="btn ghost sm" data-act="sub" data-arg="jars">Check the jars</button>
-        </div>`}
 
-    <div class="grid2">
-      <button class="card" data-act="postbox" style="text-align:left;border-color:${c.postbox.answered ? "var(--line)" : "var(--spend)"}">
-        <div class="row">${ico("postbox", "\u{1F4EC}", 26)}<div class="grow">
-          <div class="eyebrow">The postbox</div>
-          <p style="font-weight:800">${c.postbox.answered ? "Emptied for today" : "There's a letter"}</p>
-          <p class="small muted">${c.postbox.answered ? "Another one tomorrow." : "One a day. Thirty seconds."}</p></div></div>
-      </button>
-      <button class="card" data-act="${today.act}" data-arg="${today.arg || ""}" style="text-align:left">
-        <div class="row">${ico(today.em, today.em, 26)}<div class="grow">
-          <div class="eyebrow">Today</div>
-          <p style="font-weight:800">${esc(today.title)}</p>
-          <p class="small muted">${esc(today.sub)}</p></div></div>
-      </button>
-    </div>
 
-    ${g ? `<button class="card" data-act="sub" data-arg="goals" style="display:block;width:100%;text-align:left">
-      <div class="row"><div class="grow"><div class="eyebrow">In the Build Yard</div>
-        <h3 style="margin:2px 0">${esc(g.name)}</h3></div>
-        <div style="text-align:right"><div class="big">${money(g.saved)}</div>
-        <div class="small muted">of ${money(g.target)}</div></div></div>
-      <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100, g.saved / g.target * 100)}%;background:var(--save)"></i></div>
-      <p class="small muted" style="margin-top:7px">${g.saved >= g.target ? "Finished \u2014 the roof is on." : weeksToGoal(c, g) + " more pay days at your current Save rate."}</p>
-    </button>` : ""}
+
+
 
     ${say("pip", hometalk(c))}
   </div>`;
@@ -9736,34 +9839,6 @@ input{font:inherit; color:inherit}
     if (!t) return "a while back";
     const d = Math.round((Date.now() - t) / 864e5);
     return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago";
-  }
-  function todaysWork(c) {
-    const jobs = jobsToday(c);
-    if (!jobs.length) return "";
-    const left = jobs.filter((j) => !j.done).length;
-    const KIND = { stack: "stacking", trim: "balancing", sweep: "clearing", runner: "running" };
-    return `<div class="card">
-    <div class="row"><div class="grow"><div class="ct">Today's work</div>
-      <p class="cs">${esc(WORLDS[c.world || 0].name)} \xB7 each one is a shift you play, and how well you do it is what it pays</p></div>
-      <span class="pill ${left ? "" : "grow"}">${left ? left + " left" : "all done"}</span></div>
-    <div class="stack" style="gap:8px;margin-top:11px">
-      ${jobs.map((j) => {
-      const g = JOB_GAME[j.id];
-      const best2 = jobBest(c, j.id);
-      return `<div class="row" style="gap:10px;background:${j.done ? "var(--grow-tint)" : "var(--surface2)"};
-          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="${j.done ? "opacity:.5" : ""}">${ico(j.em, j.em, 26)}</span>
-          <span class="grow" style="min-width:0">
-            <b style="font-size:14px;${j.done ? "opacity:.6" : ""}">${esc(j.name)}</b>
-            <div class="small muted">${j.done ? "Back tomorrow." : `${g ? esc(KIND[g.kind]) + " \xB7 " : ""}for ${esc(j.who)}${best2 ? " \xB7 best " + best2 : ""}`}</div>
-          </span>
-          ${j.done ? '<span class="pill grow">\u2713</span>' : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${g ? "Work" : money(j.amt)}</button>`}
-        </div>`;
-    }).join("")}
-    </div>
-    <p class="small muted" style="margin-top:10px">A poor shift still pays \u2014 you did the work.
-      A good one pays roughly double. It never pays more than that.</p>
-  </div>`;
   }
   function hometalk(c) {
     const lv = c.learn.level;
