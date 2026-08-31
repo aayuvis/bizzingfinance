@@ -109,6 +109,15 @@ function render() {
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  /* The street is wider than a phone on purpose (a street you can read beats
+     one you can see all of). Open it on the middle, where the buildings are,
+     not on the empty left verge — and if the child panned, put the street
+     back where they left it rather than yanking it home every render. */
+  const ts = root.querySelector('.town-scroll');
+  if (ts && ts.scrollWidth > ts.clientWidth) {
+    ts.scrollLeft = R.townPan != null ? R.townPan : (ts.scrollWidth - ts.clientWidth) / 2;
+    ts.onscroll = () => { R.townPan = ts.scrollLeft; };
+  }
   writeHash();
   sim.save(s);
 }

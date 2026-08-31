@@ -52,135 +52,239 @@ function label(x, w, text, on) {
 }
 
 function dwelling(x, tier) {
-  const walls = ['#B9A98C', '#C6B58F', '#D3BE96', '#E0C79E', '#E8CFA8'][tier] || '#B9A98C';
-  const roof = ['#8A6A4E', '#96745A', '#A57E5E', '#B0866A', '#B8563F'][tier] || '#8A6A4E';
+  /* The child's home, and the one building that visibly improves: each tier
+     adds storeys, windows, a chimney, a garden — bought in the app, standing
+     in the street. */
+  const walls = ['#D9C49A', '#E0CBA0', '#E7D2A6', '#EDD8AC', '#F2DDB2'][tier] || '#D9C49A';
+  const wallSh = '#C2AB7E';
+  const roof = ['#8F6A4C', '#967152', '#9E7857', '#A87F5C', '#B45A40'][tier] || '#8F6A4C';
+  const roofDk = '#6E4E36';
   const storeys = tier >= 2 ? 2 : 1;
-  const h = storeys === 2 ? 118 : 78;
+  const h = storeys === 2 ? 118 : 82;
   let win = '';
-  const rows = storeys === 2 ? [G - 108, G - 62] : [G - 66];
-  rows.forEach((wy) => {
+  const rows = storeys === 2 ? [G - 104, G - 60] : [G - 62];
+  rows.forEach((wy, r) => {
     const n = tier >= 2 ? 3 : tier >= 1 ? 2 : 1;
+    const ground = r === rows.length - 1;
+    /* the door owns the middle of the ground floor, so a lone ground-floor
+       window stands beside it, not behind it */
+    if (n === 1 && ground) { win += winlet(x + 24, wy, 22, 26, roofDk); return; }
+    const first = x + 65 - (n * 30 - 8) / 2;
     for (let i = 0; i < n; i++) {
-      win += `<rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="#F6E9C8"/>
-        <rect x="${x + 22 + i * 32}" y="${wy}" width="22" height="24" rx="3" fill="none" stroke="${roof}" stroke-width="2"/>`;
+      if (ground && n % 2 === 1 && i === (n - 1) / 2) continue;   /* the door is there */
+      win += winlet(first + i * 30, wy, 22, 26, roofDk);
     }
   });
-  return `<g>
-    <rect x="${x + 8}" y="${G - h}" width="114" height="${h}" fill="${walls}" rx="3"/>
-    <path d="M${x} ${G - h} L${x + 65} ${G - h - 34} L${x + 130} ${G - h} Z" fill="${roof}"/>
+  return `<g>${shadow(x + 65, 74)}
+    <rect x="${x + 10}" y="${G - h}" width="110" height="${h}" fill="${walls}" rx="3"/>
+    <rect x="${x + 10}" y="${G - h}" width="110" height="${h}" fill="url(#wallShade)" rx="3"/>
+    <rect x="${x + 10}" y="${G - 7}" width="110" height="7" fill="${wallSh}" rx="2"/>
+    ${gable(x, 130, G - h, 36, roof, roofDk)}
     ${win}
-    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" rx="2" fill="${roof}"/>
-    <circle cx="${x + 73}" cy="${G - 17}" r="2" fill="#F0B429"/>
-    ${tier >= 3 ? `<rect x="${x + 96}" y="${G - h - 26}" width="12" height="26" fill="${roof}"/>
-      <ellipse cx="${x + 102}" cy="${G - h - 32}" rx="9" ry="6" fill="rgba(255,255,255,.5)"/>` : ''}
-    ${tier >= 4 ? `<rect x="${x + 6}" y="${G - 14}" width="118" height="14" rx="4" fill="#7FA86F"/>
-      <circle cx="${x + 22}" cy="${G - 16}" r="6" fill="#5F8A52"/><circle cx="${x + 110}" cy="${G - 16}" r="5" fill="#5F8A52"/>` : ''}
+    ${doorway(x + 51, G, 28, 38, roofDk, '#F0B429')}
+    ${tier >= 3 ? `<rect x="${x + 94}" y="${G - h - 30}" width="13" height="30" fill="${roofDk}" rx="2"/>
+      <rect x="${x + 91}" y="${G - h - 34}" width="19" height="6" fill="${roof}" rx="2"/>
+      <ellipse cx="${x + 100}" cy="${G - h - 44}" rx="8" ry="5" fill="rgba(255,255,255,.55)"/>
+      <ellipse cx="${x + 106}" cy="${G - h - 52}" rx="5" ry="3.4" fill="rgba(255,255,255,.4)"/>` : ''}
+    ${tier >= 4 ? `<rect x="${x + 4}" y="${G - 13}" width="122" height="13" rx="5" fill="#7FA86F"/>
+      <circle cx="${x + 18}" cy="${G - 15}" r="6" fill="#5F8A52"/><circle cx="${x + 40}" cy="${G - 13}" r="4.6" fill="#6B9A5E"/>
+      <circle cx="${x + 96}" cy="${G - 13}" r="4.6" fill="#6B9A5E"/><circle cx="${x + 114}" cy="${G - 15}" r="6" fill="#5F8A52"/>` : ''}
   </g>`;
 }
 
+/* ── shared building parts ──────────────────────────────────────────────
+   One street, one hand. Every building takes its shadow, roof, windows and
+   door from here so the seven of them read as one place — the same reason
+   the icon set shares a grid. */
+function shadow(cx, rx) {
+  return `<ellipse cx="${cx}" cy="${G + 3}" rx="${rx}" ry="6.5" fill="rgba(58,40,20,.18)"/>`;
+}
+function gable(x, w, baseY, peak, face, dark) {
+  /* overhang + a darker fascia under the eaves: the roof sits ON the walls
+     instead of being a triangle glued behind them */
+  return `<path d="M${x - 2} ${baseY + 2} L${x + w / 2} ${baseY - peak} L${x + w + 2} ${baseY + 2} Z" fill="${dark}"/>
+    <path d="M${x + 3} ${baseY} L${x + w / 2} ${baseY - peak + 4} L${x + w - 3} ${baseY} Z" fill="${face}"/>
+    <rect x="${x - 2}" y="${baseY}" width="${w + 4}" height="4.5" fill="${dark}" rx="2"/>`;
+}
+function winlet(wx, wy, w, h, frame) {
+  return `<rect x="${wx - 2}" y="${wy - 2}" width="${w + 4}" height="${h + 4}" rx="4" fill="${frame}"/>
+    <rect x="${wx}" y="${wy}" width="${w}" height="${h}" rx="2.5" fill="#FBEECB"/>
+    <rect x="${wx}" y="${wy}" width="${w}" height="${h / 2.4}" rx="2.5" fill="#FFF7E0"/>
+    <path d="M${wx + w / 2} ${wy} v${h} M${wx} ${wy + h / 2} h${w}" stroke="${frame}" stroke-width="1.6"/>`;
+}
+function doorway(dx, ground, w, h, wood, knob) {
+  return `<rect x="${dx - 3}" y="${ground - h - 4}" width="${w + 6}" height="${h + 4}" rx="4" fill="rgba(58,40,20,.28)"/>
+    <path d="M${dx} ${ground} v-${h - w / 2} a${w / 2} ${w / 2} 0 0 1 ${w} 0 V${ground} Z" fill="${wood}"/>
+    <path d="M${dx + w / 2} ${ground} V${ground - h + 2}" stroke="rgba(0,0,0,.22)" stroke-width="1.4"/>
+    <circle cx="${dx + w - 7}" cy="${ground - h / 2.4}" r="2.2" fill="${knob}"/>`;
+}
+
 function stall(x, on) {
-  const wood = on ? '#B07A45' : '#6E6A5E', roof = on ? '#C8524A' : '#5E5A52';
-  return `<g>
-    <rect x="${x + 8}" y="${G - 62}" width="114" height="62" fill="${wood}" rx="3"/>
-    <rect x="${x + 8}" y="${G - 72}" width="114" height="12" fill="${on ? '#8E5F35' : '#57544B'}" rx="2"/>
-    <path d="M${x} ${G - 72} L${x + 65} ${G - 112} L${x + 130} ${G - 72} Z" fill="${roof}"/>
-    <path d="M${x + 12} ${G - 74} l14-24 14 24z" fill="${on ? '#E8D9B8' : '#6E6A5E'}"/>
-    ${on ? `<circle cx="${x + 34}" cy="${G - 46}" r="7" fill="#E0603C"/><circle cx="${x + 52}" cy="${G - 46}" r="7" fill="#F0B429"/><circle cx="${x + 70}" cy="${G - 46}" r="7" fill="#7CA84F"/>` : ''}
-    <rect x="${x + 88}" y="${G - 52}" width="26" height="52" fill="${on ? '#7A5230' : '#4E4B44'}" rx="2"/>
+  /* Market Row's stall: striped awning over a counter, produce out front —
+     a market stall, not a shed with a red lid. */
+  const wood = on ? '#B07A45' : '#6E6A5E', woodDk = on ? '#8C5F36' : '#57544B';
+  const awnA = on ? '#C8524A' : '#5E5A52', awnB = on ? '#F2E3C2' : '#66625A';
+  const scallops = [0, 1, 2, 3, 4].map((i) =>
+    `<path d="M${x + 4 + i * 24.4} ${G - 78} a12.2 9 0 0 0 24.4 0 z" fill="${i % 2 ? awnB : awnA}"/>`).join('');
+  return `<g>${shadow(x + 65, 72)}
+    <rect x="${x + 14}" y="${G - 56}" width="102" height="56" fill="${wood}" rx="3"/>
+    <rect x="${x + 14}" y="${G - 56}" width="102" height="56" fill="url(#wallShade)" rx="3"/>
+    <path d="M${x + 10} ${G} h4 v-56 h-4 z M${x + 116} ${G} h4 v-56 h-4 z" fill="${woodDk}"/>
+    <rect x="${x + 8}" y="${G - 62}" width="114" height="9" fill="${woodDk}" rx="3"/>
+    <path d="M${x + 2} ${G - 78} l6 -26 h114 l6 26 z" fill="${awnA}"/>
+    ${[1, 3].map((i) => `<path d="M${x + 2 + i * 24.4} ${G - 78} l1.2 -26 h22 l1.2 26 z" fill="${awnB}"/>`).join('')}
+    <path d="M${x + 2} ${G - 78} l6 -26 h114 l6 26" fill="none" stroke="${on ? '#8C4038' : '#4E4B44'}" stroke-width="2.5" stroke-linejoin="round"/>
+    ${scallops}
+    <path d="M${x + 10} ${G - 74} v-26 M${x + 120} ${G - 74} v-26" stroke="${woodDk}" stroke-width="3" stroke-linecap="round"/>
+    ${on ? `<rect x="${x + 22}" y="${G - 50}" width="58" height="14" rx="3" fill="#8C5F36"/>
+      <circle cx="${x + 32}" cy="${G - 52}" r="6.5" fill="#E0603C"/><circle cx="${x + 46}" cy="${G - 54}" r="6.5" fill="#F0B429"/>
+      <circle cx="${x + 60}" cy="${G - 52}" r="6.5" fill="#7CA84F"/><circle cx="${x + 39}" cy="${G - 47}" r="6" fill="#C8524A"/>
+      <circle cx="${x + 53}" cy="${G - 47}" r="6" fill="#E8A33C"/>` : ''}
+    ${doorway(x + 90, G, 22, 46, on ? '#7A5230' : '#4E4B44', '#F6E9C8')}
   </g>`;
 }
 
 function shed(x, on, jars) {
-  const wall = on ? '#D8C79E' : '#6E6A5E';
+  /* The Jar Shed shows its jars through one broad window: the split IS the
+     building's face, filled to the child's real ratios. */
+  const wall = on ? '#E3CD9F' : '#6E6A5E';
   let inner = '';
   if (on) {
     const cols = ['#C4453C', '#2E7FA8', '#178A4C', '#8A5BD6'];
     jars.forEach((f, i) => {
-      const jx = x + 17 + i * 25, jh = 38 * Math.max(0.08, Math.min(1, f));
-      inner += `<rect x="${jx}" y="${G - 80}" width="21" height="42" rx="5" fill="#F4F9FA" opacity=".92"/>
-        <rect x="${jx + 2}" y="${G - 38 - jh}" width="17" height="${jh}" rx="4" fill="${cols[i]}"/>
-        <rect x="${jx}" y="${G - 80}" width="21" height="6" rx="3" fill="#CFDDDF"/>`;
+      const jx = x + 20 + i * 24, jh = 34 * Math.max(0.08, Math.min(1, f));
+      inner += `<rect x="${jx}" y="${G - 76}" width="19" height="40" rx="5.5" fill="#F7FBFB" opacity=".94"/>
+        <rect x="${jx + 2}" y="${G - 38 - jh}" width="15" height="${jh}" rx="3.5" fill="${cols[i]}"/>
+        <rect x="${jx + 2}" y="${G - 38 - jh}" width="15" height="${Math.min(5, jh)}" rx="2.5" fill="rgba(255,255,255,.35)"/>
+        <rect x="${jx - 1}" y="${G - 79}" width="21" height="6" rx="3" fill="#B9C9CC"/>`;
     });
   }
-  return `<g>
-    <rect x="${x + 6}" y="${G - 92}" width="118" height="92" fill="${wall}" rx="3"/>
-    <path d="M${x} ${G - 92} L${x + 65} ${G - 124} L${x + 130} ${G - 92} Z" fill="${on ? '#7E9C6A' : '#5E5A52'}"/>
-    <rect x="${x + 14}" y="${G - 80}" width="102" height="46" rx="4" fill="${on ? '#3E3226' : '#4E4B44'}" opacity=".25"/>
+  return `<g>${shadow(x + 65, 70)}
+    <rect x="${x + 8}" y="${G - 90}" width="114" height="90" fill="${wall}" rx="3"/>
+    <rect x="${x + 8}" y="${G - 90}" width="114" height="90" fill="url(#wallShade)" rx="3"/>
+    ${gable(x, 130, G - 90, 30, on ? '#7E9C6A' : '#5E5A52', on ? '#5C7A4C' : '#4E4B44')}
+    <rect x="${x + 15}" y="${G - 81}" width="100" height="50" rx="6" fill="${on ? '#54452F' : '#4E4B44'}" opacity=".85"/>
+    <rect x="${x + 18}" y="${G - 78}" width="94" height="44" rx="4" fill="${on ? '#FDF9EE' : '#5E5A52'}" opacity=".3"/>
     ${inner}
-    <rect x="${x + 52}" y="${G - 34}" width="26" height="34" fill="${on ? '#8E6238' : '#4E4B44'}" rx="2"/>
+    ${doorway(x + 52, G, 26, 36, on ? '#8E6238' : '#4E4B44', '#F0B429')}
   </g>`;
 }
 
 function yard(x, on, prog) {
+  /* The Build Yard: a goal going up floor by floor inside real scaffolding,
+     with a crane that leans over whatever floor is next. */
   const floors = 4, done = Math.floor(prog * floors + 0.001);
+  const beam = on ? '#8A6A3E' : '#57544B';
   let f = '';
   for (let i = 0; i < floors; i++) {
-    const y = G - 26 - (i + 1) * 26;
+    const y = G - 28 - (i + 1) * 25;
     const built = i < done;
-    f += `<rect x="${x + 22}" y="${y}" width="86" height="24" rx="2"
-      fill="${built ? (on ? '#C9A87A' : '#6E6A5E') : 'none'}"
-      stroke="${on ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.25)'}" stroke-width="1.4" stroke-dasharray="${built ? '0' : '4 4'}"/>`;
-    if (built && on) f += `<rect x="${x + 32}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".9"/>
-      <rect x="${x + 58}" y="${y + 6}" width="14" height="12" fill="#F0B429" opacity=".55"/>`;
+    f += built
+      ? `<rect x="${x + 24}" y="${y}" width="82" height="23" rx="2.5" fill="${on ? '#CDA97A' : '#6E6A5E'}"/>
+         <rect x="${x + 24}" y="${y}" width="82" height="23" rx="2.5" fill="url(#wallShade)"/>
+         <rect x="${x + 33}" y="${y + 5.5}" width="13" height="12" rx="2" fill="#F6E4B5"/>
+         <rect x="${x + 59}" y="${y + 5.5}" width="13" height="12" rx="2" fill="#F6E4B5" opacity=".7"/>
+         <rect x="${x + 84}" y="${y + 5.5}" width="13" height="12" rx="2" fill="#F6E4B5" opacity=".45"/>`
+      : `<rect x="${x + 24}" y="${y}" width="82" height="23" rx="2.5" fill="none"
+           stroke="rgba(250,244,226,.6)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   }
-  return `<g>
-    <rect x="${x + 10}" y="${G - 26}" width="110" height="26" fill="${on ? '#A98C63' : '#6E6A5E'}" rx="2"/>
+  const craneY = G - 28 - Math.min(done + 1, floors) * 25 - 12;
+  return `<g>${shadow(x + 65, 68)}
+    <rect x="${x + 12}" y="${G - 28}" width="106" height="28" fill="${on ? '#AE9166' : '#6E6A5E'}" rx="3"/>
+    <rect x="${x + 12}" y="${G - 28}" width="106" height="28" fill="url(#wallShade)" rx="3"/>
     ${f}
-    <path d="M${x + 14} ${G} L${x + 14} ${G - 118} M${x + 116} ${G} L${x + 116} ${G - 118} M${x + 14} ${G - 58} L${x + 116} ${G - 58}"
-      stroke="${on ? '#8A6A3E' : '#57544B'}" stroke-width="4" stroke-linecap="round"/>
-    ${on && done >= floors ? `<path d="M${x + 46} ${G - 132} l18-8 v10 z" fill="#C8524A"/><rect x="${x + 44}" y="${G - 134}" width="3" height="22" fill="#8A6A3E"/>` : ''}
+    <path d="M${x + 16} ${G} V${G - 128} M${x + 114} ${G} V${G - 128} M${x + 16} ${G - 128} H${x + 114}
+      M${x + 16} ${G - 62} H${x + 114}" stroke="${beam}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M${x + 16} ${G - 62} l24 -30 M${x + 114} ${G - 62} l-24 -30" stroke="${beam}" stroke-width="2.4" stroke-linecap="round"/>
+    ${on && done < floors ? `<path d="M${x + 118} ${G - 140} h-34 v6" stroke="#C05A43" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M${x + 84} ${G - 134} V${craneY}" stroke="#C05A43" stroke-width="2" stroke-dasharray="3 3"/>
+      <rect x="${x + 78}" y="${craneY}" width="12" height="8" rx="2" fill="#F0B429"/>` : ''}
+    ${on && done >= floors ? `<rect x="${x + 62}" y="${G - 150}" width="3" height="24" fill="${beam}"/>
+      <path d="M${x + 65} ${G - 150} l20 -7 v13 z" fill="#C8524A"/>` : ''}
   </g>`;
 }
 
 function bank(x, on, hour) {
-  const stone = on ? '#DCD3C0' : '#6E6A5E';
-  const ang = (hour % 12) * 30;
-  return `<g>
-    <rect x="${x + 8}" y="${G - 86}" width="114" height="86" fill="${stone}" rx="2"/>
-    <rect x="${x}" y="${G - 96}" width="130" height="12" fill="${on ? '#C6BBA4' : '#5E5A52'}" rx="2"/>
-    ${[0, 1, 2, 3].map((i) => `<rect x="${x + 18 + i * 26}" y="${G - 84}" width="12" height="84" fill="${on ? '#EFE9DA' : '#7A7669'}"/>`).join('')}
-    <rect x="${x + 44}" y="${G - 156}" width="42" height="62" fill="${on ? '#CFC5AE' : '#5E5A52'}" rx="2"/>
-    <path d="M${x + 40} ${G - 156} L${x + 65} ${G - 176} L${x + 90} ${G - 156} Z" fill="${on ? '#3E6E77' : '#4E4B44'}"/>
-    <circle cx="${x + 65}" cy="${G - 132}" r="15" fill="${on ? '#FBF7EC' : '#8A8678'}" stroke="${on ? '#8A5B00' : '#57544B'}" stroke-width="2"/>
-    ${on ? `<path d="M${x + 65} ${G - 132} v-9" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"
-        transform="rotate(${ang} ${x + 65} ${G - 132})"/>
-      <path d="M${x + 65} ${G - 132} l7 4" stroke="#3A2E1A" stroke-width="2" stroke-linecap="round"/>` : ''}
-    <rect x="${x + 54}" y="${G - 42}" width="22" height="42" rx="10" fill="${on ? '#6E5233' : '#4E4B44'}"/>
+  /* The Bank: portico, pediment, and the clock that strikes interest in
+     public. The colonnade gets real depth — shadowed flutes, capitals. */
+  const stone = on ? '#E6DCC6' : '#6E6A5E', stoneDk = on ? '#C9BCA0' : '#5E5A52';
+  const ang = (hour % 12) * 30 + 90;
+  return `<g>${shadow(x + 65, 74)}
+    <rect x="${x + 10}" y="${G - 84}" width="110" height="84" fill="${stone}" rx="2"/>
+    <rect x="${x + 10}" y="${G - 84}" width="110" height="84" fill="url(#wallShade)" rx="2"/>
+    ${[0, 1, 2, 3].map((i) => { const cx2 = x + 21 + i * 26; return `
+      <rect x="${cx2}" y="${G - 80}" width="13" height="80" fill="${on ? '#F4EDDB' : '#7A7669'}" rx="2"/>
+      <rect x="${cx2 + 9}" y="${G - 80}" width="4" height="80" fill="${stoneDk}" opacity=".55" rx="2"/>
+      <rect x="${cx2 - 2}" y="${G - 84}" width="17" height="6" fill="${stoneDk}" rx="2"/>
+      <rect x="${cx2 - 2}" y="${G - 8}" width="17" height="8" fill="${stoneDk}" rx="2"/>`; }).join('')}
+    <rect x="${x + 2}" y="${G - 96}" width="126" height="13" fill="${on ? '#D5C9AE' : '#5E5A52'}" rx="2.5"/>
+    <path d="M${x + 6} ${G - 96} L${x + 65} ${G - 124} L${x + 124} ${G - 96} Z" fill="${on ? '#CEC1A4' : '#57544B'}"/>
+    <path d="M${x + 16} ${G - 98} L${x + 65} ${G - 120} L${x + 114} ${G - 98} Z" fill="${on ? '#EFE7D3' : '#66625A'}"/>
+    <circle cx="${x + 65}" cy="${G - 106}" r="12.5" fill="${on ? '#FBF7EC' : '#8A8678'}" stroke="${on ? '#8A5B00' : '#57544B'}" stroke-width="2.5"/>
+    ${on ? `<g stroke="#3A2E1A" stroke-width="2" stroke-linecap="round">
+        <path d="M${x + 65} ${G - 106} l0 -8" transform="rotate(${ang} ${x + 65} ${G - 106})"/>
+        <path d="M${x + 65} ${G - 106} l5.5 3"/></g>
+      <circle cx="${x + 65}" cy="${G - 106}" r="1.6" fill="#3A2E1A"/>` : ''}
+    ${doorway(x + 53, G, 24, 40, on ? '#6E5233' : '#4E4B44', '#F0B429')}
   </g>`;
 }
 
 function exch(x, on, up) {
-  const wall = on ? '#C8D8DA' : '#6E6A5E';
-  return `<g>
-    <rect x="${x + 6}" y="${G - 104}" width="118" height="104" fill="${wall}" rx="3"/>
-    <rect x="${x + 16}" y="${G - 94}" width="98" height="52" rx="3" fill="${on ? '#22383C' : '#4E4B44'}"/>
-    ${on ? `<polyline points="${x + 22},${G - 56} ${x + 40},${G - 68} ${x + 56},${G - 60} ${x + 74},${G - 80} ${x + 108},${G - 86}"
-      fill="none" stroke="${up ? '#5BC98C' : '#EC8B81'}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
-    <path d="M${x} ${G - 104} L${x + 65} ${G - 130} L${x + 130} ${G - 104} Z" fill="${on ? '#3E6E77' : '#5E5A52'}"/>
-    <rect x="${x + 52}" y="${G - 36}" width="26" height="36" fill="${on ? '#7A5230' : '#4E4B44'}" rx="2"/>
-
+  /* The Exchange: the board IS the facade, and it shows the market's real
+     last move. Glass-and-teal against everyone else's timber. */
+  const wall = on ? '#CFDCDE' : '#6E6A5E';
+  const line = up ? '#5BC98C' : '#EC8B81';
+  return `<g>${shadow(x + 65, 72)}
+    <rect x="${x + 8}" y="${G - 102}" width="114" height="102" fill="${wall}" rx="4"/>
+    <rect x="${x + 8}" y="${G - 102}" width="114" height="102" fill="url(#wallShade)" rx="4"/>
+    <rect x="${x + 8}" y="${G - 102}" width="114" height="8" fill="${on ? '#3E6E77' : '#5E5A52'}" rx="3"/>
+    <rect x="${x + 16}" y="${G - 90}" width="98" height="50" rx="5" fill="${on ? '#1D3236' : '#4E4B44'}"/>
+    <rect x="${x + 16}" y="${G - 90}" width="98" height="50" rx="5" fill="none" stroke="${on ? '#3E6E77' : '#57544B'}" stroke-width="2"/>
+    ${on ? `<path d="M${x + 22} ${G - 55} h86 M${x + 22} ${G - 68} h86 M${x + 22} ${G - 81} h86" stroke="rgba(255,255,255,.07)" stroke-width="1"/>
+      <polyline points="${x + 22},${G - 54} ${x + 38},${G - 64} ${x + 54},${G - 58} ${x + 72},${G - 76} ${x + 88},${G - 70} ${x + 108},${G - 84}"
+        fill="none" stroke="${line}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x + 108}" cy="${G - 84}" r="3.4" fill="${line}"/>
+` : ''}
+    ${winlet(x + 22, G - 32, 18, 20, on ? '#3E6E77' : '#57544B')}
+    ${winlet(x + 90, G - 32, 18, 20, on ? '#3E6E77' : '#57544B')}
+    ${doorway(x + 53, G, 24, 36, on ? '#2E565E' : '#4E4B44', '#F6E9C8')}
   </g>`;
 }
 
 function shopN(x, on) {
-  const wall = on ? '#E8CFA8' : '#6E6A5E';
-  return `<g>
-    <rect x="${x + 6}" y="${G - 98}" width="118" height="98" fill="${wall}" rx="3"/>
-    <path d="M${x} ${G - 98} L${x + 65} ${G - 128} L${x + 130} ${G - 98} Z" fill="${on ? '#B8563F' : '#5E5A52'}"/>
+  /* Nana Bizz's shop, shuttered until the child earns the keys. */
+  const wall = on ? '#EFD9AF' : '#6E6A5E';
+  return `<g>${shadow(x + 65, 72)}
+    <rect x="${x + 8}" y="${G - 96}" width="114" height="96" fill="${wall}" rx="3"/>
+    <rect x="${x + 8}" y="${G - 96}" width="114" height="96" fill="url(#wallShade)" rx="3"/>
+    ${gable(x, 130, G - 96, 32, on ? '#B8563F' : '#5E5A52', on ? '#8F4132' : '#4E4B44')}
     ${on
-      ? `<rect x="${x + 18}" y="${G - 78}" width="94" height="44" rx="3" fill="#FBF3E2"/>
-         <rect x="${x + 18}" y="${G - 86}" width="94" height="10" fill="#C8524A"/>
-         <text x="${x + 65}" y="${G - 50}" text-anchor="middle" font-size="13" font-weight="800" fill="#8A5B00" font-family="Georgia,serif">BIZZ &amp; CO</text>
-         <rect x="${x + 52}" y="${G - 32}" width="26" height="32" fill="#7A5230" rx="2"/>`
-      : `<rect x="${x + 18}" y="${G - 78}" width="94" height="60" rx="3" fill="#4E4B44"/>
-         ${[0, 1, 2, 3, 4].map((i) => `<rect x="${x + 20}" y="${G - 76 + i * 12}" width="90" height="9" fill="#6E6A5E"/>`).join('')}`}
+      ? `<rect x="${x + 16}" y="${G - 84}" width="98" height="13" rx="3" fill="#C8524A"/>
+         <text x="${x + 65}" y="${G - 74}" text-anchor="middle" font-size="9.5" font-weight="800"
+           fill="#FBF3E2" font-family="Georgia,serif" letter-spacing=".08em">BIZZ &amp; CO</text>
+         <rect x="${x + 18}" y="${G - 66}" width="60" height="34" rx="4" fill="#FBF3E2"/>
+         <path d="M${x + 48} ${G - 66} v34 M${x + 18} ${G - 49} h60" stroke="#C8A96E" stroke-width="2"/>
+         <circle cx="${x + 33}" cy="${G - 57}" r="5" fill="#E0603C"/><circle cx="${x + 62}" cy="${G - 57}" r="5" fill="#7CA84F"/>
+         <rect x="${x + 28}" y="${G - 44}" width="12" height="9" rx="2" fill="#F0B429"/><rect x="${x + 55}" y="${G - 43}" width="14" height="8" rx="2" fill="#8A5BD6" opacity=".8"/>
+         ${doorway(x + 88, G, 24, 38, '#7A5230', '#F0B429')}`
+      : `<rect x="${x + 18}" y="${G - 76}" width="94" height="58" rx="4" fill="#4E4B44"/>
+         ${[0, 1, 2, 3, 4].map((i) => `<rect x="${x + 21}" y="${G - 73 + i * 11.4}" width="88" height="8" rx="2.5" fill="#66625A"/>`).join('')}
+         <rect x="${x + 40}" y="${G - 52}" width="50" height="12" rx="3" fill="#8A6A3E" transform="rotate(-8 ${x + 65} ${G - 46})"/>
+         <text x="${x + 65}" y="${G - 43}" text-anchor="middle" font-size="8" font-weight="800" fill="#F6E9C8"
+           transform="rotate(-8 ${x + 65} ${G - 46})">CLOSED</text>`}
   </g>`;
 }
 
 function lantern(x, lit) {
-  return `<g><rect x="${x - 1.5}" y="18" width="3" height="14" fill="#7A6A50"/>
-    <circle cx="${x}" cy="38" r="7.5" fill="${lit ? '#F0B429' : 'rgba(140,140,130,.5)'}"/>
-    ${lit ? `<circle cx="${x}" cy="38" r="13" fill="#F0B429" opacity=".2"/>` : ''}</g>`;
+  /* Street lamps, one per streak day: a real lamppost head, not a lollipop. */
+  return `<g>
+    <path d="M${x} 14 v10" stroke="${lit ? '#5E5142' : 'rgba(94,81,66,.55)'}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M${x - 8} 26 h16 l-2.5 14 h-11 z" fill="${lit ? '#F5C544' : 'rgba(240,235,220,.55)'}"
+      stroke="${lit ? '#5E5142' : 'rgba(94,81,66,.55)'}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M${x - 4} 42 h8" stroke="${lit ? '#5E5142' : 'rgba(94,81,66,.55)'}" stroke-width="2.6" stroke-linecap="round"/>
+    ${lit ? `<circle cx="${x}" cy="33" r="15" fill="#F0B429" opacity=".18"/>
+      <circle cx="${x}" cy="33" r="8" fill="#FFDF8E" opacity=".5"/>` : ''}
+  </g>`;
 }
 
 /* level -> which places are open. The prototype ladder is compressed so the
@@ -241,6 +345,13 @@ export function townSVG(c) {
   const deeds = mine.map((f, i) => deed(96 + i * 132, f.em, c.name || 'You')).join('');
 
   return `<svg viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
+    <defs>
+      <linearGradient id="wallShade" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#000" stop-opacity="0"/>
+        <stop offset=".78" stop-color="#000" stop-opacity="0"/>
+        <stop offset="1" stop-color="#3A2814" stop-opacity=".16"/>
+      </linearGradient>
+    </defs>
     <style>
       .bob{animation:bzf-bob 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
       .glow{animation:bzf-glow 4.2s ease-in-out infinite}
@@ -275,8 +386,6 @@ export function townSVG(c) {
     <rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || 'you')}</text>` : ''}
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
-    <text x="${W - 14}" y="${VH - 12}" text-anchor="end" font-size="12" font-weight="800"
-      fill="var(--ink)" opacity=".45">${esc(world.name)}</text>
     ${here.map(build).join('')}
     ${deeds}
     ${here.some((p) => p.key === 'wallet') ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === 'wallet')) + 145},204) scale(.72)"><g class="bob">

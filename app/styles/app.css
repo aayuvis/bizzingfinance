@@ -211,3 +211,23 @@ input{font:inherit; color:inherit}
   .brand span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .topbar-in{gap:7px}
 }
+
+/* ── the town as Home's hero ─────────────────────────────────────────────
+   Home is a street, not a dashboard (docs/02 §2) — but the street was the
+   seventh block on a 3,100px page, which is a dashboard with a street in the
+   basement. It opens the screen now. The world name and Travel live ON the
+   scene instead of in a text card above it, because a caption card before a
+   picture is the picture apologising for itself. */
+.town.hero{min-height:230px}
+.town-head{position:absolute;left:10px;top:10px;right:10px;display:flex;align-items:center;gap:8px;justify-content:space-between;pointer-events:none}
+.town-head .btn{pointer-events:auto;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px)}
+.town-chip{display:flex;flex-direction:column;gap:0;background:color-mix(in srgb,var(--surface) 86%,transparent);
+  color:var(--ink);border-radius:var(--r-md);padding:6px 11px;backdrop-filter:blur(6px);line-height:1.25}
+.town-chip .eyebrow{font-size:9.5px;letter-spacing:.08em}
+.town-chip b{font-family:var(--display);font-size:15px}
+.town-cap{top:auto;bottom:10px}
+/* The street pans. Say so with its edges rather than a scrollbar: the scene
+   runs out through a fade instead of stopping at a hard crop. */
+.town::before,.town::after{content:"";position:absolute;top:0;bottom:0;width:26px;z-index:1;pointer-events:none}
+.town::before{left:0;background:linear-gradient(90deg,var(--paper),transparent);opacity:.0}
+.town::after{right:0;background:linear-gradient(270deg,var(--paper),transparent);opacity:.55}

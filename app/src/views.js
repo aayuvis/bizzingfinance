@@ -92,16 +92,16 @@ export function viewHome() {
   const allDone = quests.length && quests.every((q) => q.claimed);
 
   return `<div class="stack">
-    ${strip}
-    <div class="card" style="padding:0;overflow:hidden">
-      <div class="row" style="padding:13px 15px;gap:11px">
-        ${ico(world.em, world.em, 26)}
-        <div class="grow"><div class="eyebrow">You are in · ${esc(world.rank)}</div>
-          <h3 style="font-size:17px;margin:1px 0">${esc(world.name)}</h3>
-          <p class="small muted">${esc(world.blurb)}</p></div>
+    <div class="town hero">
+      <div class="town-scroll">${townSVG(c)}</div>
+      <div class="town-head">
+        <span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span>
         <button class="btn ghost sm" data-act="nav" data-arg="worlds">Travel</button>
       </div>
+      <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
     </div>
+
+    ${strip}
 
     ${lessonBeat(c)}
 
@@ -177,11 +177,6 @@ export function viewHome() {
         : ind >= 0.1 ? 'A tenth of your life pays for itself. That first tenth is the slow one.'
         : 'Nothing pays for itself yet. Every subscription you cancel moves this as much as a good year in the market.'}</p>
     </button>`}
-    <div class="town">
-      <div class="town-scroll">${townSVG(c)}</div>
-      <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
-    </div>
-
     ${due
       ? `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint)">
           <div class="eyebrow" style="color:var(--treasure-deep)">The bell is ringing</div>
