@@ -5490,7 +5490,7 @@ input{font:inherit; color:inherit}
       const open = !g.needs || chapterDone(c, g.needs);
       const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
       return `<button class="card" data-act="${open ? "game" : "lockedGame"}" data-arg="${g.id}" style="text-align:left;width:100%;${open ? "" : "opacity:.62"}">
-      <div class="row"><span style="font-size:30px">${open ? g.em : "\u{1F512}"}</span>
+      <div class="row"><span style="${open ? "" : "opacity:.45"}">${ico("quest", open ? g.em : "\u{1F512}", 30)}</span>
         <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
           <p class="small muted">${open ? esc(g.blurb) : "Finish \u201C" + esc(ch.title) + "\u201D to open this"}</p></div>
         <span class="pill">${open ? g.keys : "learn first"}</span></div></button>`;
@@ -5498,7 +5498,7 @@ input{font:inherit; color:inherit}
     return `<div class="stack">
     ${say("pip", "Wages from in here land in the same wallet as everything else. There is no second, magic money \u2014 that is on purpose.")}
     <button class="card" data-act="nav" data-arg="market40" style="text-align:left;width:100%;border-color:var(--action)">
-      <div class="row"><span style="font-size:30px">\u{1F4CA}</span>
+      <div class="row">${ico("market", "\u{1F4CA}", 36)}
         <div class="grow"><b style="font-size:16px">The Market Game</b>
           <p class="small muted">Forty companies that do not exist, forty years of things happening to them.
             Study one, say what would hurt it, then put money behind your answer.</p></div>
@@ -9857,7 +9857,7 @@ input{font:inherit; color:inherit}
       <div class="row"><div class="grow"><div class="eyebrow">${esc(v.name)} \xB7 week ${v.traded}</div>
         <div class="big" style="font-size:28px">${money(val.yours)}</div>
         <p class="small muted">what your share is worth${v.outsideEquity > 0 ? " \u2014 you own " + Math.round((1 - v.outsideEquity) * 100) + "%" : ""}</p></div>
-        <span style="font-size:30px">\u{1F3EA}</span></div>
+        ${ico("shop", "\u{1F3EA}", 34)}</div>
     </div>
 
     <div class="card">
