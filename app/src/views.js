@@ -64,6 +64,127 @@ export function viewOnboard(draft) {
 }
 
 /* ══ HOME — the town ══════════════════════════════════════════════════ */
+/* ── the three journeys (docs/09) ─────────────────────────────────────
+   The app is a daily life the child runs: a Household (can I cover my life,
+   and what's left over?), a Livelihood (what is my time worth, and can I
+   make it worth more?) and a Portfolio (where does the left-over live?).
+   One wallet fuses them. Home shows each journey as one card: its name, its
+   one headline number, and its beats for today — everything these absorb
+   used to be six separate cards scattered down the page.
+
+   A row here is a BEAT — something to do or to know today — in the same
+   visual language as the quest rows, because to a child they are the same
+   kind of thing: the day, in pieces. */
+function beat(act, arg, icon, title, sub2, right, hot) {
+  return `<button class="jbeat${hot ? ' hot2' : ''}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ''}>
+    ${ico(icon, icon, 22)}
+    <span class="grow" style="min-width:0;text-align:left">
+      <b>${title}</b><span class="small muted" style="display:block">${sub2}</span></span>
+    ${right || ''}
+  </button>`;
+}
+
+function journeys(c) {
+  const due = sim.payDue(c, R.s);
+  const d = sim.daysToPay(c);
+  const g = c.money.goals.find((x) => !x.done);
+  const inc = sim.weeklyIncome(c), cost = sim.weeklyCost(c);
+  const left = inc - cost;
+  const ind = sim.independence(c);
+
+  /* Household — consumer. Postbox, pay day, the goal, and the meter. */
+  const hhBeats = [
+    c.postbox.answered
+      ? beat('postbox', '', 'postbox', 'Postbox emptied', 'Another letter tomorrow.')
+      : beat('postbox', '', 'postbox', "There's a letter", 'One a day. Thirty seconds.', '<span class="pill spendp">1</span>', true),
+    due
+      ? beat('payday', '', 'bell', "It's pay day — ring the bell", 'Wages in, bills out, jars filled.', '', true)
+      : beat('sub', 'jars', 'jars', d === 0 ? 'Pay day later today' : `Pay day in ${nWord(d)} ${d === 1 ? 'day' : 'days'}`,
+          `${money(inc)} in, ${money(cost)} straight back out.`),
+    g ? beat('sub', 'goals', 'goal', esc(g.name), `${money(g.saved)} of ${money(g.target)} — ${g.saved >= g.target ? 'the roof is on'
+        : (w => w + ' more pay ' + (w === 1 ? 'day' : 'days') + ' at your Save rate')(sim.weeksToGoal(c, g))}`,
+        `<span class="small muted tabnum">${Math.round(g.saved / g.target * 100)}%</span>`) : '',
+  ].join('');
+
+  const household = `<div class="card jny" style="--ja:var(--save)">
+    <div class="row">
+      <div class="grow"><div class="eyebrow">The Household</div>
+        <p class="cs">Can you cover your life — and what's left over?</p></div>
+      <div style="text-align:right"><div class="big" style="color:${left >= 0 ? 'var(--ink)' : 'var(--spend)'}">${money(left)}</div>
+        <div class="small muted">left over / week</div></div>
+    </div>
+    <div class="jstack">${hhBeats}</div>
+    <button class="jfoot" data-act="sub" data-arg="place">
+      <span class="bar grow" style="height:6px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}"></i></span>
+      <span class="small muted tabnum">${Math.round(ind * 100)}% of your life pays for itself</span>
+    </button>
+  </div>`;
+
+  /* Livelihood — producer. Today's shifts, and the shop once it is yours. */
+  const jobs = sim.jobsToday(c);
+  const jleft = jobs.filter((j) => !j.done).length;
+  const bizOpen = chapterOpen(c, 'business') && c.biz;
+  const KIND = { stack: 'stacking', trim: 'balancing', sweep: 'clearing', runner: 'running' };
+  const lvBeats = [
+    ...jobs.slice(0, 3).map((j) => {
+      const gm = JOB_GAME[j.id];
+      return j.done
+        ? beat('sub', 'wallet', j.em, esc(j.name), 'Done — back tomorrow.', '<span class="pill grow">✓</span>')
+        : beat('job', j.id, j.em, esc(j.name),
+            `${gm ? esc(KIND[gm.kind]) + ' · ' : ''}for ${esc(j.who)}${sim.jobBest(c, j.id) ? ' · best ' + money(sim.jobBest(c, j.id)) : ''}`,
+            '<span class="pill">Work</span>', true);
+    }),
+    bizOpen ? beat('sub', 'business', 'shop', "Your shop", 'Stock, prices, and what the till took.',
+      `<span class="small muted tabnum">${money(sim.bizValue(c))}</span>`, true) : '',
+  ].join('');
+
+  const livelihood = `<div class="card jny" style="--ja:var(--treasure)">
+    <div class="row">
+      <div class="grow"><div class="eyebrow">The Livelihood</div>
+        <p class="cs">What is your time worth — and can you make it worth more?</p></div>
+      <div style="text-align:right"><div class="big">${jobs.length - jleft}/${jobs.length}</div>
+        <div class="small muted">shifts today</div></div>
+    </div>
+    <div class="jstack">${lvBeats || `<p class="small muted">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>`}</div>
+  </div>`;
+
+  /* Portfolio — allocator. Drawn locked rather than hidden, like the street. */
+  const bankOpen = chapterOpen(c, 'bank'), exOpen = chapterOpen(c, 'portfolio');
+  let portfolio;
+  if (!bankOpen && !exOpen) {
+    portfolio = `<div class="card jny" style="--ja:var(--grow)">
+      <div class="row">
+        <div class="grow"><div class="eyebrow">The Portfolio</div>
+          <p class="cs">Where does the left-over live — and what is it doing?</p></div>
+        ${ico('lock', '🔒', 22)}
+      </div>
+      <div class="jstack">${beat('nav', 'learn', 'lesson', 'Opens with ' + esc(needFor('bank') || 'the Banking chapter'),
+        'The Bank takes deposits the day you understand what it does with them.')}</div>
+    </div>`;
+  } else {
+    const invested = c.money.bank.balance + sim.holdingsValue(c);
+    const up = c.market.lastMove >= 0;
+    const pfBeats = [
+      bankOpen ? beat('sub', 'bank', 'bank', 'The Bank', `${money(c.money.bank.balance)} on deposit, earning while you sleep.`) : '',
+      exOpen ? beat('sub', 'portfolio', 'chartUp', 'The Exchange', `Market day — see what moved. Most days the right move is nothing.`,
+        `<span class="pill ${up ? 'grow' : 'spendp'}">${up ? '▲' : '▼'}</span>`, true) : '',
+      c.learn.level >= 16 ? beat('nav', 'market40', 'company', 'The Market Game', 'Forty companies, forty years, one decade at a time.') : '',
+    ].join('');
+    portfolio = `<div class="card jny" style="--ja:var(--grow)">
+      <div class="row">
+        <div class="grow"><div class="eyebrow">The Portfolio</div>
+          <p class="cs">Where does the left-over live — and what is it doing?</p></div>
+        <div style="text-align:right"><div class="big">${money(invested)}</div>
+          <div class="small muted">invested</div></div>
+      </div>
+      <div class="jstack">${pfBeats}</div>
+    </div>`;
+  }
+
+  return `<div class="sect"><b>Your three journeys</b><i></i></div>
+    ${household}${livelihood}${portfolio}`;
+}
+
 export function viewHome() {
   const c = K();
   const due = sim.payDue(c, R.s);
@@ -103,9 +224,9 @@ export function viewHome() {
 
     ${strip}
 
-    ${lessonBeat(c)}
+    ${journeys(c)}
 
-    ${todaysWork(c)}
+    ${lessonBeat(c)}
 
     <div class="card">
       <div class="row"><div class="grow"><div class="ct">Today's three</div>
@@ -165,55 +286,10 @@ export function viewHome() {
       </div>`;
     })()}
 
-    ${sprout ? '' : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
-      <div class="row">${ico(home.em, home.em, 24)}<div class="grow">
-        <div class="eyebrow">Independence · what your money earns ÷ what your life costs</div>
-        <p style="font-weight:800;font-size:15px">${money(passive)} a week towards ${money(cost)}</p></div>
-        <div class="big" style="font-size:24px;color:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}">${Math.round(ind * 100)}%</div></div>
-      <div class="bar" style="margin-top:9px;height:11px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}"></i></div>
-      <p class="small muted" style="margin-top:7px">${ind >= 1
-        ? 'Your money pays for your life. You work because you choose to.'
-        : ind >= 0.5 ? 'Half your week is paid for without working. Keep going.'
-        : ind >= 0.1 ? 'A tenth of your life pays for itself. That first tenth is the slow one.'
-        : 'Nothing pays for itself yet. Every subscription you cancel moves this as much as a good year in the market.'}</p>
-    </button>`}
-    ${due
-      ? `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint)">
-          <div class="eyebrow" style="color:var(--treasure-deep)">The bell is ringing</div>
-          <h3 style="margin:2px 0 4px">It's pay day in Bizzington</h3>
-          <p class="small" style="color:var(--treasure-deep)">Wages in, bills out, jars filled. The whole street is busy.</p>
-          <button class="btn ghost wide" style="margin-top:12px" data-act="payday">🔔 Ring the bell</button>
-        </div>`
-      : `<div class="card row">
-          <div class="grow"><div class="eyebrow">Pay day</div>
-          <p style="font-weight:700">${d === 0 ? 'Later today' : d + ' day' + (d === 1 ? '' : 's') + ' — ' + weekday(c.money.nextPay)}</p>
-          <p class="small muted">${money(sim.weeklyIncome(c))} in, ${money(sim.weeklyCost(c))} straight back out.</p></div>
-          <button class="btn ghost sm" data-act="sub" data-arg="jars">Check the jars</button>
-        </div>`}
 
-    <div class="grid2">
-      <button class="card" data-act="postbox" style="text-align:left;border-color:${c.postbox.answered ? 'var(--line)' : 'var(--spend)'}">
-        <div class="row">${ico('postbox', '📬', 26)}<div class="grow">
-          <div class="eyebrow">The postbox</div>
-          <p style="font-weight:800">${c.postbox.answered ? 'Emptied for today' : "There's a letter"}</p>
-          <p class="small muted">${c.postbox.answered ? 'Another one tomorrow.' : 'One a day. Thirty seconds.'}</p></div></div>
-      </button>
-      <button class="card" data-act="${today.act}" data-arg="${today.arg || ''}" style="text-align:left">
-        <div class="row">${ico(today.em, today.em, 26)}<div class="grow">
-          <div class="eyebrow">Today</div>
-          <p style="font-weight:800">${esc(today.title)}</p>
-          <p class="small muted">${esc(today.sub)}</p></div></div>
-      </button>
-    </div>
 
-    ${g ? `<button class="card" data-act="sub" data-arg="goals" style="display:block;width:100%;text-align:left">
-      <div class="row"><div class="grow"><div class="eyebrow">In the Build Yard</div>
-        <h3 style="margin:2px 0">${esc(g.name)}</h3></div>
-        <div style="text-align:right"><div class="big">${money(g.saved)}</div>
-        <div class="small muted">of ${money(g.target)}</div></div></div>
-      <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100, g.saved / g.target * 100)}%;background:var(--save)"></i></div>
-      <p class="small muted" style="margin-top:7px">${g.saved >= g.target ? 'Finished — the roof is on.' : sim.weeksToGoal(c, g) + ' more pay days at your current Save rate.'}</p>
-    </button>` : ''}
+
+
 
     ${say('pip', hometalk(c))}
   </div>`;

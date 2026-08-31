@@ -231,3 +231,17 @@ input{font:inherit; color:inherit}
 .town::before,.town::after{content:"";position:absolute;top:0;bottom:0;width:26px;z-index:1;pointer-events:none}
 .town::before{left:0;background:linear-gradient(90deg,var(--paper),transparent);opacity:.0}
 .town::after{right:0;background:linear-gradient(270deg,var(--paper),transparent);opacity:.55}
+
+/* ── the three journeys (docs/09) ────────────────────────────────────────
+   One card per journey, its accent on the spine. The beats inside share the
+   quest rows' language on purpose: to the child they are the same kind of
+   thing — the day, in pieces. */
+.jny{border-left:4px solid var(--ja);padding-left:14px}
+.jstack{display:flex;flex-direction:column;gap:8px;margin-top:11px}
+.jbeat{display:flex;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:9px 11px;width:100%;font:inherit;color:inherit}
+.jbeat b{font-size:14px}
+.jbeat.hot2{background:var(--surface);border-color:color-mix(in srgb,var(--ja) 45%,var(--line));box-shadow:var(--sh)}
+.jbeat:active{transform:translateY(1px)}
+.jfoot{display:flex;gap:10px;align-items:center;width:100%;margin-top:11px;padding:2px 0;font:inherit;color:inherit}
+.pill.spendp{background:var(--spend-tint);color:var(--spend)}
