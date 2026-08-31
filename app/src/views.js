@@ -95,7 +95,7 @@ export function viewHome() {
     ${strip}
     <div class="card" style="padding:0;overflow:hidden">
       <div class="row" style="padding:13px 15px;gap:11px">
-        <span style="font-size:26px">${world.em}</span>
+        ${ico(world.em, world.em, 26)}
         <div class="grow"><div class="eyebrow">You are in · ${esc(world.rank)}</div>
           <h3 style="font-size:17px;margin:1px 0">${esc(world.name)}</h3>
           <p class="small muted">${esc(world.blurb)}</p></div>
@@ -146,7 +146,7 @@ export function viewHome() {
           ${fx.map((f) => `<div style="background:${f.done ? 'var(--grow-tint)' : 'var(--surface2)'};
             border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px">
             <div class="row" style="gap:10px">
-              <span style="font-size:21px;${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${f.em}</span>
+              <span style="${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${ico(f.em, f.em, 21)}</span>
               <span class="grow" style="min-width:0">
                 <b style="font-size:14px">${esc(f.name)}</b>
                 <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div></span>
@@ -166,7 +166,7 @@ export function viewHome() {
     })()}
 
     ${sprout ? '' : `<button class="card" data-act="sub" data-arg="place" style="display:block;width:100%;text-align:left">
-      <div class="row"><span style="font-size:24px">${home.em}</span><div class="grow">
+      <div class="row">${ico(home.em, home.em, 24)}<div class="grow">
         <div class="eyebrow">Independence · what your money earns ÷ what your life costs</div>
         <p style="font-weight:800;font-size:15px">${money(passive)} a week towards ${money(cost)}</p></div>
         <div class="big" style="font-size:24px;color:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}">${Math.round(ind * 100)}%</div></div>
@@ -179,7 +179,7 @@ export function viewHome() {
     </button>`}
     <div class="town">
       <div class="town-scroll">${townSVG(c)}</div>
-      <div class="town-cap"><span>🔥 ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
+      <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
     </div>
 
     ${due
@@ -198,13 +198,13 @@ export function viewHome() {
 
     <div class="grid2">
       <button class="card" data-act="postbox" style="text-align:left;border-color:${c.postbox.answered ? 'var(--line)' : 'var(--spend)'}">
-        <div class="row"><span style="font-size:26px">📬</span><div class="grow">
+        <div class="row">${ico('postbox', '📬', 26)}<div class="grow">
           <div class="eyebrow">The postbox</div>
           <p style="font-weight:800">${c.postbox.answered ? 'Emptied for today' : "There's a letter"}</p>
           <p class="small muted">${c.postbox.answered ? 'Another one tomorrow.' : 'One a day. Thirty seconds.'}</p></div></div>
       </button>
       <button class="card" data-act="${today.act}" data-arg="${today.arg || ''}" style="text-align:left">
-        <div class="row"><span style="font-size:26px">${today.em}</span><div class="grow">
+        <div class="row">${ico(today.em, today.em, 26)}<div class="grow">
           <div class="eyebrow">Today</div>
           <p style="font-weight:800">${esc(today.title)}</p>
           <p class="small muted">${esc(today.sub)}</p></div></div>
@@ -264,7 +264,7 @@ function closingTime(c, quests) {
     <div class="stack" style="gap:8px;margin-top:7px">
       ${rows.slice(0, 3).map((r) => `<div class="row" style="gap:10px;background:var(--surface);
         border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-        <span style="font-size:20px">${r.em}</span>
+        ${ico(r.em, r.em, 20)}
         <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
           <div class="small muted">${r.sub}</div></span></div>`).join('')}
     </div>
@@ -325,7 +325,7 @@ function todaysWork(c) {
         const best = sim.jobBest(c, j.id);
         return `<div class="row" style="gap:10px;background:${j.done ? 'var(--grow-tint)' : 'var(--surface2)'};
           border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="${j.done ? 'opacity:.5' : ''}">${ico('work', j.em, 26)}</span>
+          <span style="${j.done ? 'opacity:.5' : ''}">${ico(j.em, j.em, 26)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
             <div class="small muted">${j.done ? 'Back tomorrow.'
@@ -373,7 +373,7 @@ export function viewWorlds() {
       const done = w.chapters.length - left.length;
       return `<div class="card" style="${here ? 'border-color:var(--action);box-shadow:var(--sh-raised)' : open ? '' : 'opacity:.66'}">
         <div class="row" style="gap:12px">
-          <span style="font-size:30px">${open ? w.em : '🔒'}</span>
+          ${ico(open ? w.em : '🔒', open ? w.em : '🔒', 30)}
           <div class="grow">
             <div class="eyebrow">${esc(w.rank)}${here ? ' · you are here' : ''}</div>
             <h3 style="font-size:18px;margin:1px 0 3px">${esc(w.name)}</h3>
@@ -416,21 +416,21 @@ export function viewLearn() {
   return `<div class="stack">
     <div class="card">
       <div class="row"><div class="grow">
-        <div class="eyebrow">${rank.em} ${rank.name} · level ${c.learn.level} of 30</div>
+        <div class="eyebrow">${ico(rank.em, rank.em, 15)} ${rank.name} · level ${c.learn.level} of 30</div>
         <h2 style="margin:2px 0 0">${c.learn.xp} XP</h2>
         <p class="small muted">Learning ${esc(rank.of)}.</p></div>
         <div class="small muted" style="text-align:right">${bar.need} XP to<br>level ${c.learn.level + 1}</div></div>
       <div class="bar" style="margin-top:10px"><i style="width:${bar.pct * 100}%"></i></div>
       <div class="row" style="margin-top:12px;gap:6px;flex-wrap:wrap">
-        ${RANKS.map((r) => `<span class="pill ${c.learn.level >= r.at ? 'gold' : ''}">${r.em} ${r.name}<span style="font-family:var(--mono);opacity:.7"> L${r.at}</span></span>`).join('')}
+        ${RANKS.map((r) => `<span class="pill ${c.learn.level >= r.at ? 'gold' : ''}">${ico(r.em, r.em, 14)} ${r.name}<span style="font-family:var(--mono);opacity:.7"> L${r.at}</span></span>`).join('')}
       </div>
     </div>
     <div class="grid2">
       <button class="card" data-act="shelf" data-arg="words" style="text-align:left">
-        <div class="row"><span style="font-size:24px">📖</span><div class="grow">
+        <div class="row">${ico('lesson', '📖', 24)}<div class="grow">
         <p style="font-weight:800">Money Words</p><p class="small muted">${GLOSSARY.length} terms, in plain English.</p></div></div></button>
       <button class="card" data-act="nav" data-arg="arcade" style="text-align:left">
-        <div class="row"><span style="font-size:24px">🎮</span><div class="grow">
+        <div class="row">${ico('arcade', '🎮', 24)}<div class="grow">
         <p style="font-weight:800">Practise it</p><p class="small muted">Six games. Wages into the same wallet.</p></div></div></button>
     </div>
     ${say('pip', 'Every card ends with one question. Get it right and the town grows. Get it wrong and I tell you why — that counts too.')}
@@ -440,7 +440,7 @@ export function viewLearn() {
         const locked = c.learn.level < ch.lv;
         return `<div class="card pad0" ${locked ? 'style="opacity:.62"' : ''}>
           <div style="padding:14px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line-soft)">
-            <span style="font-size:24px">${locked ? '🔒' : ch.em}</span>
+            ${ico(locked ? '🔒' : ch.em, locked ? '🔒' : ch.em, 24)}
             <div class="grow"><h3 style="font-size:18px">${esc(ch.title)}</h3>
             <p class="small muted">${locked ? 'Opens at level ' + ch.lv + ' · ' + ch.rank : esc(ch.blurb)}</p>
             ${opensWhat(ch.id) ? `<p class="small" style="color:var(--action);font-weight:700;margin-top:2px">
@@ -530,7 +530,7 @@ export function viewMoney() {
         style="padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800;border:1px ${open ? 'solid' : 'dashed'} var(--line);
         background:${sub === x.k ? 'var(--action)' : (open ? 'var(--surface)' : 'transparent')};
         color:${sub === x.k ? 'var(--action-ink)' : (open ? 'var(--ink)' : 'var(--muted)')}">
-        ${open ? '' : '🔒 '}${x.n}</button>`;
+        ${open ? '' : ico('lock', '🔒', 14) + ' '}${x.n}</button>`;
     }).join('')}</div>`;
 
   const body = sub === 'place' ? viewPlace() : sub === 'jars' ? viewJars() : sub === 'goals' ? viewGoals()
@@ -555,7 +555,7 @@ function viewWallet() {
       <p class="small muted" style="margin:3px 0 10px">Each job once a day. You are selling an hour, not a thing.</p>
       <div class="stack" style="gap:8px">
         ${jobs.map((j) => `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="font-size:20px">${j.em}</span>
+          ${ico(j.em, j.em, 20)}
           <span class="grow"><b style="font-size:14px">${esc(j.name)}</b><br><span class="small muted">for ${esc(j.who)}</span></span>
           ${j.done ? '<span class="pill grow">done today</span>'
             : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${money(j.amt)}</button>`}
@@ -565,7 +565,7 @@ function viewWallet() {
     <div class="card pad0">
       <div style="padding:12px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center">
         <span class="eyebrow grow">Every movement</span>
-        <button class="small muted" data-act="print">🖨 Statement</button></div>
+        <button class="small muted" data-act="print">${ico('printer', '🖨', 15)} Statement</button></div>
       ${c.money.txns.slice(0, 18).map((t) => `<div style="display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)">
         <span style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:0 0 auto;background:${t.kind === 'in' ? 'var(--grow-tint)' : 'var(--spend-tint)'};color:${t.kind === 'in' ? 'var(--grow)' : 'var(--spend)'}">${t.kind === 'in' ? '↓' : '↑'}</span>
         <span class="grow" style="font-weight:650;font-size:14px">${esc(t.label)}<br><span class="small muted">${shortDate(t.t)}</span></span>
@@ -588,7 +588,7 @@ function viewPlace() {
 
   return `<div class="stack">
     <div class="card">
-      <div class="row"><span style="font-size:34px">${h.em}</span><div class="grow">
+      <div class="row">${ico(h.em, h.em, 34)}<div class="grow">
         <div class="eyebrow">You live here</div>
         <h2 style="font-size:21px;margin:2px 0 3px">${esc(h.name)}</h2>
         <p class="small muted">${esc(h.blurb)}</p></div></div>
@@ -620,7 +620,7 @@ function viewPlace() {
 
     ${next ? `<div class="card">
       <div class="eyebrow">Next along the street</div>
-      <div class="row" style="margin-top:4px"><span style="font-size:28px">${next.em}</span>
+      <div class="row" style="margin-top:4px">${ico(next.em, next.em, 28)}
         <div class="grow"><b style="font-size:16px">${esc(next.name)}</b>
           <p class="small muted">${esc(next.blurb)}</p></div></div>
       <div class="stack" style="gap:5px;margin-top:11px;font-size:14px">
@@ -824,7 +824,7 @@ function worldCard(c) {
     ${locked.length ? `<div class="sep" style="margin:12px 0"></div>
       <div class="eyebrow">Not yet — the maths comes first</div>
       <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
-        ${locked.map((a) => `<span class="pill">${a.em} ${esc(a.name)} · ${a.needs}</span>`).join('')}
+        ${locked.map((a) => `<span class="pill">${ico(a.em, a.em, 14)} ${esc(a.name)} · ${a.needs}</span>`).join('')}
       </div>` : ''}
   </div>`;
 }
@@ -854,7 +854,7 @@ function viewExchange() {
       const mv = (p - prev) / prev;
       const u = c.market.holdings[a.id] || 0;
       return `<div class="card">
-        <div class="row"><span style="font-size:22px">${a.em}</span>
+        <div class="row">${ico(a.em, a.em, 22)}
           <div class="grow"><b style="font-size:15px">${esc(a.name)}</b>
           <p class="small muted">${esc(a.one)}</p></div>
           <div style="text-align:right"><div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p)}</div>
@@ -1037,7 +1037,7 @@ export function viewStore() {
       const hrs = waiting ? Math.ceil((cool - nowT) / 3600000) : 0;
       const afford = c.money.wallet + c.money.jars.spend >= p;
       return `<div class="card">
-        <div class="row"><span style="font-size:28px">${it.em}</span>
+        <div class="row">${ico(it.em, it.em, 28)}
           <div class="grow"><b style="font-size:15.5px">${esc(it.name)}</b>
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
@@ -1076,8 +1076,8 @@ export function viewProgress() {
       <p class="small muted">The one chart a card app can't draw: it only has your last statement, and this has every decision since you opened your stall.</p>
     </div>
     <div class="grid3">
-      <div class="card"><div class="eyebrow">Streak</div><div class="big">🔥 ${c.streak.days.length}</div><p class="small muted">days in a row</p></div>
-      <div class="card"><div class="eyebrow">Rank</div><div class="big" style="font-size:20px">${rank.em} ${rank.name}</div><p class="small muted">level ${c.learn.level} of 30</p></div>
+      <div class="card"><div class="eyebrow">Streak</div><div class="big">${ico('streak', '🔥', 22)} ${c.streak.days.length}</div><p class="small muted">days in a row</p></div>
+      <div class="card"><div class="eyebrow">Rank</div><div class="big" style="font-size:20px">${ico(rank.em, rank.em, 15)} ${rank.name}</div><p class="small muted">level ${c.learn.level} of 30</p></div>
       <div class="card"><div class="eyebrow">Letters</div><div class="big">${c.postbox.log.length}</div><p class="small muted">${scamsAll ? scams + ' of ' + scamsAll + ' scams spotted' : 'no scams yet'}</p></div>
     </div>
     <div class="card">
@@ -1085,7 +1085,7 @@ export function viewProgress() {
       <div class="stack" style="gap:7px;margin-top:9px">
         ${CHAPTERS.map((ch) => {
           const done = ch.cards.filter((x) => c.learn.done[x.id]).length;
-          return `<div class="row" style="font-size:13.5px"><span style="width:22px">${ch.em}</span>
+          return `<div class="row" style="font-size:13.5px"><span style="width:22px">${ico(ch.em, ch.em, 17)}</span>
             <span class="grow">${esc(ch.title)}</span>
             <div class="bar" style="width:88px"><i style="width:${done / ch.cards.length * 100}%;background:${done === ch.cards.length ? 'var(--grow)' : 'var(--action)'}"></i></div>
             <span class="muted tabnum" style="width:34px;text-align:right">${done}/${ch.cards.length}</span></div>`;
@@ -1093,7 +1093,7 @@ export function viewProgress() {
       </div>
     </div>
     <button class="card" data-act="nav" data-arg="parents" style="display:block;width:100%;text-align:left">
-      <div class="row"><span style="font-size:24px">👪</span><div class="grow">
+      <div class="row">${ico('family', '👪', 24)}<div class="grow">
         <p style="font-weight:800">The grown-up's page</p>
         <p class="small muted">What they learned, what they decided, Family Mode, and a printable week.</p></div>
         <span class="muted">→</span></div>
@@ -1141,7 +1141,7 @@ export function viewReport() {
   const r = report.weekly(c, { money });
   const row = (em, label, body) => `<div class="row" style="gap:11px;align-items:flex-start;
     background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px">
-    <span style="font-size:19px">${em}</span><span class="grow" style="min-width:0">
+    ${ico(em, em, 19)}<span class="grow" style="min-width:0">
     <b style="font-size:14px">${label}</b><div class="small muted">${body}</div></span></div>`;
   return `<div class="stack">
     <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">← Grown-up's page</button>
@@ -1244,7 +1244,7 @@ export function viewParents() {
       <div class="eyebrow">What they decided</div>
       <div class="stack" style="gap:8px;margin-top:8px">
         ${w.decisions.map((d) => `<div class="row" style="align-items:flex-start;gap:9px">
-          <span style="font-size:15px">${d.em}</span><p class="small grow">${d.t}</p></div>`).join('')}
+          ${ico(d.em, d.em, 15)}<p class="small grow">${d.t}</p></div>`).join('')}
       </div>
     </div>
 
@@ -1253,7 +1253,7 @@ export function viewParents() {
       <div class="stack" style="gap:7px;margin-top:8px">
         ${w.prompts.map((p) => `<p class="small">💬 ${esc(p)}</p>`).join('')}
       </div>
-      <button class="btn ghost wide" style="margin-top:12px" data-act="print">🖨 Printable weekly page</button>
+      <button class="btn ghost wide" style="margin-top:12px" data-act="print">${ico('printer', '🖨', 16)} Printable weekly page</button>
     </div>
 
     <div class="card stack">
@@ -1379,7 +1379,7 @@ export function viewCollection() {
         ${Object.keys(BADGES).map((k) => {
           const b = BADGES[k], has = c.badges.includes(k);
           return `<div style="background:${has ? 'var(--treasure-tint)' : 'var(--tint)'};border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has ? 1 : .45}">
-            <div style="font-size:24px">${has ? b.em : '🔒'}</div>
+            <div>${ico(has ? b.em : 'lock', has ? b.em : '🔒', 24)}</div>
             <div style="font-weight:800;font-size:13px;margin-top:3px">${esc(b.name)}</div>
             <div class="small muted" style="font-size:11.5px;line-height:1.35">${has ? esc(b.desc) : 'not yet'}</div></div>`;
         }).join('')}

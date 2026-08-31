@@ -55,7 +55,7 @@ export function viewArcade() {
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
     <button class="card" data-act="nav" data-arg="market40" style="text-align:left;width:100%;border-color:var(--action)">
-      <div class="row">${ico('market','📊',36)}
+      <div class="row">${ico('chartUp','📊',36)}
         <div class="grow"><b style="font-size:16px">The Market Game</b>
           <p class="small muted">Forty companies that do not exist, forty years of things happening to them.
             Study one, say what would hurt it, then put money behind your answer.</p></div>
@@ -794,7 +794,7 @@ function stallRush() {
             ${st.q.length ? st.q.map((c) => {
               const item = STOCK.find((x) => x.id === c.want);
               return `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-                <span style="font-size:22px">${item.em}</span>
+                ${ico(item.em, item.em, 22)}
                 <span class="grow"><b style="font-size:14px">${esc(item.name)}</b>
                   <div class="bar" style="height:5px;margin-top:5px"><i id="srP${c.id}" style="width:${c.patience * 100}%;background:var(--treasure);transition:none"></i></div></span>
                 <span class="pill">${money(price(item.sells))}</span></div>`;
@@ -804,7 +804,7 @@ function stallRush() {
           <div class="choices" style="grid-template-columns:repeat(4,1fr)">
             ${STOCK.map((x, i) => `<button class="btn ${st.stock[x.id] ? '' : 'ghost'}" data-act="srServe" data-arg="${x.id}"
               style="flex-direction:column;gap:1px;padding:8px 3px;font-size:11px;line-height:1.15">
-              <span style="font-size:18px">${x.em}</span>
+              ${ico(x.em, x.em, 18)}
               <span style="font-weight:800">${esc(x.name)}</span>
               <span style="opacity:.75;font-family:var(--mono);font-size:10.5px">${i + 1} · ${st.stock[x.id] || 0} left</span></button>`).join('')}
           </div>

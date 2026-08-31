@@ -3,7 +3,7 @@
 
 import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js';
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
-import { say, CAST } from './art.js';
+import { say, CAST, ico, mark } from './art.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
@@ -79,17 +79,21 @@ function render() {
     s.ui.nav === 'market40' ? viewMarketGame() :
     s.ui.nav === 'collection' ? viewCollection() : viewHome();
 
+  /* The tab bar is the one row on every screen, so its icons are named here
+     rather than inherited from whatever glyph the tab data happens to carry. */
+  const TAB_ICON = { home: 'home', learn: 'learn', money: 'wallet', arcade: 'arcade',
+                     more: 'more', town: 'town', worlds: 'town', collection: 'quest' };
   const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]);
 
   root.innerHTML = `
     <header class="topbar">
       <div class="topbar-in">
-        <button class="brand" data-act="nav" data-arg="home"><em>Bizzing</em> Finance</button>
+        <button class="brand" data-act="nav" data-arg="home">${mark(26)}<span><em>Bizzing</em> Finance</span></button>
         <button class="chip money" data-act="nav" data-arg="money"
           title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
-        <span class="chip streak" title="Days in a row">🔥 ${c.streak.days.length}</span>
-        <button class="iconbtn" data-act="mode" aria-label="Light or dark">${R.mode === 'dark' ? '☾' : '☀'}</button>
-        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">👪</button>
+        <span class="chip streak" title="Days in a row">${ico('streak', '', 15)} ${c.streak.days.length}</span>
+        <button class="iconbtn" data-act="mode" aria-label="Light or dark">${ico(R.mode === 'dark' ? 'moon' : 'sun', '', 19)}</button>
+        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico('family', '', 19)}</button>
       </div>
       <nav class="nav" aria-label="Sections">
         ${tabs.map((t) => `<button class="navbtn" data-act="nav" data-arg="${t.k}"
@@ -99,7 +103,7 @@ function render() {
     <main class="content">${sim.clockSuspect(s) ? clockWarning() : ''}${body}</main>
     <nav class="tabbar" aria-label="Primary">
       ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
-        aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${t.g}</span><span>${t.n}</span></button>`).join('')}
+        aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join('')}
     </nav>
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own

@@ -276,7 +276,7 @@ export function townSVG(c) {
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || 'you')}</text>` : ''}
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
     <text x="${W - 14}" y="${VH - 12}" text-anchor="end" font-size="12" font-weight="800"
-      fill="var(--ink)" opacity=".45">${world.em} ${esc(world.name)}</text>
+      fill="var(--ink)" opacity=".45">${esc(world.name)}</text>
     ${here.map(build).join('')}
     ${deeds}
     ${here.some((p) => p.key === 'wallet') ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === 'wallet')) + 145},204) scale(.72)"><g class="bob">

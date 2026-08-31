@@ -104,18 +104,53 @@ export function say(who, text) {
   return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
 }
 
-/* ── the drawn icon set ────────────────────────────────────────────────
-   `ico()` returns an <img> for a drawn icon, and FALLS BACK to the emoji it
-   replaces when there is no drawing for that key. A missing icon must leave
-   the old glyph rather than a hole: the set is generated, so a regeneration
-   that drops one should degrade, never break the screen. */
-import { ICONS } from './icons-gen.js';
+/* ── the icon set ──────────────────────────────────────────────────────
+   `ico()` renders one of the authored SVGs from icons.js. It accepts either
+   an icon name or the emoji it replaces, so a call site that already had an
+   emoji in its data (`q.em`, a job's glyph, a chapter's badge) gets the drawn
+   icon without every content file being rewritten.
+
+   Anything unmapped FALLS BACK to the emoji rather than a hole. That is the
+   whole reason the fallback exists: the long tail of store goods, weather and
+   board squares is deliberately still emoji, and a missing key must degrade
+   to the old glyph instead of leaving a gap in the middle of a row. */
+import { ICONS, EMOJI_MAP } from './icons.js';
 
 export function ico(name, fallback, size) {
   const s = size || 24;
-  const src = ICONS[name];
-  if (!src) return `<span style="font-size:${Math.round(s * 0.92)}px;line-height:1">${fallback || ''}</span>`;
-  return `<img src="${src}" alt="" width="${s}" height="${s}" loading="lazy" decoding="async"
-    style="width:${s}px;height:${s}px;display:block;flex:0 0 auto;object-fit:contain">`;
+  const key = ICONS[name] ? name : EMOJI_MAP[String(name || '').replace(/\uFE0F/g, '')];
+  const ic = ICONS[key];
+  if (!ic) {
+    const glyph = fallback || (String(name || '').length <= 3 ? name : '');
+    return `<span class="ico-em" style="font-size:${Math.round(s * 0.9)}px;line-height:1;width:${s}px;height:${s}px">${glyph}</span>`;
+  }
+  /* Three passes, and the order is the drawing: the accent body carries the
+     silhouette, the linework sits on top of it, the keynote sits on top of
+     both. currentColor for the line means an icon always agrees with the text
+     beside it, in either theme, with no second file. */
+  return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" style="--ic:${ic.a}" aria-hidden="true" focusable="false">`
+    + (ic.b ? `<g fill="var(--ic)" fill-opacity=".26">${ic.b}</g>` : '')
+    + (ic.l ? `<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ic.l}</g>` : '')
+    + (ic.k ? `<g fill="var(--ic)">${ic.k}</g>` : '')
+    + '</svg>';
 }
-export function hasIcon(name) { return !!ICONS[name]; }
+export function hasIcon(name) {
+  return !!(ICONS[name] || ICONS[EMOJI_MAP[String(name || '').replace(/\uFE0F/g, '')]]);
+}
+
+/* The mark. Bizzing Finance had no mark at all — the top bar was bare text
+   and the installed icon was a generic currency glyph that said "a finance
+   app" and nothing about this one.
+
+   A coin, with the three ascending bars struck THROUGH it rather than drawn
+   beside it: the two ideas the app is about are one shape, not a coin with a
+   chart sitting next to it. Cut as negative space so it survives being shrunk
+   — at 16px in a browser tab, three counters in a disc still read, where
+   three thin bars would silt up. Gold on teal, both straight from the tokens. */
+export function mark(size) {
+  const s = size || 28;
+  return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Finance">
+    <rect width="48" height="48" rx="12" fill="#0E6B78"/>
+    <path fill="#F0B429" fill-rule="evenodd" d="M24 6a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-8.5 24.5a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v3.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6zm6.1-5.6a1.6 1.6 0 0 1 1.6-1.6h1.6a1.6 1.6 0 0 1 1.6 1.6v9.5a1.6 1.6 0 0 1-1.6 1.6h-1.6a1.6 1.6 0 0 1-1.6-1.6zm6-6.4a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v15.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6z"/>
+  </svg>`;
+}
