@@ -39,6 +39,21 @@ cp -r build/. "$WORK"/
 
 cd "$WORK"
 git add -A
+
+# Bizzing India learnt this one expensively: their publish step quietly did
+# nothing once app/voice passed 700 MB, and the script reported success while
+# the live site sat four hours behind. A deploy that no-ops and says so
+# cheerfully is worse than one that fails. So count what we meant to publish
+# against what is actually staged, and refuse to lie.
+WANT=$(find "$HERE/build" -type f | wc -l)
+GOT=$(git ls-files --cached | wc -l)
+if [ "$WANT" -ne "$GOT" ]; then
+  echo "REFUSING TO DEPLOY: built $WANT files, staged $GOT." >&2
+  echo "Something dropped files on the way in — do not trust a partial publish." >&2
+  exit 1
+fi
+echo "staged $GOT/$WANT files"
+
 if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
 git commit -q -m "Deploy Bizzington
 
