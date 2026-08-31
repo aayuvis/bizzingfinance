@@ -5,6 +5,7 @@ import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
+import { lessonBlock } from './lessonplayer.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
@@ -540,6 +541,7 @@ function viewCard(card) {
   const d = shuffledDrill(card);
   return `<div class="stack">
     <button class="small muted" data-act="closeCard">← All chapters</button>
+    ${lessonBlock(card.id)}
     <div class="card stack">
       <div class="eyebrow">${esc(CHAPTERS.find((x) => x.id === card.ch).title)}</div>
       <h2>${esc(card.title)}</h2>

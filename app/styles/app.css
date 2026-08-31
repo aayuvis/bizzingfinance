@@ -245,3 +245,38 @@ input{font:inherit; color:inherit}
 .jbeat:active{transform:translateY(1px)}
 .jfoot{display:flex;gap:10px;align-items:center;width:100%;margin-top:11px;padding:2px 0;font:inherit;color:inherit}
 .pill.spendp{background:var(--spend-tint);color:var(--spend)}
+
+/* ── the lesson stage ────────────────────────────────────────────────────
+   Watch, then read, then answer. The stage is a small theatre: Nana at the
+   left, the columns at the right, the banner across the boards. Movement is
+   CSS transition from state — generated motion stays banned — and under
+   prefers-reduced-motion the teaching advances with the motion turned off. */
+.lstage-holder{margin-top:10px}
+.lstage{position:relative;height:215px;border-radius:var(--r-md);overflow:hidden;
+  background:linear-gradient(var(--sky1),var(--sky2));border:1px solid var(--line)}
+.lstage.w-rain{background:linear-gradient(#9FB6BE,#C8D4CE)}
+.lnana{position:absolute;left:8px;bottom:0;transition:transform .4s}
+.lnana-point{transform:translateX(4px)}
+.lright{position:absolute;left:40%;right:8px;top:10px;bottom:34px}
+.ltray{display:flex;gap:9px;justify-content:center;align-items:center;height:52px}
+.lcols{display:flex;gap:10px;height:100%}
+.lcol{flex:1;background:color-mix(in srgb,var(--surface) 84%,transparent);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:6px 8px;backdrop-filter:blur(3px)}
+.lcol b{font-family:var(--display);font-size:12.5px;display:block;text-align:center}
+.lslot{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;padding-top:6px}
+.litem{transition:transform .45s ease}
+.litem.lswap{animation:lhop 1.6s ease-in-out infinite}
+@keyframes lhop{0%,100%{transform:translateX(0)}50%{transform:translateX(26px)}}
+.lbanner{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);white-space:nowrap;
+  background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:10.5px;font-weight:600;
+  letter-spacing:.09em;padding:4px 12px;border-radius:var(--r-pill);animation:pop .3s}
+.lsun{position:absolute;right:10px;top:8px;width:34px;height:34px;border-radius:50%;
+  background:radial-gradient(circle,#FFE9A8,#F0B429);box-shadow:0 0 24px 6px rgb(240 180 41 / .45)}
+.lrain i{position:absolute;top:-12%;width:2px;height:14px;background:rgba(255,255,255,.55);
+  border-radius:2px;animation:lfall 1.1s linear infinite}
+@keyframes lfall{to{transform:translateY(240px)}}
+.lcap{min-height:2.6em;margin-top:8px;font-size:14px;line-height:1.5}
+.ldot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line);margin-left:4px}
+.ldot.past{background:var(--muted)}
+.ldot.now{background:var(--action)}
+@media (prefers-reduced-motion:reduce){.litem,.lnana{transition:none}.litem.lswap,.lrain i,.lbanner{animation:none}}

@@ -4,6 +4,7 @@
 import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js';
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST, ico, mark } from './art.js';
+import { mountLesson } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
@@ -109,6 +110,7 @@ function render() {
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  mountLesson();   /* narrated lessons re-attach the same way the games do */
   /* The street is wider than a phone on purpose (a street you can read beats
      one you can see all of). Open it on the middle, where the buildings are,
      not on the empty left verge — and if the child panned, put the street
