@@ -919,7 +919,7 @@ function viewBusiness() {
         <div class="big" style="font-size:28px">${money(val.yours)}</div>
         <p class="small muted">what your share is worth${v.outsideEquity > 0
           ? ' — you own ' + Math.round((1 - v.outsideEquity) * 100) + '%' : ''}</p></div>
-        <span style="font-size:30px">🏪</span></div>
+        ${ico('shop','🏪',34)}</div>
     </div>
 
     <div class="card">

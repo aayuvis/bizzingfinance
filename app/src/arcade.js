@@ -7,7 +7,7 @@
 
 import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
 import { money, price, currency, CURRENCIES } from './fmt.js';
-import { say } from './art.js';
+import { say, ico } from './art.js';
 import { ASSETS, STOCK, CHAPTERS, chapterDone } from './content.js';
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
@@ -47,7 +47,7 @@ export function viewArcade() {
     const open = !g.needs || chapterDone(c, g.needs);
     const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
     return `<button class="card" data-act="${open ? 'game' : 'lockedGame'}" data-arg="${g.id}" style="text-align:left;width:100%;${open ? '' : 'opacity:.62'}">
-      <div class="row"><span style="font-size:30px">${open ? g.em : '🔒'}</span>
+      <div class="row"><span style="${open ? '' : 'opacity:.45'}">${ico('quest', open ? g.em : '🔒', 30)}</span>
         <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
           <p class="small muted">${open ? esc(g.blurb) : 'Finish “' + esc(ch.title) + '” to open this'}</p></div>
         <span class="pill">${open ? g.keys : 'learn first'}</span></div></button>`;
@@ -55,7 +55,7 @@ export function viewArcade() {
   return `<div class="stack">
     ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
     <button class="card" data-act="nav" data-arg="market40" style="text-align:left;width:100%;border-color:var(--action)">
-      <div class="row"><span style="font-size:30px">📊</span>
+      <div class="row">${ico('market','📊',36)}
         <div class="grow"><b style="font-size:16px">The Market Game</b>
           <p class="small muted">Forty companies that do not exist, forty years of things happening to them.
             Study one, say what would hurt it, then put money behind your answer.</p></div>
