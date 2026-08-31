@@ -457,6 +457,56 @@ export const LETTERS = [
       { label: 'Pay the fee', wallet: -20, xp: 6, note: 'The prize never arrives. Nobody who is giving you money needs money from you first. That cost 20 — cheap, here.' },
       { label: 'Bin it and tell a grown-up', xp: 14, badge: 'scam-spotter', safe: true, note: 'Right on both counts: a prize you did not enter is not a prize, and telling someone is part of the answer.' }] },
 
+  /* ── household shocks (docs/09 §3) — the letters with consequences ────
+     Two primitives: a bill that recurs, a fuse that lands later. Every fuse
+     is deterministic — a random flood behind a paid choice would be a slot
+     machine; a certain one is a consequence on a delay. */
+  { id: 'hh-tap', from: 'nana', title: 'The tap is dripping',
+    body: 'Your tap has started to drip. Mistri-ji can fix it today for 8. Or you can put the bucket under it and hope.',
+    choices: [
+      { label: 'Fix it now', wallet: -8, xp: 12, defuse: 'hh-flood',
+        note: 'Fixed. Small costs now are how big costs get cancelled — that is most of what insurance is, too.' },
+      { label: 'The bucket will do', xp: 4, fuse: { id: 'hh-flood', days: 4 },
+        note: 'Noted. Drips do not fix themselves, and this one is now on a timer.' }] },
+  { id: 'hh-flood', from: 'nana', fuseOnly: true, title: 'The drip found the flour sack',
+    body: 'The tap you left dripping soaked the shelf below it overnight. The flour, the lentils, and the shelf itself: 30 to put right.',
+    choices: [
+      { label: 'Pay for the mess', wallet: -30, xp: 8,
+        note: 'The 8 you did not spend became 30. That trade has a name — deferred maintenance — and it almost always loses.' }] },
+  { id: 'hh-rent', from: 'mags', title: "The landlord's note",
+    body: 'Rents on Market Row are going up. Yours rises by 2 a week — unless you write back promising to stay the whole year, which softens it to 1.',
+    choices: [
+      { label: 'Promise the year, pay +1', bill: { id: 'hh-rent', name: 'Rent rise', units: 1, weeks: null }, xp: 12,
+        note: 'A commitment traded for a discount. Landlords pay for certainty; you just sold them some.' },
+      { label: 'Stay flexible, pay +2', bill: { id: 'hh-rent', name: 'Rent rise', units: 2, weeks: null }, xp: 10,
+        note: 'Costlier, but you kept your freedom to move. Flexibility is worth money too — you just bought some.' }] },
+  { id: 'hh-festival', from: 'pip', title: 'Festival week!',
+    body: 'Lights are going up across the square. Feasting properly costs about 3 extra a week for the two festival weeks. Cooking simple at home is a one-off 6 for sweets and oil.',
+    choices: [
+      { label: 'Celebrate properly', bill: { id: 'hh-festival', name: 'Festival food', units: 3, weeks: 2 }, xp: 10,
+        note: 'A season is allowed to cost more — the skill is knowing it will, before it does.' },
+      { label: 'Keep it simple', wallet: -6, xp: 10,
+        note: 'One planned cost instead of a bigger recurring one. Both fine; yours was cheaper and you knew it going in.' }] },
+  { id: 'hh-club', from: 'mags', title: 'First week FREE!',
+    body: "Mags's Tune Club: songs delivered to your door! First week free, then just 2 a week. Cancel any time, she says, waving vaguely.",
+    choices: [
+      { label: 'Join the club', bill: { id: 'hh-club', name: 'Tune Club', units: 2, weeks: 4 }, xp: 6,
+        note: 'Joined. It sits in your bills now — look at Money → Home and you will see it taking its 2 every pay day. "Free first week" is how subscriptions get in the door.' },
+      { label: 'No thanks', xp: 12,
+        note: 'The trick in "cancel any time" is that cancelling takes remembering. You skipped the whole trap.' }] },
+  { id: 'hh-umbrella', from: 'nana', title: 'The umbrella fund',
+    body: 'Monsoon reaches Market Row in about three weeks — it always does. The street umbrella fund is 1 a week for four weeks, and it covers your stall when the rain comes. Roofs that are not covered cost about 24 to dry out.',
+    choices: [
+      { label: 'Join the fund', bill: { id: 'hh-umbrella', name: 'Umbrella fund', units: 1, weeks: 4 }, defuse: 'hh-monsoon', xp: 14,
+        note: 'You paid 4 to cap a 24. That is insurance, whole and entire: many people each pay a little so no one pays a lot.' },
+      { label: 'Chance it', fuse: { id: 'hh-monsoon', days: 21 }, xp: 6,
+        note: 'The monsoon is not a maybe. Three weeks.' }] },
+  { id: 'hh-monsoon', from: 'nana', fuseOnly: true, title: 'The monsoon came',
+    body: 'It always does. Your stall took the rain uncovered, and drying out the boards and the baskets comes to 24.',
+    choices: [
+      { label: 'Pay to dry out', wallet: -24, xp: 8,
+        note: 'The fund would have been 4. Insurance looks like a waste right up until the sky opens.' }] },
+
   { id: 'l4', from: 'nana', title: 'A question, not a task',
     body: 'Ask someone at home tonight: what is the first thing they ever saved up for, and how long did it take? Then come back and tell me.',
     choices: [

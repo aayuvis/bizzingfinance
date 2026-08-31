@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 4;
+export const SCHEMA = 5;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -39,6 +39,7 @@ function migrate(blob) {
     if (blob.v === 1) blob = v1_to_v2(blob);
     else if (blob.v === 2) blob = v2_to_v3(blob);
     else if (blob.v === 3) blob = v3_to_v4(blob);
+    else if (blob.v === 4) blob = v4_to_v5(blob);
     else break;
   }
   return blob;
@@ -91,5 +92,17 @@ function v3_to_v4(old) {
     if (k.market) { k.market.series = null; k.market.holdings = {}; k.market.step = 8; }
   });
   old.v = 4;
+  return old;
+}
+
+/* v5: household shocks (docs/09). Letters can now leave lasting marks — a
+   recurring bill with weeks on it, a consequence on a timer — so the kid
+   carries a place for each. */
+function v4_to_v5(old) {
+  old.kids.forEach((k) => {
+    if (k.money && !k.money.extraBills) k.money.extraBills = [];
+    if (k.postbox && !k.postbox.fuses) k.postbox.fuses = [];
+  });
+  old.v = 5;
   return old;
 }

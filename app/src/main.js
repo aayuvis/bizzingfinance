@@ -152,6 +152,7 @@ function overlay() {
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? '+' : '−'}${money(Math.abs(o.result.money))}</span>` : ''}
              <span class="pill grow">+${o.result.xp} XP</span>
              ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ''}</div>
+           ${o.result.lasting ? `<p class="small" style="margin-top:9px;color:var(--muted)">${esc(o.result.lasting)}</p>` : ''}
            <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button>`
         : `<div class="stack" style="gap:8px;margin-top:14px">
             ${L.choices.map((ch, i) => `<button class="opt" data-act="letterPick" data-arg="${i}">${esc(ch.label)}</button>`).join('')}
@@ -501,7 +502,12 @@ function levelUp(res) {
 on('postbox', () => {
   const c = C();
   if (c.postbox.answered) { toast('Emptied — another one tomorrow'); return; }
-  R.overlay = { kind: 'letter', letter: LETTERS[c.postbox.idx % LETTERS.length], result: null };
+  /* a consequence that has come due jumps the queue: the flood does not wait
+     politely behind the tune club */
+  const fuse = sim.dueFuse(c);
+  const rotation = LETTERS.filter((l) => !l.fuseOnly);
+  const letter = fuse ? LETTERS.find((l) => l.id === fuse.id) : rotation[c.postbox.idx % rotation.length];
+  R.overlay = { kind: 'letter', letter, fuse: fuse ? fuse.id : null, result: null };
   sfx.click(); render();
 });
 on('letterPick', (i) => {
@@ -512,6 +518,20 @@ on('letterPick', (i) => {
     if (ch.wallet > 0) { sim.earn(c, amt, L.title, 'letter'); delta = amt; }
     else { sim.spend(c, amt, L.title, 'letter'); delta = -amt; }
   }
+  /* lasting consequences (docs/09): bills that recur, fuses that land later */
+  let lasting = '';
+  if (ch.bill) {
+    sim.addBill(c, ch.bill);
+    lasting = `${ch.bill.name}: ${money(price(ch.bill.units))} a week${ch.bill.weeks ? ` for ${ch.bill.weeks} weeks` : ''} — it's in your bills now.`;
+  }
+  if (ch.unbill) sim.removeBill(c, ch.unbill);
+  if (ch.fuse) sim.addFuse(c, ch.fuse);
+  if (ch.defuse) sim.defuse(c, ch.defuse);
+  if (R.overlay.fuse) sim.defuse(c, R.overlay.fuse);
+  decisions.log(c, {
+    surface: 'letter', chose: ch.label, label: L.title,
+    alternatives: L.choices.filter((x) => x !== ch).map((x) => x.label),
+  });
   const res = sim.addXP(c, ch.xp || 0);
   if (ch.badge) sim.badge(c, ch.badge);
   c.postbox.answered = true;
@@ -519,7 +539,7 @@ on('letterPick', (i) => {
   sim.questTick(c, 'letter', 1);
   if (L.scam && ch.safe) sim.questTick(c, 'scam', 1);
   sim.stamp(c);
-  R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, good: !(L.scam && !ch.safe) };
+  R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
   if (delta > 0) sfx.coin(); else if (L.scam && !ch.safe) sfx.bad(); else sfx.good();
   render();
   if (res.leveled) setTimeout(() => levelUp(res), 900);
@@ -903,5 +923,5 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
   });
 }
 
-window.BZF = { R, sim, ledger, mastery, decisions, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   cardById, allCards: ALL_CARDS, fire, key: (id) => shuffledDrill(ALL_CARDS.find((c) => c.id === id)).answer };

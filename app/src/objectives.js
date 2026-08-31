@@ -279,7 +279,7 @@ export const STRANDS = ['EARN', 'CHOOSE', 'KEEP', 'GROW', 'OWE', 'GUARD'];
    quietly poorer than it claims. validate() fails on it, so the list and the
    code cannot drift apart. Add a surface here only when you have written the
    call, not when you intend to. */
-export const INSTRUMENTED = ['store', 'goals', 'loans'];
+export const INSTRUMENTED = ['store', 'goals', 'loans', 'letter'];
 
 /* The teaching card for an objective, whether it lives in a chapter or here. */
 export function teachCard(o, allCards) {

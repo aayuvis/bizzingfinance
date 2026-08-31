@@ -46,6 +46,7 @@ export function newChild(name, band, cur) {
     name: name || 'Friend', band: band || 'builder', currency: cur || 'INR', created: now,
     money: {
       wallet: price(12),
+      extraBills: [],
       jars: { spend: 0, save: 0, grow: 0, give: 0 },
       rules: { spend: 40, save: 30, grow: 20, give: 10 },
       goals: [],
@@ -59,7 +60,7 @@ export function newChild(name, band, cur) {
     market: newMarket((now ^ 0x9e3779b9) >>> 0),
     biz: null,
     streak: { days: [dayIndex(now)], last: dayIndex(now) },
-    postbox: { day: dayIndex(now), idx: 0, answered: false, log: [] },
+    postbox: { day: dayIndex(now), idx: 0, answered: false, log: [], fuses: [] },
     shop: { owned: [], cooling: {} },
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },
@@ -84,8 +85,44 @@ export function refreshBills(c) {
   h.bills.forEach((b) => bills.push({ name: b.name, units: b.units, amt: at(b.units) }));
   bills.push({ name: h.perk === 'kitchen' ? 'Food (you cook)' : 'Food', units: h.food, amt: at(h.food) });
   if (c.home.mortgage) bills.push({ name: 'Mortgage', units: 0, amt: c.home.mortgage.perWeek });
+  /* Letters can change what living costs (docs/09): a rent rise, a club
+     subscription, an umbrella fund. Each carries the weeks it has left; a
+     null is for keeps. They price like everything else, so year 3's
+     inflation reaches them too. */
+  (c.money.extraBills || []).forEach((b) => bills.push({
+    name: b.name + (b.weeks != null ? ` (${b.weeks} wk${b.weeks === 1 ? '' : 's'} left)` : ''),
+    units: b.units, amt: at(b.units), extra: b.id }));
   c.money.bills = bills;
   return bills;
+}
+
+/* ── household shocks (docs/09 §3) ──────────────────────────────────────
+   A household is not a static cost, it is a stream of small shocks and
+   offers, and they arrive as letters. Two primitives carry every one of
+   them: a BILL that recurs (a rent rise, a subscription, an umbrella fund)
+   and a FUSE that is lit now and lands later (the tap you did not fix, the
+   monsoon everyone knew was coming). Fuses are deterministic on purpose —
+   a random flood behind a paid choice would be a slot machine (CONCEPT
+   §6.3); a certain one is just a consequence on a delay. */
+export function addBill(c, b) {
+  if (!c.money.extraBills) c.money.extraBills = [];
+  if (c.money.extraBills.find((x) => x.id === b.id)) return;
+  c.money.extraBills.push({ id: b.id, name: b.name, units: b.units, weeks: b.weeks == null ? null : b.weeks });
+}
+export function removeBill(c, id) {
+  c.money.extraBills = (c.money.extraBills || []).filter((x) => x.id !== id);
+}
+export function addFuse(c, f) {
+  if (!c.postbox.fuses) c.postbox.fuses = [];
+  if (c.postbox.fuses.find((x) => x.id === f.id)) return;
+  c.postbox.fuses.push({ id: f.id, day: dayIndex(Date.now()) + f.days });
+}
+export function defuse(c, id) {
+  c.postbox.fuses = (c.postbox.fuses || []).filter((x) => x.id !== id);
+}
+export function dueFuse(c) {
+  const d = dayIndex(Date.now());
+  return (c.postbox.fuses || []).find((x) => x.day <= d) || null;
 }
 export function weeklyCost(c) { return refreshBills(c).reduce((t, b) => t + b.amt, 0); }
 /* What you know is what you're worth. A wage frozen at level 1 makes the top
@@ -415,6 +452,11 @@ export function daysToPay(c) { return Math.max(0, Math.ceil((c.money.nextPay - D
 
 export function runPayDay(c, state) {
   const out = { wage: 0, bills: [], interest: 0, split: null, loan: 0, chores: [] };
+  /* timed extra bills burn a week each pay day and fall off when spent */
+  if (c.money.extraBills) {
+    c.money.extraBills.forEach((b) => { if (b.weeks != null) b.weeks -= 1; });
+    c.money.extraBills = c.money.extraBills.filter((b) => b.weeks == null || b.weeks > 0);
+  }
 
   /* Family Mode: a parent mirrors a real allowance in, entirely by hand.
      No bank connection, ever (CONCEPT §8). */
