@@ -34,6 +34,15 @@ function loadLesson(id) {
   if (MEDIA[id]) return Promise.resolve(MEDIA[id]);
   return LOADERS[id]().then((m) => (MEDIA[id] = m.default));
 }
+
+/* Audio is referenced BY KEY, never by a path a module wrote down — the rule
+   Bizzing India states in bhasha.js and both siblings run at a scale this
+   app will never reach (Bee: 42,392 clips; India: 11,506). One place
+   resolves a key, so moving the corpus is one edit and a lesson module
+   never knows where a clip lives. Relative, so the app drops onto any base
+   path. A beat with no key has no clip — the single-file build strips them,
+   and the measured duration is the clock instead. */
+const clipURL = (key) => 'voice/lessons/' + key + '.mp3';
 import { ico } from './art.js';
 import { esc } from './ui.js';
 
@@ -149,15 +158,18 @@ function playBeat() {
   const L = MEDIA[P.lid], b = L.beats[P.i];
   clearTimeout(P.timer);
   if (P.audio) { P.audio.onended = null; P.audio.pause(); }
-  if (!b.src) {
+  if (!b.key) {
     /* a lite lesson (or a browser with no audio): the measured duration is
        still the clock, so the teaching still walks at the narrated pace */
     P.audio = null; refresh();
     P.timer = setTimeout(() => advance(), b.dur * 1000);
     return;
   }
-  P.audio = new Audio(b.src);
+  P.audio = new Audio(clipURL(b.key));
   P.audio.onended = () => advance();
+  /* a clip that never arrives must not strand a child on beat four: the
+     measured duration is a hard backstop, cancelled the moment audio ends */
+  P.audio.onerror = () => { P.timer = setTimeout(() => advance(), 200); };
   refresh();
   P.audio.play().catch(() => {
     P.timer = setTimeout(() => advance(), b.dur * 1000);

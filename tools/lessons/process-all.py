@@ -1,33 +1,42 @@
-"""process-all.py — assemble every recorded lesson into per-lesson modules.
+"""process-all.py — assemble every recorded lesson.
 
-Weight is the whole reason this file exists. Thirty-two narrated lessons are
-about five megabytes of audio, and one module holding all of it would ride
-in the main bundle of an app whose first paint budget is measured in
-milliseconds. So:
+AUDIO IS FILES, REFERENCED BY KEY. This is the family's answer, and both
+siblings prove it at a scale this app will never reach: Bizzing Bee ships
+42,392 mp3 clips (1.2 GB), Bizzing India 11,506 (522 MB) — every one a loose
+file under voice/, addressed by key, cached by the service worker like any
+other same-origin GET. India's bhasha.js states the rule outright: "Audio is
+referenced BY KEY only — 'hi/ka' means voice/hi/ka.mp3."
 
-  app/src/lessons/<id>.js       the lesson, audio embedded
-  app/src/lessons/<id>.lite.js  the same lesson, audio stripped — captions
-                                and measured durations still carry the
-                                teaching, on the duration clock
-  app/src/lessons-poses.js      the teaching avatars, shared once
-  app/src/lessonindex-list.js   loaders, every lesson FULL (Vite splits each
-                                dynamic import into its own cached chunk)
-  app/src/lessonindex-lite.js   loaders, chapter 1 full and the rest lite —
-                                what the single self-contained file inlines,
-                                because a 7 MB "one file" stops being a
-                                courtesy
+The first cut of this file embedded clips as base64 data URIs inside the
+JavaScript. That was wrong three ways and the siblings had already paid for
+each: base64 costs a third of the bytes for nothing; the browser cannot
+cache a clip independently of the code around it; and audio inside a module
+is audio the parser must walk before the app can paint.
+
+So:
+  app/public/voice/lessons/<id>-<n>.mp3   the clips, as files
+  app/src/lessons/<id>.js                 beats: dur, line, stage, key
+  app/src/lessons-poses.js                the teaching avatars, shared once
+  app/src/lessonindex-list.js             loaders (Vite chunks each one)
+  app/src/lessonindex-lite.js             the same beats with no keys — the
+                                          single self-contained file has no
+                                          server to fetch a clip FROM, so it
+                                          teaches in captions on the measured
+                                          duration clock
 
 A lesson only ships if its run VERIFIED: every clip present, measured, loud
 enough. An unverified run is skipped loudly, never promoted quietly.
 """
-import base64, importlib.util, io, json, os, sys, glob
+import base64, importlib.util, io, json, os, shutil, sys, glob
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.join(HERE, '..', 'art')
 APP = os.path.join(HERE, '..', '..', 'app', 'src')
 OUTDIR = os.path.join(APP, 'lessons')
+VOICE = os.path.join(APP, '..', 'public', 'voice', 'lessons')
 os.makedirs(OUTDIR, exist_ok=True)
+os.makedirs(VOICE, exist_ok=True)
 spec = importlib.util.spec_from_file_location('pi', os.path.join(ART, 'process-icons.py'))
 pi = importlib.util.module_from_spec(spec); spec.loader.exec_module(pi)
 from scripts import LESSONS
@@ -66,9 +75,10 @@ for lid, L in LESSONS.items():
         skipped.append(lid + ' (NOT CLEAN)'); continue
     full, lite = [], []
     for m in man:
-        mp3 = open(os.path.join(run, f'{lid}-{m["i"]}.mp3'), 'rb').read()
+        name = f'{lid}-{m["i"]}.mp3'
+        shutil.copyfile(os.path.join(run, name), os.path.join(VOICE, name))
         core = f"dur: {m['dur']}, line: {json.dumps(m['line'])}, stage: {json.dumps(m['stage'])}"
-        full.append(f"    {{ {core}, src: 'data:audio/mpeg;base64,{base64.b64encode(mp3).decode()}' }},")
+        full.append(f"    {{ {core}, key: '{lid}-{m['i']}' }},")
         lite.append(f"    {{ {core} }},")
     for suffix, beats in (('', full), ('.lite', lite)):
         with open(os.path.join(OUTDIR, f'{lid}{suffix}.js'), 'w') as o:
@@ -78,15 +88,18 @@ print(f'lessons: {len(ready)} ready, skipped: {skipped or "none"}')
 
 # ── the two loader lists ────────────────────────────────────────────────
 with open(os.path.join(APP, 'lessonindex-list.js'), 'w') as o:
-    o.write(HEAD + "/* every lesson full — Vite gives each dynamic import its own chunk,\n   fetched on first watch and then held by the service worker */\nexport const LOADERS = {\n")
+    o.write(HEAD + "/* every lesson, with its clip keys — the module is a few hundred bytes\n   and the audio is fetched per clip from voice/lessons/, cached by the\n   worker like anything else same-origin */\nexport const LOADERS = {\n")
     for lid in ready:
         o.write(f"  '{lid}': () => import('./lessons/{lid}.js'),\n")
     o.write('};\n')
 with open(os.path.join(APP, 'lessonindex-lite.js'), 'w') as o:
-    o.write(HEAD + "/* the single-file variant: chapter 1 speaks, the rest teach in captions\n   on the measured-duration clock — a 7 MB \"one file\" is no courtesy */\nexport const LOADERS = {\n")
+    o.write(HEAD + "/* the single-file variant: one HTML file has no server to fetch a clip\n   from, so every lesson teaches in captions on the measured-duration\n   clock. The narration lives on the web build. */\nexport const LOADERS = {\n")
     for lid in ready:
-        suffix = '' if lid.startswith('c1') else '.lite'
+        suffix = '.lite'
         o.write(f"  '{lid}': () => import('./lessons/{lid}{suffix}.js'),\n")
     o.write('};\n')
-total = sum(os.path.getsize(os.path.join(OUTDIR, f)) for f in os.listdir(OUTDIR))
-print(f'lessons/: {total // 1024} kB across {len(os.listdir(OUTDIR))} modules')
+mods = sum(os.path.getsize(os.path.join(OUTDIR, f)) for f in os.listdir(OUTDIR))
+clips = [f for f in os.listdir(VOICE) if f.endswith('.mp3')]
+audio = sum(os.path.getsize(os.path.join(VOICE, f)) for f in clips)
+print(f'src/lessons/: {mods // 1024} kB of modules across {len(os.listdir(OUTDIR))} files')
+print(f'public/voice/lessons/: {len(clips)} clips, {audio // 1024} kB — files, not data URIs')
