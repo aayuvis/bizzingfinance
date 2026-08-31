@@ -1805,6 +1805,141 @@ input{font:inherit; color:inherit}
         { label: "Bin it and tell a grown-up", xp: 14, badge: "scam-spotter", safe: true, note: "Right on both counts: a prize you did not enter is not a prize, and telling someone is part of the answer." }
       ]
     },
+    /* ── household shocks (docs/09 §3) — the letters with consequences ────
+       Two primitives: a bill that recurs, a fuse that lands later. Every fuse
+       is deterministic — a random flood behind a paid choice would be a slot
+       machine; a certain one is a consequence on a delay. */
+    {
+      id: "hh-tap",
+      from: "nana",
+      title: "The tap is dripping",
+      body: "Your tap has started to drip. Mistri-ji can fix it today for 8. Or you can put the bucket under it and hope.",
+      choices: [
+        {
+          label: "Fix it now",
+          wallet: -8,
+          xp: 12,
+          defuse: "hh-flood",
+          note: "Fixed. Small costs now are how big costs get cancelled \u2014 that is most of what insurance is, too."
+        },
+        {
+          label: "The bucket will do",
+          xp: 4,
+          fuse: { id: "hh-flood", days: 4 },
+          note: "Noted. Drips do not fix themselves, and this one is now on a timer."
+        }
+      ]
+    },
+    {
+      id: "hh-flood",
+      from: "nana",
+      fuseOnly: true,
+      title: "The drip found the flour sack",
+      body: "The tap you left dripping soaked the shelf below it overnight. The flour, the lentils, and the shelf itself: 30 to put right.",
+      choices: [
+        {
+          label: "Pay for the mess",
+          wallet: -30,
+          xp: 8,
+          note: "The 8 you did not spend became 30. That trade has a name \u2014 deferred maintenance \u2014 and it almost always loses."
+        }
+      ]
+    },
+    {
+      id: "hh-rent",
+      from: "mags",
+      title: "The landlord's note",
+      body: "Rents on Market Row are going up. Yours rises by 2 a week \u2014 unless you write back promising to stay the whole year, which softens it to 1.",
+      choices: [
+        {
+          label: "Promise the year, pay +1",
+          bill: { id: "hh-rent", name: "Rent rise", units: 1, weeks: null },
+          xp: 12,
+          note: "A commitment traded for a discount. Landlords pay for certainty; you just sold them some."
+        },
+        {
+          label: "Stay flexible, pay +2",
+          bill: { id: "hh-rent", name: "Rent rise", units: 2, weeks: null },
+          xp: 10,
+          note: "Costlier, but you kept your freedom to move. Flexibility is worth money too \u2014 you just bought some."
+        }
+      ]
+    },
+    {
+      id: "hh-festival",
+      from: "pip",
+      title: "Festival week!",
+      body: "Lights are going up across the square. Feasting properly costs about 3 extra a week for the two festival weeks. Cooking simple at home is a one-off 6 for sweets and oil.",
+      choices: [
+        {
+          label: "Celebrate properly",
+          bill: { id: "hh-festival", name: "Festival food", units: 3, weeks: 2 },
+          xp: 10,
+          note: "A season is allowed to cost more \u2014 the skill is knowing it will, before it does."
+        },
+        {
+          label: "Keep it simple",
+          wallet: -6,
+          xp: 10,
+          note: "One planned cost instead of a bigger recurring one. Both fine; yours was cheaper and you knew it going in."
+        }
+      ]
+    },
+    {
+      id: "hh-club",
+      from: "mags",
+      title: "First week FREE!",
+      body: "Mags's Tune Club: songs delivered to your door! First week free, then just 2 a week. Cancel any time, she says, waving vaguely.",
+      choices: [
+        {
+          label: "Join the club",
+          bill: { id: "hh-club", name: "Tune Club", units: 2, weeks: 4 },
+          xp: 6,
+          note: 'Joined. It sits in your bills now \u2014 look at Money \u2192 Home and you will see it taking its 2 every pay day. "Free first week" is how subscriptions get in the door.'
+        },
+        {
+          label: "No thanks",
+          xp: 12,
+          note: 'The trick in "cancel any time" is that cancelling takes remembering. You skipped the whole trap.'
+        }
+      ]
+    },
+    {
+      id: "hh-umbrella",
+      from: "nana",
+      title: "The umbrella fund",
+      body: "Monsoon reaches Market Row in about three weeks \u2014 it always does. The street umbrella fund is 1 a week for four weeks, and it covers your stall when the rain comes. Roofs that are not covered cost about 24 to dry out.",
+      choices: [
+        {
+          label: "Join the fund",
+          bill: { id: "hh-umbrella", name: "Umbrella fund", units: 1, weeks: 4 },
+          defuse: "hh-monsoon",
+          xp: 14,
+          note: "You paid 4 to cap a 24. That is insurance, whole and entire: many people each pay a little so no one pays a lot."
+        },
+        {
+          label: "Chance it",
+          fuse: { id: "hh-monsoon", days: 21 },
+          xp: 6,
+          note: "The monsoon is not a maybe. Three weeks."
+        }
+      ]
+    },
+    {
+      id: "hh-monsoon",
+      from: "nana",
+      fuseOnly: true,
+      title: "The monsoon came",
+      body: "It always does. Your stall took the rain uncovered, and drying out the boards and the baskets comes to 24.",
+      choices: [
+        {
+          label: "Pay to dry out",
+          wallet: -24,
+          xp: 8,
+          note: "The fund would have been 4. Insurance looks like a waste right up until the sky opens."
+        }
+      ]
+    },
     {
       id: "l4",
       from: "nana",
@@ -2758,6 +2893,8 @@ input{font:inherit; color:inherit}
     JOB_FLOOR: () => JOB_FLOOR,
     MARKET_STEPS: () => MARKET_STEPS,
     MARKET_WEEKS: () => MARKET_WEEKS,
+    addBill: () => addBill,
+    addFuse: () => addFuse,
     addGoal: () => addGoal,
     addXP: () => addXP,
     badge: () => badge,
@@ -2779,8 +2916,10 @@ input{font:inherit; color:inherit}
     dayLedger: () => dayLedger,
     daysToPay: () => daysToPay,
     debt: () => debt,
+    defuse: () => defuse,
     doJob: () => doJob,
     dropGoal: () => dropGoal,
+    dueFuse: () => dueFuse,
     earn: () => earn,
     earnRate: () => earnRate,
     fixState: () => fixState,
@@ -2821,6 +2960,7 @@ input{font:inherit; color:inherit}
     questTick: () => questTick,
     raidGoal: () => raidGoal,
     refreshBills: () => refreshBills,
+    removeBill: () => removeBill,
     repayLoan: () => repayLoan,
     rollQuests: () => rollQuests,
     runPayDay: () => runPayDay,
@@ -2856,7 +2996,7 @@ input{font:inherit; color:inherit}
   var KEY = "bzf_profile";
   var OLD = "bzf_v1";
   var DEV = "bzf_device";
-  var SCHEMA = 4;
+  var SCHEMA = 5;
   function read(k, fallback) {
     try {
       const raw = localStorage.getItem(k);
@@ -2915,6 +3055,7 @@ input{font:inherit; color:inherit}
       if (blob.v === 1) blob = v1_to_v2(blob);
       else if (blob.v === 2) blob = v2_to_v3(blob);
       else if (blob.v === 3) blob = v3_to_v4(blob);
+      else if (blob.v === 4) blob = v4_to_v5(blob);
       else break;
     }
     return blob;
@@ -2962,6 +3103,14 @@ input{font:inherit; color:inherit}
       }
     });
     old.v = 4;
+    return old;
+  }
+  function v4_to_v5(old) {
+    old.kids.forEach((k) => {
+      if (k.money && !k.money.extraBills) k.money.extraBills = [];
+      if (k.postbox && !k.postbox.fuses) k.postbox.fuses = [];
+    });
+    old.v = 5;
     return old;
   }
 
@@ -3517,6 +3666,7 @@ input{font:inherit; color:inherit}
       created: now2,
       money: {
         wallet: price(12),
+        extraBills: [],
         jars: { spend: 0, save: 0, grow: 0, give: 0 },
         rules: { spend: 40, save: 30, grow: 20, give: 10 },
         goals: [],
@@ -3530,7 +3680,7 @@ input{font:inherit; color:inherit}
       market: newMarket((now2 ^ 2654435769) >>> 0),
       biz: null,
       streak: { days: [dayIndex(now2)], last: dayIndex(now2) },
-      postbox: { day: dayIndex(now2), idx: 0, answered: false, log: [] },
+      postbox: { day: dayIndex(now2), idx: 0, answered: false, log: [], fuses: [] },
       shop: { owned: [], cooling: {} },
       jobs: {},
       home: { tier: 0, since: now2, mortgage: null },
@@ -3558,8 +3708,34 @@ input{font:inherit; color:inherit}
     h.bills.forEach((b) => bills.push({ name: b.name, units: b.units, amt: at(b.units) }));
     bills.push({ name: h.perk === "kitchen" ? "Food (you cook)" : "Food", units: h.food, amt: at(h.food) });
     if (c.home.mortgage) bills.push({ name: "Mortgage", units: 0, amt: c.home.mortgage.perWeek });
+    (c.money.extraBills || []).forEach((b) => bills.push({
+      name: b.name + (b.weeks != null ? ` (${b.weeks} wk${b.weeks === 1 ? "" : "s"} left)` : ""),
+      units: b.units,
+      amt: at(b.units),
+      extra: b.id
+    }));
     c.money.bills = bills;
     return bills;
+  }
+  function addBill(c, b) {
+    if (!c.money.extraBills) c.money.extraBills = [];
+    if (c.money.extraBills.find((x) => x.id === b.id)) return;
+    c.money.extraBills.push({ id: b.id, name: b.name, units: b.units, weeks: b.weeks == null ? null : b.weeks });
+  }
+  function removeBill(c, id) {
+    c.money.extraBills = (c.money.extraBills || []).filter((x) => x.id !== id);
+  }
+  function addFuse(c, f) {
+    if (!c.postbox.fuses) c.postbox.fuses = [];
+    if (c.postbox.fuses.find((x) => x.id === f.id)) return;
+    c.postbox.fuses.push({ id: f.id, day: dayIndex(Date.now()) + f.days });
+  }
+  function defuse(c, id) {
+    c.postbox.fuses = (c.postbox.fuses || []).filter((x) => x.id !== id);
+  }
+  function dueFuse(c) {
+    const d = dayIndex(Date.now());
+    return (c.postbox.fuses || []).find((x) => x.day <= d) || null;
   }
   function weeklyCost(c) {
     return refreshBills(c).reduce((t, b) => t + b.amt, 0);
@@ -3880,6 +4056,12 @@ input{font:inherit; color:inherit}
   }
   function runPayDay(c, state) {
     const out = { wage: 0, bills: [], interest: 0, split: null, loan: 0, chores: [] };
+    if (c.money.extraBills) {
+      c.money.extraBills.forEach((b) => {
+        if (b.weeks != null) b.weeks -= 1;
+      });
+      c.money.extraBills = c.money.extraBills.filter((b) => b.weeks == null || b.weeks > 0);
+    }
     const wage = weeklyIncome(c);
     c.money.wallet += wage;
     txn(c, "in", wage, "Pay day \u2014 wages", "wage");
@@ -4960,7 +5142,7 @@ input{font:inherit; color:inherit}
     return BY_ID[id];
   }
   var STRANDS = ["EARN", "CHOOSE", "KEEP", "GROW", "OWE", "GUARD"];
-  var INSTRUMENTED = ["store", "goals", "loans"];
+  var INSTRUMENTED = ["store", "goals", "loans", "letter"];
   function teachCard(o, allCards) {
     return NEW_CARDS.find((c) => c.id === o.teach) || allCards.find((c) => c.id === o.teach) || null;
   }
@@ -10953,6 +11135,7 @@ input{font:inherit; color:inherit}
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? "+" : "\u2212"}${money(Math.abs(o.result.money))}</span>` : ""}
              <span class="pill grow">+${o.result.xp} XP</span>
              ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ""}</div>
+           ${o.result.lasting ? `<p class="small" style="margin-top:9px;color:var(--muted)">${esc(o.result.lasting)}</p>` : ""}
            <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button>` : `<div class="stack" style="gap:8px;margin-top:14px">
             ${L.choices.map((ch, i) => `<button class="opt" data-act="letterPick" data-arg="${i}">${esc(ch.label)}</button>`).join("")}
            </div>`}`);
@@ -11398,7 +11581,10 @@ input{font:inherit; color:inherit}
       toast("Emptied \u2014 another one tomorrow");
       return;
     }
-    R.overlay = { kind: "letter", letter: LETTERS[c.postbox.idx % LETTERS.length], result: null };
+    const fuse = dueFuse(c);
+    const rotation = LETTERS.filter((l) => !l.fuseOnly);
+    const letter = fuse ? LETTERS.find((l) => l.id === fuse.id) : rotation[c.postbox.idx % rotation.length];
+    R.overlay = { kind: "letter", letter, fuse: fuse ? fuse.id : null, result: null };
     sfx.click();
     render();
   });
@@ -11415,6 +11601,21 @@ input{font:inherit; color:inherit}
         delta = -amt;
       }
     }
+    let lasting = "";
+    if (ch.bill) {
+      addBill(c, ch.bill);
+      lasting = `${ch.bill.name}: ${money(price(ch.bill.units))} a week${ch.bill.weeks ? ` for ${ch.bill.weeks} weeks` : ""} \u2014 it's in your bills now.`;
+    }
+    if (ch.unbill) removeBill(c, ch.unbill);
+    if (ch.fuse) addFuse(c, ch.fuse);
+    if (ch.defuse) defuse(c, ch.defuse);
+    if (R.overlay.fuse) defuse(c, R.overlay.fuse);
+    log(c, {
+      surface: "letter",
+      chose: ch.label,
+      label: L.title,
+      alternatives: L.choices.filter((x) => x !== ch).map((x) => x.label)
+    });
     const res = addXP(c, ch.xp || 0);
     if (ch.badge) badge(c, ch.badge);
     c.postbox.answered = true;
@@ -11422,7 +11623,7 @@ input{font:inherit; color:inherit}
     questTick(c, "letter", 1);
     if (L.scam && ch.safe) questTick(c, "scam", 1);
     stamp(c);
-    R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, good: !(L.scam && !ch.safe) };
+    R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
     if (delta > 0) sfx.coin();
     else if (L.scam && !ch.safe) sfx.bad();
     else sfx.good();
@@ -12051,6 +12252,7 @@ So it costs ${money(offer.cost)}.`);
     ledger: ledger_exports,
     mastery: mastery_exports,
     decisions: decisions_exports,
+    letters: LETTERS,
     report: report_exports,
     validate: () => validate(ALL_CARDS),
     objectives: OBJECTIVES,
