@@ -10,3 +10,8 @@ app/build/
 *.gkey
 .gkey
 tools/art/*.png
+tools/lessons/run-*/
+__pycache__/
+tools/art/nana-*.png
+tools/art/bld-*.png
+tools/art/sprites.pkl
