@@ -27,7 +27,9 @@ export function companionFigure(c, size, opts = {}) {
     const a = ACC[id], item = co.WARDROBE.find((w) => w.id === id);
     if (!a || !item) return '';
     const anchor = sp.a[item.slot] || sp.a.head;
-    const aw = Math.round(s * (item.slot === 'face' ? 0.34 : item.slot === 'neck' ? 0.46 : 0.42));
+    /* sized to the measured head, so the same hat fits a duckling and a grown dog */
+    const hw = (sp.a.hw || 0.42) * s;
+    const aw = Math.round(hw * (item.slot === 'face' ? 0.7 : item.slot === 'neck' ? 0.9 : 0.95));
     const ah = Math.round(aw * a.h / a.w);
     const cx = anchor[0] * s, cy = anchor[1] * h;
     /* a hat sits ON the head-top; a collar hangs FROM the neck; specs sit on the face */
