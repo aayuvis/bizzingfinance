@@ -59,7 +59,9 @@ build rides along at `/bizzington.html`.
 | **Bizz & Co** | Stock, pricing with real demand elasticity, weather, spoilage, rent, and a daily profit statement. |
 | **Store** | Priced in the child's own money, every item showing its opportunity cost, optional 24-hour cooling-off. |
 | **Arcade** | Eleven games in three shelves. **Main Street** (the board game) · eight action games — Change Rush, Needs vs Wants, Scam Spotter, Budget Blitz, **Compound Climb** (hold to grow, and you can be wiped out), **Stall Rush** (sixty seconds of customers), **Market Storm** (a game whose winning move is inaction), The Market Cup · two quick drills. Keyboard **and** touch on every one. |
-| **The postbox** | 22 letters; roughly one in six is a scam that looks exactly like the rest. |
+| **The postbox** | 25 letters; roughly one in six is a scam that looks exactly like the rest. Some have a fuse: a choice on Tuesday lands on Saturday. |
+| **The companion** | Five who need homes — puppy, kitten, parrot, bunny, duckling — three growth stages, three moods, a wardrobe of priced wants. Adoption costs once and food is a weekly bill from the same wallet. Poorly only when that bill went unpaid on pay day; never for a missed day; never dies. [docs/10](../docs/10-the-three-motivators.md). |
+| **Keepsakes & the morning after** | The first thing she buys is kept as a receipt in the Collection — the item, the shifts that paid for it, the weeks it took, counted from her ledger. On a new day Home opens with what is *waiting*: a letter, the bell, the companion by the door, the board. Never what she lost. |
 | **Grown-up's page** | What they learned, what they *decided*, talk-together prompts, a printable week, Family Mode, multiple children, currency, mode, sound. |
 | **PWA** | Manifest, icon, and a service worker that caches the shell. Installable, works offline. |
 
@@ -70,7 +72,10 @@ build rides along at `/bizzington.html`.
 | `src/store.js` | **The seam.** All persistence. Two buckets — household (syncs one day) and device (never does) — plus a versioned `migrate()`. Nothing else touches storage. |
 | `src/sim.js` | The money. Wallet, jars, goals, bank, loans, the Exchange, Bizz & Co, XP, badges, pay day, currency conversion, and the clock guard. |
 | `src/content.js` | Curriculum, letters, jobs, glossary, shop, market, stock, badges — everything the app teaches. |
-| `src/town.js` | Bizzington, drawn from the child's level. |
+| `src/town.js` | Bizzington, drawn from the child's level; the companion walks the street at its current stage and mood. |
+| `src/companion.js` | The creature. Adoption, the food bill, care that moves only on pay day, growth, the wardrobe, play. Every rupee goes through `sim.js`. |
+| `src/companionview.js` `src/companions-gen.js` | The figure with what it wears (accessories at anchors **measured from the sprite's alpha**), the shelter, the wardrobe, the Home card · generated sprites, 45 + 6, rebuilt by `tools/art/process-companions.py`. |
+| `src/keepsakes.js` | The receipt slip and the overnight card. |
 | `src/views.js` | Home · Learn · Money · Store · Progress · Parents · Collection. |
 | `src/arcade.js` | The hub and ten games. `twoChoice` and `quizGame` are shared shapes; Change Rush, Compound Climb, Stall Rush, Market Storm and the Market Cup each own their loop. Games with a loop implement `mount()` / `stop()` — string rendering replaces the DOM every frame, so a live game re-attaches after each render rather than holding a stale node. |
 | `src/board.js` | **Main Street** — the board game. Twenty squares, three players, chance cards that are real money events, and a win condition that is the Independence meter on a board: your shops pay for your life. Nobody goes bankrupt. |
@@ -134,7 +139,7 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 - **No accounts.** One household per browser, `localStorage` only. Supabase + RLS is the
   next structural piece, and `store.js` is the seam it goes behind.
 - **Entitlements do not exist yet** — everything is unlocked by level, nothing by payment.
-- No audio narration; the cast speaks in text. Bizzing Bee's bundled-clip pattern is the model.
+- Only the **first receipt** is a keepsake so far. The first pay slip, the first statement and the season finales in docs/08 are the same shape and not yet objects.
 - Sprout mode hides the market and debt and cannot go negative, but the *reading level* is
   not yet differentiated.
 - The Market Cup replays one authored season. A shipping build wants many.

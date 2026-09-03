@@ -61,6 +61,8 @@ export function newChild(name, band, cur) {
     biz: null,
     streak: { days: [dayIndex(now)], last: dayIndex(now) },
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [], fuses: [] },
+    companion: null,
+    keepsakes: [], overnight: null,
     shop: { owned: [], cooling: {} },
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },
@@ -478,6 +480,9 @@ export function runPayDay(c, state) {
     txn(c, 'out', b.amt, b.name, 'bill');
     out.bills.push(b);
   });
+  /* the companion's clock: a negative wallet here means the last things on
+     the list did not really get bought, and the food was one of them */
+  out.walletAfterBills = c.money.wallet;
 
   if (hasPerk(c, 'lockbox') && c.money.jars.save > 0) {
     const i = Math.round(c.money.jars.save * 0.01);
@@ -778,12 +783,54 @@ export function badge(c, id) {
 export function touchDay(c) {
   const d = dayIndex(Date.now());
   if (c.streak.last === d) return false;
+  const nights = Math.max(1, d - c.streak.last);
   if (c.streak.last === d - 1) c.streak.days.push(d);
   else c.streak.days = [d];
   c.streak.last = d;
   if (c.postbox.day !== d) { c.postbox.day = d; c.postbox.idx += 1; c.postbox.answered = false; }
   rollQuests(c);   /* so a job taken before Home is opened can't tick yesterday's three */
+  /* the morning after: what is waiting, measured on the day it flips. The
+     overnight card (keepsakes.js) reads this and never invents an event. */
+  c.overnight = { day: d, nights, seen: false, fuse: !!dueFuse(c) };
   return true;
+}
+
+/* ── the shop she buys from (content.js SHOP), and the first receipt ──────
+   The Spend jar tops the wallet up if it is short, because that is what the
+   jar is for; nothing else does. The FIRST thing she ever buys is kept as a
+   receipt: the item, the shifts that paid for it and the weeks they took —
+   counted back through her own ledger, never guessed. */
+export function buyFromShop(c, it) {
+  const p = price(it.units);
+  let short = p - c.money.wallet;
+  if (short > 0) {
+    const take = Math.min(short, c.money.jars.spend);
+    c.money.jars.spend -= take; c.money.wallet += take; short -= take;
+  }
+  if (short > 0) return { ok: false, why: 'Not enough — even after the Spend jar' };
+  c.money.wallet -= p;
+  txn(c, 'out', p, it.name, 'shop');
+  c.shop.owned.push(it.id);
+  const receipt = keepReceipt(c, it, p);
+  stamp(c);
+  return { ok: true, receipt };
+}
+function keepReceipt(c, it, p) {
+  if (!c.keepsakes) c.keepsakes = [];
+  if (c.keepsakes.some((k) => k.kind === 'receipt')) return null;
+  const shifts = []; let sum = 0;
+  for (const t of c.money.txns) {           /* newest first */
+    if (t.kind !== 'in' || t.cat !== 'job') continue;
+    shifts.push(t); sum += t.amt;
+    if (sum >= p) break;
+  }
+  const from = shifts.length ? shifts[shifts.length - 1].t : Date.now();
+  const k = { id: 'k' + Date.now().toString(36), kind: 'receipt', t: Date.now(),
+    item: it.name, itemId: it.id, em: it.em, price: p, shifts: shifts.length, covered: sum >= p,
+    weeks: Math.max(1, Math.ceil((Date.now() - from) / (7 * DAY))), who: c.name, level: c.learn.level };
+  c.keepsakes.push(k);
+  badge(c, 'first-receipt');
+  return k;
 }
 
 /* ── currency ────────────────────────────────────────────────────────────

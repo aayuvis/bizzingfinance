@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 5;
+export const SCHEMA = 7;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -40,6 +40,8 @@ function migrate(blob) {
     else if (blob.v === 2) blob = v2_to_v3(blob);
     else if (blob.v === 3) blob = v3_to_v4(blob);
     else if (blob.v === 4) blob = v4_to_v5(blob);
+    else if (blob.v === 5) blob = v5_to_v6(blob);
+    else if (blob.v === 6) blob = v6_to_v7(blob);
     else break;
   }
   return blob;
@@ -104,5 +106,25 @@ function v4_to_v5(old) {
     if (k.postbox && !k.postbox.fuses) k.postbox.fuses = [];
   });
   old.v = 5;
+  return old;
+}
+
+/* v6: the companion (companion.js). A kid without one carries null, never a
+   missing key — "has she adopted?" must be a question with one answer. */
+function v5_to_v6(old) {
+  old.kids.forEach((k) => { if (k.companion === undefined) k.companion = null; });
+  old.v = 6;
+  return old;
+}
+
+/* v7: keepsakes (the first receipt) and the overnight card (keepsakes.js).
+   An existing child has bought things before there were receipts; those are
+   not back-filled — a keepsake is kept at the moment, or not at all. */
+function v6_to_v7(old) {
+  old.kids.forEach((k) => {
+    if (!k.keepsakes) k.keepsakes = [];
+    if (k.overnight === undefined) k.overnight = null;
+  });
+  old.v = 7;
   return old;
 }

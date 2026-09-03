@@ -483,6 +483,18 @@ export const LETTERS = [
     choices: [
       { label: 'Pay for the mess', wallet: -30, xp: 8,
         note: 'The 8 you did not spend became 30. That trade has a name — deferred maintenance — and it almost always loses.' }] },
+  { id: 'hh-cough', from: 'nana', needsCompanion: true, title: 'A cough at the door',
+    body: "Your companion has been off their food and coughing at night. The vet can see them today for 8. Or you can wait and see — sometimes it passes, and sometimes it does not.",
+    choices: [
+      { label: 'The vet, today', wallet: -8, xp: 12, pet: 'well', defuse: 'hh-vet',
+        note: 'Seen, sorted, sleeping it off. Small costs now are how big costs get cancelled — for tap washers and for anyone you love.' },
+      { label: 'Wait and see', xp: 4, pet: 'ill', fuse: { id: 'hh-vet', days: 3 },
+        note: 'Noted. They are poorly until it is dealt with, and it is now on a timer.' }] },
+  { id: 'hh-vet', from: 'nana', fuseOnly: true, title: 'It did not pass',
+    body: 'The cough got worse and the vet came out at night, which costs more than a morning visit. 20, and a very sorry-looking companion who is going to be fine.',
+    choices: [
+      { label: 'Pay the night call', wallet: -20, xp: 8, pet: 'well',
+        note: 'The 8 became 20. That trade has a name — deferred maintenance — and it loses with pets exactly as it loses with taps.' }] },
   { id: 'hh-rent', from: 'mags', title: "The landlord's note",
     body: 'Rents on Market Row are going up. Yours rises by 2 a week — unless you write back promising to stay the whole year, which softens it to 1.',
     choices: [
@@ -517,6 +529,11 @@ export const LETTERS = [
       { label: 'Pay to dry out', wallet: -24, xp: 8,
         note: 'The fund would have been 4. Insurance looks like a waste right up until the sky opens.' }] },
 
+  { id: 'hh-adopt', from: 'nana', title: 'Five who need homes',
+    body: 'The shelter behind the Jar Shed has five who need somewhere to live. Taking one home is 12, once. Feeding one is 2 a week — and 2 a week is 104 a year, so say it to yourself before you say yes. Want to meet them?',
+    choices: [
+      { label: 'Meet them', open: 'shelter', xp: 6, note: 'Go and look. Nobody has to come home today.' },
+      { label: 'Not yet', xp: 4, note: 'A recurring cost is a promise. Not making one you cannot keep is the grown-up answer too.' }] },
   { id: 'l4', from: 'nana', title: 'A question, not a task',
     body: 'Ask someone at home tonight: what is the first thing they ever saved up for, and how long did it take? Then come back and tell me.',
     choices: [
@@ -892,6 +909,11 @@ export const BADGES = {
   'cool-head':         { em: '🧊', name: 'Cool head',         desc: 'Said no to a "today only".' },
   'asked-home':        { em: '🏡', name: 'Asked at home',     desc: 'Every family does money differently.' },
   'steady-hand':       { em: '🪨', name: 'Steady hand',       desc: 'Did nothing on a red day. Hardest move there is.' },
+  'adopted':           { em: '🐾', name: 'Took someone home',  desc: 'A one-off cost, and a weekly one for keeps.' },
+  'first-receipt':     { em: '🧾', name: 'The first receipt',  desc: 'Bought with shifts you worked. Kept for good.' },
+  'dressed-up':        { em: '🎀', name: 'Dressed up',         desc: 'Bought a want, on purpose, with a full bowl already paid for.' },
+  'well-fed':          { em: '🥣', name: 'Ten full bowls',     desc: 'Ten pay days running, the food bill was met.' },
+  'all-grown':         { em: '🌟', name: 'All grown',          desc: 'Raised from tiny to grown. Steady feeding did that.' },
   'jars-set':          { em: '🫙', name: 'Split it first',    desc: 'Paid yourself before you paid anyone else.' },
   'goal-built':        { em: '🏗️', name: 'Built it',          desc: 'Finished a goal in the Build Yard.' },
   'rainy-day':         { em: '☔', name: 'Rainy-day tin',     desc: 'Money set aside for the thing you did not plan.' },

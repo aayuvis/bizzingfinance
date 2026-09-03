@@ -6,6 +6,9 @@ import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { lessonBlock } from './lessonplayer.js';
+import { companionCard } from './companionview.js';
+import { overnightCard, receiptSlip } from './keepsakes.js';
+import * as co from './companion.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
@@ -95,6 +98,7 @@ function journeys(c) {
 
   /* Household — consumer. Postbox, pay day, the goal, and the meter. */
   const hhBeats = [
+    co.has(c) ? '' : beat('shelter', '', 'family', 'Five who need homes', 'The shelter behind the Jar Shed.'),
     c.postbox.answered
       ? beat('postbox', '', 'postbox', 'Postbox emptied', 'Another letter tomorrow.')
       : beat('postbox', '', 'postbox', "There's a letter", 'One a day. Thirty seconds.', '<span class="pill spendp">1</span>', true),
@@ -222,6 +226,9 @@ export function viewHome() {
       </div>
       <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
     </div>
+
+    ${overnightCard(c, R.s)}
+    ${companionCard(c)}
 
     ${strip}
 
@@ -1454,6 +1461,12 @@ export function viewCollection() {
   const c = K();
   const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
   return `<div class="stack">
+    <div class="card">
+      <div class="eyebrow">Keepsakes</div>
+      ${(c.keepsakes || []).length
+        ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => receiptSlip(k)).join('')}</div>`
+        : `<p class="small muted" style="margin-top:4px">Your first receipt goes here — the thing you bought, the shifts that paid for it, the weeks it took. Nothing on this shelf is given. It is kept.</p>`}
+    </div>
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Badges</div>
         <h2 style="margin:2px 0 0">${have} of ${Object.keys(BADGES).length}</h2></div></div>

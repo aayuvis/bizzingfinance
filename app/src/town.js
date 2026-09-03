@@ -67,6 +67,22 @@ function label(x, w, text, on) {
    drawing, never typed by hand, so a regenerated sprite moves its own
    anchors instead of putting the jars across the roof. */
 import { BLD, ZONES } from './buildings-gen.js';
+import { CO } from './companions-gen.js';
+import * as co from './companion.js';
+
+/* The companion stands beside her house — the one thing on the street that
+   is hers before anything is bought. Drawn from the same sprite the Home card
+   uses, so the mood on the street is the mood in the card. */
+function companionOnStreet(c, here, xOf) {
+  if (!co.has(c)) return '';
+  const i = here.findIndex((p) => p.key === 'place');
+  if (i < 0) return '';
+  const key = co.spriteKey(c);
+  const sp = CO[key]; if (!sp) return '';
+  const w = 44, h = w * sp.h / sp.w, x = xOf(i) + 150;
+  return `<g aria-hidden="true" data-co="${key}" class="${co.get(c).mood === 'happy' ? 'bob' : ''}">
+    <image href="${sp.src}" x="${x}" y="${(G - h).toFixed(1)}" width="${w}" height="${h.toFixed(1)}"/></g>`;
+}
 
 function spr(name, cx, ground, w) {
   const b = BLD[name]; if (!b) return '';
@@ -286,6 +302,7 @@ export function townSVG(c) {
     <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
     ${here.map(build).join('')}
     ${deeds}
+    ${companionOnStreet(c, here, xOf)}
     ${here.some((p) => p.key === 'wallet') ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === 'wallet')) + 145},204) scale(.72)"><g class="bob">
       <ellipse cx="16" cy="62" rx="16" ry="4" fill="rgba(0,0,0,.14)"/>
       <path d="M30 44c8-3 10-14 4-19-5-5-11-2-10 4 1 5 6 4 6 8 0 3-3 5-6 5z" fill="#C9752F"/>

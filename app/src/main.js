@@ -5,6 +5,9 @@ import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST, ico, mark } from './art.js';
 import { mountLesson } from './lessonplayer.js';
+import * as co from './companion.js';
+import { companionFigure, shelterView, wardrobeView } from './companionview.js';
+import { receiptSlip } from './keepsakes.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
@@ -161,6 +164,24 @@ function overlay() {
            </div>`}`);
   }
 
+  if (o.kind === 'shelter') return box(shelterView(o));
+  if (o.kind === 'wardrobe') return box(wardrobeView(C()));
+  if (o.kind === 'receipt') return box(`
+    <div class="eyebrow">Keep this one</div>
+    <h2 style="margin:4px 0 6px">Your first receipt</h2>
+    <p class="small muted">The thing you bought, the shifts that paid for it, the weeks it took. It goes in the Collection, with your name on it.</p>
+    ${receiptSlip(o.k, true)}
+    <button class="btn wide" style="margin-top:14px" data-act="closeOv">Into the Collection</button>`);
+  if (o.kind === 'adopted') {
+    const p = co.get(C());
+    return box(`
+      <div style="text-align:center">${companionFigure(C(), 150)}
+        <div class="eyebrow" style="margin-top:8px">Welcome home</div>
+        <h2 style="margin:4px 0 8px">${esc(p.name)}</h2>
+        <p class="small muted">${esc(co.KINDS[p.kind].line)}</p>
+        <p class="small" style="margin-top:10px">Food is <b>${money(co.weeklyCost(C()))} a week</b>, from your wallet, on pay day. That is ${money(co.yearlyCost(C()))} a year — you said it out loud, so you know.</p>
+        <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button></div>`);
+  }
   if (o.kind === 'payday') {
     const p = o.res;
     return box(`
@@ -171,6 +192,7 @@ function overlay() {
         <div class="row"><span class="grow">Wages</span><b style="color:var(--grow)">+${money(p.wage)}</b></div>
         ${p.chores.map((ch) => `<div class="row"><span class="grow muted">${esc(ch.name)}</span><b style="color:var(--grow)">+${money(ch.amt)}</b></div>`).join('')}
         ${p.bills.map((b) => `<div class="row"><span class="grow muted">${esc(b.name)}</span><b>−${money(b.amt)}</b></div>`).join('')}
+        ${p.companion ? `<div class="row" style="margin-top:4px"><span class="grow small" style="color:${p.companion.fed ? 'var(--grow)' : 'var(--spend)'}">${p.companion.fed ? co.get(C()).name + ' ate well.' : co.get(C()).name + ' went hungry — the wallet ran out before the food.'}</span></div>` : ''}
         ${p.interest ? `<div class="row"><span class="grow">Bank interest</span><b style="color:var(--grow)">+${money(p.interest)}</b></div>` : ''}
         ${p.loan ? `<div class="row"><span class="grow muted">Loan repayment</span><b>−${money(p.loan)}</b></div>` : ''}
         ${p.split ? `<div class="sep"></div><div class="eyebrow">Your rule split it before you could think about it</div>
@@ -326,7 +348,37 @@ function overlay() {
 const C = () => sim.kid(R.s);
 
 on('noop', () => {});
-on('closeOv', () => { R.overlay = null; render(); });
+on('shelter', () => { R.overlay = { kind: 'shelter', pick: null, name: '' }; sfx.click(); render(); });
+on('shelterPick', (kind) => { R.overlay.pick = kind; render(); });
+on('adopt', () => {
+  const c = C(), o = R.overlay;
+  const r = co.adopt(c, o.pick, o.name);
+  if (!r.ok) { toast(r.why); sfx.bad(); return; }
+  sim.stamp(c);
+  decisions.log(c, { surface: 'letter', chose: 'adopt ' + o.pick, label: 'The shelter',
+    alternatives: ['not yet'] });
+  R.overlay = { kind: 'adopted' };
+  sfx.level(); confetti(40); render();
+});
+on('play', () => {
+  const c = C();
+  if (!co.play(c)) { toast(co.has(c) ? 'Already played today — tomorrow is another day' : 'Nobody at home yet'); return; }
+  sim.stamp(c); sfx.good(); toast(co.get(c).name + ' loved that'); render();
+});
+on('wardrobe', () => { R.overlay = { kind: 'wardrobe' }; sfx.click(); render(); });
+on('buyAcc', (id) => {
+  const c = C(), r = co.buy(c, id);
+  if (!r.ok) { toast(r.why); sfx.bad(); return; }
+  sim.stamp(c);
+  if (r.cost) { decisions.log(c, { objective: 'CHOOSE-2', surface: 'store', chose: 'buy', label: id, alternatives: [] }); sfx.coin(); }
+  else sfx.click();
+  render();
+});
+on('closeOv', () => {
+  /* the adoption letter's "meet them" closes into the shelter, not to Home */
+  if (R.overlay && R.overlay.then === 'shelter') { R.overlay = { kind: 'shelter', pick: null, name: '' }; render(); return; }
+  R.overlay = null; render();
+});
 on('more', () => { R.overlay = { kind: 'more' }; render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
@@ -520,7 +572,8 @@ on('postbox', () => {
   /* a consequence that has come due jumps the queue: the flood does not wait
      politely behind the tune club */
   const fuse = sim.dueFuse(c);
-  const rotation = LETTERS.filter((l) => !l.fuseOnly);
+  const rotation = LETTERS.filter((l) => !l.fuseOnly
+    && !(l.needsCompanion && !co.has(c)) && !(l.id === 'hh-adopt' && co.has(c)));
   const letter = fuse ? LETTERS.find((l) => l.id === fuse.id) : rotation[c.postbox.idx % rotation.length];
   R.overlay = { kind: 'letter', letter, fuse: fuse ? fuse.id : null, result: null };
   sfx.click(); render();
@@ -542,6 +595,9 @@ on('letterPick', (i) => {
   if (ch.unbill) sim.removeBill(c, ch.unbill);
   if (ch.fuse) sim.addFuse(c, ch.fuse);
   if (ch.defuse) sim.defuse(c, ch.defuse);
+  if (ch.pet === 'ill') co.setIll(c, true);
+  if (ch.pet === 'well') co.setIll(c, false);
+  if (ch.open) R.overlay.then = ch.open;
   if (R.overlay.fuse) sim.defuse(c, R.overlay.fuse);
   decisions.log(c, {
     surface: 'letter', chose: ch.label, label: L.title,
@@ -564,7 +620,9 @@ on('letterPick', (i) => {
 on('payday', () => {
   const c = C();
   if (!sim.payDue(c, R.s)) { toast('Not yet — the bell rings on ' + weekday(c.money.nextPay)); return; }
-  R.overlay = { kind: 'payday', res: sim.runPayDay(c, R.s) };
+  const res = sim.runPayDay(c, R.s);
+  res.companion = co.onPayDay(c, res.walletAfterBills);
+  R.overlay = { kind: 'payday', res };
   sfx.bell(); confetti(30); render();
 });
 on('skipWeek', () => { sim.protoSkipWeek(C(), R.s); toast('Clock pushed to pay day'); fire('nav', 'home'); });
@@ -768,22 +826,17 @@ on('cool', (id) => {
   sfx.click(); render();
 });
 on('buyItem', (id) => {
-  const c = C(), it = SHOP.find((x) => x.id === id), p = price(it.units);
-  let short = p - c.money.wallet;
-  if (short > 0) {
-    const take = Math.min(short, c.money.jars.spend);
-    c.money.jars.spend -= take; c.money.wallet += take; short -= take;
-  }
-  if (short > 0) { toast('Not enough — even after the Spend jar'); sfx.bad(); return; }
-  c.money.wallet -= p;
-  sim.txn(c, 'out', p, it.name, 'shop');
-  c.shop.owned.push(id);
+  const c = C(), it = SHOP.find((x) => x.id === id);
+  const r = sim.buyFromShop(c, it);
+  if (!r.ok) { toast(r.why); sfx.bad(); return; }
   const goal = (c.money.goals || []).find((g) => !g.done);
   decisions.log(c, { objective: 'CHOOSE-2', surface: 'store', chose: 'buy', label: it.name,
-    alternatives: goal ? [{ id: goal.id, cost: p, label: goal.name }] : [] });
-  sim.stamp(c);
+    alternatives: goal ? [{ id: goal.id, cost: price(it.units), label: goal.name }] : [] });
+  /* the first thing she ever buys is a keepsake — a receipt with her name on */
+  if (r.receipt) { R.overlay = { kind: 'receipt', k: r.receipt }; sfx.level(); confetti(40); render(); return; }
   sfx.coin(); toast(it.name + ' is yours'); render();
 });
+on('ovSeen', () => { const c = C(); if (c.overnight) c.overnight.seen = true; sim.save(R.s); render(); });
 
 /* your place */
 on('move', (t) => {
@@ -877,6 +930,11 @@ document.body.addEventListener('input', (e) => {
   const f = e.target.getAttribute && e.target.getAttribute('data-field');
   if (!f) return;
   R.fields[f] = e.target.value;
+  if (f === 'petname' && R.overlay && R.overlay.kind === 'shelter') {
+    R.overlay.name = e.target.value;
+    const b = document.querySelector('[data-act="adopt"]');
+    if (b) b.textContent = `Take ${(e.target.value.trim() || 'them').slice(0, 16)} home · ${money(price(co.C.adopt))}`;
+  }
   if (e.target.getAttribute('data-live')) liveField(f, e.target.value);
 });
 document.body.addEventListener('change', (e) => {

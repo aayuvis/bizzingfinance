@@ -121,6 +121,11 @@ not aspirational. The short version:
 - **Nav lives in the hash.** The back button is how people leave a screen on a phone.
 - Every game gets its wage through `payout()`, so there is exactly one place that decides
   what play is worth.
+- **The companion reacts to money on pay day and to nothing else** (docs/10). Care never
+  moves with wall-clock time, it never dies, and its wants are priced from the same wallet.
+  A creature that sulks at a missed login is streak pressure in a costume — refuse it.
+- **A keepsake is kept, never given.** The first receipt is counted from the ledger
+  (`sim.buyFromShop`); nothing on the Collection shelf arrives for showing up.
 
 ## Architecture (planned)
 
