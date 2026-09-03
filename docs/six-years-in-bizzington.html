@@ -1,0 +1,444 @@
+<title>Six Years in Bizzington</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+<style>
+  :root{
+    --paper:#FFFCF5; --surface:#FFFFFF; --tint:#F1F3F1; --line:#DCE5E4; --line-soft:#EAF0EF;
+    --ink:#16262A; --muted:#5B7075; --action:#0E6B78; --action-tint:#E2EFF1;
+    --gold:#F0B429; --gold-deep:#8A5B00; --gold-tint:#FFF3D6;
+    --l1:#B8741A; --l2:#2E7FA8; --l3:#178A4C; --l4:#8A5BD6;
+    --l1-tint:#FBEFD9; --l2-tint:#E2EFF6; --l3-tint:#E3F3E9; --l4-tint:#EFE8FB;
+    --spend:#C4453C;
+    --display:"Fraunces",Georgia,serif; --ui:"Hanken Grotesk",system-ui,sans-serif; --mono:"Sono",ui-monospace,monospace;
+    --sh:0 1px 2px rgb(12 30 34 / .06), 0 10px 28px rgb(12 30 34 / .07);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0F1A1D; --surface:#16252A; --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
+      --ink:#E4EDEE; --muted:#93A7AC; --action:#3FAEBC; --action-tint:#12333A;
+      --gold:#F0C25A; --gold-deep:#F0C25A; --gold-tint:#33280F;
+      --l1:#E2A24A; --l2:#6EB6D8; --l3:#5BC98C; --l4:#B79BEC;
+      --l1-tint:#33280F; --l2-tint:#122B36; --l3-tint:#0F2E20; --l4-tint:#241A38;
+      --spend:#EC8B81;
+      --sh:0 1px 2px rgb(0 0 0 / .4), 0 10px 28px rgb(0 0 0 / .35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0F1A1D; --surface:#16252A; --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
+    --ink:#E4EDEE; --muted:#93A7AC; --action:#3FAEBC; --action-tint:#12333A;
+    --gold:#F0C25A; --gold-deep:#F0C25A; --gold-tint:#33280F;
+    --l1:#E2A24A; --l2:#6EB6D8; --l3:#5BC98C; --l4:#B79BEC;
+    --l1-tint:#33280F; --l2-tint:#122B36; --l3-tint:#0F2E20; --l4-tint:#241A38;
+    --spend:#EC8B81;
+    --sh:0 1px 2px rgb(0 0 0 / .4), 0 10px 28px rgb(0 0 0 / .35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.55}
+  .wrap{max-width:900px;margin:0 auto;padding:56px 24px 96px}
+  .wide{max-width:1120px;margin-left:auto;margin-right:auto}
+  h1,h2,h3,h4{font-family:var(--display);margin:0;line-height:1.08;text-wrap:balance;font-weight:800}
+  h1{font-size:clamp(44px,7vw,74px);font-variation-settings:"opsz" 144;letter-spacing:-.02em}
+  h2{font-size:30px;font-variation-settings:"opsz" 72;letter-spacing:-.01em}
+  h3{font-size:21px;font-weight:600;font-variation-settings:"opsz" 36}
+  h4{font-size:15px;font-weight:700;font-variation-settings:"opsz" 18}
+  p{margin:0;max-width:66ch}
+  .lead{font-size:19px;max-width:60ch}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .rule{display:flex;align-items:center;gap:14px;margin:76px 0 16px}
+  .rule .eyebrow{white-space:nowrap}
+  .rule i{flex:1;height:1px;background:var(--line)}
+  .small{font-size:14px;color:var(--muted)}
+  em{font-style:italic}
+  .cap{font-size:13.5px;color:var(--muted);margin-top:12px;max-width:72ch}
+  figure{margin:22px 0 0}
+  figure svg{width:100%;height:auto;display:block;color:var(--ink)}
+  figure text{font-family:var(--ui);fill:currentColor}
+  figure .mono{font-family:var(--mono)}
+  figcaption{font-size:13.5px;color:var(--muted);margin-top:12px;max-width:72ch}
+
+  /* status marks */
+  .st{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;padding:2px 8px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .st.built{background:var(--tint);color:var(--ink)}
+  .st.part{background:var(--gold-tint);color:var(--gold-deep)}
+  .st.new{border:1.5px dashed var(--action);color:var(--action);background:transparent}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;font-size:13.5px;color:var(--muted);align-items:center}
+
+  /* masthead */
+  .thesis{border-left:3px solid var(--gold);padding:6px 0 6px 20px;font-family:var(--display);font-variation-settings:"opsz" 36;font-size:22px;line-height:1.4;font-weight:400;max-width:60ch;margin-top:28px}
+  .thesis b{font-weight:600}
+
+  /* the lives */
+  .life{margin-top:26px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
+  .life header{padding:20px 24px 16px;border-bottom:1px solid var(--line-soft);display:grid;grid-template-columns:1fr auto;gap:12px 20px;align-items:end;background:var(--lt)}
+  .life header .eyebrow{color:var(--lc)}
+  .life header h3{font-size:26px;margin-top:4px}
+  .life header .who{text-align:right;font-size:13.5px;color:var(--muted)}
+  .life header .who b{display:block;color:var(--ink);font-size:14px}
+  .life .body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .life .col{padding:18px 24px}
+  .life .col + .col{border-left:1px solid var(--line-soft)}
+  .life h4{color:var(--lc);margin-bottom:8px}
+  .life ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+  .life li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;font-size:14.5px;padding:0}
+  .life li span:first-child{line-height:1.45}
+  .life .fork{grid-column:1/-1;border-top:1px solid var(--line-soft);padding:18px 24px;background:var(--tint)}
+  .life .fork h4{color:var(--ink)}
+  .life .fork p{font-size:14.5px}
+  .life .fin{grid-column:1/-1;border-top:1px solid var(--line-soft);padding:16px 24px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
+  .life .fin .flag{width:34px;height:34px;border-radius:9px;background:var(--lc);display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:16px}
+  .life .fin p{font-size:14.5px}
+  .life .fin b{font-family:var(--display);font-size:16px;font-weight:600;font-variation-settings:"opsz" 24}
+  .l1{--lc:var(--l1);--lt:var(--l1-tint)} .l2{--lc:var(--l2);--lt:var(--l2-tint)} .l3{--lc:var(--l3);--lt:var(--l3-tint)} .l4{--lc:var(--l4);--lt:var(--l4-tint)}
+  @media (max-width:640px){.life .body{grid-template-columns:1fr}.life .col + .col{border-left:0;border-top:1px solid var(--line-soft)}.life header{grid-template-columns:1fr}.life header .who{text-align:left}}
+
+  /* seasons strip */
+  .seasons{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+  .season{padding:16px 18px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+  .season .eyebrow{color:var(--action)}
+  .season h4{font-size:17px;margin-top:6px}
+  .season p{font-size:13.5px;margin-top:8px}
+  .season .finale{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13.5px}
+  .season .finale b{color:var(--gold-deep)}
+  @media (max-width:760px){.seasons{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:440px){.seasons{grid-template-columns:1fr}}
+
+  /* keeps */
+  .keeps{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:22px}
+  .keep{padding:16px 18px;border-radius:12px;background:var(--tint);display:grid;gap:6px}
+  .keep h4{font-size:16px}
+  .keep p{font-size:14px}
+  .keep .rulep{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em}
+  @media (max-width:640px){.keeps{grid-template-columns:1fr}}
+
+  /* build order */
+  ol.build{list-style:none;padding:0;margin:22px 0 0;display:grid}
+  ol.build li{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line-soft)}
+  ol.build li:first-child{border-top:0}
+  ol.build .when{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--gold-deep);letter-spacing:.06em;padding-top:4px}
+  ol.build b{display:block;font-family:var(--display);font-size:18px;font-weight:600;font-variation-settings:"opsz" 24;margin-bottom:4px}
+  ol.build p{font-size:14.5px}
+
+  .foot{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);display:grid;gap:8px}
+  .foot code{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--tint);padding:1px 5px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Journey map · Bizzing Finance · 31 August 2026</div>
+    <h1 style="margin-top:14px">Six Years in Bizzington</h1>
+    <p class="lead" style="margin-top:18px">Ahana is eight when she opens the app and is handed a stall on Market Row. She is fourteen when the app prints her a book. This is what happens in between — day by day, season by season, life by life — with every fork she can take drawn, and every feature marked as built, half-built, or proposed.</p>
+    <div class="thesis">The ladder already exists: thirty levels, five ranks. What a child <b>feels</b> is not a ladder. She feels four lives in one town, each with a new place, a new mentor, new things she is allowed to do, one real choice that changes her street, and something at the end she can put on the fridge.</div>
+    <div class="legend"><span class="st built">✓ built</span> in the app today &nbsp; <span class="st part">◐ partial</span> exists but not yet in this shape &nbsp; <span class="st new">○ proposed</span> new in this document</div>
+  </header>
+
+  <div class="rule"><span class="eyebrow">The map</span><i></i></div>
+  <h2>Four lives, five forks, four things to keep</h2>
+  <figure class="wide">
+    <svg viewBox="0 0 1120 470" role="img" aria-label="A river running left to right from age eight to fourteen, banded into four lives — Pocket money, The bank and the plan, The exchange and the stall, Founder — with the worlds that open in each, five forks branching off the river, and a flag at the end of each life for its finale artefact.">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+      </defs>
+      <!-- life bands -->
+      <rect x="40" y="70" width="230" height="250" rx="10" fill="var(--l1)" opacity=".10"/>
+      <rect x="290" y="70" width="230" height="250" rx="10" fill="var(--l2)" opacity=".10"/>
+      <rect x="540" y="70" width="290" height="250" rx="10" fill="var(--l3)" opacity=".10"/>
+      <rect x="850" y="70" width="230" height="250" rx="10" fill="var(--l4)" opacity=".10"/>
+      <!-- band titles -->
+      <text x="155" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="var(--l1)">Life 1 · Pocket money</text>
+      <text x="155" y="112" text-anchor="middle" font-size="11" class="mono" fill="var(--muted)">age 8–9 · Saver → Budgeter · L1–10</text>
+      <text x="405" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="var(--l2)">Life 2 · The bank and the plan</text>
+      <text x="405" y="112" text-anchor="middle" font-size="11" class="mono" fill="var(--muted)">age 10–11 · Banker · L11–15</text>
+      <text x="685" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="var(--l3)">Life 3 · The exchange and the stall</text>
+      <text x="685" y="112" text-anchor="middle" font-size="11" class="mono" fill="var(--muted)">age 12–13 · Investor · L16–22</text>
+      <text x="965" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="var(--l4)">Life 4 · Founder</text>
+      <text x="965" y="112" text-anchor="middle" font-size="11" class="mono" fill="var(--muted)">age 14 · Founder · L23–30</text>
+      <!-- the river -->
+      <path d="M40 200 C 200 200, 240 200, 290 200 S 500 200, 540 200 S 800 200, 850 200 S 1040 200, 1080 200" fill="none" stroke="currentColor" stroke-width="3" marker-end="url(#arr)"/>
+      <!-- age ticks -->
+      <g class="mono" font-size="11" fill="var(--muted)">
+        <text x="40" y="335" text-anchor="middle">age 8</text><text x="290" y="335" text-anchor="middle">10</text><text x="540" y="335" text-anchor="middle">12</text><text x="850" y="335" text-anchor="middle">14</text>
+      </g>
+      <!-- worlds opening (on the river) -->
+      <g font-size="11.5">
+        <circle cx="60" cy="200" r="6" fill="var(--l1)"/><text x="60" y="185" text-anchor="middle">Market Row</text>
+        <circle cx="180" cy="200" r="6" fill="var(--l1)"/><text x="180" y="185" text-anchor="middle">Old Harbour · L6</text>
+        <circle cx="330" cy="200" r="6" fill="var(--l2)"/><text x="330" y="185" text-anchor="middle">Clocktower · L11</text>
+        <circle cx="580" cy="200" r="6" fill="var(--l3)"/><text x="580" y="185" text-anchor="middle">Exchange Quarter · L16</text>
+        <circle cx="880" cy="200" r="6" fill="var(--l4)"/><text x="880" y="185" text-anchor="middle">The Works · L23</text>
+      </g>
+      <!-- forks: branches off the river, labelled -->
+      <g stroke="currentColor" stroke-width="1.6" fill="none" stroke-dasharray="4 3">
+        <path d="M330 200 q30 40 60 60" marker-end="url(#arr)"/>
+        <path d="M460 200 q30 40 60 60" marker-end="url(#arr)"/>
+        <path d="M580 200 q30 40 60 60" marker-end="url(#arr)"/>
+        <path d="M750 200 q30 40 60 60" marker-end="url(#arr)"/>
+        <path d="M930 200 q30 40 60 60" marker-end="url(#arr)"/>
+      </g>
+      <g font-size="11.5" fill="var(--ink)">
+        <text x="394" y="278" text-anchor="middle" font-weight="700">Home</text><text x="394" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">rent · or buy</text>
+        <text x="524" y="278" text-anchor="middle" font-weight="700">Borrow</text><text x="524" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">the tool · or wait</text>
+        <text x="644" y="278" text-anchor="middle" font-weight="700">Temperament</text><text x="644" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">saver · investor · owner</text>
+        <text x="814" y="278" text-anchor="middle" font-weight="700">Stall</text><text x="814" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">maker · trader · service</text>
+        <text x="994" y="278" text-anchor="middle" font-weight="700">Capital</text><text x="994" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">a loan · or a partner</text>
+      </g>
+      <!-- finale flags -->
+      <g>
+        <line x1="268" y1="200" x2="268" y2="140" stroke="var(--l1)" stroke-width="2"/><path d="M268 140 h34 l-8 9 8 9 h-34z" fill="var(--l1)"/>
+        <line x1="518" y1="200" x2="518" y2="140" stroke="var(--l2)" stroke-width="2"/><path d="M518 140 h34 l-8 9 8 9 h-34z" fill="var(--l2)"/>
+        <line x1="828" y1="200" x2="828" y2="140" stroke="var(--l3)" stroke-width="2"/><path d="M828 140 h34 l-8 9 8 9 h-34z" fill="var(--l3)"/>
+        <line x1="1078" y1="200" x2="1078" y2="140" stroke="var(--l4)" stroke-width="2"/><path d="M1078 140 h-34 l8 9 -8 9 h34z" fill="var(--l4)"/>
+      </g>
+      <g font-size="11" class="mono" fill="var(--muted)">
+        <text x="262" y="132" text-anchor="end">the first receipt</text>
+        <text x="512" y="132" text-anchor="end">the monsoon</text>
+        <text x="822" y="132" text-anchor="end">her annual report</text>
+        <text x="1072" y="132" text-anchor="end">the printed book</text>
+      </g>
+      <!-- the four keeps, below -->
+      <g font-size="12" fill="var(--ink)">
+        <text x="40" y="380" font-weight="700" fill="var(--muted)" class="mono" font-size="11">WHAT RUNS UNDERNEATH ALL FOUR</text>
+        <text x="40" y="404">one wallet</text><text x="40" y="420" font-size="11" fill="var(--muted)">wages, takings and rent share it</text>
+        <text x="300" y="404">one clock</text><text x="300" y="420" font-size="11" fill="var(--muted)">pay day, market day, shop week — together</text>
+        <text x="580" y="404">one record</text><text x="580" y="420" font-size="11" fill="var(--muted)">every decision, every retained objective, six years</text>
+        <text x="880" y="404">one town</text><text x="880" y="420" font-size="11" fill="var(--muted)">that visibly changes because of her</text>
+      </g>
+    </svg>
+    <figcaption>The river is the thirty-level ladder that already exists. The bands are how a child experiences it. Solid dots are worlds opening — all five are built. Dashed branches are the five forks — none are built yet, and they are the difference between a ladder and a life. Flags are the artefact each life ends with.</figcaption>
+  </figure>
+
+  <div class="rule"><span class="eyebrow">One day · fifteen minutes</span><i></i></div>
+  <h2>The loop she runs on day 30, and on day 1,030</h2>
+  <p style="margin-top:12px">A day is the same shape for six years; what changes is what each beat contains. Nothing here needs a notification — the reasons to come back are that <em>things happened without her</em>, and that yesterday's choice has a consequence on a timer.</p>
+  <figure>
+    <svg viewBox="0 0 1000 300" role="img" aria-label="A ring of six beats: overnight, the letter, work, market day, the lesson beat, closing time — with minutes on each, returning to overnight.">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g stroke="currentColor" stroke-width="1.6" fill="none">
+        <path d="M210 90 H 335" marker-end="url(#arr2)"/><path d="M445 90 H 570" marker-end="url(#arr2)"/><path d="M680 90 H 805" marker-end="url(#arr2)"/>
+        <path d="M860 110 V 190" marker-end="url(#arr2)"/>
+        <path d="M805 210 H 680" marker-end="url(#arr2)"/><path d="M570 210 H 445" marker-end="url(#arr2)"/>
+        <path d="M335 210 H 210" marker-end="url(#arr2)"/>
+        <path d="M155 190 V 110" marker-end="url(#arr2)" stroke-dasharray="4 3"/>
+      </g>
+      <g font-size="13" font-weight="700">
+        <rect x="100" y="70" width="110" height="40" rx="8" fill="var(--l2)" opacity=".18"/><text x="155" y="94" text-anchor="middle">overnight</text>
+        <rect x="335" y="70" width="110" height="40" rx="8" fill="var(--l2)" opacity=".18"/><text x="390" y="94" text-anchor="middle">the letter</text>
+        <rect x="570" y="70" width="110" height="40" rx="8" fill="var(--l1)" opacity=".18"/><text x="625" y="94" text-anchor="middle">work</text>
+        <rect x="805" y="70" width="110" height="40" rx="8" fill="var(--l3)" opacity=".18"/><text x="860" y="94" text-anchor="middle">market day</text>
+        <rect x="335" y="190" width="110" height="40" rx="8" fill="var(--action)" opacity=".18"/><text x="390" y="214" text-anchor="middle">closing time</text>
+        <rect x="570" y="190" width="110" height="40" rx="8" fill="var(--action)" opacity=".18"/><text x="625" y="214" text-anchor="middle">the lesson beat</text>
+        <rect x="805" y="190" width="110" height="40" rx="8" fill="var(--tint)"/><text x="860" y="214" text-anchor="middle">the quests tick</text>
+        <rect x="100" y="190" width="110" height="40" rx="8" fill="var(--tint)"/><text x="155" y="214" text-anchor="middle">tomorrow</text>
+      </g>
+      <g font-size="11" fill="var(--muted)">
+        <text x="155" y="128" text-anchor="middle">what the till took · 2 min</text>
+        <text x="390" y="128" text-anchor="middle">decide; a fuse may light · 3 min</text>
+        <text x="625" y="128" text-anchor="middle">a shift or a shop call · 5 min</text>
+        <text x="860" y="128" text-anchor="middle">usually do nothing · 2 min</text>
+        <text x="625" y="248" text-anchor="middle">explainer + 3 questions · 4 min</text>
+        <text x="390" y="248" text-anchor="middle">what today earned</text>
+        <text x="860" y="248" text-anchor="middle">three a day, one wallet</text>
+      </g>
+      <g font-size="11" fill="var(--muted)"><text x="138" y="150" transform="rotate(-90 138 150)" text-anchor="middle">a fuse lands</text></g>
+      <g font-size="10.5" class="mono" fill="var(--muted)">
+        <text x="100" y="285">✓ letter · work · lesson · closing · quests &nbsp;&nbsp; ◐ market day is a screen, not a beat &nbsp;&nbsp; ○ overnight does not exist yet</text>
+      </g>
+    </svg>
+    <figcaption>Fifteen minutes on a school day. The dashed return is the one that makes tomorrow different from today: a letter she answered on Tuesday lands on Saturday. "Overnight" is the missing beat — the shop already sells while she is away and the market already moves; she is just never shown it as a reason to open the app.</figcaption>
+  </figure>
+
+  <div class="rule"><span class="eyebrow">One year · four seasons</span><i></i></div>
+  <h2>Each season ends with something to show</h2>
+  <p style="margin-top:12px">The daily loop holds a child for weeks. Seasons hold her for years. Each is roughly twelve weeks of the sim clock, themed to one journey, and ends in a <em>finale</em> — the thing a parent gets to see. This is the calendar the app does not have, and every piece of it reuses engines that already run. <span class="st new">○ proposed</span></p>
+  <div class="seasons wide">
+    <div class="season"><span class="eyebrow">Season of shocks</span><h4>Monsoon</h4><p>The Household's season. Letters arrive faster: the tap, the rent, the umbrella fund. Everyone on the street chooses. Then the sky opens.</p><div class="finale"><b>Finale</b> — the rain hits the whole street at once; who joined the fund and who chanced it is visible on every roof. Insurance, taught by weather.</div></div>
+    <div class="season"><span class="eyebrow">Season of spending</span><h4>Festival</h4><p>The Household and the Give jar. Prices rise, the market booms, the shop's best fortnight of the year — and the temptation to spend the Save jar on lights.</p><div class="finale"><b>Finale</b> — the town's festival is funded from what the children gave; the restorations they paid for are lit that night, deeds and names on them.</div></div>
+    <div class="season"><span class="eyebrow">Season of selling</span><h4>The Fair</h4><p>The Livelihood's season. Every stall competes for a fortnight. Rivals cut prices. Stock runs out or goes home unsold.</p><div class="finale"><b>Finale</b> — the Fair is scored on margin and on decisions, never on takings alone (rule 3). The boring, well-priced stall wins more often than the flashy one.</div></div>
+    <div class="season"><span class="eyebrow">Season of the long game</span><h4>The Bee</h4><p>The Portfolio's season. The Market Game campaign runs a decade; the real-world test (NFLAT, or its equivalent) sits at the end of it, with a date.</p><div class="finale"><b>Finale</b> — the campaign's review: what she held through, what she panic-sold, what she wrote before buying. And the test result, the only number a school recognises.</div></div>
+  </div>
+
+  <div class="rule"><span class="eyebrow">The four lives</span><i></i></div>
+  <h2>What she does, what she can newly do, what changes on her street</h2>
+  <p style="margin-top:12px">A life ends when its rank is reached. Its <em>verbs</em> are the things the town lets her do that it would not before — that is what mastery unlocks, not a number. Each life has one fork, and the fork is a real choice with two right answers that teach different things.</p>
+
+  <section class="life l1">
+    <header><div><span class="eyebrow">Life 1 · age 8–9 · Saver → Budgeter · levels 1–10</span><h3>Pocket money</h3></div><div class="who"><b>Mentor: Pip</b>Market Row, then the Old Harbour</div></header>
+    <div class="body">
+      <div class="col"><h4>What she does</h4><ul>
+        <li><span>Names herself, picks a currency, is handed a room above a stall and 12 coins</span><span class="st built">✓</span></li>
+        <li><span>Works shifts — crates, flyers, sweeping — paid by how well she plays them</span><span class="st built">✓</span></li>
+        <li><span>Opens one letter a day and chooses; the first scam arrives in week two</span><span class="st built">✓</span></li>
+        <li><span>Watches Nana explain a card, reads it, answers three questions</span><span class="st built">✓</span></li>
+        <li><span>Splits pay day into four jars at level 6 — her first personal rule</span><span class="st built">✓</span></li>
+        <li><span>Names a goal at level 8 and watches it go up floor by floor</span><span class="st built">✓</span></li>
+        <li><span>Buys her first thing from the store with money she earned</span><span class="st built">✓</span></li>
+      </ul></div>
+      <div class="col"><h4>Verbs she gains · what the town shows</h4><ul>
+        <li><span><b>earn · keep · tell need from want · split · aim</b></span><span></span></li>
+        <li><span>Her house goes from tier 0 to tier 1: a second window lights</span><span class="st built">✓</span></li>
+        <li><span>The Jar Shed opens with her real ratios in its window</span><span class="st built">✓</span></li>
+        <li><span>The first restoration on Market Row carries her name on a deed</span><span class="st built">✓</span></li>
+        <li><span>Overnight: the stall did nothing while she slept — <em>yet</em>. The morning beat has nothing to say until Life 3, and should say so</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="fork"><h4>No fork — on purpose</h4><p>An eight-year-old needs a straight road with one rule of her own on it. The jar split <em>is</em> her choice, and the goal is hers. The first real fork waits for the bank.</p></div>
+      <div class="fin"><div class="flag">1</div><div><b>The first receipt</b><p>The thing she bought, the shifts that paid for it, the weeks it took. A receipt with her name on it, kept in the Collection. The parent report's first line reads: <em>Ahana earned 340, saved 120 of it, and bought a kite.</em> <span class="st part">◐ the purchase is logged; the receipt is not yet an object</span></p></div></div>
+    </div>
+  </section>
+
+  <section class="life l2">
+    <header><div><span class="eyebrow">Life 2 · age 10–11 · Banker · levels 11–15</span><h3>The bank and the plan</h3></div><div class="who"><b>Mentor: Nana Bizz</b>Clocktower Square</div></header>
+    <div class="body">
+      <div class="col"><h4>What she does</h4><ul>
+        <li><span>Opens an account; watches the clock strike interest in public every pay day</span><span class="st built">✓</span></li>
+        <li><span>Lives through the shocks: the dripping tap, the rent rise, the tune club, the umbrella fund</span><span class="st built">✓</span></li>
+        <li><span>Runs a real budget — in, out, what is left — because the letters keep changing "out"</span><span class="st built">✓</span></li>
+        <li><span>Takes her first loan and meets her trust score</span><span class="st built">✓</span></li>
+        <li><span>Sits through the Monsoon season with the rest of the street</span><span class="st new">○</span></li>
+        <li><span>A pet arrives by letter — a recurring cost that loves her back</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="col"><h4>Verbs she gains · what the town shows</h4><ul>
+        <li><span><b>plan · protect · borrow · repay</b></span><span></span></li>
+        <li><span>The Bank's clock tells the real hour; her deposit sits in its window</span><span class="st built">✓</span></li>
+        <li><span>Her bills list grows and shrinks with her own choices — the tune club sits there taking its 2</span><span class="st built">✓</span></li>
+        <li><span>The Household card on Home shows left-over per week going red or black</span><span class="st built">✓</span></li>
+        <li><span>Rain on the street, roofs covered or not</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="fork"><h4>Fork A · Home — rent, or buy</h4><p>The housing ladder already has five rungs and the last one is <em>"a little house, bought"</em> with a mortgage the sim can service. Make it a choice at level 12: keep renting (cheap, flexible, the difference goes to the bank) or take the mortgage (equity, a fixed cost that does not care about a quiet week). Both are right. One teaches flexibility, the other teaches ownership, and the Independence meter moves differently under each. <span class="st part">◐ the mortgage exists; the choice is not presented as one</span></p>
+      <h4 style="margin-top:14px">Fork B · Borrow — the tool, or wait</h4><p>A letter offers a trolley that doubles what crate-stacking pays. Borrow for it now (an asset that earns, with rent on the money) or save six more weeks. The trust score remembers either way. <span class="st new">○</span></p></div>
+      <div class="fin"><div class="flag">2</div><div><b>The Monsoon, and her first statement</b><p>The season finale plays out on the street. Then her first Annual Statement: every bill she took on, every shock, what she borrowed and what it cost. The parent report says: <em>Ahana kept her household solvent for 22 weeks, joined the umbrella fund, and paid 4 to avoid 24.</em> <span class="st part">◐ the weekly report exists; the annual one and the season do not</span></p></div></div>
+    </div>
+  </section>
+
+  <section class="life l3">
+    <header><div><span class="eyebrow">Life 3 · age 12–13 · Investor · levels 16–22</span><h3>The exchange and the stall</h3></div><div class="who"><b>Mentors: Bo &amp; Bea, then Mags</b>The Exchange Quarter</div></header>
+    <div class="body">
+      <div class="col"><h4>What she does</h4><ul>
+        <li><span>Opens the Exchange: seven asset classes off one world model, so they move together in ways she can feel</span><span class="st built">✓</span></li>
+        <li><span>Plays the Market Game — forty companies, forty years, a decade at a time, quizzed before she buys</span><span class="st built">✓</span></li>
+        <li><span>Holds through a drawdown, or panic-sells and sees the review say so</span><span class="st built">✓</span></li>
+        <li><span>Apprentices in Nana's shop: reads Nana's books before she keeps her own</span><span class="st new">○</span></li>
+        <li><span>Chooses her stall type and opens on Market Row beside rivals whose prices react</span><span class="st new">○</span></li>
+        <li><span>Competes in the Fair</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="col"><h4>Verbs she gains · what the town shows</h4><ul>
+        <li><span><b>invest · diversify · hold · price · sell · read a P&amp;L</b></span><span></span></li>
+        <li><span>The Exchange's board draws the market's real last move</span><span class="st built">✓</span></li>
+        <li><span>The Portfolio card on Home: invested, and the arrow</span><span class="st built">✓</span></li>
+        <li><span>Overnight becomes real: the stall sold while she slept, the market moved</span><span class="st new">○</span></li>
+        <li><span>A second stall on the street with a rival's name on it</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="fork"><h4>Fork C · Temperament — saver, investor, owner</h4><p>Where does the surplus live? The Saver's desk (deposits and bonds, slow and safe), the Investor's desk (the index and shares), or the Owner's desk (into her own stall). She picks one to start; the world model makes them correlate, so a bad year teaches all three at once. Bo argues for one, Bea for another, and neither of them knows. <span class="st part">◐ all three exist as asset classes; nothing frames them as a temperament she chooses</span></p>
+      <h4 style="margin-top:14px">Fork D · The stall — maker, trader, service</h4><p>Three kinds of stall on the same business engine, each teaching a different economics. <b>Maker</b> (bake, craft, mend): unit cost, margin, waste. <b>Trader</b> (buy in the Harbour, sell on Market Row): spread, inventory, the stock that goes home unsold. <b>Service</b> (deliveries, tutoring): pricing an hour, and the day when there are no more hours. Switching later is allowed and costs something — which is its own lesson. <span class="st new">○ the engine is built; the types are not</span></p></div>
+      <div class="fin"><div class="flag">3</div><div><b>Her own Annual Report</b><p>In exactly the format the Market Game's companies get — revenue, cost, profit, net worth, a balance sheet that balances — with a letter to shareholders that she writes. The parent is the shareholder. <em>Ahana's stall made a margin of 19% in its second year, up from 12; she held through a 20% fall and wrote why.</em> <span class="st new">○ the company report exists; hers does not</span></p></div></div>
+    </div>
+  </section>
+
+  <section class="life l4">
+    <header><div><span class="eyebrow">Life 4 · age 14 · Founder · levels 23–30</span><h3>Founder</h3></div><div class="who"><b>Mentor: nobody — Nana retires</b>The Works</div></header>
+    <div class="body">
+      <div class="col"><h4>What she does</h4><ul>
+        <li><span>Takes on Nana's shop: stock, prices, P&amp;L, a balance sheet, cash that is not profit</span><span class="st built">✓</span></li>
+        <li><span>Hires — a wage becomes a fixed cost that arrives whether she sold anything or not</span><span class="st new">○</span></li>
+        <li><span>Raises capital for the second shop</span><span class="st part">◐</span></li>
+        <li><span>Values a rival's stall and makes an offer</span><span class="st new">○</span></li>
+        <li><span>Funds the town's last restorations at scale, from the Give jar of a business</span><span class="st part">◐</span></li>
+        <li><span>Runs the fast-forward: thirty years of her real portfolio, compounding, on one screen</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="col"><h4>Verbs she gains · what the town shows</h4><ul>
+        <li><span><b>run · hire · raise · value · give</b></span><span></span></li>
+        <li><span>BIZZ &amp; CO on the signboard becomes her own name</span><span class="st part">◐</span></li>
+        <li><span>The crossover chart: the week her shop first out-earned her shifts — the most important picture in the app, drawn nowhere yet</span><span class="st new">○</span></li>
+        <li><span>The Works' chimneys run when her stock is moving</span><span class="st new">○</span></li>
+      </ul></div>
+      <div class="fork"><h4>Fork E · Capital — a loan, or a partner</h4><p>The second shop costs more than she has. A loan: she keeps all of it and pays rent on the money. A partner — Bea offers — she gives away half and pays no rent at all. docs/08's capability five, staged as a letter with two right answers and one sentence of arithmetic each way. <span class="st part">◐ borrow and raiseEquity both exist in the engine; the choice is not staged</span></p></div>
+      <div class="fin"><div class="flag">4</div><div><b>The printed book</b><p>Six years in Bizzington: her net-worth line from eight to fourteen, every decision underneath it, the crossover chart, the goals that went up, the deeds with her name. Printed and bound — the family already prints books. The parent report's last line: <em>She can run money.</em> <span class="st new">○ the record accrues today in decisions.js; nothing draws it and nothing prints it</span></p></div></div>
+    </div>
+  </section>
+
+  <div class="rule"><span class="eyebrow">The forks, drawn</span><i></i></div>
+  <h2>Two right answers, different lessons</h2>
+  <figure class="wide">
+    <svg viewBox="0 0 1120 330" role="img" aria-label="Five forks side by side, each splitting into its options with the lesson each option teaches written beneath.">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g font-size="13" font-weight="700" text-anchor="middle">
+        <text x="96" y="40">A · Home</text><text x="300" y="40">B · Borrow</text><text x="540" y="40">C · Temperament</text><text x="790" y="40">D · The stall</text><text x="1030" y="40">E · Capital</text>
+      </g>
+      <g font-size="10.5" class="mono" fill="var(--muted)" text-anchor="middle">
+        <text x="96" y="56">Life 2 · L12</text><text x="300" y="56">Life 2 · L13</text><text x="540" y="56">Life 3 · L16</text><text x="790" y="56">Life 3 · L18</text><text x="1030" y="56">Life 4 · L26</text>
+      </g>
+      <!-- trunks -->
+      <g stroke="currentColor" stroke-width="2" fill="none">
+        <path d="M96 70 V 110"/><path d="M300 70 V 110"/><path d="M540 70 V 110"/><path d="M790 70 V 110"/><path d="M1030 70 V 110"/>
+      </g>
+      <!-- two-way forks A B E · spread ±60 -->
+      <g stroke="currentColor" stroke-width="1.6" fill="none">
+        <path d="M96 110 q-40 20 -56 50" marker-end="url(#arr3)"/><path d="M96 110 q40 20 56 50" marker-end="url(#arr3)"/>
+        <path d="M300 110 q-40 20 -56 50" marker-end="url(#arr3)"/><path d="M300 110 q40 20 56 50" marker-end="url(#arr3)"/>
+        <path d="M1030 110 q-40 20 -56 50" marker-end="url(#arr3)"/><path d="M1030 110 q40 20 56 50" marker-end="url(#arr3)"/>
+        <!-- three-way forks C D · spread ±80 -->
+        <path d="M540 110 q-55 20 -76 50" marker-end="url(#arr3)"/><path d="M540 110 V 160" marker-end="url(#arr3)"/><path d="M540 110 q55 20 76 50" marker-end="url(#arr3)"/>
+        <path d="M790 110 q-55 20 -76 50" marker-end="url(#arr3)"/><path d="M790 110 V 160" marker-end="url(#arr3)"/><path d="M790 110 q55 20 76 50" marker-end="url(#arr3)"/>
+      </g>
+      <!-- option labels -->
+      <g font-size="12" font-weight="700" text-anchor="middle">
+        <text x="36" y="185">rent</text><text x="156" y="185">buy</text>
+        <text x="240" y="185">borrow now</text><text x="360" y="185">wait</text>
+        <text x="460" y="185">saver</text><text x="540" y="185">investor</text><text x="620" y="185">owner</text>
+        <text x="710" y="185">maker</text><text x="790" y="185">trader</text><text x="870" y="185">service</text>
+        <text x="970" y="185">a loan</text><text x="1090" y="185">a partner</text>
+      </g>
+      <!-- lessons: two short lines each, so neighbours never touch -->
+      <g font-size="10.5" fill="var(--muted)" text-anchor="middle">
+        <text x="36" y="203">flexibility;</text><text x="36" y="216">the gap invested</text>
+        <text x="156" y="203">equity; a fixed</text><text x="156" y="216">cost that</text><text x="156" y="229">does not care</text>
+        <text x="240" y="203">an asset that</text><text x="240" y="216">earns, with rent</text>
+        <text x="360" y="203">six weeks of</text><text x="360" y="216">patience</text>
+        <text x="460" y="203">slow, safe;</text><text x="460" y="216">inflation bites</text>
+        <text x="540" y="203">volatility felt,</text><text x="540" y="216">not told</text>
+        <text x="620" y="203">concentration;</text><text x="620" y="216">one Tuesday</text>
+        <text x="710" y="203">unit cost,</text><text x="710" y="216">margin, waste</text>
+        <text x="790" y="203">the spread;</text><text x="790" y="216">unsold stock</text>
+        <text x="870" y="203">pricing an hour;</text><text x="870" y="216">running out</text>
+        <text x="970" y="203">keep all of it;</text><text x="970" y="216">rent on money</text>
+        <text x="1090" y="203">give up half;</text><text x="1090" y="216">no rent at all</text>
+      </g>
+      <!-- the return path: forks can be revisited -->
+      <g stroke="var(--action)" stroke-width="1.4" fill="none" stroke-dasharray="4 3">
+        <path d="M710 250 q80 30 160 0" marker-end="url(#arr3)"/>
+      </g>
+      <text x="790" y="292" text-anchor="middle" font-size="10.5" fill="var(--action)">switching later is allowed and costs — sunk cost, taught by the switch</text>
+      <text x="40" y="318" font-size="10.5" class="mono" fill="var(--muted)">every option is logged by decisions.js with the alternative she did not take, so the parent report can say what she chose and what it cost</text>
+    </svg>
+    <figcaption>A fork is only a fork if both branches are good. Every one here has two right answers and the difference is the lesson — that is what keeps a choice from being a quiz in disguise. None of these five is built; the engines under all of them are.</figcaption>
+  </figure>
+
+  <div class="rule"><span class="eyebrow">What keeps her</span><i></i></div>
+  <h2>Eight reasons to come back, none of them a trick</h2>
+  <p style="margin-top:12px">CONCEPT §6.3 and the editorial policy ban the cheap ways — loot, streak pressure, countdowns, notifications to a child. What is left is better, and every mechanic here names the rule it must not break.</p>
+  <div class="keeps wide">
+    <div class="keep"><h4>Things happen without her <span class="st new">○</span></h4><p>The shop sells overnight, interest lands, the market moves, a letter arrives. The morning glance exists to <em>find out</em>. This is the single strongest reason to open an app, and the engines already produce it — nothing yet shows it.</p><span class="rulep">must not become: a notification. She finds it; it does not find her.</span></div>
+    <div class="keep"><h4>The town changes because of her <span class="st built">✓</span></h4><p>House tiers, the shop opening, restorations with her name on a deed. Progress she can walk past, not a bar she reads.</p><span class="rulep">must not become: cosmetics for sale. Nothing on the street is bought with real money.</span></div>
+    <div class="keep"><h4>Consequences on a timer <span class="st built">✓</span></h4><p>The tap she did not fix lands in four days. Anticipation without a reminder — the fuse is the app's honest version of suspense.</p><span class="rulep">must not become: random. A certain flood is a lesson; a rolled one is a slot machine.</span></div>
+    <div class="keep"><h4>Seasons with finales <span class="st new">○</span></h4><p>Four a year, each with a day the whole street shares and an artefact for the fridge. A finale is the reason a parent asks "how did it go?"</p><span class="rulep">must not become: FOMO. A missed finale is replayed, never lost.</span></div>
+    <div class="keep"><h4>A count of what is left <span class="st part">◐</span></h4><p>Worlds lit (5), restorations mended (17), badges (38) — and, once the Register exists, companies she can name (500). Bee's "Library explored" and India's map, for money.</p><span class="rulep">must not become: a grind. Every item on the count teaches; none is filler.</span></div>
+    <div class="keep"><h4>Someone in the room <span class="st part">◐</span></h4><p>Sunday in Bizzington: the board game pass-and-play, a parent with a fictional household of their own. And the Sibling Exchange — two children in one household lend to each other at interest and sell each other outgrown bikes.</p><span class="rulep">must not become: a leaderboard. Rivalry between siblings is on decisions, never on money.</span></div>
+    <div class="keep"><h4>Mastery opens verbs <span class="st built">✓</span></h4><p>Not XP — a new thing the town lets her <em>do</em>. Level 6 is not a number; it is the day the Jar Shed's door opens.</p><span class="rulep">must not become: a paywall on the child's screen. Premium is a parent's decision elsewhere.</span></div>
+    <div class="keep"><h4>The heirloom <span class="st new">○</span></h4><p>Six years accumulating into a printed object. Worthless on day one, and by year two the one thing that makes leaving unthinkable — not because it locks her in, but because it is hers.</p><span class="rulep">must not become: data hostage. Export and delete of the whole record, always, one tap.</span></div>
+  </div>
+
+  <div class="rule"><span class="eyebrow">Build order</span><i></i></div>
+  <h2>To make the journey real, in the order the child meets it</h2>
+  <ol class="build">
+    <li><span class="when">first</span><div><b>Overnight, and the first receipt</b><p>The morning beat that shows what happened while she was away, and the purchase that becomes an object in her Collection. Both are surfacing work — the engines already produce the facts. This is Life 1 becoming a life.</p></div></li>
+    <li><span class="when">second</span><div><b>The seasons, starting with the Monsoon</b><p>A calendar on the sim clock, one season themed to each journey, and the Monsoon's street-wide finale built on the umbrella fund and fuses that already run. Life 2's ending.</p></div></li>
+    <li><span class="when">third</span><div><b>Forks A and B, staged as letters</b><p>The mortgage and the trolley loan, presented as choices with two right answers, logged with their alternatives. The housing ladder and the loan engine exist; this is the staging.</p></div></li>
+    <li><span class="when">fourth</span><div><b>Stall types, rivals, and her Annual Report</b><p>Maker, trader, service on the one business engine; a rival whose prices react; the Fair as the season finale; and the report in the companies' own format with her letter to the shareholder. Life 3, whole.</p></div></li>
+    <li><span class="when">fifth</span><div><b>The crossover chart, the fast-forward, the book</b><p>Draw the net-worth line from day one so year two has something to print; the week the shop out-earned the shifts; thirty years of compounding on one screen. Life 4's ending, and the promise kept.</p></div></li>
+  </ol>
+
+  <div class="foot">
+    <div class="eyebrow">Where this stands on the app as built</div>
+    <div>Ranks, levels and unlocks are the app's own: Saver 1 · Budgeter 6 · Banker 11 · Investor 16 · Founder 23, Jars 6 · Goals 8 · Bank 11 · Exchange 16 · Shop 23 (<code>content.js</code>, <code>CLAUDE.md</code>). The five worlds, five home tiers including the bought house, seventeen restorations, the shock letters with bills and fuses, the seven asset classes, the business engine with <code>borrow</code> and <code>raiseEquity</code>, the Market Game, and the decision log are all built. The three journeys and the daily loop are <code>docs/09</code>. The eight Founder capabilities are <code>docs/08</code>.</div>
+    <div>Everything marked ○ is new in this document: the overnight beat, seasons and finales, the five forks as staged choices, stall types and rivals, the apprenticeship, the pet, the Sibling Exchange, her Annual Report, the crossover chart, the fast-forward, the printed book. Nothing here needs a new engine. All of it needs the existing ones to be <em>shown</em> to her as a life.</div>
+  </div>
+</div>
