@@ -1,0 +1,360 @@
+<title>The Third Sibling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Hanken+Grotesk:wght@400;500;700&family=Sono:wght@400;600&display=swap">
+<style>
+  :root{
+    --paper:#FFFCF5; --surface:#FFFFFF; --tint:#F1F3F1; --line:#DCE5E4; --line-soft:#EAF0EF;
+    --ink:#16262A; --muted:#5B7075; --gold:#F0B429; --gold-deep:#8A5B00; --gold-tint:#FFF3D6;
+    --fin:#00839E; --bee:#A8690F; --ind:#7E2F72;
+    --fin-tint:#E2F1F5; --bee-tint:#F7ECDB; --ind-tint:#F3E4F0;
+    --grow:#178A4C; --spend:#C4453C;
+    --display:"Fraunces",Georgia,serif; --ui:"Hanken Grotesk",system-ui,sans-serif; --mono:"Sono",ui-monospace,monospace;
+    --sh:0 1px 2px rgb(12 30 34 / .06), 0 8px 24px rgb(12 30 34 / .06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0F1A1D; --surface:#16252A; --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
+      --ink:#E4EDEE; --muted:#93A7AC; --gold:#F0C25A; --gold-deep:#F0C25A; --gold-tint:#33280F;
+      --fin:#22A3B8; --bee:#BF7E19; --ind:#AE5CA1;
+      --fin-tint:#12333A; --bee-tint:#33280F; --ind-tint:#2E1A2B;
+      --grow:#5BC98C; --spend:#EC8B81;
+      --sh:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0F1A1D; --surface:#16252A; --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
+    --ink:#E4EDEE; --muted:#93A7AC; --gold:#F0C25A; --gold-deep:#F0C25A; --gold-tint:#33280F;
+    --fin:#22A3B8; --bee:#BF7E19; --ind:#AE5CA1;
+    --fin-tint:#12333A; --bee-tint:#33280F; --ind-tint:#2E1A2B;
+    --grow:#5BC98C; --spend:#EC8B81;
+    --sh:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.55;font-weight:400}
+  a{color:var(--fin)}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 24px 96px}
+  .wide{max-width:1080px;margin-left:auto;margin-right:auto}
+  h1,h2,h3{font-family:var(--display);margin:0;line-height:1.08;text-wrap:balance;font-weight:800}
+  h1{font-size:clamp(44px,7vw,72px);font-variation-settings:"opsz" 144;letter-spacing:-.02em}
+  h2{font-size:30px;font-variation-settings:"opsz" 72;margin-top:72px;letter-spacing:-.01em}
+  h3{font-size:19px;font-weight:600;font-variation-settings:"opsz" 24}
+  p{margin:0;max-width:66ch}
+  .lead{font-size:19px;line-height:1.5;max-width:62ch}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .rule{display:flex;align-items:center;gap:14px;margin:72px 0 18px}
+  .rule .eyebrow{white-space:nowrap}
+  .rule i{flex:1;height:1px;background:var(--line)}
+  .rule + h2{margin-top:0}
+  .stack{display:flex;flex-direction:column;gap:18px}
+  .small{font-size:14px;color:var(--muted)}
+  .tabnum{font-variant-numeric:tabular-nums}
+  em{font-style:italic}
+  strong{font-weight:700}
+  .fin{color:var(--fin)} .bee{color:var(--bee)} .ind{color:var(--ind)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:6px}
+
+  /* masthead */
+  .mast{display:grid;gap:22px}
+  .verdict{border-left:3px solid var(--gold);padding:6px 0 6px 20px;font-family:var(--display);font-variation-settings:"opsz" 36;font-size:22px;line-height:1.4;font-weight:400;max-width:60ch}
+  .verdict b{font-weight:600}
+
+  /* the ledger */
+  .ledger{display:grid;gap:14px;margin-top:22px}
+  .row{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start;padding:14px 0;border-top:1px solid var(--line-soft)}
+  .row:first-child{border-top:0}
+  .row .k{font-weight:700;line-height:1.3}
+  .row .k .small{display:block;font-weight:400;margin-top:2px}
+  .bars{display:grid;gap:6px}
+  .bar{display:grid;grid-template-columns:70px 1fr 118px;align-items:center;gap:10px;font-size:14px}
+  .bar .who{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .bar .t{height:14px;background:var(--tint);border-radius:0 3px 3px 0;position:relative;overflow:visible}
+  .bar .t i{position:absolute;left:0;top:0;bottom:0;border-radius:0 3px 3px 0;min-width:2px}
+  .bar .t i.f{background:var(--fin)} .bar .t i.b{background:var(--bee)} .bar .t i.i{background:var(--ind)}
+  .bar .v{font-family:var(--mono);font-size:12.5px;font-weight:600;text-align:right;color:var(--ink);white-space:nowrap}
+  .bar .v.zero{color:var(--spend)}
+  .axis{display:grid;grid-template-columns:70px 1fr 118px;gap:10px;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:4px}
+  .axis .ticks{position:relative;height:14px;border-top:1px dashed var(--line)}
+  .axis .ticks span{position:absolute;top:2px;transform:translateX(-50%);white-space:nowrap}
+  .bar .t:hover i{filter:brightness(1.08)}
+  .bar[data-tip]{position:relative;cursor:default}
+  .bar[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:80px;top:-30px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:5px;white-space:nowrap;z-index:2;pointer-events:none}
+  @media (max-width:640px){.row{grid-template-columns:1fr}.bar{grid-template-columns:56px 1fr 96px}.axis{grid-template-columns:56px 1fr 96px}}
+
+  /* the seven questions */
+  .matrix{overflow-x:auto;margin-top:20px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+  th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--line-soft)}
+  tr:last-child td{border-bottom:0}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--muted);background:var(--tint);position:sticky;top:0}
+  th.app{font-family:var(--display);font-size:16px;letter-spacing:0;text-transform:none;font-weight:700;font-variation-settings:"opsz" 24}
+  td.q{font-weight:700;width:150px;color:var(--ink)}
+  td.q .small{display:block;font-weight:400;font-size:12.5px;margin-top:2px}
+  td .empty{display:inline-block;padding:3px 9px;border:1.5px dashed var(--spend);border-radius:999px;color:var(--spend);font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.04em}
+  td .half{display:inline-block;padding:3px 9px;border:1.5px dashed var(--gold-deep);border-radius:999px;color:var(--gold-deep);font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.04em;margin-bottom:6px}
+  td.fin{border-left:3px solid var(--fin)} td.bee{border-left:3px solid var(--bee)} td.ind{border-left:3px solid var(--ind)}
+  .score{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .score div{flex:1;min-width:180px;padding:12px 14px;border-radius:10px;background:var(--tint)}
+  .score b{font-family:var(--display);font-size:26px;font-variation-settings:"opsz" 36;display:block;line-height:1;margin-top:4px}
+
+  /* the edge */
+  .edge{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
+  .edge > div{padding:18px 20px;border-radius:12px;background:var(--fin-tint);border:1px solid color-mix(in srgb,var(--fin) 30%,transparent)}
+  .edge h3{color:var(--fin);margin-bottom:8px}
+  .edge p{font-size:15px}
+  @media (max-width:640px){.edge{grid-template-columns:1fr}}
+
+  /* strategies */
+  .board{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:22px}
+  @media (max-width:700px){.board{grid-template-columns:1fr}}
+  .strat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;gap:10px;box-shadow:var(--sh)}
+  .strat header{display:flex;gap:12px;align-items:baseline}
+  .strat .n{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);width:22px;flex:0 0 auto}
+  .strat h3{flex:1}
+  .strat p{font-size:14.5px}
+  .strat .meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:2px}
+  .strat .meta b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-top:2px}
+  .strat .meta span{color:var(--ink)}
+  .strat .from{display:inline-flex;align-items:center;gap:6px}
+  .strat.lead-move{border-color:var(--gold);background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--gold-tint)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--tint);color:var(--muted)}
+  .pill.gold{background:var(--gold-tint);color:var(--gold-deep)}
+  .pill.warn{background:color-mix(in srgb,var(--spend) 12%,transparent);color:var(--spend)}
+
+  /* scatter */
+  .plate{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:22px}
+  .plate svg{width:100%;height:auto;display:block}
+  .plate text{font-family:var(--ui);fill:var(--ink)}
+  .plate .ax{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+  .plate .lbl{font-size:12.5px;font-weight:700}
+  .plate .grid{stroke:var(--line-soft);stroke-width:1}
+  .plate .axis{stroke:var(--line);stroke-width:1}
+  .plate .dot{fill:var(--fin);stroke:var(--surface);stroke-width:2}
+  .plate .dot.hot{fill:var(--gold)}
+  .plate .dot.slow{fill:var(--muted)}
+  .plate g.pt:hover .dot{r:9}
+  .cap{font-size:13px;color:var(--muted);margin-top:10px;max-width:70ch}
+
+  /* the ninety days */
+  ol.days{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:0;counter-reset:d}
+  ol.days li{display:grid;grid-template-columns:86px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line-soft)}
+  ol.days li:first-child{border-top:0}
+  ol.days .when{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--gold-deep);letter-spacing:.06em;padding-top:4px}
+  ol.days b{display:block;font-family:var(--display);font-size:18px;font-weight:600;font-variation-settings:"opsz" 24;margin-bottom:4px}
+  ol.days p{font-size:14.5px}
+
+  /* sources */
+  .sources{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);display:grid;gap:8px}
+  .sources code{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--tint);padding:1px 5px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="eyebrow">Studio brief · the Bizzing family · 31 August 2026</div>
+    <h1>The Third Sibling</h1>
+    <p class="lead">Bizzing Finance measured against Bizzing Bee and Bizzing India on the family's own yardstick — the one India wrote in its docs/10 and Finance borrowed in its docs/06 — and eight moves that would make it an equal, ranked by what each one actually <em>produces</em>.</p>
+    <div class="verdict">The gap is not a features gap. Bee and India each answer <b>seven questions</b> a parent can repeat to another parent; Finance answers <b>three</b>. Two of the four it cannot answer — the corpus and the deadline — are the two that make a family renew for three years.</div>
+  </header>
+
+  <div class="rule"><span class="eyebrow">1 · The ledger</span><i></i></div>
+  <h2>What each app has actually produced</h2>
+  <p style="margin-top:12px">Counted from the repositories on disk, not from the decks. The founder's own test from Finance's docs/07 applies: <em>a defendable asset is something somebody had to produce, license or earn — not a decision somebody made.</em> These are the produced things.</p>
+
+  <div class="ledger wide">
+    <div class="row">
+      <div class="k">Narration clips <span class="small">log scale — every tick is ×10</span></div>
+      <div class="bars">
+        <div class="bar" data-tip="605 concept-explainer scenes + 41,652 word pronunciations"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:92.4%"></i></span><span class="v tabnum">42,257</span></div>
+        <div class="bar" data-tip="every story scene in English and in Hindi, plus 7 language packs"><span class="who ind">India</span><span class="t"><i class="i" style="width:81.1%"></i></span><span class="v tabnum">11,506</span></div>
+        <div class="bar" data-tip="32 lessons recorded this week — 17 minutes"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:44.4%"></i></span><span class="v tabnum">165</span></div>
+        <div class="axis"><span></span><span class="ticks"><span style="left:0%">1</span><span style="left:20%">10</span><span style="left:40%">100</span><span style="left:60%">1k</span><span style="left:80%">10k</span><span style="left:100%">100k</span></span><span></span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="k">Content atoms <span class="small">the countable unit a parent can repeat · log scale</span></div>
+      <div class="bars">
+        <div class="bar" data-tip="the whole championship list; 40,000 core words load on open"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:100%"></i></span><span class="v tabnum">128,040 words</span></div>
+        <div class="bar" data-tip="344 stories · 2,830 scenes · plus 91 songs, 84 Nani tales, 38 festivals, 28 street games, 26 kinship words"><span class="who ind">India</span><span class="t"><i class="i" style="width:49.6%"></i></span><span class="v tabnum">344 stories</span></div>
+        <div class="bar" data-tip="8 chapters · 96 questions · 40 fictional companies in the Market Game"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:29.4%"></i></span><span class="v tabnum">32 cards</span></div>
+        <div class="axis"><span></span><span class="ticks"><span style="left:0%">1</span><span style="left:19.6%">10</span><span style="left:39.2%">100</span><span style="left:58.8%">1k</span><span style="left:78.4%">10k</span><span style="left:98%">100k</span></span><span></span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="k">Commissioned art <span class="small">named artists, credited traditions — licensable</span></div>
+      <div class="bars">
+        <div class="bar" data-tip="Bee's art is coded and generated — themes, 17 avatars — not commissioned"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:0%"></i></span><span class="v tabnum zero">0</span></div>
+        <div class="bar" data-tip="952 master images, 406 MB, folk-art traditions named"><span class="who ind">India</span><span class="t"><i class="i" style="width:100%"></i></span><span class="v tabnum">952</span></div>
+        <div class="bar" data-tip="13 generated sprites, 5 generated plates, 54 hand-drawn SVG icons"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:0%"></i></span><span class="v tabnum zero">0</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="k">Worlds <span class="small">places with their own identity</span></div>
+      <div class="bars">
+        <div class="bar" data-tip="palette + display face + page motif per theme"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:80%"></i></span><span class="v tabnum">12 themes</span></div>
+        <div class="bar" data-tip="five-layer animated scenes, each with a night composition"><span class="who ind">India</span><span class="t"><i class="i" style="width:100%"></i></span><span class="v tabnum">15 worlds</span></div>
+        <div class="bar" data-tip="painted plates with 13 sprites composited over them"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:33.3%"></i></span><span class="v tabnum">5 worlds</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="k">Weight on disk <span class="small">excluding node_modules and .git</span></div>
+      <div class="bars">
+        <div class="bar"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:53.2%"></i></span><span class="v tabnum">585 MB</span></div>
+        <div class="bar"><span class="who ind">India</span><span class="t"><i class="i" style="width:100%"></i></span><span class="v tabnum">1.1 GB</span></div>
+        <div class="bar"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:4.5%"></i></span><span class="v tabnum">50 MB</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="k">What Finance has that they don't <span class="small">the one column that runs the other way</span></div>
+      <div class="bars">
+        <div class="bar"><span class="who bee">Bee</span><span class="t"><i class="b" style="width:0%"></i></span><span class="v tabnum zero">0 engines</span></div>
+        <div class="bar"><span class="who ind">India</span><span class="t"><i class="i" style="width:0%"></i></span><span class="v tabnum zero">0 engines</span></div>
+        <div class="bar" data-tip="world model · 7 asset classes · accrual business accounting · 40-company × 40-year market · mastery record"><span class="who fin">Finance</span><span class="t"><i class="f" style="width:100%"></i></span><span class="v tabnum">5 engines</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Bee is ten days older than Finance in the repository history and India is fourteen; the gap is not time. It is that both siblings spent their time producing a corpus and narrating it, and Finance spent its time building engines — which is the right thing to be different about, and the wrong thing to be <em>only</em>.</p>
+
+  <div class="rule"><span class="eyebrow">2 · The seven questions</span><i></i></div>
+  <h2>The founder's own frame, applied to all three</h2>
+  <p style="margin-top:12px">India's docs/10 strips Bee down to a machine: a corpus, an atom, a ladder, a memory engine, a completion meter, a promise. India's docs/11 adds the seventh — a <em>deadline</em>, the reason a parent acts this year rather than next. Here is each app's answer, taken from its own documents and source. A dashed cell is an honest blank.</p>
+
+  <div class="matrix wide">
+    <table>
+      <thead><tr>
+        <th>Question</th>
+        <th class="app bee"><span class="sw" style="background:var(--bee)"></span>Bizzing Bee</th>
+        <th class="app ind"><span class="sw" style="background:var(--ind)"></span>Bizzing India</th>
+        <th class="app fin"><span class="sw" style="background:var(--fin)"></span>Bizzing Finance</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="q">The corpus <span class="small">finite, countable, canonical, already loved</span></td>
+          <td class="bee"><strong>128,040 words</strong> — the real championship list, with the NSF finals 500 and Scripps data alongside</td>
+          <td class="ind"><strong>1,008 stories</strong> (344 built), 2,500 verses, 36 states, 9 languages — "an auspicious count"</td>
+          <td class="fin"><span class="empty">none stated</span><br>32 cards and 40 fictional companies. docs/06 proposes 500 real companies; none exist yet</td></tr>
+        <tr><td class="q">The atom <span class="small">the smallest thing a child completes</span></td>
+          <td class="bee">One word: say it, spell it, know its origin</td>
+          <td class="ind">One story · one verse · one place · one word</td>
+          <td class="fin"><span class="half">unresolved</span><br>A card? A decision? A week? The app has never said, and the engines mean it could be <em>a situation</em></td></tr>
+        <tr><td class="q">The ladder</td>
+          <td class="bee">Word → Set (24) → Level → Champ → Library</td>
+          <td class="ind">Story → Padav → Level → Yatri rank → the open map</td>
+          <td class="fin">30 levels; Jars 6 · Goals 8 · Bank 11 · Exchange 16 · Shop 23. <strong>Real, and comparable</strong></td></tr>
+        <tr><td class="q">The memory engine</td>
+          <td class="bee">Spaced repetition — a word won't return until ~150 others have</td>
+          <td class="ind">Leitner SRS in the language engine, 585 checks in its test suite</td>
+          <td class="fin">Leitner boxes 1·3·7·21·60 with a 7-day retention gap; transfer surfaces instrumented. <strong>Comparable, arguably better measured</strong></td></tr>
+        <tr><td class="q">The completion meter <span class="small">the multi-year long game, visible</span></td>
+          <td class="bee">"Library explored" — a percentage of 128,040</td>
+          <td class="ind">The Living Map lights up, state by state; the share card is "Aanya has lit up 14 states"</td>
+          <td class="fin"><span class="empty">none</span><br>Net worth is a number, not a meter; nothing shows a child how much of the subject is left</td></tr>
+        <tr><td class="q">The promise <span class="small">one sentence a parent repeats</span></td>
+          <td class="bee">"Nothing is skipped; every word waits its turn"</td>
+          <td class="ind">"She can talk to my mother"</td>
+          <td class="fin"><span class="empty">none</span><br>The closest thing on file is docs/08's "an entrepreneur by fourteen" — a journey, not a promise</td></tr>
+        <tr><td class="q">The deadline <span class="small">why this year and not next</span></td>
+          <td class="bee">The bee itself — a real competition, with a date and a published list</td>
+          <td class="ind">"Grandparents do not wait, and every year the conversation gets harder to start"</td>
+          <td class="fin"><span class="empty">none</span><br>Though the subject has one built in: compounding means every year of delay costs more, and nobody has said so out loud</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="score">
+    <div><span class="eyebrow bee">Bee</span><b class="tabnum">7 / 7</b></div>
+    <div><span class="eyebrow ind">India</span><b class="tabnum">7 / 7</b></div>
+    <div><span class="eyebrow fin">Finance</span><b class="tabnum">3 / 7</b><span class="small">ladder · memory engine · and half an atom</span></div>
+  </div>
+
+  <div class="rule"><span class="eyebrow">3 · The edge</span><i></i></div>
+  <h2>What only Finance has, and should build on</h2>
+  <p style="margin-top:12px">A strategy that only copies the siblings would make Finance a third content app with a smaller corpus. Two things are structurally Finance's alone, and every move below is chosen so that it borrows a sibling's <em>form</em> while standing on one of these.</p>
+  <div class="edge">
+    <div><h3>It is a simulation, not a library</h3><p>Bee and India ship authored corpora; their content is finite because somebody wrote it. Finance has a world model, seven asset classes priced off it, a business with a balance sheet that balances to 10⁻¹¹ over 300 weeks, and a forty-year market. It can <strong>generate situations forever</strong> — the one thing a library cannot do. The atom Finance never named is sitting here: <em>a situation the child had to decide in.</em></p></div>
+    <div><h3>The subject has a clock built in</h3><p>India had to argue its deadline ("grandparents do not wait"). Finance's is arithmetic: the app already teaches it in c7a. A child who starts at eight compounds six more years than one who starts at fourteen, and the difference is not small. <strong>Nobody has said this to a parent yet.</strong> It is the only deadline in the family that gets <em>more</em> true every year.</p></div>
+  </div>
+
+  <div class="rule"><span class="eyebrow">4 · Eight moves</span><i></i></div>
+  <h2>Ranked by what each one produces</h2>
+  <p style="margin-top:12px">Every move names the sibling precedent it borrows, the asset it leaves behind, and an honest effort. Policy choices — anything a competitor changes in a sprint — are excluded on purpose; that list was written once already and called what it was.</p>
+
+  <div class="board wide">
+    <div class="strat lead-move">
+      <header><span class="n">1</span><h3>A real bee for money</h3><span class="pill gold">the deadline</span></header>
+      <p>Bee's whole engine works because the bee is a <em>real event with a date and a published word list</em>. Money has one too: NCFE's annual National Financial Literacy Assessment Test for classes VI–XII in India, and the Council for Economic Education's National Personal Finance Challenge in the US. Map the curriculum to the published syllabus, and the app gains a calendar, a canonical list, and a reason a parent signs up in September.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--bee)"></span>Bee — Scripps as the corpus and the clock</span><b>Produces</b><span>Institutional recognition; a syllabus-mapped mastery record</span><b>Effort</b><span>~4 weeks to map — <em>against the published syllabus, never from memory</em> (CONCEPT §6.6 applies to a syllabus exactly as to a rate)</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">2</span><h3>Narrate the town</h3><span class="pill">the pipeline exists</span></header>
+      <p>India's 11,506 clips are what make it feel finished; Finance has 165. The pipeline built this week records, measures and rejects a silent clip automatically, so the marginal clip costs minutes. Every letter and each of its outcomes, every shopkeeper's line, the market-day report, the shock when the monsoon comes — all of it spoken, in the neutral voice.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--ind)"></span>India — every scene narrated; audio by key</span><b>Produces</b><span>~3,000 clips; the app's second-biggest asset after the engines</span><b>Effort</b><span>2 weeks, mostly waiting for the synthesiser</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">3</span><h3>The Register</h3><span class="pill">the corpus</span></header>
+      <p>The atom a child already loves: <em>who makes this?</em> Five hundred real companies — what they make, who pays them, what could hurt them — collected the way India lights up states: "you can name the maker of 84 things in your house." Read-only, behind the hard wall in CONCEPT §6.2; the Exchange keeps its fictional names and its buy button. The asset is not the blurbs, which a model writes in an afternoon, but the <strong>verification trail and the house voice</strong>.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--bee)"></span>Bee — a canonical, finite list, nothing skipped</span><b>Produces</b><span>A sourced, countable corpus with a completion meter</span><b>Effort</b><span>8 weeks for the first 50, deep not wide — docs/06 §6</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">4</span><h3>The Almanac</h3><span class="pill">history, sourced</span></header>
+      <p>Forty narrated episodes of market history — 1929, 1987, 2000, 2008, 2020, India's 1991 — told exactly as India tells Itihaas: badged, with <code style="font-family:var(--mono);font-size:12.5px">sources[]</code> on every claim, a human reviewer on anything contested. The Market Game already replays the <em>behaviour</em> of these years under fictional names; the Almanac gives them their dates and their faces.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--ind)"></span>India — the editorial policy and its headless gate</span><b>Produces</b><span>A second corpus, dramatic, finite, narratable</span><b>Effort</b><span>6 weeks for the first six episodes</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">5</span><h3>The heirloom ledger</h3><span class="pill">the completion meter</span></header>
+      <p>Bee's meter is a percentage; India's is a map. Finance's should be <strong>the child's own net-worth line from eight to fourteen</strong>, with every decision underneath it — decisions.js already keeps them. At fourteen the family gets it printed and bound: six years in Bizzington, the crossover chart where the shop first out-earned the shifts, the goals that went up floor by floor. The family already prints books.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--ind)"></span>India — the map as the share artefact; bizzing-bee-books</span><b>Produces</b><span>A longitudinal record: worthless on day one, a switching cost by year two</span><b>Effort</b><span>6 weeks for the meter; the book at year two</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">6</span><h3>The parent's own gap</h3><span class="pill">the promise</span></header>
+      <p>India's sharpest insight: <em>the parent absorbed their culture; the child has to be taught it, and the parent never learned how.</em> Money is the same shape, harder — most parents were never taught it at all. The promise is one sentence: <strong>"She'll know at twelve what you learnt at thirty-five."</strong> And the method India hands the parent becomes, here, the Sunday three — three dinner-table questions drawn from what the child actually did this week. Never about the household's own money; that rule stands.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--ind)"></span>India docs/11 — "hand the parent a method"</span><b>Produces</b><span>The promise, and a parent report that becomes a conversation</span><b>Effort</b><span>2 weeks; the report already exists</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">7</span><h3>Sunday in Bizzington</h3><span class="pill">someone in the room</span></header>
+      <p>India's inventory ends with two things an app cannot give — fifteen cousins, being in the majority — "but belonging can be simulated." Finance's version is pass-and-play: the board game and a market season played by a whole family on one screen, the parent given a fictional household of their own to run against the child's. The one hook in docs/07 that is weekend-shaped, and the only one where an adult learns something too.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--ind)"></span>India — belonging simulated; docs/07 H7</span><b>Produces</b><span>A weekly ritual; a second adult who renews</span><b>Effort</b><span>3 weeks; the board game engine exists</span></div>
+    </div>
+    <div class="strat">
+      <header><span class="n">8</span><h3>Outcome evidence</h3><span class="pill warn">slow · strongest</span></header>
+      <p>A pre/post study: the mastery record against an independent instrument, a real cohort, a real gap. Bee tests learning outcomes better than India does; nobody in children's finance has published any. It is expensive, slow and unfakeable — which is exactly why it would be the only moat in the category that a competitor cannot rent, generate or copy in a sprint.</p>
+      <div class="meta"><b>Borrows</b><span class="from"><span class="sw" style="background:var(--bee)"></span>Bee — outcomes measured, not just rendering</span><b>Produces</b><span>The one asset with no precedent in the category</span><b>Effort</b><span>A school year; design it now, run it with move 1's cohort</span></div>
+    </div>
+  </div>
+
+  <div class="plate wide">
+    <div class="eyebrow">Effort against what it leaves behind</div>
+    <svg viewBox="0 0 760 360" role="img" aria-label="Eight strategies plotted by effort in weeks against the defensibility of the asset each produces">
+      <g class="grid">
+        <line x1="130" y1="40" x2="710" y2="40"/><line x1="130" y1="100" x2="710" y2="100"/><line x1="130" y1="160" x2="710" y2="160"/><line x1="130" y1="220" x2="710" y2="220"/><line x1="130" y1="280" x2="710" y2="280"/>
+      </g>
+      <line class="axis" x1="130" y1="300" x2="710" y2="300"/><line class="axis" x1="130" y1="30" x2="130" y2="300"/>
+      <text class="ax" x="130" y="322" text-anchor="middle">0</text><text class="ax" x="246" y="322" text-anchor="middle">8</text><text class="ax" x="362" y="322" text-anchor="middle">16</text><text class="ax" x="478" y="322" text-anchor="middle">24</text><text class="ax" x="594" y="322" text-anchor="middle">32</text><text class="ax" x="710" y="322" text-anchor="middle">40 weeks</text>
+      <text class="ax" x="120" y="304" text-anchor="end">policy</text><text class="ax" x="120" y="244" text-anchor="end">feature</text><text class="ax" x="120" y="184" text-anchor="end">copyable asset</text><text class="ax" x="120" y="124" text-anchor="end">produced asset</text><text class="ax" x="120" y="64" text-anchor="end">moat</text>
+      <text class="ax" x="420" y="350" text-anchor="middle">effort · weeks to first shippable</text>
+      <!-- x: 130 + weeks*14.5 · y: 300 − score*60 -->
+      <g class="pt"><circle class="dot hot" cx="188" cy="60" r="7"/><text class="lbl" x="201" y="52">1 · A real bee for money</text></g>
+      <g class="pt"><circle class="dot" cx="159" cy="120" r="7"/><text class="lbl" x="172" y="116">2 · Narrate the town</text></g>
+      <g class="pt"><circle class="dot" cx="246" cy="72" r="7"/><text class="lbl" x="259" y="76">3 · The Register</text></g>
+      <g class="pt"><circle class="dot" cx="217" cy="132" r="7"/><text class="lbl" x="230" y="140">4 · The Almanac</text></g>
+      <g class="pt"><circle class="dot" cx="217" cy="96" r="7"/><text class="lbl" x="230" y="100">5 · The heirloom ledger</text></g>
+      <g class="pt"><circle class="dot" cx="159" cy="180" r="7"/><text class="lbl" x="172" y="184">6 · The parent's own gap</text></g>
+      <g class="pt"><circle class="dot" cx="173.5" cy="216" r="7"/><text class="lbl" x="186.5" y="220">7 · Sunday in Bizzington</text></g>
+      <g class="pt"><circle class="dot slow" cx="710" cy="48" r="7"/><text class="lbl" x="697" y="52" text-anchor="end">8 · Outcome evidence</text></g>
+    </svg>
+    <p class="cap">Gold is the move to make first; grey is the one to <em>start</em> first, because it takes a school year and the cohort from move 1 is the cohort to run it on. Vertical placement uses docs/07's own ladder — policy, feature, copyable asset, produced asset, moat.</p>
+  </div>
+
+  <div class="rule"><span class="eyebrow">5 · The ninety days</span><i></i></div>
+  <h2>In order, because the order matters</h2>
+  <ol class="days">
+    <li><span class="when">Weeks 1–2</span><div><b>Narrate the town, and say the promise</b><p>Moves 2 and 6. The cheapest two, and the two that change how the app <em>feels</em> the day they land. Every letter spoken; the parent report ending with the Sunday three; the promise on the first screen a parent sees.</p></div></li>
+    <li><span class="when">Weeks 3–6</span><div><b>Map to the bee, register the first fifty</b><p>Moves 1 and 3, together, because the syllabus decides which fifty companies come first. This is the month the corpus and the deadline both appear, and the parent gets a number to repeat.</p></div></li>
+    <li><span class="when">Weeks 7–12</span><div><b>The Almanac's first six, the meter's first line</b><p>Moves 4 and 5. Six narrated episodes under the editorial gate; the net-worth line drawn from day one so that year two has something to print.</p></div></li>
+    <li><span class="when">Week 12 →</span><div><b>Design the study, run it on the bee cohort</b><p>Move 8 starts on paper now and in classrooms when move 1's first cohort sits the test. Move 7, the Sunday game, is the reward for shipping the rest — weekend-shaped work for a weekend.</p></div></li>
+  </ol>
+
+  <div class="sources">
+    <div class="eyebrow">Where the numbers come from</div>
+    <div>Counted on 31 August 2026 from the three repositories on disk. Narration: <code>find -name '*.mp3'</code> — Bee <code>voice/w</code> 41,652 + 605 explainer scenes; India 11,506 across <code>st/ ep/ hi/</code> and seven language packs; Finance 165 in <code>public/voice/lessons</code>. Corpora: Bee's <code>READ-ME-FIRST.md</code> (128,040 words, 121 concepts, 100 Word Journeys); India's <code>docs/13</code> (344 stories, 2,830 scenes) and <code>data-*.js</code>; Finance's <code>content.js</code> via a module import. Commissioned art: India's <code>masters/</code>, 952 files, 406 MB. Weight: <code>du -sh</code> excluding node_modules and .git.</div>
+    <div>The seven questions are India's <code>docs/10-the-corpus.md</code> §1 plus the deadline from <code>docs/11</code> §3. The vertical ladder in the scatter is Finance's <code>docs/07-the-hour.md</code> §1. Effort figures are estimates by the author of this brief and should be read as such.</div>
+    <div>Move 1 names two real programmes. Their syllabi are published; nothing here claims to have mapped them yet, and CONCEPT §6.6 forbids teaching a syllabus from memory exactly as it forbids a rate. Verify before claiming coverage.</div>
+  </div>
+</div>
