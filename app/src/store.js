@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 8;
+export const SCHEMA = 9;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -49,6 +49,7 @@ function migrate(blob) {
     else if (blob.v === 5) blob = v5_to_v6(blob);
     else if (blob.v === 6) blob = v6_to_v7(blob);
     else if (blob.v === 7) blob = v7_to_v8(blob);
+    else if (blob.v === 8) blob = v8_to_v9(blob);
     else break;
   }
   return blob;
@@ -146,3 +147,45 @@ function v7_to_v8(old) {
   old.v = 8;
   return old;
 }
+
+/* v9: today's till (dailypuzzle.js), the maths placement (placement.js) and
+   the recorded answers index (recordings live in the device bucket, never
+   here — a voice is not household data that syncs). */
+function v8_to_v9(old) {
+  old.kids.forEach((k) => {
+    if (k.puzzle === undefined) k.puzzle = null;
+    if (k.maths === undefined) k.maths = null;
+    if (!k.answers) k.answers = [];
+  });
+  old.v = 9;
+  return old;
+}
+
+/* ── recordings ───────────────────────────────────────────────────────────
+   A grandparent's answer to the week's question. It is audio of a real
+   person in a real house, so it is the most sensitive thing the app ever
+   holds — which is why it goes to IndexedDB on THIS device and is named in
+   backup.js's NEVER_SYNCED list. It is not in the household blob, so it
+   cannot ride along with a sync that has not been written yet. */
+const REC_DB = 'bzf_recordings';
+function recDB() {
+  return new Promise((res, rej) => {
+    if (typeof indexedDB === 'undefined') return rej(new Error('no indexedDB'));
+    const r = indexedDB.open(REC_DB, 1);
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('clips')) r.result.createObjectStore('clips'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function recTx(mode, fn) {
+  return recDB().then((db) => new Promise((res, rej) => {
+    const tx = db.transaction('clips', mode), st = tx.objectStore('clips');
+    const req = fn(st);
+    tx.oncomplete = () => res(req && req.result);
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+Store.putClip = (id, blob) => recTx('readwrite', (st) => st.put(blob, id));
+Store.getClip = (id) => recTx('readonly', (st) => st.get(id));
+Store.delClip = (id) => recTx('readwrite', (st) => st.delete(id));
+Store.clipKeys = () => recTx('readonly', (st) => st.getAllKeys());

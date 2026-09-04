@@ -11,6 +11,10 @@ import { ART } from './art-gen.js';
 import { hero } from './hero.js';
 import { viewAtlas, viewAct, viewRevise } from './atlas.js';
 import * as daily from './daily.js';
+import * as puz from './dailypuzzle.js';
+import * as placement from './placement.js';
+import * as answers from './answers.js';
+import * as backup from './backup.js';
 import { GAMES } from './arcade.js';
 import { canSay } from './ui.js';
 import { COVERS } from './covers-gen.js';
@@ -283,6 +287,8 @@ export function viewHome() {
     ${greeting(c)}
 
     ${strip}
+
+    ${tillCard(c)}
 
     ${todayCard(c)}
 
@@ -796,7 +802,7 @@ function viewJars() {
       </div>
       <p class="small muted" style="margin-top:12px">Buttons move ${money(price(2))} at a time, out of your wallet (${money(c.money.wallet)}).</p>
     </div>
-    ${!levelAtLeast(c, 11) ? `<div class="card stack">
+    ${!ledger.mathsMet(c)('M10') ? `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
       <p class="small muted">Every twenty coins that arrive, split like this:</p>
       <div class="stack" style="gap:9px">
@@ -817,6 +823,7 @@ function viewJars() {
         ${tot === 100 ? 'Twenty coins, all spoken for. Good.' : 'That is ' + Math.round(tot / 5) + ' coins out of twenty. Every coin has to go somewhere.'}</p>
     </div>` : `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
+      <p class="small muted">Percent is only a way of writing it. Every line below is also sayable in coins — ${esc(String(Math.round(r.save / 5)))} coins in every twenty to Save, and so on.${ledger.mathsMeasured(c) ? '' : ' (The town is guessing at your arithmetic until you sit the maths check on the grown-up\'s page.)'}</p>
       ${Object.keys(JARMETA).map((k) => `<div class="row">
         <span style="width:58px;font-weight:800;font-size:13.5px;color:${JARMETA[k][1]}">${JARMETA[k][0]}</span>
         <div class="grow bar"><i style="width:${r[k]}%;background:${JARMETA[k][1]}"></i></div>
@@ -1468,6 +1475,10 @@ export function viewParents() {
         <button class="btn ${s.settings.sound ? '' : 'ghost'} sm" data-act="sound">${s.settings.sound ? 'On' : 'Off'}</button></div>
     </div>
 
+    ${placementCard(c)}
+    ${answersCard(c)}
+    ${backupCard(s)}
+
     <div class="card stack" style="${s.settings.tester ? 'box-shadow:0 0 0 2px var(--spend),0 14px 34px rgb(12 30 34 / .08)' : ''}">
       <div class="eyebrow" style="color:var(--spend)">Tester mode</div>
       <p class="small muted">For trying the app, not for a child. With it on, every gate opens — all eight chapters, the five worlds, the Jar Shed, the Build Yard, the Bank, the Exchange, the shop and every game — while ${esc(c.name)}'s learning record stays exactly what it is. A red TESTER pill sits in the bar the whole time it is on.</p>
@@ -1741,5 +1752,101 @@ function landing() {
         .map(([ic, t, sub]) => `<div class="qrow"><span class="iw">${ico(ic, '✓', 20)}</span><span class="grow"><b style="font-size:14.5px">${t}</b><div class="small muted">${sub}</div></span></div>`).join('')}
     </div></div>
     <p class="small muted" style="text-align:center">Third of the Bizzing family, after <b>Bizzing Bee</b> and <b>Bizzing India</b>. <button class="small" style="color:var(--action);font-weight:800" data-act="about">How it was made →</button></p>
+  </div>`;
+}
+
+
+/* ── today's till (dailypuzzle.js) ───────────────────────────────────────
+   One a day, the same one in every house, no timer and no streak. */
+function tillCard(c) {
+  const p = puz.puzzle(), st = puz.stateOf(c, p.day);
+  const money2 = (n) => money(price(n));
+  const line = (l, i) => `<div class="tline">
+    <span class="grow">${ico(l.em, l.em, 16)} ${esc(l.name)}${l.qty > 1 ? ` <span class="small muted">× ${l.qty}</span>` : ''}</span>
+    <i></i><b class="tabnum">${i === p.hidden ? (st.done ? money2(l.each) + (l.qty > 1 ? ' each' : '') : '<span class="tq">?</span>') : money2(l.each) + (l.qty > 1 ? ' each' : '')}</b>
+  </div>`;
+  const marks = st.tries.map((t) => t === p.answer ? '<span class="tm ok">✓</span>' : `<span class="tm">${t > p.answer ? '▼ too high' : '▲ too low'}</span>`).join('');
+  return `<div class="card till">
+    <div class="row"><div class="grow"><div class="eyebrow">Today's till · everyone gets the same one</div>
+      <h3 style="margin:2px 0 0">What did one cost?</h3></div>
+      <span class="small muted tabnum">#${p.day}</span></div>
+    <div class="slip" style="margin-top:10px;max-width:none">
+      <div class="slip-head"><span>Bizzington General Store</span><span>no. ${p.day}</span></div>
+      ${p.lines.map(line).join('')}
+      <div class="slip-line total"><span>Total</span><i></i><b class="tabnum">${money2(p.total)}</b></div>
+    </div>
+    ${st.done
+      ? `<p class="small" style="margin-top:10px">${st.won
+          ? `<b style="color:var(--grow)">${st.tries.length === 1 ? 'First look.' : 'Got it.'}</b> ${esc(p.lines[p.hidden].name)} was ${money2(p.answer)}${p.lines[p.hidden].qty > 1 ? ' each' : ''}.`
+          : `<b>It was ${money2(p.answer)}${p.lines[p.hidden].qty > 1 ? ' each' : ''}.</b> ${p.kind === 'divide'
+              ? `Take the other lines off the total, then share what is left between the ${p.lines[p.hidden].qty}.`
+              : 'Take the other lines off the total, and what is left is the missing one.'}`}</p>
+         <div class="row" style="gap:8px;margin-top:10px">${marks}<span class="grow"></span>
+           <button class="btn ghost sm" data-act="tillShare">Copy the shape</button></div>`
+      : `<div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+           <input class="field" data-field="till" inputmode="numeric" placeholder="What did one cost?" value="${esc(R.fields.till || '')}"
+             style="flex:1;min-width:150px;padding:11px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-weight:700">
+           <button class="btn sm" data-act="till">Check</button></div>
+         <div class="row" style="gap:8px;margin-top:8px">${marks}<span class="grow"></span>
+           <span class="small muted">${puz.TRIES - st.tries.length} ${puz.TRIES - st.tries.length === 1 ? 'try' : 'tries'} left · no timer, and missing a day costs nothing</span></div>`}
+  </div>`;
+}
+
+/* ── the maths check (placement.js), on the grown-up's page ───────────── */
+export function placementCard(c) {
+  const m = placement.measured(c);
+  return `<div class="card stack">
+    <div class="eyebrow">The maths check</div>
+    <p class="small muted">${m
+      ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(placement.RUNGS[c.maths.reached - 1] || {}).can ? esc(placement.RUNGS[c.maths.reached - 1].can.toLowerCase()) : 'the first rung'}</b>. The town uses that to decide what it may put on screen — a screen that needs arithmetic she has not met waits, or shows the same truth another way.`
+      : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
+    <div class="row" style="gap:8px"><span class="grow"></span>
+      <button class="btn ${m ? 'ghost' : ''} sm" data-act="placement">${m ? 'Sit it again' : 'Start the check'}</button></div>
+  </div>`;
+}
+
+/* ── backup, and the consent gate for a server that does not exist yet ── */
+export function backupCard(s) {
+  const con = backup.consented(s);
+  return `<div class="card stack">
+    <div class="eyebrow">Backup</div>
+    <p class="small muted">Everything lives on this device and nowhere else. Save a copy and you can move the household to another phone, or bring it back if this one is wiped.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn sm" data-act="bkSave">Save a copy</button>
+      <button class="btn ghost sm" data-act="bkLoad">Restore from a file</button>
+    </div>
+    <div class="sect" style="margin-top:6px"><b>If there is ever a server</b><i></i></div>
+    <p class="small muted">There is no account and no server today, so nothing has ever been uploaded. When there is one, this switch is what it waits on — and even with it on, ${esc(s.kids.map((k) => k.name).join(' and ') || 'your child')}'s name, age band and any recorded voice are <b>not on the list of things that may leave</b>. That is built into the code, not into a policy.</p>
+    <div class="row"><span class="small grow">Allow a backup to the cloud, when one exists</span>
+      <button class="btn ${con ? '' : 'ghost'} sm" data-act="consent">${con ? 'Allowed' : 'Not allowed'}</button></div>
+    ${con ? '<p class="small muted">Turning this off again deletes whatever was uploaded, rather than just stopping.</p>' : ''}
+  </div>`;
+}
+
+/* ── the week's answer, in the voice that gave it (answers.js) ───────── */
+export function answersCard(c) {
+  const list = answers.list(c);
+  if (!answers.supported()) return `<div class="card stack"><div class="eyebrow">The week's answer</div>
+    <p class="small muted">This device cannot record audio, so the question stays a question. Everything else works.</p></div>`;
+  const rec = R.rec;
+  return `<div class="card stack">
+    <div class="eyebrow">The week's answer</div>
+    <p class="small">“${esc(daily.askOfWeek())}”</p>
+    <p class="small muted">Ask it, and keep the answer in the voice that gave it. It stays on this phone: it is not in the backup, and there is nowhere for it to go even when there is a server.</p>
+    ${rec ? `<div class="row" style="gap:8px;align-items:center">
+        <span class="reclive"></span><span class="small grow tabnum">${Math.floor(rec.secs)}s</span>
+        <button class="btn sm" data-act="recStop">Stop and keep</button>
+        <button class="btn ghost sm" data-act="recCancel">Throw away</button></div>`
+      : `<div class="row" style="gap:8px;flex-wrap:wrap">
+          <input class="field" data-field="recwho" placeholder="Who is answering? (Nani, Dad…)" value="${esc(R.fields.recwho || '')}"
+            style="flex:1;min-width:160px;padding:9px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-weight:650;font-size:13.5px">
+          <button class="btn sm" data-act="recStart">${ico('sound', '🎙', 15)} Record</button></div>`}
+    ${list.length ? `<div class="rows" style="margin:6px -18px 0">
+      ${list.map((a) => `<div class="qrow"><span class="iw">${ico('sound', '🎙', 18)}</span>
+        <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(a.who || 'Someone at home')}</b>
+          <div class="small muted">“${esc(a.q)}” · ${shortDate(a.t)}${a.plays ? ` · played ${a.plays}×` : ''}</div></span>
+        <button class="btn ghost sm" data-act="recPlay" data-arg="${a.id}">Play</button>
+        <button class="btn ghost sm" data-act="recDel" data-arg="${a.id}" aria-label="Delete">×</button></div>`).join('')}
+    </div>` : ''}
   </div>`;
 }

@@ -127,6 +127,19 @@ not aspirational. The short version:
 - **The companion reacts to money on pay day and to nothing else** (docs/10). Care never
   moves with wall-clock time, it never dies, and its wants are priced from the same wallet.
   A creature that sulks at a missed login is streak pressure in a costume — refuse it.
+- **A transfer surface is never the surface it was taught on.** Doing it where you learned it
+  is practice; doing it somewhere nobody asked is the evidence. `validate()` fails the other.
+- **Every figure is registered in `src/sources.js`** — a dial of this town, said plainly, or a
+  real figure with a citation. A projection that hard-codes its own rate is a number claiming
+  a provenance it does not have; `test/sources.mjs` catches it.
+- **`placement.js` measures the maths ceiling; nothing else may guess at it.** It is a ceiling,
+  not a score: never shown to the child, never in a report. Surfaces gate on the arithmetic
+  (`ledger.mathsMet`), never on the level — that was the Jar Shed's bug.
+- **A name, an age band and a recorded voice may never leave the device.** `backup.js` decides
+  by allow-list, so a field added tomorrow is excluded by default rather than included by
+  accident, and `test/backup.mjs` holds it to that.
+- **The microphone opens only from a real tap and its track stops the instant recording ends.**
+  A stream left open is a microphone left on.
 - **A keepsake is kept, never given.** The first receipt is counted from the ledger
   (`sim.buyFromShop`); nothing on the Collection shelf arrives for showing up.
 

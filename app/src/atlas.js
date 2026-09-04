@@ -10,6 +10,7 @@
 import { WORLDS, CHAPTERS, worldOpen, chapterDone, chapterLocked, rankObj, GLOSSARY } from './content.js';
 import { ART } from './art-gen.js';
 import { ATLAS, PINS } from './atlas-gen.js';
+import { WALKS } from './walks-gen.js';
 import { face, ico } from './art.js';
 import { esc } from './ui.js';
 import * as sim from './sim.js';
@@ -165,6 +166,44 @@ export function viewAtlas(c) {
     ${WORLDS.map((w, wi) => actSection(c, wi, r)).join('')}
   </div>`;
 }
+/* ── the walk ─────────────────────────────────────────────────────────────
+   Bee's Atlas opens a region as a painting the camera unrolls, with the stops
+   standing on the road and the one you are at carrying its card. Here the
+   road's height is MEASURED from each panorama (walks-gen.js), so a stop
+   stands on the road rather than in the sky, and the stops are spread along
+   the width by how many there are — a region with twelve stops is a longer
+   walk, not a more crowded one. It pans, and it scrolls itself to where she
+   is standing. */
+function walk(c, w, ns, wi) {
+  const art = WALKS[w.id];
+  if (!art) return '';
+  const n = ns.length; if (!n) return '';
+  const gap = 100 / (n + 1);
+  const cur = ns.findIndex((s) => s.cur);
+  const y = art.road * 100;
+  return `<div class="walk-scroll" data-walk="${wi}" data-cur="${cur}">
+    <div class="walk" style="aspect-ratio:${art.w}/${art.h};background-image:url(${art.src})">
+      <svg class="walk-road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 ${y} L100 ${y}" stroke="rgba(255,255,255,.5)" stroke-width=".5" stroke-dasharray="1.2 2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        ${cur > 0 ? `<path d="M0 ${y} L${gap * (cur + 1)} ${y}" stroke="#FFD24D" stroke-width="1.1" stroke-linecap="round" vector-effect="non-scaling-stroke" style="filter:drop-shadow(0 1px 3px rgba(24,14,4,.55))"/>` : ''}
+      </svg>
+      ${ns.map((s, i) => {
+        const kind = s.done ? 'passed' : s.cur ? 'cur' : s.locked ? 'locked' : 'open';
+        return `<button class="wstop ${kind}" style="left:${gap * (i + 1)}%;top:${y}%;--ja:${w.tint}"
+          data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}"
+          aria-label="Stop ${s.n}: ${esc(s.card.title)}">
+          <span class="wdot">${s.done ? '✓' : s.cur ? (co.has(c) ? companionFigure(c, 34, { bob: true }) : face('pip', 34)) : s.locked ? ico('lock', '🔒', 12) : s.n}</span>
+          ${s.cur ? `<span class="wcard">
+            <span class="eyebrow">Stop ${s.n} of ${n}</span>
+            <b>${esc(s.card.title)}</b>
+            <span class="small">${esc(s.ch.title)}</span>
+            <span class="wgo">${s.done ? 'Again' : 'Walk it'} →</span></span>` : ''}
+        </button>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
 export function viewAct(c, wi) {
   const r = stops(c); const w = WORLDS[wi] || WORLDS[0]; wi = WORLDS.indexOf(w);
   const st = worldStat(r, wi);
@@ -175,6 +214,7 @@ export function viewAct(c, wi) {
       <div class="grow"><h1 style="font-size:24px">${ROMAN[wi]} · ${esc(w.name)}</h1>
         <p class="small muted">${esc(w.blurb)} · ${st.done} of ${st.total} stops</p></div>
     </div>
+    ${walk(c, w, r.list.filter((s) => s.wi === wi), wi)}
     ${actSection(c, wi, r, { solo: true })}
   </div>`;
 }

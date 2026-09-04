@@ -28,9 +28,15 @@ import * as mastery from './mastery.js';
    they are honest guesses rather than facts about any real curriculum. */
 const BAND_FLOOR = { sprout: 6, builder: 10 };
 export function mathsCeiling(c) {
+  /* Measured beats guessed. placement.js asks the child directly; until she
+     has sat it, the band guess above stands in and says so. */
+  if (c.maths && c.maths.ceiling) return Math.min(17, c.maths.ceiling + Math.floor(((c.learn && c.learn.level) || 1) / 6));
   const base = BAND_FLOOR[c.band] || 6;
   return Math.min(17, base + Math.floor(((c.learn && c.learn.level) || 1) / 3));
 }
+/* Whether the ceiling is a measurement or a guess — surfaces that hold
+   something back should be able to say which, honestly. */
+export function mathsMeasured(c) { return !!(c.maths && c.maths.ceiling); }
 export function mathsMet(c) {
   const ceil = mathsCeiling(c);
   return (m) => (parseInt(String(m).slice(1), 10) || 0) <= ceil;

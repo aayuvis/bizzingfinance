@@ -62,7 +62,7 @@ export function newChild(name, band, cur) {
     streak: { days: [dayIndex(now)], last: dayIndex(now) },
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [], fuses: [] },
     companion: null,
-    keepsakes: [], overnight: null, deeds: [],
+    keepsakes: [], overnight: null, deeds: [], puzzle: null, maths: null, answers: [],
     shop: { owned: [], cooling: {} },
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },

@@ -544,3 +544,38 @@ html[data-motion="reduced"] *{animation-duration:.01ms!important;animation-itera
 .stop.testout .sttitle{font-size:14.5px;font-weight:700}
 .stgo.ghost{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .stop.chk .med{border-style:dashed}
+
+/* ── the walk: a region as a road you move along ─────────────────────────── */
+.walk-scroll{border-radius:22px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;box-shadow:0 2px 6px rgb(12 30 34 / .08),0 14px 34px rgb(12 30 34 / .12)}
+.walk{position:relative;background-size:cover;background-position:center;min-width:720px}
+@media (min-width:820px){ .walk{min-width:0;width:100%} }
+.walk-road{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.wstop{position:absolute;transform:translate(-50%,-50%);font:inherit;color:inherit;z-index:2}
+.wstop .wdot{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;overflow:hidden;
+  background:rgba(22,30,34,.55);border:2px solid rgba(255,255,255,.8);box-shadow:0 4px 12px rgba(10,20,24,.45);
+  color:#fff;font-family:var(--display);font-weight:800;font-size:14px}
+.wstop.passed .wdot{background:linear-gradient(160deg,#FFD24D,#C8791B);color:#4A2E00;border-color:rgba(255,255,255,.9)}
+.wstop.cur{z-index:4}
+.wstop.cur .wdot{width:46px;height:46px;background:linear-gradient(160deg,var(--ja),color-mix(in srgb,var(--ja) 60%,#1a2a2e));
+  box-shadow:0 0 0 5px color-mix(in srgb,var(--ja) 32%,transparent),0 6px 16px rgba(10,20,24,.5)}
+.wstop.locked .wdot{background:rgba(22,30,34,.42);border-color:rgba(255,255,255,.4)}
+.wstop .wcard{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);
+  display:grid;gap:2px;width:max-content;max-width:min(70vw,260px);text-align:left;
+  background:var(--surface);color:var(--ink);border-radius:14px;padding:11px 13px;box-shadow:0 10px 28px rgba(10,20,24,.35)}
+.wstop .wcard::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:var(--surface)}
+.wstop .wcard b{font-family:var(--display);font-weight:800;font-size:15.5px;line-height:1.15}
+.wstop .wcard .small{color:var(--muted)}
+.wstop .wgo{display:inline-block;margin-top:7px;padding:7px 14px;border-radius:999px;background:var(--action);color:var(--action-ink);font-weight:800;font-size:12.5px;justify-self:start}
+.wstop:active .wdot{transform:scale(.96)}
+
+/* today's till, and the live recorder */
+.till .slip{font-size:13px}
+.tline{display:flex;align-items:center;gap:8px;padding:7px 0}
+.tline i{flex:1;border-bottom:1px dotted var(--line);height:1px;align-self:flex-end;margin-bottom:5px}
+.tq{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--action-tint);color:var(--action);font-weight:800}
+.tm{font-size:12px;font-weight:700;color:var(--muted);background:var(--tint);border-radius:999px;padding:3px 9px}
+.tm.ok{background:var(--grow-tint);color:var(--grow)}
+.reclive{width:12px;height:12px;border-radius:50%;background:var(--spend);flex:0 0 auto;animation:recpulse 1.1s ease-in-out infinite}
+@keyframes recpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+html[data-motion="reduced"] .reclive{animation:none}

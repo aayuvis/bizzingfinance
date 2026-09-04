@@ -11,6 +11,10 @@ import { receiptSlip } from './keepsakes.js';
 import * as daily from './daily.js';
 import * as quiz from './quiz.js';
 import * as srcs from './sources.js';
+import * as puz from './dailypuzzle.js';
+import * as placement from './placement.js';
+import * as answers from './answers.js';
+import * as backup from './backup.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
@@ -121,6 +125,13 @@ function render() {
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
   mountLesson();   /* narrated lessons re-attach the same way the games do */
+  /* the walk scrolls itself to where she is standing, once, after paint */
+  document.querySelectorAll('.walk-scroll[data-cur]').forEach((el) => {
+    const i = +el.getAttribute('data-cur'); if (i < 0 || el.dataset.done) return;
+    el.dataset.done = '1';
+    const stop = el.querySelectorAll('.wstop')[i];
+    if (stop) el.scrollLeft = Math.max(0, stop.offsetLeft - el.clientWidth / 2);
+  });
   /* The street is wider than a phone on purpose (a street you can read beats
      one you can see all of). Open it on the middle, where the buildings are,
      not on the empty left verge — and if the child panned, put the street
@@ -178,6 +189,7 @@ function overlay() {
   if (o.kind === 'bug') return box(bugSheet(), true);
   if (o.kind === 'about') return box(aboutSheet(), true);
   if (o.kind === 'sources') return box(sourcesSheet(o.key), true);
+  if (o.kind === 'placement') return box(placementView(o), true);
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
   if (o.kind === 'receipt') return box(`
@@ -1214,3 +1226,129 @@ function sourcesSheet(key) {
          <div class="row" style="margin-top:12px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`}`;
 }
 on('sources', (key) => { R.overlay = { kind: 'sources', key: key || '' }; sfx.click(); render(); });
+
+
+/* ══ today's till ═════════════════════════════════════════════════════ */
+on('till', () => {
+  const c = C(), v = (R.fields.till || '').replace(/[^0-9]/g, '');
+  if (!v) { toast('Type what one cost'); return; }
+  /* the field is in the child's own currency; the puzzle is in price units */
+  const r = puz.guess(c, Math.round(Number(v) / (price(1) || 1)));
+  if (r.bad) { toast('A number, in ' + CURRENCIES[c.currency].sign); return; }
+  R.fields.till = '';
+  if (r.won) { sfx.level(); confetti(40); toast(r.paid ? 'Right — and ' + money(r.paid) + ' for the working' : 'Right'); }
+  else if (r.done) { sfx.bad(); toast('That was the last try — here is how it works out'); }
+  else { sfx.click(); toast(r.near ? 'Close' : 'Not that one'); }
+  sim.save(R.s); render();
+});
+on('tillShare', async () => {
+  const t = puz.share(C(), null); if (!t) return;
+  try { await navigator.clipboard.writeText(t); toast('Copied — it gives nothing away'); }
+  catch (e) { toast('Could not copy on this device'); }
+});
+
+/* ══ the maths check ══════════════════════════════════════════════════ */
+function placementView(o) {
+  const c = C();
+  if (o.done) {
+    const r = placement.finish(c, o) || { ceiling: placement.ceilingOf(o) };
+    const can = placement.RUNGS[o.reached - 1] || null;
+    return `<div class="eyebrow">The maths check</div><h2 style="margin:4px 0 8px">Done — thank you</h2>
+      <p class="small">${esc(c.name)} got as far as <b>${can ? esc(can.can.toLowerCase()) : 'the first rung'}</b>. The town will not put a screen in front of her that needs more than that; it will wait, or show the same truth another way.</p>
+      <p class="small muted" style="margin-top:8px">This is a ceiling, not a mark. It is not shown to her, it is not in any report, and it can be sat again whenever it stops fitting.</p>
+      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">Back</button></div>`;
+  }
+  const q = placement.current(o), p = o.pick;
+  return `<div class="eyebrow">The maths check · question ${o.i + 1} of ${placement.RUNGS.length}</div>
+    <p class="small muted" style="margin-top:4px">It stops as soon as two in a row go wrong, so it is usually shorter than this.</p>
+    <h3 style="font-size:19px;margin:10px 0 10px">${esc(q.q)}</h3>
+    <div class="stack" style="gap:8px">
+      ${q.opts.map((opt, i) => { let k = ''; if (p) k = i === q.a ? ' ok' : (i === p.i ? ' no' : '');
+        return `<button class="opt${k}" data-act="plPick" data-arg="${i}" ${p ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span>${esc(opt)}</button>`; }).join('')}
+    </div>
+    ${p ? `<div style="background:${p.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px;margin-top:10px">${esc(p.why)}</div>
+      <button class="btn wide" style="margin-top:12px" data-act="plNext">Next →</button>` : ''}`;
+}
+on('placement', () => { R.overlay = placement.start(); sfx.click(); render(); });
+on('plPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'placement') return; placement.answer(o, i); if (o.pick.ok) sfx.good(); else sfx.click(); render(); });
+on('plNext', () => {
+  const o = R.overlay; if (!o || o.kind !== 'placement') return;
+  placement.next(o);
+  if (o.done) { const c = C(); placement.finish(c, o); sim.badge(c, 'placed'); sim.save(R.s); sfx.level(); }
+  render();
+});
+
+/* ══ backup, and consent for a server that does not exist yet ═════════ */
+on('bkSave', () => {
+  const text = backup.toFile(R.s), name = backup.fileName(R.s);
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('Saved as ' + name);
+  } catch (e) { toast('This device would not save the file'); }
+});
+on('bkLoad', () => {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      const r = backup.fromFile(String(fr.result));
+      if (!r.ok) { toast(r.why); sfx.bad(); return; }
+      if (!confirm(`Restore ${r.kids} ${r.kids === 1 ? 'child' : 'children'} from this backup? Everything on this device is replaced.`)) return;
+      R.s = r.state; sim.save(R.s); setCurrency(C().currency); setTester(!!R.s.settings.tester);
+      R.s.ui = { nav: 'home', sub: 'wallet' }; sfx.level(); toast('Restored'); render();
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+});
+on('consent', () => {
+  const on2 = !backup.consented(R.s);
+  if (!on2 && !confirm('Turn cloud backup off? When a server exists, this deletes whatever was uploaded rather than just stopping.')) return;
+  backup.consent(R.s, on2); sim.save(R.s);
+  toast(on2 ? 'Allowed — nothing is uploaded today, because there is nowhere to upload to' : 'Not allowed');
+  sfx.click(); render();
+});
+
+/* ══ the week's answer, recorded ══════════════════════════════════════ */
+let recTick = null;
+on('recStart', async () => {
+  try {
+    await answers.begin();
+    R.rec = { secs: 0 };
+    clearInterval(recTick);
+    recTick = setInterval(() => {
+      if (!R.rec) return clearInterval(recTick);
+      R.rec.secs = answers.elapsed();
+      const el = document.querySelector('.reclive + .small'); if (el) el.textContent = Math.floor(R.rec.secs) + 's';
+      if (R.rec.secs >= answers.MAX_SECONDS) fire('recStop');
+    }, 250);
+    render();
+  } catch (e) {
+    const why = /NotAllowed|Permission/i.test(String(e && e.name) + String(e && e.message)) ? 'The microphone was not allowed'
+      : /NotFound|Devices/i.test(String(e && e.name)) ? 'No microphone on this device'
+      : 'The microphone would not start';
+    toast(why); sfx.bad();
+  }
+});
+on('recStop', async () => {
+  clearInterval(recTick); const blob = await answers.stop(); R.rec = null;
+  if (!blob || !blob.size) { toast('Nothing was recorded'); render(); return; }
+  const rec = await answers.keep(C(), blob, R.fields.recwho);
+  if (rec) { R.fields.recwho = ''; sim.save(R.s); sfx.good(); toast('Kept on this device'); }
+  render();
+});
+on('recCancel', () => { clearInterval(recTick); answers.cancel(); R.rec = null; toast('Thrown away'); render(); });
+on('recPlay', async (id) => {
+  const url = await answers.url(id);
+  if (!url) { toast('That recording is gone'); return; }
+  const a = new Audio(url); a.play().catch(() => toast('This device would not play it'));
+  a.onended = () => URL.revokeObjectURL(url);
+  answers.played(C(), id); sim.save(R.s); render();
+});
+on('recDel', async (id) => {
+  if (!confirm('Delete this recording? It cannot be brought back.')) return;
+  await answers.remove(C(), id); sim.save(R.s); toast('Deleted'); render();
+});
