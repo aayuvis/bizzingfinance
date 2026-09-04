@@ -13,8 +13,8 @@ h1{font:800 clamp(34px,6vw,54px)/1.02 var(--display);letter-spacing:-.015em;marg
 .lead b{font-weight:800}
 header{display:grid;gap:18px;margin-bottom:34px}
 .bar{display:flex;height:54px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
-.seg{display:grid;place-items:center;align-content:center;color:#fff;min-width:44px}
-.seg b{font:800 20px/1 var(--display)} .seg i{font:700 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;opacity:.9;margin-top:3px}
+.seg{display:grid;place-items:center;align-content:center;color:#fff;min-width:56px;padding:0 4px;overflow:hidden}
+.seg b{font:800 20px/1 var(--display)} .seg i{font:700 10px var(--mono);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:clip;letter-spacing:.08em;text-transform:uppercase;font-style:normal;opacity:.9;margin-top:3px}
 .seg.have{background:var(--grow)} .seg.built{background:var(--action)} .seg.own{background:var(--treasure-deep)} .seg.refused{background:var(--spend)}
 .legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .legend .k{font-size:13px;color:var(--muted)}
@@ -64,7 +64,7 @@ footer{margin-top:44px;font-size:13px;color:var(--muted);border-top:1px solid va
 <section class="grp" id="shell-and-navigation">
   <h2>Shell and navigation</h2>
   <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
-<tr class="r have" data-d="have"><td class="f">Mascot + wordmark as the way home</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">the mark and *Bizzing* Finance, folding only under 360px</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Mascot + wordmark as the way home</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">the mark and <i>Bizzing</i> Finance, folding only under 360px</span></td></tr>
 <tr class="r have" data-d="have"><td class="f">Money / coins chip in the bar</td><td class="s"><span class="how">coins</span></td><td class="s"><span class="how">sikke</span></td><td class="z"><span class="chip have">Have</span><span class="note">the wallet, which is the curriculum; one currency, never a second</span></td></tr>
 <tr class="r have" data-d="have"><td class="f">Streak in the bar</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">diya footnote</span></td><td class="z"><span class="chip have">Have</span><span class="note">a count, never a target (editorial policy)</span></td></tr>
 <tr class="r built" data-d="built"><td class="f">Settings button in the bar</td><td class="s"><span class="how">sliders</span></td><td class="s"><span class="how">avatar chip → You</span></td><td class="z"><span class="chip built">Built</span><span class="note">the gear opens one sheet: look, text, motion, sound, narration speed, money, children, tester, help</span></td></tr>
