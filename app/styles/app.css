@@ -524,3 +524,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .chip.tester{background:var(--spend-tint);color:var(--spend);font-weight:800;letter-spacing:.07em;font-size:10.5px;border:1px solid color-mix(in srgb,var(--spend) 40%,transparent)}
 /* when the TESTER pill is in the bar, the wordmark folds so the bar still fits a phone */
 @media (max-width:520px){ .topbar-in:has(.chip.tester) .brand span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
+
+/* ── settings: segmented controls, and the two device preferences ───────── */
+.seg{display:inline-flex;background:var(--tint);border-radius:999px;padding:3px;gap:2px;flex:0 0 auto}
+.seg button{padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:800;color:var(--muted);font:inherit;font-weight:800;font-size:12.5px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+.field.sm{padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-weight:700;font-size:13px;max-width:170px}
+html[data-text="large"] #app{zoom:1.12}
+html[data-motion="reduced"] *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}

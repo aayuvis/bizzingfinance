@@ -1549,3 +1549,47 @@ export function viewCollection() {
     </div>
   </div>`;
 }
+
+
+/* ══ SETTINGS — one sheet, from the gear in the bar ══════════════════════
+   Bee keeps a sliders button in its bar and India a row of chips; both put
+   every preference within one tap of any screen. Device preferences (look,
+   text, motion) are this browser's; the household's (currency, pay day,
+   mode, children) are the household's; tester mode is loud on purpose. */
+export function settingsSheet(R) {
+  const s = R.s, c = K();
+  const seg = (act, opts, cur) => `<span class="seg">${opts.map(([v, l]) => `<button data-act="${act}" data-arg="${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</span>`;
+  const row = (t, sub, ctl) => `<div class="qrow"><span class="grow" style="min-width:0"><b style="font-size:14px">${t}</b>${sub ? `<div class="small muted">${sub}</div>` : ''}</span>${ctl}</div>`;
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return `
+    <div class="eyebrow">Settings</div>
+    <h2 style="margin:4px 0 2px">How Bizzington looks and sounds</h2>
+    <div class="sect"><b>Look</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Appearance', 'Follows the device unless you choose.', seg('mode', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], R.mode || 'system'))}
+      ${row('Text size', 'Larger type on every screen.', seg('text', [['normal', 'Normal'], ['large', 'Large']], R.text || 'normal'))}
+      ${row('Motion', 'Reduced turns off the confetti and the bobbing.', seg('motion', [['full', 'Full'], ['reduced', 'Reduced']], R.motion || 'full'))}
+      ${row('Sound', 'Clicks, coins and the bell.', seg('sound', [['on', 'On'], ['off', 'Off']], s.settings.sound ? 'on' : 'off'))}
+    </div>
+    <div class="sect"><b>Money</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Currency', 'Changing it converts the town rather than resetting it.', `<select class="field sm" data-field="cur" data-live="1">${Object.keys(CURRENCIES).map((k) => `<option value="${k}" ${c.currency === k ? 'selected' : ''}>${CURRENCIES[k].sign} ${CURRENCIES[k].name}</option>`).join('')}</select>`)}
+      ${row('Pay day', 'The bell rings once a week, on this day.', `<select class="field sm" data-field="payday" data-live="1">${DAYS.map((d, i) => `<option value="${i}" ${(c.family.payWeekday == null ? 5 : c.family.payWeekday) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>`)}
+      ${row('Mode', c.band === 'sprout' ? 'Sprout: no debt, no market, nothing below zero.' : 'Builder: the whole town, including borrowing.', `<button class="btn ghost sm" data-act="band">${c.band === 'sprout' ? 'Sprout (8–10)' : 'Builder (11+)'}</button>`)}
+    </div>
+    <div class="sect"><b>Children</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${s.kids.map((k, i) => row(esc(k.name), `Level ${k.learn.level} · ${k.band === 'sprout' ? 'Sprout' : 'Builder'}`, i === s.active ? '<span class="pill gold">playing</span>' : `<button class="btn ghost sm" data-act="switchKid" data-arg="${i}">Switch</button>`)).join('')}
+      ${row('Another child', 'Their own town, their own money.', '<button class="btn ghost sm" data-act="addKid">Add</button>')}
+    </div>
+    <div class="sect"><b>For testers</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Tester mode', s.settings.tester ? 'On — every gate is open; the record is untouched. Tools are on the grown-up\'s page.' : 'Opens every chapter, world, building and game without changing what ' + esc(c.name) + ' has learned.', seg('tester', [['on', 'On'], ['off', 'Off']], s.settings.tester ? 'on' : 'off'))}
+    </div>
+    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '👪', 15)} Grown-up's page</button>
+      <button class="btn ghost sm" data-act="nav" data-arg="collection">${ico('quest', '🏅', 15)} Collection</button>
+      <span class="grow"></span>
+      <button class="btn sm" data-act="closeOv">Done</button>
+    </div>`;
+}

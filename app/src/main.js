@@ -12,6 +12,7 @@ import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
   rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester } from './content.js';
 import * as sim from './sim.js';
+import { Store } from './store.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
@@ -22,7 +23,7 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection, viewWorlds, viewGate, viewReport } from './views.js';
+  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
@@ -97,7 +98,7 @@ function render() {
           title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
         <span class="chip streak" title="Days in a row">${ico('streak', '', 15)} ${c.streak.days.length}</span>
         ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on — everything is open">TESTER</button>' : ''}
-        <button class="iconbtn" data-act="mode" aria-label="Light or dark">${ico(R.mode === 'dark' ? 'moon' : 'sun', '', 19)}</button>
+        <button class="iconbtn" data-act="settings" aria-label="Settings">${ico('gear', '', 19)}</button>
         <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico('family', '', 19)}</button>
       </div>
       <nav class="nav" aria-label="Sections">
@@ -165,6 +166,7 @@ function overlay() {
            </div>`}`);
   }
 
+  if (o.kind === 'settings') return box(settingsSheet(R), true);
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
   if (o.kind === 'receipt') return box(`
@@ -429,16 +431,26 @@ on('questBonus', () => {
   if (a) { sfx.level(); confetti(40); toast('All three — ' + money(a)); }
   render();
 });
-on('mode', () => {
-  R.mode = R.mode === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-mode', R.mode);
-  try { localStorage.setItem('bzf_mode', R.mode); } catch (e) {}
-  render();
+/* ── device preferences: this browser's business, never the household's ──
+   Appearance, text size and motion live in the device bucket (store.js) and
+   are stamped on <html> so CSS can read them without a re-render. */
+function applyDevice() {
+  const h = document.documentElement;
+  if (R.mode) h.setAttribute('data-mode', R.mode); else h.removeAttribute('data-mode');
+  if (R.text === 'large') h.setAttribute('data-text', 'large'); else h.removeAttribute('data-text');
+  if (R.motion === 'reduced') h.setAttribute('data-motion', 'reduced'); else h.removeAttribute('data-motion');
+}
+on('mode', (m) => {
+  R.mode = m === 'system' ? null : m || (R.mode === 'dark' ? 'light' : 'dark');
+  Store.saveDevice('mode', R.mode); applyDevice(); render();
 });
-on('sound', () => { R.s.settings.sound = !R.s.settings.sound; setSound(R.s.settings.sound); sfx.click(); render(); });
+on('text', (v) => { R.text = v === 'large' ? 'large' : null; Store.saveDevice('text', R.text); applyDevice(); render(); });
+on('motion', (v) => { R.motion = v === 'reduced' ? 'reduced' : null; Store.saveDevice('motion', R.motion); applyDevice(); render(); });
+on('settings', () => { R.overlay = { kind: 'settings' }; sfx.click(); render(); });
+on('sound', (v) => { R.s.settings.sound = v ? v === 'on' : !R.s.settings.sound; setSound(R.s.settings.sound); sfx.click(); render(); });
 /* tester mode: every gate opens; the child's record is untouched (content.js) */
-on('tester', () => {
-  R.s.settings.tester = !R.s.settings.tester; setTester(R.s.settings.tester); sim.save(R.s);
+on('tester', (v) => {
+  R.s.settings.tester = v ? v === 'on' : !R.s.settings.tester; setTester(R.s.settings.tester); sim.save(R.s);
   toast(R.s.settings.tester ? 'Tester mode on — everything is open' : 'Tester mode off'); sfx.click(); render();
 });
 on('tJump', (lv) => { if (!R.s.settings.tester) return; const l = sim.jumpLevel(C(), +lv); sim.save(R.s); toast('Level ' + l); sfx.level(); render(); });
@@ -988,8 +1000,8 @@ window.addEventListener('hashchange', () => {
 });
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
-try { R.mode = localStorage.getItem('bzf_mode') || null; } catch (e) { R.mode = null; }
-if (R.mode) document.documentElement.setAttribute('data-mode', R.mode);
+R.mode = Store.loadDevice('mode', null); R.text = Store.loadDevice('text', null); R.motion = Store.loadDevice('motion', null);
+applyDevice();
 
 R.s = sim.load();
 if (R.s && R.s.kids.length) {

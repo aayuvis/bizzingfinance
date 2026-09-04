@@ -73,7 +73,7 @@ export function toast(msg) {
 }
 const CONF = ['#F0B429', '#0E6B78', '#178A4C', '#C4453C', '#8A5BD6', '#2E7FA8'];
 export function confetti(n) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced') return;
   const wrap = document.createElement('div');
   wrap.className = 'conf'; wrap.setAttribute('aria-hidden', 'true');
   let html = '';

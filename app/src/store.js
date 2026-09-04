@@ -26,7 +26,13 @@ export const Store = {
   },
   saveProfile(blob) { clearTimeout(pending); pending = setTimeout(() => write(KEY, blob), 150); },
   saveNow(blob) { clearTimeout(pending); write(KEY, blob); },
-  loadDevice(k, fb) { const d = read(DEV, {}); return d[k] === undefined ? fb : d[k]; },
+  loadDevice(k, fb) {
+    const d = read(DEV, {});
+    if (d[k] !== undefined) return d[k];
+    /* the theme lived under its own key before the device bucket existed */
+    if (k === 'mode') { try { const m = localStorage.getItem('bzf_mode'); if (m) return m; } catch (e) {} }
+    return fb;
+  },
   saveDevice(k, v) { const d = read(DEV, {}); d[k] = v; write(DEV, d); },
   wipe() { try { localStorage.removeItem(KEY); localStorage.removeItem(OLD); } catch (e) {} },
 };
