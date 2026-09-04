@@ -1,0 +1,197 @@
+<title>Made Whole</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Hanken+Grotesk:wght@450;650;800&family=Sono:wght@500;700&display=swap">
+<style>
+:root{--paper:#FFFCF5;--surface:#FFFFFF;--tint:#EDF2F2;--line:#DCE5E4;--line-soft:#E9EFEE;--ink:#16262A;--muted:#5B7075;--action:#0E6B78;--action-ink:#FFFFFF;--action-tint:#E2EFF1;--treasure:#F0B429;--treasure-tint:#FFF3D6;--treasure-deep:#8A5B00;--grow:#178A4C;--grow-tint:#E3F3E9;--spend:#C4453C;--spend-tint:#FBE9E7;--display:"Fraunces",Georgia,serif;--ui:"Hanken Grotesk",system-ui,sans-serif;--mono:"Sono",ui-monospace,monospace;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#0F1A1D;--surface:#16252A;--tint:#132025;--line:#24373D;--line-soft:#1C2C32;--ink:#E4EDEE;--muted:#93A7AC;--action:#3FAEBC;--action-ink:#06262B;--action-tint:#12333A;--treasure-tint:#33280F;--treasure-deep:#F0C25A;--grow:#5BC98C;--grow-tint:#0F2E20;--spend:#EC8B81;--spend-tint:#331916}}
+:root[data-theme="dark"]{--paper:#0F1A1D;--surface:#16252A;--tint:#132025;--line:#24373D;--line-soft:#1C2C32;--ink:#E4EDEE;--muted:#93A7AC;--action:#3FAEBC;--action-ink:#06262B;--action-tint:#12333A;--treasure-tint:#33280F;--treasure-deep:#F0C25A;--grow:#5BC98C;--grow-tint:#0F2E20;--spend:#EC8B81;--spend-tint:#331916}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:450 15px/1.55 var(--ui);background-image:radial-gradient(color-mix(in srgb,var(--action) 55%,transparent) 1.1px,transparent 1.4px);background-size:24px 24px}
+.wrap{max-width:980px;margin:0 auto;padding:40px clamp(16px,4vw,40px) 80px}
+.eyebrow{font:700 11.5px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(34px,6vw,54px)/1.02 var(--display);letter-spacing:-.015em;margin:6px 0 12px;text-wrap:balance}
+.lead{font-size:17px;max-width:64ch;margin:0}
+.lead b{font-weight:800}
+header{display:grid;gap:18px;margin-bottom:34px}
+.bar{display:flex;height:54px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.seg{display:grid;place-items:center;align-content:center;color:#fff;min-width:44px}
+.seg b{font:800 20px/1 var(--display)} .seg i{font:700 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;opacity:.9;margin-top:3px}
+.seg.have{background:var(--grow)} .seg.built{background:var(--action)} .seg.own{background:var(--treasure-deep)} .seg.refused{background:var(--spend)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.legend .k{font-size:13px;color:var(--muted)}
+.fbtn{font:650 13px var(--ui);padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.fbtn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.fbtn:focus-visible{outline:3px solid color-mix(in srgb,var(--action) 40%,transparent);outline-offset:2px}
+.grp{margin:0 0 30px}
+h2{font:800 24px/1.1 var(--display);margin:0 0 10px;letter-spacing:-.01em}
+.tw{overflow-x:auto;border-radius:16px;background:var(--surface);box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 12px 30px rgb(12 30 34 / .06)}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th{text-align:left;font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-top:1px solid var(--line-soft);vertical-align:top}
+tbody tr:first-child td{border-top:0}
+td.f{font-weight:650;width:26%} th.s,td.s{width:11%;text-align:center;font-family:var(--mono);font-size:12.5px} td.z{width:52%}
+.yes{color:var(--grow);font-weight:700;font-size:15px} .no{color:var(--muted)} .how{color:var(--muted);font-size:12px}
+.chip{display:inline-block;font:700 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;margin:0 8px 4px 0;vertical-align:1px}
+.chip.have{background:var(--grow-tint);color:var(--grow)} .chip.built{background:var(--action-tint);color:var(--action)}
+.chip.own{background:var(--treasure-tint);color:var(--treasure-deep)} .chip.refused{background:var(--spend-tint);color:var(--spend)}
+.note{font-size:14px} code{font:600 12.5px var(--mono);background:var(--tint);padding:1px 5px;border-radius:5px}
+tr.hide{display:none}
+.empty{display:none;padding:14px;color:var(--muted);font-size:13.5px;margin:0}
+.grp.allhidden .tw{display:none} .grp.allhidden .empty{display:block}
+.prop{margin:44px 0 0}
+.prop ol{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:12px}
+.prop li{background:var(--surface);border-radius:16px;padding:16px 18px;box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
+.prop li:first-child{box-shadow:0 0 0 2px var(--action),0 12px 30px rgb(12 30 34 / .08)}
+.pn{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.num{font:800 15px var(--display);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--paper)}
+.tag{font:700 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.prop h3{font:800 18px/1.2 var(--display);margin:0 0 4px}
+.prop p{margin:0;font-size:14.5px;max-width:70ch}
+.still ul{padding-left:18px;margin:8px 0 0} .still li{margin:4px 0;font-size:14.5px}
+footer{margin-top:44px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:560px){.seg i{display:none} td.f{width:auto}}
+@media (prefers-reduced-motion:no-preference){.fbtn{transition:background .12s,color .12s}}
+</style>
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Bizzing Finance · diagnosis against Bizzing Bee and Bizzing India · September 2026</div>
+    <h1>Made Whole</h1>
+    <p class="lead">Two agents read Bee's live build and India's app file by file. Every feature they found is one row here, mapped onto Finance as <b>Have</b> (already there), <b>Built</b> (added in this pass), <b>Own way</b> (same job, done differently, reason given) or <b>Refused</b> (a money app must not). 69 rows in all.</p>
+  </div>
+  <div class="bar" role="img" aria-label="Have 31; Built 22; Own way 13; Refused 3"><span class="seg have" style="flex:31" title="Have · 31"><b>31</b><i>Have</i></span><span class="seg built" style="flex:22" title="Built · 22"><b>22</b><i>Built</i></span><span class="seg own" style="flex:13" title="Own way · 13"><b>13</b><i>Own way</i></span><span class="seg refused" style="flex:3" title="Refused · 3"><b>3</b><i>Refused</i></span></div>
+  <div class="legend"><span class="k">Show</span><button class="fbtn" data-f="all" aria-pressed="true">All</button><button class="fbtn" data-f="have">Have</button><button class="fbtn" data-f="built">Built</button><button class="fbtn" data-f="own">Own way</button><button class="fbtn" data-f="refused">Refused</button></div>
+</header>
+<section class="grp" id="shell-and-navigation">
+  <h2>Shell and navigation</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Mascot + wordmark as the way home</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">the mark and *Bizzing* Finance, folding only under 360px</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Money / coins chip in the bar</td><td class="s"><span class="how">coins</span></td><td class="s"><span class="how">sikke</span></td><td class="z"><span class="chip have">Have</span><span class="note">the wallet, which is the curriculum; one currency, never a second</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Streak in the bar</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">diya footnote</span></td><td class="z"><span class="chip have">Have</span><span class="note">a count, never a target (editorial policy)</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Settings button in the bar</td><td class="s"><span class="how">sliders</span></td><td class="s"><span class="how">avatar chip → You</span></td><td class="z"><span class="chip built">Built</span><span class="note">the gear opens one sheet: look, text, motion, sound, narration speed, money, children, tester, help</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Five tabs + More</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">seven tabs</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">One back control</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note"><code>backlink</code> on every sub-view; Escape closes a sheet, then a card, then a shelf (<b>Built</b>)</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">New-version bar</td><td class="s"><span class="no">—</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">waits on the service worker, one tap swaps</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Install / PWA</td><td class="s"><span class="no">—</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip built">Built</span><span class="note">the browser&#x27;s offer, kept and put in Settings</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Bug report, on-device</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip built">Built</span><span class="note">Settings → Help → Report; saved to the device bucket, copy out, clear</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Header search</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">Money Words has its own search; the glossary is 44 terms, not 129,000</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Splash, lazy loader</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">per-lesson chunks load lazily; no splash</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="settings">
+  <h2>Settings</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r built" data-d="built"><td class="f">Appearance</td><td class="s"><span class="how">Light/White/Dusk</span></td><td class="s"><span class="how">night toggle</span></td><td class="z"><span class="chip built">Built</span><span class="note">Light / Dark / System</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Text size</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip built">Built</span><span class="note"></span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Reduce motion, calm</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">kill switch, unset</span></td><td class="z"><span class="chip built">Built</span><span class="note">turns off confetti and the bobbing too</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Sound</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Voice speed</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">reading speed</span></td><td class="z"><span class="chip built">Built</span><span class="note">Nana and read-to-me both</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Voice picker</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">m/f if recorded</span></td><td class="z"><span class="chip own">Own way</span><span class="note">Indian English chosen first, automatically</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Currency, pay day, mode</td><td class="s"><span class="no">—</span></td><td class="s"><span class="how">tongue/script</span></td><td class="z"><span class="chip have">Have</span><span class="note">moved into the sheet</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Children</td><td class="s"><span class="how">parent zone</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note">switch and add from the sheet</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Parent PIN gating settings</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip built">Built</span><span class="note">money, children and tester sit behind the PIN when one is set</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Developer / tester unlock</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">every gate opens, the record is untouched; a red TESTER pill in the bar</span></td></tr>
+<tr class="r refused" data-d="refused"><td class="f">Daily time targets</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip refused">Refused</span><span class="note">time-on-app targets are engagement pressure on a child</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Plan / subscription</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">premium is the grown-up&#x27;s, on their page, later</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Sign-out / accounts</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">no accounts yet; the store seam is where they go</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="onboarding">
+  <h2>Onboarding</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r built" data-d="built"><td class="f">Landing page with counted claims</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">lessons, games, worlds, badges counted from the data; three promises</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Name, age band</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Companion pick at start</td><td class="s"><span class="how">buddy</span></td><td class="s"><span class="how">avatar</span></td><td class="z"><span class="chip own">Own way</span><span class="note">the companion is adopted later, for money, because that is the lesson</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Placement test</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">placement questions</span></td><td class="z"><span class="chip own">Own way</span><span class="note">test out of any level-locked chapter (<b>Built</b>)</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Privacy notice near the name field</td><td class="s"><span class="how">✓ (4 places)</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">the landing links How it was made; About states it</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="home">
+  <h2>Home</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Greeting with the mascot speaking</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">the companion or Pip</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Daily rings / plan</td><td class="s"><span class="how">rings</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">Today&#x27;s three quests, no time targets</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Do one (a real-world deed, kept)</td><td class="s"><span class="no">—</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">never about the household&#x27;s money; beads on the Collection shelf</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Carry one (word of the day)</td><td class="s"><span class="how">word of the hour</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note"></span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Ask at home (weekly question)</td><td class="s"><span class="no">—</span></td><td class="s"><span class="how">Ask Nani</span></td><td class="z"><span class="chip built">Built</span><span class="note">about a grown-up&#x27;s own past, shared with the grown-up&#x27;s page</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Tip of the day</td><td class="s"><span class="how">bee tip</span></td><td class="s"><span class="how">subhashita</span></td><td class="z"><span class="chip built">Built</span><span class="note">a &quot;for instance&quot; from a card already read</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Next on your journey</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note">the greeting&#x27;s chips and the journey doors</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Overnight / what is waiting</td><td class="s"><span class="no">—</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="learning">
+  <h2>Learning</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Map of the course</td><td class="s"><span class="how">Word Atlas</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note">the Money Atlas</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Rail of stops, current expanded</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">pack path</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Checkpoints</td><td class="s"><span class="how">every 4th unit</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip built">Built</span><span class="note">a mixed-quiz stop after every finished chapter, score on the rail</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Test-out of a locked stage</td><td class="s"><span class="no">—</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">all but one right opens the chapter; its cards stay unread</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Stars per stop</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Narrated explainers with the mascot</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">Mithu</span></td><td class="z"><span class="chip have">Have</span><span class="note">32 narrated lessons, an Indian narrator</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Read-aloud everywhere</td><td class="s"><span class="how">words</span></td><td class="s"><span class="how">everything</span></td><td class="z"><span class="chip built">Built</span><span class="note">read-to-me on the reading, the letters, the glossary and the dailies</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Revise pile / missed</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">missed more than once</span></td><td class="z"><span class="chip built">Built</span><span class="note">due and missed objectives, read from the mastery record</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">My traps (weak patterns)</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">one strand has objectives today; strand bars when the rest exist</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Spaced repetition</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">Leitner</span></td><td class="z"><span class="chip have">Have</span><span class="note">the mastery record and the daily beat</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Dictionary / word cards</td><td class="s"><span class="how">Finder</span></td><td class="s"><span class="how">Shabdkosh</span></td><td class="z"><span class="chip have">Have</span><span class="note">Money Words</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Library of books</td><td class="s"><span class="how">23 spines</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">no books yet; the Bee books live in their own repo</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Tiers (same route, harder)</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip own">Own way</span><span class="note">the three journeys get harder as the town grows</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="games-and-motivators">
+  <h2>Games and motivators</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Painted covers on the arcade</td><td class="s"><span class="how">screenshots</span></td><td class="s"><span class="how">game art</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Keyboard and touch on every game</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Badges</td><td class="s"><span class="how">~80</span></td><td class="s"><span class="how">mala</span></td><td class="z"><span class="chip have">Have</span><span class="note">47, each for a decision; plus the deeds shelf (<b>Built</b>)</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Avatar / trading cards</td><td class="s"><span class="how">217, packs</span></td><td class="s"><span class="how">pitara</span></td><td class="z"><span class="chip own">Own way</span><span class="note">the cast as cards with lore (<b>Built</b>); no packs</span></td></tr>
+<tr class="r refused" data-d="refused"><td class="f">Coins, packs, gacha</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">sikke, pitara</span></td><td class="z"><span class="chip refused">Refused</span><span class="note">no second currency, no randomised reward for money (§6.3, §6.4)</span></td></tr>
+<tr class="r refused" data-d="refused"><td class="f">Streak rewards, freezes</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip refused">Refused</span><span class="note">streak pressure</span></td></tr>
+<tr class="r own" data-d="own"><td class="f">Worlds to buy</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip own">Own way</span><span class="note">five worlds, walked in order by learning</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Celebrations</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="how">toast only</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Companion that grows</td><td class="s"><span class="how">forms</span></td><td class="s"><span class="how">collection</span></td><td class="z"><span class="chip have">Have</span><span class="note">five kinds, three stages, three moods, wired to pay day</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="grown-ups">
+  <h2>Grown-ups</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Report of learning, not usage</td><td class="s"><span class="how">progress</span></td><td class="s"><span class="how">how it is going</span></td><td class="z"><span class="chip have">Have</span><span class="note">objectives moved, decisions, missed more than once</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Printable</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Multiple children</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Family Mode</td><td class="s"><span class="no">—</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r none" data-d="none"><td class="f">Milestone countdown</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="no">—</span></td><td class="z"><span class="note">n/a</span></td></tr>
+<tr class="r none" data-d="none"><td class="f">Notifications</td><td class="s"><span class="how">none</span></td><td class="s"><span class="how">none</span></td><td class="z"><span class="note">none, on purpose</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="grp" id="accessibility-and-honesty">
+  <h2>Accessibility and honesty</h2>
+  <div class="tw"><table><thead><tr><th class="f">Feature</th><th class="s">Bee</th><th class="s">India</th><th class="z">Finance</th></tr></thead><tbody>
+<tr class="r have" data-d="have"><td class="f">Offline</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">fonts, art and narration bundled</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Reduced motion</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">(and a setting, <b>Built</b>)</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">ARIA on toggles and tabs</td><td class="s"><span class="yes">✓</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note"></span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Credits (art, fonts, method)</td><td class="s"><span class="how">trademark line</span></td><td class="s"><span class="how">folk-art credit</span></td><td class="z"><span class="chip built">Built</span><span class="note">About names the image model, the synthetic voice and the three open fonts</span></td></tr>
+<tr class="r built" data-d="built"><td class="f">Counted, never typed numbers</td><td class="s"><span class="no">—</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip built">Built</span><span class="note">on the landing</span></td></tr>
+<tr class="r have" data-d="have"><td class="f">Named gaps, not fakes</td><td class="s"><span class="no">—</span></td><td class="s"><span class="yes">✓</span></td><td class="z"><span class="chip have">Have</span><span class="note">the clock notice, the shelter&#x27;s yearly cost, the test-out&#x27;s &quot;cards stay unread&quot;</span></td></tr>
+</tbody></table></div>
+  <p class="empty">Nothing in this group under that filter.</p>
+</section>
+<section class="prop">
+  <div class="eyebrow">The proposal</div>
+  <h2>What to add next, in order</h2>
+  <p class="lead" style="font-size:15px">The first two are substance and come before anything visual. Three and four are the ones a child would notice first.</p>
+  <ol><li><div class="pn"><span class="num">1</span><span class="tag">Substance</span></div><h3>Objectives for the other five strands</h3><p>The mastery record has 12 objectives and every one of them sits in one strand, CHOOSE. EARN, KEEP, GROW, OWE and GUARD are empty, so the Revise pile, the grown-up's report and any weak-strand view see a sixth of the ladder. Authoring, not code, and the largest payoff on this list.</p></li><li><div class="pn"><span class="num">2</span><span class="tag">Substance</span></div><h3>Sources on every card that states a figure</h3><p>Rule six says fill <code>sources[]</code> or cut it, and India puts "How we know" under everything. No card carries a sources field today. Add the field, show "Where this comes from" on the card, and cut any number that cannot cite one.</p></li><li><div class="pn"><span class="num">3</span><span class="tag">Visible</span></div><h3>The painted walk per region</h3><p>Bee opens each Atlas region as a panorama with the current stop's card sitting on the road. Five paintings and one view — the biggest visual step left.</p></li><li><div class="pn"><span class="num">4</span><span class="tag">Visible</span></div><h3>A daily puzzle everyone in the house shares</h3><p>Bee's Daily Buzz is the strongest return hook either sibling has that is not streak pressure: one puzzle a day, the same for everyone, a spoiler-free share. For Finance, a one-a-day till or change puzzle.</p></li><li><div class="pn"><span class="num">5</span><span class="tag">Substance</span></div><h3>Arithmetic placement</h3><p>Finance's own rule says every screen declares the maths it demands, and the Jar Shed still shows percentages to a child who has not met them. Bee's three-minute placement quest is the model: it sets the ceiling.</p></li><li><div class="pn"><span class="num">6</span><span class="tag">Launch</span></div><h3>Accounts and cloud backup with a consent gate</h3><p>Bee's pattern is portable: a consent screen behind the PIN, an allow-list that strips name and age before upload, withdrawal deletes. This and the server clock are the launch blockers; no sibling solves them for us.</p></li><li><div class="pn"><span class="num">7</span><span class="tag">Visible</span></div><h3>Recorded answers to "Ask at home"</h3><p>India keeps a grandparent's voice on the device. The weekly question already exists; a kept answer turns it into family memory.</p></li><li><div class="pn"><span class="num">8</span><span class="tag">Reach</span></div><h3>Hindi narration for the lessons</h3><p>India's rule is never to imply Hindi is Indian, so this is a first extra language, not the language. The voice table already names the Hindi voice.</p></li></ol>
+</section>
+<section class="still" style="margin-top:34px">
+  <h2>Still open</h2>
+  <ul><li>A per-strand weak-pattern view once the other five strands carry objectives.</li><li>Bee&#x27;s per-region painted walk for the Atlas, if the five paintings are wanted.</li><li>Accounts and the server clock: the launch blockers that no sibling solves here either.</li></ul>
+</section>
+<footer>The finding, in one line: Finance was not short of mechanics — it has more simulation than either sibling — it was short of the shell and the daily rhythm that make the siblings feel finished. Source: <code>docs/11-made-whole.md</code> in the bizzingfinance repository; the inventories were read from Bee's <code>gh-pages</code> build and India's <code>app/</code>, not from their docs.</footer>
+</div>
+<script>
+(function(){var btns=document.querySelectorAll(".fbtn"),rows=document.querySelectorAll("tr.r"),grps=document.querySelectorAll(".grp");function apply(f){btns.forEach(function(b){b.setAttribute("aria-pressed",String(b.getAttribute("data-f")===f));});rows.forEach(function(r){r.classList.toggle("hide",f!=="all"&&r.getAttribute("data-d")!==f);});grps.forEach(function(g){g.classList.toggle("allhidden",!g.querySelector("tr.r:not(.hide)"));});}btns.forEach(function(b){b.addEventListener("click",function(){apply(b.getAttribute("data-f"));});});})();
+</script>
