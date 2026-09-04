@@ -13,6 +13,9 @@ import { ATLAS, PINS } from './atlas-gen.js';
 import { face, ico } from './art.js';
 import { esc } from './ui.js';
 import * as sim from './sim.js';
+import * as mastery from './mastery.js';
+import { OBJECTIVES } from './objectives.js';
+import { PASS as QPASS, N as QN } from './quiz.js';
 import * as co from './companion.js';
 import { companionFigure } from './companionview.js';
 
@@ -125,7 +128,19 @@ export function actSection(c, wi, r, opts = {}) {
     </div>
     <div class="rail">
       <span class="railline" aria-hidden="true"><span style="height:${pct}%"></span></span>
-      ${ns.map((s) => stopRow(c, s)).join('')}
+      ${w.chapters.map((chId) => {
+        const ch = CHAPTERS.find((x) => x.id === chId); if (!ch) return '';
+        const mine = ns.filter((s) => s.ch.id === chId);
+        const allDone = mine.length && mine.every((s) => s.done);
+        const lockedByLevel = mine.length && mine[0].lockedCh;
+        return `${lockedByLevel && open ? `<button class="stop testout" data-act="testout" data-arg="${chId}" style="--ja:${w.tint}">
+            <span class="med">${ico('lock', '🔒', 13)}</span>
+            <span class="stbody"><span class="sttitle">Already know “${esc(ch.title)}”?</span>
+              <span class="sttag">Opens at level ${ch.lv} — or a few questions at full difficulty, all but one right, and it opens now. Failing costs nothing.</span>
+              <span class="stgo ghost">Test out →</span></span></button>` : ''}
+          ${mine.map((s) => stopRow(c, s)).join('')}
+          ${allDone ? checkpointRow(c, ch, w) : ''}`;
+      }).join('')}
       ${!open && wi > 0 ? `<p class="small muted" style="padding:6px 4px 2px 44px">Finish ${esc(WORLDS[wi - 1].name)} to walk on.</p>` : ''}
     </div>
   </section>`;
@@ -141,6 +156,7 @@ export function viewAtlas(c) {
       <div class="row" style="gap:7px;flex-wrap:wrap;margin-top:8px">
         <button class="wchip" data-act="shelf" data-arg="words">${ico('lesson', '📖', 15)} Money Words · ${GLOSSARY.length}</button>
         <button class="wchip" data-act="nav" data-arg="arcade">${ico('arcade', '🎮', 15)} Practise it</button>
+        ${(() => { const n = reviseList(c).length; return `<button class="wchip${n ? ' hot' : ''}" data-act="shelf" data-arg="revise">${ico('moon', '🔁', 15)} Revise${n ? ' · ' + n : ''}</button>`; })()}
       </div>
     </div>
     ${levelBar(c)}
@@ -160,5 +176,45 @@ export function viewAct(c, wi) {
         <p class="small muted">${esc(w.blurb)} · ${st.done} of ${st.total} stops</p></div>
     </div>
     ${actSection(c, wi, r, { solo: true })}
+  </div>`;
+}
+
+
+/* a checkpoint is a stop that teaches nothing: six mixed questions from the
+   chapter, its score worn on the rail like Bee's */
+function checkpointRow(c, ch, w) {
+  const pct = (c.learn.checkpoints || {})[ch.id];
+  const passed = pct != null && pct >= Math.round(QPASS / QN * 100);
+  return `<button class="stop ${passed ? 'passed' : 'open'} chk" data-act="checkpoint" data-arg="${ch.id}" style="--ja:${w.tint}">
+    <span class="med ${passed ? 'passed' : ''}">${passed ? '✓' : '◆'}</span>
+    <span class="stbody"><span class="sttitle">Checkpoint · ${esc(ch.title)}</span>
+      <span class="sttag">Mixed questions, nothing new${pct != null ? ` · best ${pct}%` : ''}</span></span>
+    ${pct != null ? `<span class="small" style="color:${passed ? 'var(--grow)' : 'var(--muted)'};font-weight:800">${pct}%</span>` : ''}
+  </button>`;
+}
+
+/* ── Revise: what is due, and what was missed ─────────────────────────
+   Bee's Revise pile and India's "missed more than once", read straight from
+   the mastery record — never a list the child has to build. */
+export function reviseList(c) {
+  const now = Date.now();
+  const due = mastery.due(c, now).map((o) => ({ o, why: 'due for a look' }));
+  const missed = OBJECTIVES.filter((o) => { const r = c.mastery && c.mastery.rec[o.id]; return r && r.hist && r.hist.filter((h) => !h.ok).length >= 2; })
+    .filter((o) => !due.some((d) => d.o.id === o.id)).map((o) => ({ o, why: 'missed more than once' }));
+  return due.concat(missed);
+}
+export function viewRevise(c) {
+  const rows = reviseList(c);
+  const cardOf = (id) => { for (const ch of CHAPTERS) { const k = ch.cards.find((x) => x.id === id); if (k) return { k, ch }; } return null; };
+  return `<div class="stack atlas">
+    <button class="backlink" data-act="shelf" data-arg="">${ico('back', '←', 16)} The map</button>
+    <div><h1 style="font-size:26px">Revise</h1><p class="small muted">Things due for another look, and things missed more than once. Read from your record — nothing here is a guess.</p></div>
+    ${rows.length ? `<div class="card pad0"><div class="rows" style="margin:0">${rows.map(({ o, why }) => {
+      const t = cardOf(o.teach);
+      return `<button class="qrow" style="width:100%;text-align:left" data-act="card" data-arg="${o.teach}">
+        <span class="iw">${ico(why === 'due for a look' ? 'moon' : 'quest', '🔁', 20)}</span>
+        <span class="grow" style="min-width:0"><b style="font-size:14.5px">${esc(o.short || o.objective)}</b><div class="small muted">${t ? esc(t.k.title) + ' · ' + esc(t.ch.title) + ' · ' : ''}${why}</div></span></button>`;
+    }).join('')}</div></div>`
+    : `<div class="card"><p class="small muted">Nothing to revise. That is not nothing — it means everything you have met is holding.</p></div>`}
   </div>`;
 }

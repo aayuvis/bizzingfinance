@@ -8,8 +8,9 @@ import { townSVG, PLACES } from './town.js';
 import { BLD } from './buildings-gen.js';
 import { ART } from './art-gen.js';
 import { hero } from './hero.js';
-import { viewAtlas, viewAct } from './atlas.js';
+import { viewAtlas, viewAct, viewRevise } from './atlas.js';
 import * as daily from './daily.js';
+import { GAMES } from './arcade.js';
 import { canSay } from './ui.js';
 import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';
@@ -37,13 +38,14 @@ export function viewOnboard(draft) {
   const step = draft.step || 0;
   const shell = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
   const first = R.s ? R.s.kids.length === 0 : true;
+  if (step === 0 && first && !draft.go) return landing();
   if (step === 0) {
     return shell(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : 'A new stall on Market Row'}</h1>
         <p class="muted" style="margin-top:8px">${first
-          ? "A town where you get a stall, a wallet, and every mistake is made with money that isn't real."
+          ? "A town where you get a stall, a wallet and four jars — and learn money by running your own."
           : 'Another child, their own town, their own money. Nothing is shared between them.'}</p>
       </div>
       ${say('nana', first
@@ -533,6 +535,7 @@ export function viewLearn() {
   }
   if (R.shelf === 'words') return viewGlossary();
   /* Learn is the Money Atlas (atlas.js): one map, five regions, a rail of stops */
+  if (R.shelf === 'revise') return viewRevise(c);
   if (R.shelf && R.shelf.startsWith('act:')) return viewAct(c, +R.shelf.slice(4) || 0);
   return viewAtlas(c);
 }
@@ -1543,10 +1546,10 @@ export function viewCollection() {
     <div class="card">
       <div class="eyebrow">People you've met</div>
       <div class="grid3" style="margin-top:10px">
-        ${Object.keys(CAST).map((k) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center">
-          <div style="width:54px;height:54px;margin:0 auto;border-radius:50%;overflow:hidden">${CAST[k].svg}</div>
+        ${Object.keys(CAST).map((k) => `<button data-act="castCard" data-arg="${k}" style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;font:inherit;color:inherit">
+          <div style="width:54px;height:54px;margin:0 auto;border-radius:50%;overflow:hidden">${face(k, 54)}</div>
           <div style="font-weight:800;font-size:13.5px;margin-top:5px">${esc(CAST[k].name)}</div>
-          <div class="small muted" style="font-size:11.5px;line-height:1.35">${esc(CAST[k].role)}</div></div>`).join('')}
+          <div class="small muted" style="font-size:11.5px;line-height:1.35">${esc(CAST[k].role)}</div></button>`).join('')}
       </div>
     </div>
     <div class="card">
@@ -1586,7 +1589,10 @@ export function settingsSheet(R) {
       ${row('Sound', 'Clicks, coins and the bell.', seg('sound', [['on', 'On'], ['off', 'Off']], s.settings.sound ? 'on' : 'off'))}
       ${row('Narration speed', 'Nana in the lessons, and "Read it to me".', seg('rate', [['slow', 'Slower'], ['normal', 'Normal']], R.rate === 'slow' ? 'slow' : 'normal'))}
     </div>
-    <div class="sect"><b>Money</b><i></i></div>
+    ${s.parent.pin && !s.parent.gate ? `<div class="sect"><b>Grown-ups only</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Money, children and tester mode', 'Behind the PIN. Unlock on the grown-up\'s page and come back.', '<button class="btn ghost sm" data-act="nav" data-arg="parents">Unlock</button>')}
+    </div>` : `<div class="sect"><b>Money</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
       ${row('Currency', 'Changing it converts the town rather than resetting it.', `<select class="field sm" data-field="cur" data-live="1">${Object.keys(CURRENCIES).map((k) => `<option value="${k}" ${c.currency === k ? 'selected' : ''}>${CURRENCIES[k].sign} ${CURRENCIES[k].name}</option>`).join('')}</select>`)}
       ${row('Pay day', 'The bell rings once a week, on this day.', `<select class="field sm" data-field="payday" data-live="1">${DAYS.map((d, i) => `<option value="${i}" ${(c.family.payWeekday == null ? 5 : c.family.payWeekday) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>`)}
@@ -1600,6 +1606,10 @@ export function settingsSheet(R) {
     <div class="sect"><b>For testers</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
       ${row('Tester mode', s.settings.tester ? 'On — every gate is open; the record is untouched. Tools are on the grown-up\'s page.' : 'Opens every chapter, world, building and game without changing what ' + esc(c.name) + ' has learned.', seg('tester', [['on', 'On'], ['off', 'Off']], s.settings.tester ? 'on' : 'off'))}
+    </div>`}
+    <div class="sect"><b>Help</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Something not right?', 'Note it here. It stays on this device until you copy it out.', '<button class="btn ghost sm" data-act="bug">Report</button>')}
     </div>
     ${R.install ? `<div class="sect"><b>This device</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
@@ -1624,7 +1634,7 @@ export function aboutSheet() {
   return `
     <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
       <div class="small muted">Bizzing Finance · build ${VERSION}</div></div></div>
-    <p class="small" style="margin-top:12px">A town where you get a stall, a wallet, and every mistake is made with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
+    <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own — with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
     <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
     <p class="small muted" style="margin-top:8px">Every number is Bizzington's own arithmetic. There are no real interest rates, no real returns and no real companies in it, and no path from any screen to a payment form.</p>
@@ -1681,5 +1691,32 @@ function todayCard(c) {
         </div>
       </div>` : ''}
     </div>
+  </div>`;
+}
+
+
+/* ── the landing: what a grown-up meets first ────────────────────────────
+   Bee and India both open on a page that says what this is, counts what is
+   in it FROM THE DATA (never a typed number), states the promises, and
+   offers one button. */
+function landing() {
+  const counts = [[ALL_CARDS.length, 'lessons, each narrated'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'worlds to walk'], [Object.keys(BADGES).length, 'badges for decisions']];
+  return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
+    <div style="text-align:center">${mark(64)}
+      <div class="eyebrow" style="margin-top:12px">Bizzing Finance</div>
+      <h1 style="font-size:clamp(30px,8vw,40px);line-height:1.05;margin-top:4px">Earn it, keep it, grow it — in a town of your own.</h1>
+      <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own — and a grown-up's page that reports what they learned, not how long they stayed.</p>
+    </div>
+    <button class="btn wide" style="font-size:16px;min-height:52px" data-act="obStart">Start free →</button>
+    <div class="moneyline stats" style="justify-content:space-between">
+      ${counts.map(([n, l]) => `<div><div class="v" style="font-size:24px">${n}</div><div class="k">${l}</div></div>`).join('')}
+    </div>
+    <div class="card pad0"><div class="rows" style="margin:0">
+      ${[['lock', 'No real money, ever', 'No card, no bank link, no cash-out. The simulator is closed, and that is the point.'],
+         ['family', 'Nothing leaves this device', 'A first name and an age band. No email, no photo, no tracking, no ads.'],
+         ['receipt', 'Every number is Bizzington\'s own', 'No real interest rates, no real returns, no real companies — and nothing is investment advice.']]
+        .map(([ic, t, sub]) => `<div class="qrow"><span class="iw">${ico(ic, '✓', 20)}</span><span class="grow"><b style="font-size:14.5px">${t}</b><div class="small muted">${sub}</div></span></div>`).join('')}
+    </div></div>
+    <p class="small muted" style="text-align:center">Third of the Bizzing family, after <b>Bizzing Bee</b> and <b>Bizzing India</b>. <button class="small" style="color:var(--action);font-weight:800" data-act="about">How it was made →</button></p>
   </div>`;
 }

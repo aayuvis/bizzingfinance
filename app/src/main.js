@@ -3,12 +3,13 @@
 
 import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound, say as speak, setSayRate, canSay } from './ui.js';
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
-import { say, CAST, ico, mark } from './art.js';
+import { say, CAST, ico, mark, face } from './art.js';
 import { mountLesson } from './lessonplayer.js';
 import * as co from './companion.js';
 import { companionFigure, shelterView, wardrobeView } from './companionview.js';
 import { receiptSlip } from './keepsakes.js';
 import * as daily from './daily.js';
+import * as quiz from './quiz.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
@@ -25,7 +26,7 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet } from './views.js';
+  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet, VERSION } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
@@ -171,6 +172,9 @@ function overlay() {
   }
 
   if (o.kind === 'settings') return box(settingsSheet(R), true);
+  if (o.kind === 'quiz') return box(quizView(o), true);
+  if (o.kind === 'cast') return box(castCard(o.who), true);
+  if (o.kind === 'bug') return box(bugSheet(), true);
   if (o.kind === 'about') return box(aboutSheet(), true);
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
@@ -1060,3 +1064,84 @@ window.addEventListener('appinstalled', () => { R.install = null; toast('Install
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   cardById, allCards: ALL_CARDS, fire, key: (id, qi) => shuffledDrill(ALL_CARDS.find((c) => c.id === id), qi || 0).answer };
+
+
+/* ── six questions, one chapter (quiz.js) ─────────────────────────────── */
+function quizView(o) {
+  const ch = quiz.chapter(o.ch), c = C();
+  const head = `<div class="eyebrow">${o.mode === 'testout' ? 'Test out' : 'Checkpoint'} · ${esc(ch.title)}</div>`;
+  if (o.done) {
+    const r = quiz.finish(c, o) || { pass: o.right >= quiz.passMark(o.items.length), pct: Math.round(o.right / o.items.length * 100) };
+    return `${head}<h2 style="margin:4px 0 8px">${o.right} of ${o.items.length}</h2>
+      <p class="small">${o.mode === 'testout'
+        ? (r.pass ? `That is enough. <b>${esc(ch.title)}</b> is open — its cards are still there to read, and none of them are marked done, because you have not read them.` : `Not this time, and it cost nothing. Read one of its cards when the level arrives, or try again tomorrow — the questions will be different.`)
+        : (r.pass ? `Checkpoint passed. The whole chapter, mixed up, and it held.` : `Not yet. The rail shows where to look — the cards you got wrong are worth a second read.`)}</p>
+      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">${r.pass && o.mode === 'testout' ? 'Walk in →' : 'Back to the map'}</button></div>`;
+  }
+  const { dq } = quiz.current(o); const p = o.pick;
+  return `${head}
+    <div class="row" style="margin-top:4px"><span class="small muted grow">Question ${o.i + 1} of ${o.items.length}</span><span class="small muted tabnum">${o.right} right</span></div>
+    <h3 style="font-size:18px;margin:8px 0 10px">${esc(dq.q)}</h3>
+    <div class="stack" style="gap:8px">
+      ${dq.opts.map((opt, i) => { let k = ''; if (p) k = i === dq.answer ? ' ok' : (i === p.i ? ' no' : '');
+        return `<button class="opt${k}" data-act="quizPick" data-arg="${i}" ${p ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span>${esc(opt)}</button>`; }).join('')}
+    </div>
+    ${p ? `<div style="background:${p.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px;margin-top:10px"><b>${p.ok ? 'That\'s it.' : 'Not quite —'}</b> ${esc(p.why)}</div>
+      <button class="btn wide" style="margin-top:12px" data-act="quizNext">${o.i + 1 >= o.items.length ? 'See how it went →' : 'Next question →'}</button>` : ''}`;
+}
+on('testout', (chId) => { const o = quiz.start(chId, 'testout'); if (!o || !o.items.length) return; R.overlay = o; sfx.click(); render(); });
+on('checkpoint', (chId) => { const o = quiz.start(chId, 'checkpoint'); if (!o || !o.items.length) return; R.overlay = o; sfx.click(); render(); });
+on('quizPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'quiz') return; quiz.answer(o, i); if (o.pick.ok) sfx.good(); else sfx.bad(); render(); });
+on('quizNext', () => { const o = R.overlay; if (!o || o.kind !== 'quiz') return; quiz.next(o); if (o.done) { const r = quiz.finish(C(), o); sim.save(R.s); if (r && r.pass) { sfx.level(); confetti(40); } } render(); });
+
+/* ── the cast, as cards (India's avatar cards, Bee's trading cards) ──── */
+const LORE = {
+  pip:  { line: 'Your neighbour on Market Row, and the first to say "there is work going".', quote: 'Wages from in here land in the same wallet as everything else. There is no second, magic money.', why: 'Pip is the voice of the street: jobs, quests, the postbox, and the plain sentence when a number needs one.' },
+  nana: { line: 'Ran the shop at the end of the road for sixty years, and is shutting it up.', quote: 'Split it the moment it lands. What sits in one pile gets spent as one pile.', why: 'Nana Bizz teaches: every lesson is hers, and so are the jars, the Bank, and the shop she hands over.' },
+  mags: { line: "Bizzington's best salesperson, and honest about it.", quote: 'Some of this earns its keep and some of it is just lovely — and I have written which is which.', why: 'Mags runs the General Store and sends most of the letters. When something is "today only", it is usually her.' },
+  bo:   { line: 'Sure the market is going up. Always.', quote: 'Up on the week! I said it would be. I say that every week.', why: 'Bo and Bea argue on the Exchange steps so you can hear both sides and do nothing, which is usually right.' },
+  bea:  { line: 'Sure the market is going down. Always.', quote: 'Down on the week. Sell? No. I only say that so you notice the feeling.', why: 'Bea is the other half of the argument. Neither of them is a forecast; they are the two voices in your own head.' },
+};
+function castCard(who) {
+  const p = CAST[who] || CAST.pip, l = LORE[who] || LORE.pip;
+  return `<div style="text-align:center">${face(who, 120)}</div>
+    <div class="eyebrow" style="text-align:center;margin-top:10px">Someone you've met</div>
+    <h2 style="text-align:center;margin:2px 0 2px">${esc(p.name)}</h2>
+    <p class="small muted" style="text-align:center">${esc(p.role)}</p>
+    <p class="small" style="margin-top:12px">${esc(l.line)}</p>
+    <div class="aside" style="margin-top:10px"><span class="eyebrow">In their words</span>“${esc(l.quote)}” <span class="small muted">— ${esc(p.name)}</span></div>
+    <p class="small muted" style="margin-top:10px">${esc(l.why)}</p>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">Back</button></div>`;
+}
+on('castCard', (who) => { R.overlay = { kind: 'cast', who }; sfx.click(); render(); });
+on('obStart', () => { draft.go = true; render(); window.scrollTo(0, 0); });
+
+/* ── report a problem: on this device, until it is copied out (Bee's bug tab) ── */
+const BUG_CATS = ['Something broke', 'Looks wrong', 'A number or a word', 'An idea'];
+function bugSheet() {
+  const list = Store.loadDevice('bugs', []);
+  const cat = R.bugCat || BUG_CATS[0];
+  return `<div class="eyebrow">Something not right?</div><h2 style="margin:4px 0 6px">Note it here</h2>
+    <p class="small muted">Saved on this device only. Copy them out to send them on — nothing is sent by the app.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px">${BUG_CATS.map((k) => `<button class="wchip${cat === k ? ' hot' : ''}" data-act="bugCat" data-arg="${k}">${k}</button>`).join('')}</div>
+    <textarea class="field" data-field="bugtext" rows="3" placeholder="What happened, and where?" style="width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-size:14px">${esc(R.fields.bugtext || '')}</textarea>
+    <div class="row" style="gap:8px;margin-top:10px"><span class="grow"></span><button class="btn sm" data-act="bugSave">Save note</button></div>
+    ${list.length ? `<div class="sect"><b>${list.length} saved</b><i></i></div>
+      <div class="rows" style="margin:0 -22px">${list.slice(-8).reverse().map((b) => `<div class="qrow"><span class="grow"><b style="font-size:13.5px">${esc(b.cat)}</b> <span class="small muted">· ${esc(b.where)} · ${new Date(b.t).toLocaleDateString()}</span><div class="small">${esc(b.text)}</div></span></div>`).join('')}</div>
+      <div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost sm" data-act="bugCopy">Copy all</button><button class="btn ghost sm" data-act="bugClear">Clear</button><span class="grow"></span><button class="btn ghost sm" data-act="closeOv">Done</button></div>`
+    : `<div class="row" style="margin-top:12px"><span class="grow"></span><button class="btn ghost sm" data-act="closeOv">Done</button></div>`}`;
+}
+on('bug', () => { R.overlay = { kind: 'bug' }; sfx.click(); render(); });
+on('bugCat', (k) => { R.bugCat = k; render(); });
+on('bugSave', () => {
+  const text = (R.fields.bugtext || '').trim(); if (!text) { toast('Write a line first'); return; }
+  const list = Store.loadDevice('bugs', []);
+  list.push({ t: Date.now(), cat: R.bugCat || BUG_CATS[0], text, where: location.hash || '#/', build: VERSION, size: innerWidth + '×' + innerHeight });
+  Store.saveDevice('bugs', list.slice(-60)); R.fields.bugtext = ''; toast('Saved on this device'); sfx.good(); render();
+});
+on('bugCopy', async () => {
+  const list = Store.loadDevice('bugs', []);
+  const txt = list.map((b) => `[${new Date(b.t).toISOString()}] ${b.cat} · ${b.where} · build ${b.build} · ${b.size}\n${b.text}`).join('\n\n');
+  try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch (e) { toast('Could not copy on this device'); }
+});
+on('bugClear', () => { Store.saveDevice('bugs', []); render(); });

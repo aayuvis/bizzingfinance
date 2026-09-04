@@ -1,6 +1,9 @@
 # CLAUDE.md — Bizzing Finance
 
 Read this first, then [CONCEPT.md](CONCEPT.md), then [docs/01-tabs.md](docs/01-tabs.md).
+Before adding a feature because a sibling has it, read
+[docs/11-made-whole.md](docs/11-made-whole.md): the diagnosis against Bee and India, with
+what is built, what is done differently, and what is refused and why.
 
 ## What this is
 

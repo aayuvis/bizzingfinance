@@ -82,6 +82,8 @@ build rides along at `/bizzington.html`.
 | `src/main.js` | Shell, hash routing, overlays, and every `data-act` in one table. |
 | `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast, drawn art with the hand-authored SVG as fallback. |
 | `src/art-gen.js` | Generated. Portraits and plates as data URIs. Rebuild with `tools/art/process.py`, never hand-edit. |
+| `src/daily.js` | The dailies on Home — Do one (a real-world deed, kept), Carry one (a glossary word), Ask at home (a weekly question about a grown-up's own past), a tip from a card already read. Rotates from the day, never chance. |
+| `src/quiz.js` | Six mixed questions from one chapter, two doors: **test out** of a level-locked chapter (opens it, cards stay unread) and a **checkpoint** after a finished one (score on the rail). |
 | `src/atlas.js` | **The Money Atlas** — Learn as one map you walk, in the language of Bee's Word Atlas: a painted board with the five worlds as pins on a route, then each world as a banner with a rail of stops (the cards), the stop you are standing on expanded. Reads the frontier from `c.learn.done` and the content's own order. |
 | `src/atlas-gen.js` `src/covers-gen.js` `src/companions-gen.js` `src/buildings-gen.js` | Generated art: the atlas board and its measured pins, the twelve Arcade covers, the companion sprites with their anchors, the town's buildings with their zones. `tools/art/` regenerates each; never hand-edit. |
 | `src/hero.js` | The screen header: where you are, in type, with the place painted beside it and the one number that matters. Every top-level screen opens with one. |
@@ -149,6 +151,13 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
   as surely as text does.
 - **No number without a source.** Everything on screen is Bizzington's own arithmetic; no
   real rate, return or company appears anywhere.
+
+## What the siblings taught it
+
+[docs/11-made-whole.md](../docs/11-made-whole.md) is the feature-by-feature diagnosis against
+Bizzing Bee and Bizzing India — every row Have / Built / Own way / Refused, with the reason.
+Read it before adding a feature "because Bee has it": three of Bee's are refused here on
+purpose (coins, packs, streak rewards), and the reasons are the app's own rules.
 
 ## Known gaps
 
