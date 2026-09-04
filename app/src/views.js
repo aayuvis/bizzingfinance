@@ -5,8 +5,9 @@ import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
+import { BLD } from './buildings-gen.js';
 import { lessonBlock } from './lessonplayer.js';
-import { companionCard } from './companionview.js';
+import { companionCard, companionFigure } from './companionview.js';
 import { overnightCard, receiptSlip } from './keepsakes.js';
 import * as co from './companion.js';
 import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
@@ -81,7 +82,7 @@ export function viewOnboard(draft) {
    kind of thing: the day, in pieces. */
 function beat(act, arg, icon, title, sub2, right, hot) {
   return `<button class="jbeat${hot ? ' hot2' : ''}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ''}>
-    ${ico(icon, icon, 22)}
+    <span class="iw">${ico(icon, icon, 20)}</span>
     <span class="grow" style="min-width:0;text-align:left">
       <b>${title}</b><span class="small muted" style="display:block">${sub2}</span></span>
     ${right || ''}
@@ -111,19 +112,13 @@ function journeys(c) {
         `<span class="small muted tabnum">${Math.round(g.saved / g.target * 100)}%</span>`) : '',
   ].join('');
 
-  const household = `<div class="card jny" style="--ja:var(--save)">
-    <div class="row">
-      <div class="grow"><div class="eyebrow">The Household</div>
-        <p class="cs">Can you cover your life — and what's left over?</p></div>
-      <div style="text-align:right"><div class="big" style="color:${left >= 0 ? 'var(--ink)' : 'var(--spend)'}">${money(left)}</div>
-        <div class="small muted">left over / week</div></div>
-    </div>
-    <div class="jstack">${hhBeats}</div>
-    <button class="jfoot" data-act="sub" data-arg="place">
+  const household = jcard({ accent: 'var(--save)', sprite: 'home-' + Math.min(4, (c.home && c.home.tier) || 0), act: 'sub', arg: 'place',
+    eyebrow: 'The Household', question: "Can you cover your life — and what's left over?",
+    big: money(left), bigStyle: left >= 0 ? '' : 'color:var(--spend)', sub: 'left over / week', rows: hhBeats,
+    foot: `<button class="jfoot" data-act="sub" data-arg="place">
       <span class="bar grow" style="height:6px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}"></i></span>
       <span class="small muted tabnum">${Math.round(ind * 100)}% of your life pays for itself</span>
-    </button>
-  </div>`;
+    </button>` });
 
   /* Livelihood — producer. Today's shifts, and the shop once it is yours. */
   const jobs = sim.jobsToday(c);
@@ -143,29 +138,20 @@ function journeys(c) {
       `<span class="small muted tabnum">${money(sim.bizValue(c))}</span>`, true) : '',
   ].join('');
 
-  const livelihood = `<div class="card jny" style="--ja:var(--treasure)">
-    <div class="row">
-      <div class="grow"><div class="eyebrow">The Livelihood</div>
-        <p class="cs">What is your time worth — and can you make it worth more?</p></div>
-      <div style="text-align:right"><div class="big">${jobs.length - jleft}/${jobs.length}</div>
-        <div class="small muted">shifts today</div></div>
-    </div>
-    <div class="jstack">${lvBeats || `<p class="small muted">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>`}</div>
-  </div>`;
+  const livelihood = jcard({ accent: 'var(--treasure)', sprite: bizOpen ? 'shop' : 'stall', act: 'sub', arg: bizOpen ? 'business' : 'wallet',
+    eyebrow: 'The Livelihood', question: 'What is your time worth — and can you make it worth more?',
+    big: `${jobs.length - jleft}/${jobs.length}`, sub: 'shifts today',
+    rows: lvBeats || `<p class="small muted" style="padding:12px 16px">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>` });
 
   /* Portfolio — allocator. Drawn locked rather than hidden, like the street. */
   const bankOpen = chapterOpen(c, 'bank'), exOpen = chapterOpen(c, 'portfolio');
   let portfolio;
   if (!bankOpen && !exOpen) {
-    portfolio = `<div class="card jny" style="--ja:var(--grow)">
-      <div class="row">
-        <div class="grow"><div class="eyebrow">The Portfolio</div>
-          <p class="cs">Where does the left-over live — and what is it doing?</p></div>
-        ${ico('lock', '🔒', 22)}
-      </div>
-      <div class="jstack">${beat('nav', 'learn', 'lesson', 'Opens with ' + esc(needFor('bank') || 'the Banking chapter'),
-        'The Bank takes deposits the day you understand what it does with them.')}</div>
-    </div>`;
+    portfolio = jcard({ accent: 'var(--grow)', sprite: 'bank', locked: true, act: 'nav', arg: 'learn',
+      eyebrow: 'The Portfolio', question: 'Where does the left-over live — and what is it doing?',
+      big: ico('lock', '🔒', 26), sub: 'not yet open',
+      rows: beat('nav', 'learn', 'lesson', 'Opens with ' + esc(needFor('bank') || 'the Banking chapter'),
+        'The Bank takes deposits the day you understand what it does with them.') });
   } else {
     const invested = c.money.bank.balance + sim.holdingsValue(c);
     const up = c.market.lastMove >= 0;
@@ -175,19 +161,75 @@ function journeys(c) {
         `<span class="pill ${up ? 'grow' : 'spendp'}">${up ? '▲' : '▼'}</span>`, true) : '',
       c.learn.level >= 16 ? beat('nav', 'market40', 'company', 'The Market Game', 'Forty companies, forty years, one decade at a time.') : '',
     ].join('');
-    portfolio = `<div class="card jny" style="--ja:var(--grow)">
-      <div class="row">
-        <div class="grow"><div class="eyebrow">The Portfolio</div>
-          <p class="cs">Where does the left-over live — and what is it doing?</p></div>
-        <div style="text-align:right"><div class="big">${money(invested)}</div>
-          <div class="small muted">invested</div></div>
-      </div>
-      <div class="jstack">${pfBeats}</div>
-    </div>`;
+    portfolio = jcard({ accent: 'var(--grow)', sprite: exOpen ? 'exchange' : 'bank', act: 'sub', arg: exOpen ? 'portfolio' : 'bank',
+      eyebrow: 'The Portfolio', question: 'Where does the left-over live — and what is it doing?',
+      big: money(invested), sub: 'invested', rows: pfBeats });
   }
 
   return `<div class="sect"><b>Your three journeys</b><i></i></div>
     ${household}${livelihood}${portfolio}`;
+}
+
+/* A journey card is a DOOR — the building itself, painted, on the journey's
+   own tint — with the day's beats as plain rows beneath it. One box per
+   journey; nothing boxed inside it. The rows separate with hairlines, and
+   the one hot beat is the only row that carries a fill. */
+function jcard(o) {
+  const b = BLD[o.sprite];
+  return `<div class="card pad0 jny" style="--ja:${o.accent}">
+    <button class="door${o.locked ? ' locked' : ''}" data-act="${o.act}" data-arg="${o.arg}">
+      ${b ? `<img src="${b.src}" alt="" width="${b.w}" height="${b.h}">` : ''}
+      <span class="db">
+        <span class="eyebrow">${o.eyebrow}</span>
+        <b class="dq">${o.question}</b>
+        <span class="dn"><span class="big"${o.bigStyle ? ` style="${o.bigStyle}"` : ''}>${o.big}</span><span class="small muted">${o.sub}</span></span>
+      </span>
+    </button>
+    <div class="jrows">${o.rows}</div>
+    ${o.foot || ''}
+  </div>`;
+}
+
+/* ── the greeting: a face, a line, and what is waiting ─────────────────
+   The companion if there is one (docs/10), Pip if not. The overnight lines
+   (keepsakes.js) become chips here instead of a card of their own, and the
+   companion's care and controls fold in beneath — one panel where there were
+   three. */
+function greeting(c) {
+  const o = c.overnight, fresh = !!(o && !o.seen);
+  const has = co.has(c), p = co.get(c);
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const line = has ? esc(co.line(c)) : hometalk(c);
+  const chips = [];
+  if (fresh) {
+    if (o.fuse) chips.push(['postbox', '', 'A letter you were expecting', true]);
+    else if (!c.postbox.answered) chips.push(['postbox', '', 'A letter came']);
+    if (sim.payDue(c, R.s)) chips.push(['payday', '', 'Ring the bell', true]);
+    if (has && co.canPlay(c)) chips.push(['play', '', `${esc(p.name)} waited by the door`]);
+    const jobs = sim.jobsToday(c).length;
+    if (jobs) chips.push(['sub', 'wallet', `${nWord(jobs)} ${jobs === 1 ? 'shift' : 'shifts'} on the board`]);
+  }
+  const can = has && co.canPlay(c);
+  return `<div class="card greet">
+    <div class="gfig">${has ? companionFigure(c, 112, { bob: p.mood === 'happy' }) : face('pip', 96)}</div>
+    <div class="gbody">
+      ${fresh ? `<span class="eyebrow">${o.nights === 1 ? 'Overnight' : `${nWord(o.nights)} nights away`}</span>` : `<span class="eyebrow">${hello}</span>`}
+      <h2>${fresh ? 'Welcome back, ' : ''}${esc(c.name)}</h2>
+      <div class="bub">${line}</div>
+      ${chips.length ? `<div class="waiting">${chips.map(([act, arg, t, hot]) => `<button class="wchip${hot ? ' hot' : ''}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ''}>${t}</button>`).join('')}
+        <button class="wchip quiet" data-act="ovSeen" aria-label="Got it">Got it</button></div>` : ''}
+      ${has ? `<div class="gco">
+          <span class="small muted">${esc(p.name)} · ${co.STAGES[p.stage]} ${esc(co.KINDS[p.kind].name).toLowerCase()} · ${p.paydays} pay ${p.paydays === 1 ? 'day' : 'days'} with you${p.everMissed ? ` · went hungry ${p.everMissed}×` : ''}</span>
+          <div class="care ${p.mood}"><i style="width:${p.care}%"></i></div>
+          <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
+            <button class="btn sm ${can ? '' : 'ghost'}" data-act="play">${can ? 'Play' : 'Played today'}</button>
+            <button class="btn ghost sm" data-act="wardrobe">Wardrobe${p.wardrobe.length ? ' · ' + p.wardrobe.length : ''}</button>
+          </div></div>`
+        : `<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn ghost sm" data-act="shelter">${ico('family', '🐾', 16)} Meet the five who need homes</button></div>`}
+    </div>
+  </div>`;
 }
 
 export function viewHome() {
@@ -198,12 +240,13 @@ export function viewHome() {
   const sprout = c.band === 'sprout';
   const today = nextThing(c);
 
+  /* the money is a line of type on the ground, not a grid of boxes */
   const strip = sprout
-    ? `<div class="strip two">
-        <div><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
+    ? `<div class="moneyline">
+        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
         <div><div class="k">Saved up</div><div class="v">${money(c.money.jars.save + c.money.jars.grow)}</div></div></div>`
-    : `<div class="strip">
-        <div><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
+    : `<div class="moneyline">
+        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
         <div><div class="k">Jars</div><div class="v">${money(sim.jarTotal(c))}</div></div>
         <div><div class="k">Invested</div><div class="v">${money(c.money.bank.balance + sim.holdingsValue(c))}</div></div>
         <div><div class="k">Net worth</div><div class="v" style="color:var(--action)">${money(sim.netWorth(c))}</div></div></div>`;
@@ -227,8 +270,7 @@ export function viewHome() {
       <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
     </div>
 
-    ${overnightCard(c, R.s)}
-    ${companionCard(c)}
+    ${greeting(c)}
 
     ${strip}
 
@@ -240,10 +282,9 @@ export function viewHome() {
       <div class="row"><div class="grow"><div class="ct">Today's three</div>
         <p class="cs">Wages into the same wallet as everything else.</p></div>
         <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
-      <div class="stack" style="gap:8px;margin-top:11px">
-        ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? 'var(--grow-tint)' : 'var(--surface2)'};
-          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="${q.claimed ? 'opacity:.5' : ''}">${ico('quest', q.em, 26)}</span>
+      <div class="rows" style="margin-top:6px">
+        ${quests.map((q) => `<div class="qrow${q.claimed ? ' done' : ''}">
+          <span class="iw" style="${q.claimed ? 'opacity:.5' : ''}">${ico('quest', q.em, 20)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${q.claimed ? 'opacity:.6' : ''}">${esc(q.t)}</b>
             <div class="small muted">${q.claimed ? 'Claimed.' : esc(q.sub)}</div>
@@ -271,11 +312,10 @@ export function viewHome() {
         <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
           <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
           <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
-        <div class="stack" style="gap:9px;margin-top:11px">
-          ${fx.map((f) => `<div style="background:${f.done ? 'var(--grow-tint)' : 'var(--surface2)'};
-            border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px">
+        <div class="rows" style="margin-top:6px">
+          ${fx.map((f) => `<div class="qrow block${f.done ? ' done' : ''}">
             <div class="row" style="gap:10px">
-              <span style="${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${ico(f.em, f.em, 21)}</span>
+              <span class="iw" style="${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${ico(f.em, f.em, 20)}</span>
               <span class="grow" style="min-width:0">
                 <b style="font-size:14px">${esc(f.name)}</b>
                 <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div></span>
@@ -299,7 +339,7 @@ export function viewHome() {
 
 
 
-    ${say('pip', hometalk(c))}
+    ${co.has(c) ? say('pip', hometalk(c)) : ''}
   </div>`;
 }
 
@@ -340,10 +380,9 @@ function closingTime(c, quests) {
       ? `You kept ${money(led.net)} of it. The rest is either spent or working.`
       : `You spent ${money(-led.net)} more than came in today. That happens — it is what the jars are for.`}</p>
     <div class="eyebrow" style="margin-top:13px">Waiting for you tomorrow</div>
-    <div class="stack" style="gap:8px;margin-top:7px">
-      ${rows.slice(0, 3).map((r) => `<div class="row" style="gap:10px;background:var(--surface);
-        border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-        ${ico(r.em, r.em, 20)}
+    <div class="rows" style="margin-top:4px">
+      ${rows.slice(0, 3).map((r) => `<div class="qrow">
+        <span class="iw">${ico(r.em, r.em, 20)}</span>
         <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
           <div class="small muted">${r.sub}</div></span></div>`).join('')}
     </div>
@@ -398,13 +437,12 @@ function todaysWork(c) {
     <div class="row"><div class="grow"><div class="ct">Today's work</div>
       <p class="cs">${esc(WORLDS[c.world || 0].name)} · each one is a shift you play, and how well you do it is what it pays</p></div>
       <span class="pill ${left ? '' : 'grow'}">${left ? left + ' left' : 'all done'}</span></div>
-    <div class="stack" style="gap:8px;margin-top:11px">
+    <div class="rows" style="margin-top:6px">
       ${jobs.map((j) => {
         const g = JOB_GAME[j.id];
         const best = sim.jobBest(c, j.id);
-        return `<div class="row" style="gap:10px;background:${j.done ? 'var(--grow-tint)' : 'var(--surface2)'};
-          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="${j.done ? 'opacity:.5' : ''}">${ico(j.em, j.em, 26)}</span>
+        return `<div class="qrow${j.done ? ' done' : ''}">
+          <span class="iw" style="${j.done ? 'opacity:.5' : ''}">${ico(j.em, j.em, 20)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
             <div class="small muted">${j.done ? 'Back tomorrow.'
@@ -612,7 +650,7 @@ export function viewMoney() {
   let sub = R.s.ui.sub;
   if (!subs.find((x) => x.k === sub && chapterOpen(c, x.k))) sub = 'wallet';
 
-  const strip = `<div style="display:flex;gap:7px;flex-wrap:wrap;padding:11px;background:var(--tint);border-radius:var(--r-md);border:1px solid var(--line-soft)">
+  const strip = `<div class="mnav">
     ${subs.map((x) => {
       const open = chapterOpen(c, x.k);
       return `<button data-act="${open ? 'sub' : 'lockedSub'}" data-arg="${x.k}"
@@ -642,9 +680,9 @@ function viewWallet() {
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
       <p class="small muted" style="margin:3px 0 10px">Each job once a day. You are selling an hour, not a thing.</p>
-      <div class="stack" style="gap:8px">
-        ${jobs.map((j) => `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          ${ico(j.em, j.em, 20)}
+      <div class="rows">
+        ${jobs.map((j) => `<div class="qrow${j.done ? ' done' : ''}">
+          <span class="iw">${ico(j.em, j.em, 20)}</span>
           <span class="grow"><b style="font-size:14px">${esc(j.name)}</b><br><span class="small muted">for ${esc(j.who)}</span></span>
           ${j.done ? '<span class="pill grow">done today</span>'
             : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${money(j.amt)}</button>`}
@@ -1130,10 +1168,8 @@ export function viewStore() {
           <div class="grow"><b style="font-size:15.5px">${esc(it.name)}</b>
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
-        ${it.gives ? `<div style="background:var(--grow-tint);color:var(--grow);border-radius:var(--r-md);padding:9px 12px;margin-top:10px;font-size:13px;font-weight:700">
-          ⚙ ${esc(it.gives)}</div>` : ''}
-        <div style="background:var(--treasure-tint);color:var(--treasure-deep);border-radius:var(--r-md);padding:9px 12px;margin-top:8px;font-size:13px;font-weight:650">
-          That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</div>
+        ${it.gives ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:9px">${ico('gear', '⚙', 15)} ${esc(it.gives)}</p>` : ''}
+        <p class="small muted" style="margin-top:6px">That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</p>
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>'
             : waiting ? `<span class="pill">think it over · ${hrs}h left</span>`
@@ -1228,9 +1264,8 @@ export function viewGate() {
 export function viewReport() {
   const c = K();
   const r = report.weekly(c, { money });
-  const row = (em, label, body) => `<div class="row" style="gap:11px;align-items:flex-start;
-    background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px">
-    ${ico(em, em, 19)}<span class="grow" style="min-width:0">
+  const row = (em, label, body) => `<div class="qrow" style="align-items:flex-start">
+    <span class="iw">${ico(em, em, 19)}</span><span class="grow" style="min-width:0">
     <b style="font-size:14px">${label}</b><div class="small muted">${body}</div></span></div>`;
   return `<div class="stack">
     <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">← Grown-up's page</button>

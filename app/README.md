@@ -88,6 +88,13 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 
 ## Rules this code keeps
 
+- **Paper on a ground, and rows inside it — never a box inside a box.** The page is the
+  world's tint with the family's dot motif; a card is a sheet lifted off it, without a
+  border. Inside a card the day is ROWS (`.qrow`, `.jbeat`) separated by hairlines, an icon
+  in a tinted well, and at most one filled row: the thing to do now. A journey is a DOOR —
+  the building itself, painted, on the journey's tint — with its rows beneath. Bee and
+  India set this language; a grid of bordered tiles is a dashboard, and Home is a street.
+
 - **No real money anywhere.** No card, no bank link, no payment form on a child's screen.
 - **No real security is named as a thing to buy.** Fictional companies, real behaviour.
 - **No gambling mechanics.** No loot box, no paid spin, no randomised reward. The Market Cup
