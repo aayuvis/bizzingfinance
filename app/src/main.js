@@ -23,7 +23,7 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet } from './views.js';
+  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 
 const root = document.getElementById('app');
@@ -111,6 +111,7 @@ function render() {
       ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
         aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join('')}
     </nav>
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzington is ready · Reload</button>' : ''}
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
@@ -167,6 +168,7 @@ function overlay() {
   }
 
   if (o.kind === 'settings') return box(settingsSheet(R), true);
+  if (o.kind === 'about') return box(aboutSheet(), true);
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
   if (o.kind === 'receipt') return box(`
@@ -343,6 +345,8 @@ function overlay() {
       <div class="rows" style="margin:0 -22px -10px">
         ${rest.map((t) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="${t.k}">
           <span class="iw">${ico(t.g, t.g, 20)}</span><b style="font-size:15px">${t.n}</b></button>`).join('')}
+        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="settings"><span class="iw">${ico('gear', '⚙', 20)}</span><b style="font-size:15px">Settings</b></button>
+        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="about"><span class="iw">${ico('lesson', '📖', 20)}</span><b style="font-size:15px">About Bizzington</b></button>
       </div>`);
   }
   return '';
@@ -1016,9 +1020,23 @@ render();
    http. Skipped in the single-file build, which has nothing to fetch. */
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.BZF_SINGLE) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      /* a newer build is installed behind the running one: say so once, with
+         one tap to swap — Bee and India both carry this bar */
+      const watch = (w) => { if (!w) return; w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) { R.update = w; render(); } }); };
+      if (reg.waiting && navigator.serviceWorker.controller) { R.update = reg.waiting; render(); }
+      reg.addEventListener('updatefound', () => watch(reg.installing));
+    }).catch(() => {});
+    let swapped = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (swapped) return; swapped = true; location.reload(); });
   });
 }
+on('update', () => { if (R.update) { R.update.postMessage({ type: 'SKIP_WAITING' }); R.update = null; toast('Swapping to the new build…'); render(); } });
+/* the browser offers to install; we keep the offer and put it in Settings */
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); R.install = e; if (R.overlay && R.overlay.kind === 'settings') render(); });
+on('install', async () => { const e = R.install; if (!e) return; R.install = null; try { await e.prompt(); } catch (x) {} render(); });
+on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
+window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   cardById, allCards: ALL_CARDS, fire, key: (id, qi) => shuffledDrill(ALL_CARDS.find((c) => c.id === id), qi || 0).answer };

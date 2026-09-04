@@ -3,7 +3,7 @@
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
-import { say, face, ico, CAST } from './art.js';
+import { say, face, ico, CAST, mark } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { BLD } from './buildings-gen.js';
 import { ART } from './art-gen.js';
@@ -1586,10 +1586,36 @@ export function settingsSheet(R) {
     <div class="rows" style="margin:0 -22px">
       ${row('Tester mode', s.settings.tester ? 'On — every gate is open; the record is untouched. Tools are on the grown-up\'s page.' : 'Opens every chapter, world, building and game without changing what ' + esc(c.name) + ' has learned.', seg('tester', [['on', 'On'], ['off', 'Off']], s.settings.tester ? 'on' : 'off'))}
     </div>
+    ${R.install ? `<div class="sect"><b>This device</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row('Install Bizzington', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
+    </div>` : ''}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '👪', 15)} Grown-up's page</button>
+      <button class="btn ghost sm" data-act="about">${ico('lesson', '📖', 15)} About</button>
       <button class="btn ghost sm" data-act="nav" data-arg="collection">${ico('quest', '🏅', 15)} Collection</button>
       <span class="grow"></span>
       <button class="btn sm" data-act="closeOv">Done</button>
     </div>`;
+}
+
+
+/* ══ ABOUT — what this is, how it was made, and who is credited ══════════
+   India credits every art tradition and Bee its typefaces; this app owes
+   the same honesty about the image model, the synthesised narration and the
+   three open fonts it ships. */
+export const VERSION = '2026-09-04';
+export function aboutSheet() {
+  return `
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
+      <div class="small muted">Bizzing Finance · build ${VERSION}</div></div></div>
+    <p class="small" style="margin-top:12px">A town where you get a stall, a wallet, and every mistake is made with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
+    <div class="sect"><b>How it was made</b><i></i></div>
+    <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
+    <p class="small muted" style="margin-top:8px">Every number is Bizzington's own arithmetic. There are no real interest rates, no real returns and no real companies in it, and no path from any screen to a payment form.</p>
+    <div class="sect"><b>Type</b><i></i></div>
+    <p class="small muted"><b>Fraunces</b> by Undercase Type, <b>Hanken Grotesk</b> by Hanken Design Co., and <b>Sono</b> by Tyler Finck — all under the SIL Open Font License, bundled so the app works with no network at all.</p>
+    <div class="sect"><b>The family</b><i></i></div>
+    <p class="small muted">Third of three: <b>Bizzing Bee</b> teaches spelling, <b>Bizzing India</b> teaches the India a child has not lived in, and this one teaches money. Same rules in all three: no ads, no tracking, nothing sold to a child.</p>
+    <div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`;
 }
