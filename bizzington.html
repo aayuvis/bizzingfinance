@@ -706,6 +706,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .aboard-scroll .aboard{box-shadow:none}
 @media (max-width:600px){ .aboard-scroll .aboard{width:600px;max-width:none} }
 
+/* tester mode is loud on purpose */
+.chip.tester{background:var(--spend-tint);color:var(--spend);font-weight:800;letter-spacing:.07em;font-size:10.5px;border:1px solid color-mix(in srgb,var(--spend) 40%,transparent)}
+/* when the TESTER pill is in the bar, the wordmark folds so the bar still fits a phone */
+@media (max-width:520px){ .topbar-in:has(.chip.tester) .brand span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
+
 </style>
 </head>
 <body>
@@ -2372,6 +2377,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     jarTotal: () => jarTotal,
     jobBest: () => jobBest,
     jobsToday: () => jobsToday,
+    jumpLevel: () => jumpLevel,
     kid: () => kid,
     load: () => load,
     loanOffer: () => loanOffer,
@@ -2410,6 +2416,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     spread: () => spread,
     stamp: () => stamp,
     takeLoan: () => takeLoan,
+    testerTopUp: () => testerTopUp,
     toJar: () => toJar,
     touchDay: () => touchDay,
     townFixes: () => townFixes,
@@ -4187,7 +4194,24 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const ch = CHAPTERS.find((x) => x.id === id);
     return !!ch && ch.cards.every((k) => c.learn.done[k.id]);
   }
+  var TESTER = false;
+  function setTester(on2) {
+    TESTER = !!on2;
+  }
+  function tester() {
+    return TESTER;
+  }
+  function chapterLocked(c, ch) {
+    return !TESTER && c.learn.level < ch.lv;
+  }
+  function levelAtLeast(c, lv) {
+    return TESTER || c.learn.level >= lv;
+  }
+  function gameOpen(c, g) {
+    return TESTER || !g.needs || chapterDone(c, g.needs);
+  }
   function isOpen(c, key) {
+    if (TESTER) return true;
     const need = UNLOCKS[key];
     return !need || chapterDone(c, need);
   }
@@ -4197,7 +4221,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     return ch ? ch.title : null;
   }
   function worldOpen(c, i) {
-    if (i <= 0) return true;
+    if (TESTER || i <= 0) return true;
     return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterDone(c, ch)));
   }
   var QUESTS = [
@@ -5420,7 +5444,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       done: c.fix.done.includes(f.id),
       left: Math.max(0, cost - put),
       pct: Math.min(1, put / cost),
-      locked: !!(f.needs && !chapterDone(c, f.needs))
+      locked: !tester() && !!(f.needs && !chapterDone(c, f.needs))
     };
   }
   function townFixes(c, worldId) {
@@ -5457,7 +5481,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   function rollQuests(c) {
     const d = dayIndex(Date.now());
     if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
-    const pool = QUESTS.filter((q) => !q.needs || chapterDone(c, q.needs));
+    const pool = QUESTS.filter((q) => !q.needs || tester() || chapterDone(c, q.needs));
     if (!townFixes(c).some((f) => !f.done && !f.locked)) {
       const i = pool.findIndex((q) => q.kind === "town");
       if (i >= 0) pool.splice(i, 1);
@@ -5587,7 +5611,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         out.loanCleared = true;
       }
     }
-    if (c.learn.level >= 6 && c.money.wallet > 0) {
+    if (levelAtLeast(c, 6) && c.money.wallet > 0) {
       const pot = c.money.wallet, r = c.money.rules;
       const split = {
         spend: Math.round(pot * r.spend / 100),
@@ -5643,6 +5667,16 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   function protoSkipWeek(c, state) {
     c.money.nextPay = Date.now() - 1;
     state.clock.lastSeen = Date.now();
+  }
+  function jumpLevel(c, lv) {
+    const l = Math.max(1, Math.min(LEVELS.length, Math.round(lv)));
+    c.learn.level = l;
+    c.learn.xp = Math.max(c.learn.xp, LEVELS[l - 1]);
+    stamp(c);
+    return l;
+  }
+  function testerTopUp(c, units) {
+    return earn(c, price(units), "Tester top-up", "gift");
   }
   function toJar(c, jar, amt) {
     const a = Math.min(Math.round(amt), c.money.wallet);
@@ -8306,7 +8340,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     if (R.game) return R.game.view();
     const c = K2();
     const cover = (g, o = {}) => {
-      const open = o.open != null ? o.open : !g.needs || chapterDone(c, g.needs);
+      const open = o.open != null ? o.open : gameOpen(c, g);
       const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
       const art2 = COVERS[g.id];
       return `<button class="cover${o.big ? " big" : ""}${open ? "" : " locked"}" data-act="${open ? o.act || "game" : "lockedGame"}" data-arg="${o.arg || g.id}"
@@ -8326,7 +8360,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       needs: null,
       blurb: "Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer."
     };
-    const m40open = c.learn.level >= 13;
+    const m40open = levelAtLeast(c, 13);
     return `<div class="stack">
     ${hero({
       eyebrow: "Practise it",
@@ -11879,7 +11913,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     WORLDS.forEach((w, wi) => w.chapters.forEach((chId) => {
       const ch = CHAPTERS.find((x) => x.id === chId);
       if (!ch) return;
-      const lockedCh = c.learn.level < ch.lv;
+      const lockedCh = chapterLocked(c, ch);
       ch.cards.forEach((card) => out.push({ card, ch, wi, w, done: !!c.learn.done[card.id], lockedCh }));
     }));
     const fr = out.findIndex((s) => !s.done);
@@ -12184,7 +12218,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
           `<span class="pill ${up ? "grow" : "spendp"}">${up ? "\u25B2" : "\u25BC"}</span>`,
           true
         ) : "",
-        c.learn.level >= 16 ? beat2("nav", "market40", "company", "The Market Game", "Forty companies, forty years, one decade at a time.") : ""
+        levelAtLeast(c, 16) ? beat2("nav", "market40", "company", "The Market Game", "Forty companies, forty years, one decade at a time.") : ""
       ].join("");
       portfolio = jcard({
         accent: "var(--grow)",
@@ -12700,7 +12734,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       </div>
       <p class="small muted" style="margin-top:12px">Buttons move ${money(price(2))} at a time, out of your wallet (${money(c.money.wallet)}).</p>
     </div>
-    ${c.learn.level < 11 ? `<div class="card stack">
+    ${!levelAtLeast(c, 11) ? `<div class="card stack">
       <div class="eyebrow">Pay-day rule \u2014 this fires by itself on ${weekday(c.money.nextPay)}</div>
       <p class="small muted">Every twenty coins that arrive, split like this:</p>
       <div class="stack" style="gap:9px">
@@ -13334,6 +13368,24 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <button class="btn ${s.settings.sound ? "" : "ghost"} sm" data-act="sound">${s.settings.sound ? "On" : "Off"}</button></div>
     </div>
 
+    <div class="card stack" style="${s.settings.tester ? "box-shadow:0 0 0 2px var(--spend),0 14px 34px rgb(12 30 34 / .08)" : ""}">
+      <div class="eyebrow" style="color:var(--spend)">Tester mode</div>
+      <p class="small muted">For trying the app, not for a child. With it on, every gate opens \u2014 all eight chapters, the five worlds, the Jar Shed, the Build Yard, the Bank, the Exchange, the shop and every game \u2014 while ${esc(c.name)}'s learning record stays exactly what it is. A red TESTER pill sits in the bar the whole time it is on.</p>
+      <div class="row"><span class="small grow">Unlock everything</span>
+        <button class="btn ${s.settings.tester ? "" : "ghost"} sm" data-act="tester">${s.settings.tester ? "On" : "Off"}</button></div>
+      ${s.settings.tester ? `
+      <div class="rows" style="margin-top:4px">
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Jump the ladder</b><div class="small muted">Sets the level; XP follows. Level ${c.learn.level} now.</div></span>
+          <span class="row" style="gap:6px"><button class="btn ghost sm" data-act="tJump" data-arg="1">1</button><button class="btn ghost sm" data-act="tJump" data-arg="12">12</button><button class="btn ghost sm" data-act="tJump" data-arg="30">30</button></span></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Top up the wallet</b><div class="small muted">Labelled "Tester top-up" in the ledger.</div></span>
+          <button class="btn ghost sm" data-act="tMoney">+ ${money(price(100))}</button></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Bring pay day forward</b><div class="small muted">The bell is ready to ring on Home straight away.</div></span>
+          <button class="btn ghost sm" data-act="tBell">Ring now</button></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Mark every card done</b><div class="small muted">Fills the learn record with tester marks (no stars). This one does change the record.</div></span>
+          <button class="btn ghost sm" data-act="tDone">Mark all</button></div>
+      </div>` : ""}
+    </div>
+
     <div class="card stack">
       <div class="eyebrow">How this was made</div>
       <p class="small muted">The characters and the painted backdrops were drawn with an AI image
@@ -13418,7 +13470,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <p class="small muted" style="margin:4px 0 10px">Real notes and coins, unlocked as you climb \u2014 a quiet way to teach that money is an agreement rather than a law of nature.</p>
       <div class="grid3">
         ${Object.keys(CURRENCIES).map((k, i) => {
-      const has2 = c.currency === k || c.learn.level >= (i + 1) * 4;
+      const has2 = c.currency === k || levelAtLeast(c, (i + 1) * 4);
       return `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has2 ? 1 : 0.4}">
             <div style="font-size:22px;font-weight:800">${has2 ? CURRENCIES[k].sign : "\u{1F512}"}</div>
             <div style="font-weight:700;font-size:12.5px">${has2 ? esc(CURRENCIES[k].name) : "level " + (i + 1) * 4}</div></div>`;
@@ -13489,6 +13541,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <button class="chip money" data-act="nav" data-arg="money"
           title="Your money \u2014 this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
         <span class="chip streak" title="Days in a row">${ico("streak", "", 15)} ${c.streak.days.length}</span>
+        ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on \u2014 everything is open">TESTER</button>' : ""}
         <button class="iconbtn" data-act="mode" aria-label="Light or dark">${ico(R.mode === "dark" ? "moon" : "sun", "", 19)}</button>
         <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico("family", "", 19)}</button>
       </div>
@@ -13893,6 +13946,47 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     R.s.settings.sound = !R.s.settings.sound;
     setSound(R.s.settings.sound);
     sfx.click();
+    render();
+  });
+  on("tester", () => {
+    R.s.settings.tester = !R.s.settings.tester;
+    setTester(R.s.settings.tester);
+    save(R.s);
+    toast(R.s.settings.tester ? "Tester mode on \u2014 everything is open" : "Tester mode off");
+    sfx.click();
+    render();
+  });
+  on("tJump", (lv) => {
+    if (!R.s.settings.tester) return;
+    const l = jumpLevel(C3(), +lv);
+    save(R.s);
+    toast("Level " + l);
+    sfx.level();
+    render();
+  });
+  on("tMoney", () => {
+    if (!R.s.settings.tester) return;
+    testerTopUp(C3(), 100);
+    save(R.s);
+    sfx.coin();
+    toast("Topped up");
+    render();
+  });
+  on("tBell", () => {
+    if (!R.s.settings.tester) return;
+    protoSkipWeek(C3(), R.s);
+    save(R.s);
+    toast("The bell is ready \u2014 ring it on Home");
+    render();
+  });
+  on("tDone", () => {
+    if (!R.s.settings.tester) return;
+    const c = C3();
+    ALL_CARDS.forEach((k) => {
+      if (!c.learn.done[k.id]) c.learn.done[k.id] = { t: Date.now(), right: 0, tester: true };
+    });
+    save(R.s);
+    toast("Every card marked done (tester)");
     render();
   });
   on("obNext", () => {
@@ -14752,6 +14846,7 @@ So it costs ${money(offer.cost)}.`);
   R.s = load();
   if (R.s && R.s.kids.length) {
     setSound(R.s.settings.sound);
+    setTester(!!R.s.settings.tester);
     touchDay(kid(R.s));
     readHash();
   }
