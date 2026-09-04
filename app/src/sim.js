@@ -9,7 +9,7 @@ import { CLASSES, byId as classById, marketPath, classesFor } from './assetclass
 import * as biz from './business.js';
 import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
 import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
-import { levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
+import { tester, levelAtLeast, levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
   WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
@@ -346,7 +346,7 @@ export function fixState(c, f) {
   const cost = price(f.units);
   const put = (c.fix.prog[f.id] || 0);
   return { cost, put, done: c.fix.done.includes(f.id), left: Math.max(0, cost - put),
-    pct: Math.min(1, put / cost), locked: !!(f.needs && !chapterDone(c, f.needs)) };
+    pct: Math.min(1, put / cost), locked: !tester() && !!(f.needs && !chapterDone(c, f.needs)) };
 }
 export function townFixes(c, worldId) {
   return fixesIn(worldId || WORLDS[c.world || 0].id).map((f) => ({ ...f, ...fixState(c, f) }));
@@ -389,7 +389,7 @@ export function townProgress(c) {
 export function rollQuests(c) {
   const d = dayIndex(Date.now());
   if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
-  const pool = QUESTS.filter((q) => !q.needs || chapterDone(c, q.needs));
+  const pool = QUESTS.filter((q) => !q.needs || tester() || chapterDone(c, q.needs));
   /* the town can only ask for help with something once it has something broken
      you are allowed to touch */
   if (!townFixes(c).some((f) => !f.done && !f.locked)) {
@@ -522,7 +522,7 @@ export function runPayDay(c, state) {
 
   /* Jar rules fire by themselves once the shed is open — "pay yourself first"
      as a mechanic rather than a slogan. */
-  if (c.learn.level >= 6 && c.money.wallet > 0) {
+  if (levelAtLeast(c, 6) && c.money.wallet > 0) {
     const pot = c.money.wallet, r = c.money.rules;
     const split = {
       spend: Math.round(pot * r.spend / 100), save: Math.round(pot * r.save / 100),
@@ -567,6 +567,17 @@ export function setPayWeekday(c, wd) {
 export function protoSkipWeek(c, state) {
   c.money.nextPay = Date.now() - 1;
   state.clock.lastSeen = Date.now();
+}
+/* Tester tools (the grown-up's page, tester mode on). They move the ladder
+   and the wallet by the sim's own rules and are labelled in the ledger, so a
+   tester's town never pretends to be a child's. */
+export function jumpLevel(c, lv) {
+  const l = Math.max(1, Math.min(LEVELS.length, Math.round(lv)));
+  c.learn.level = l; c.learn.xp = Math.max(c.learn.xp, LEVELS[l - 1]);
+  stamp(c); return l;
+}
+export function testerTopUp(c, units) {
+  return earn(c, price(units), 'Tester top-up', 'gift');
 }
 
 /* ── jars & goals ────────────────────────────────────────────────────── */

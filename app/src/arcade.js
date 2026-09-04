@@ -10,7 +10,7 @@ import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say, ico } from './art.js';
 import { hero } from './hero.js';
 import { COVERS } from './covers-gen.js';
-import { ASSETS, STOCK, CHAPTERS, chapterDone } from './content.js';
+import { ASSETS, STOCK, CHAPTERS, chapterDone, gameOpen, levelAtLeast } from './content.js';
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
@@ -48,7 +48,7 @@ export function viewArcade() {
   /* a cover per game — a painting when tools/art has drawn it, the game's
      own tint until then — with the words on a veil across the bottom */
   const cover = (g, o = {}) => {
-    const open = o.open != null ? o.open : (!g.needs || chapterDone(c, g.needs));
+    const open = o.open != null ? o.open : gameOpen(c, g);
     const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
     const art = COVERS[g.id];
     return `<button class="cover${o.big ? ' big' : ''}${open ? '' : ' locked'}" data-act="${open ? (o.act || 'game') : 'lockedGame'}" data-arg="${o.arg || g.id}"
@@ -63,7 +63,7 @@ export function viewArcade() {
   };
   const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
     blurb: 'Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer.' };
-  const m40open = c.learn.level >= 13;
+  const m40open = levelAtLeast(c, 13);
   return `<div class="stack">
     ${hero({ eyebrow: 'Practise it', title: 'The Arcade', who: 'pip',
       line: 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.' })}

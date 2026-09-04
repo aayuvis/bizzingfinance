@@ -14,7 +14,7 @@ import { lessonBlock } from './lessonplayer.js';
 import { companionCard, companionFigure } from './companionview.js';
 import { overnightCard, receiptSlip } from './keepsakes.js';
 import * as co from './companion.js';
-import { CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
+import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
@@ -163,7 +163,7 @@ function journeys(c) {
       bankOpen ? beat('sub', 'bank', 'bank', 'The Bank', `${money(c.money.bank.balance)} on deposit, earning while you sleep.`) : '',
       exOpen ? beat('sub', 'portfolio', 'chartUp', 'The Exchange', `Market day — see what moved. Most days the right move is nothing.`,
         `<span class="pill ${up ? 'grow' : 'spendp'}">${up ? '▲' : '▼'}</span>`, true) : '',
-      c.learn.level >= 16 ? beat('nav', 'market40', 'company', 'The Market Game', 'Forty companies, forty years, one decade at a time.') : '',
+      levelAtLeast(c, 16) ? beat('nav', 'market40', 'company', 'The Market Game', 'Forty companies, forty years, one decade at a time.') : '',
     ].join('');
     portfolio = jcard({ accent: 'var(--grow)', sprite: exOpen ? 'exchange' : 'bank', act: 'sub', arg: exOpen ? 'portfolio' : 'bank',
       eyebrow: 'The Portfolio', question: 'Where does the left-over live — and what is it doing?',
@@ -554,7 +554,7 @@ function viewLearnOld() {
     <div class="chapts">
       ${CHAPTERS.map((ch) => {
         const done = ch.cards.filter((x) => c.learn.done[x.id]).length;
-        const locked = c.learn.level < ch.lv;
+        const locked = chapterLocked(c, ch);
         return `<div class="card pad0" ${locked ? 'style="opacity:.62"' : ''}>
           <div style="padding:14px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line-soft)">
             ${ico(locked ? '🔒' : ch.em, locked ? '🔒' : ch.em, 24)}
@@ -786,7 +786,7 @@ function viewJars() {
       </div>
       <p class="small muted" style="margin-top:12px">Buttons move ${money(price(2))} at a time, out of your wallet (${money(c.money.wallet)}).</p>
     </div>
-    ${c.learn.level < 11 ? `<div class="card stack">
+    ${!levelAtLeast(c, 11) ? `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
       <p class="small muted">Every twenty coins that arrive, split like this:</p>
       <div class="stack" style="gap:9px">
@@ -1436,6 +1436,24 @@ export function viewParents() {
         <button class="btn ${s.settings.sound ? '' : 'ghost'} sm" data-act="sound">${s.settings.sound ? 'On' : 'Off'}</button></div>
     </div>
 
+    <div class="card stack" style="${s.settings.tester ? 'box-shadow:0 0 0 2px var(--spend),0 14px 34px rgb(12 30 34 / .08)' : ''}">
+      <div class="eyebrow" style="color:var(--spend)">Tester mode</div>
+      <p class="small muted">For trying the app, not for a child. With it on, every gate opens — all eight chapters, the five worlds, the Jar Shed, the Build Yard, the Bank, the Exchange, the shop and every game — while ${esc(c.name)}'s learning record stays exactly what it is. A red TESTER pill sits in the bar the whole time it is on.</p>
+      <div class="row"><span class="small grow">Unlock everything</span>
+        <button class="btn ${s.settings.tester ? '' : 'ghost'} sm" data-act="tester">${s.settings.tester ? 'On' : 'Off'}</button></div>
+      ${s.settings.tester ? `
+      <div class="rows" style="margin-top:4px">
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Jump the ladder</b><div class="small muted">Sets the level; XP follows. Level ${c.learn.level} now.</div></span>
+          <span class="row" style="gap:6px"><button class="btn ghost sm" data-act="tJump" data-arg="1">1</button><button class="btn ghost sm" data-act="tJump" data-arg="12">12</button><button class="btn ghost sm" data-act="tJump" data-arg="30">30</button></span></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Top up the wallet</b><div class="small muted">Labelled "Tester top-up" in the ledger.</div></span>
+          <button class="btn ghost sm" data-act="tMoney">+ ${money(price(100))}</button></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Bring pay day forward</b><div class="small muted">The bell is ready to ring on Home straight away.</div></span>
+          <button class="btn ghost sm" data-act="tBell">Ring now</button></div>
+        <div class="qrow"><span class="grow"><b style="font-size:14px">Mark every card done</b><div class="small muted">Fills the learn record with tester marks (no stars). This one does change the record.</div></span>
+          <button class="btn ghost sm" data-act="tDone">Mark all</button></div>
+      </div>` : ''}
+    </div>
+
     <div class="card stack">
       <div class="eyebrow">How this was made</div>
       <p class="small muted">The characters and the painted backdrops were drawn with an AI image
@@ -1522,7 +1540,7 @@ export function viewCollection() {
       <p class="small muted" style="margin:4px 0 10px">Real notes and coins, unlocked as you climb — a quiet way to teach that money is an agreement rather than a law of nature.</p>
       <div class="grid3">
         ${Object.keys(CURRENCIES).map((k, i) => {
-          const has = c.currency === k || c.learn.level >= (i + 1) * 4;
+          const has = c.currency === k || levelAtLeast(c, (i + 1) * 4);
           return `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has ? 1 : .4}">
             <div style="font-size:22px;font-weight:800">${has ? CURRENCIES[k].sign : '🔒'}</div>
             <div style="font-weight:700;font-size:12.5px">${has ? esc(CURRENCIES[k].name) : 'level ' + ((i + 1) * 4)}</div></div>`;

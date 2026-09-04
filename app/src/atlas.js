@@ -7,7 +7,7 @@
    ahead recedes. Every fact here is read from the child's learn record
    (c.learn.done) and the content's own order (WORLDS → chapters → cards); the
    frontier is the first card not yet done in that order. */
-import { WORLDS, CHAPTERS, worldOpen, chapterDone, rankObj, GLOSSARY } from './content.js';
+import { WORLDS, CHAPTERS, worldOpen, chapterDone, chapterLocked, rankObj, GLOSSARY } from './content.js';
 import { ART } from './art-gen.js';
 import { ATLAS, PINS } from './atlas-gen.js';
 import { face, ico } from './art.js';
@@ -25,7 +25,7 @@ export function stops(c) {
   const out = [];
   WORLDS.forEach((w, wi) => w.chapters.forEach((chId) => {
     const ch = CHAPTERS.find((x) => x.id === chId); if (!ch) return;
-    const lockedCh = c.learn.level < ch.lv;
+    const lockedCh = chapterLocked(c, ch);
     ch.cards.forEach((card) => out.push({ card, ch, wi, w, done: !!c.learn.done[card.id], lockedCh }));
   }));
   const fr = out.findIndex((s) => !s.done);

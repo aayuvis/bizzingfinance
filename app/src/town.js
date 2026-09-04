@@ -4,7 +4,7 @@
    hidden — a child should see the whole road on their first afternoon. */
 
 import { esc } from './ui.js';
-import { WORLDS, FIXES, isOpen as chapterOpen, needFor } from './content.js';
+import { WORLDS, FIXES, isOpen as chapterOpen, needFor, tester } from './content.js';
 import { art } from './art-gen.js';
 
 export const PLACES = [
@@ -203,7 +203,7 @@ function lantern(x, lit) {
 
 /* level -> which places are open. The prototype ladder is compressed so the
    whole street can be seen in one sitting; the shipping ladder is docs/01 §10. */
-export function isOpen(place, level) { return level >= place.lv; }
+export function isOpen(place, level) { return tester() || level >= place.lv; }
 
 export function townSVG(c) {
   const s = c;

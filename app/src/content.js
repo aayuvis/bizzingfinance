@@ -409,7 +409,22 @@ export function chapterDone(c, id) {
   const ch = CHAPTERS.find((x) => x.id === id);
   return !!ch && ch.cards.every((k) => c.learn.done[k.id]);
 }
+/* ── tester mode ──────────────────────────────────────────────────────────
+   For trying the app, not for a child: every GATE passes — chapters, worlds,
+   the Bank, the Exchange, the shop, every game — while the child's learn
+   record stays exactly what it is. A gate is a function here so that the
+   tester flag is one line in one place; a view that compares levels by hand
+   is a gate that tester mode cannot open. Set from the household's settings
+   (main.js) the way the currency is. */
+let TESTER = false;
+export function setTester(on) { TESTER = !!on; }
+export function tester() { return TESTER; }
+export function chapterLocked(c, ch) { return !TESTER && c.learn.level < ch.lv; }
+export function levelAtLeast(c, lv) { return TESTER || c.learn.level >= lv; }
+export function gameOpen(c, g) { return TESTER || !g.needs || chapterDone(c, g.needs); }
+
 export function isOpen(c, key) {
+  if (TESTER) return true;
   const need = UNLOCKS[key];
   return !need || chapterDone(c, need);
 }
@@ -419,7 +434,7 @@ export function needFor(key) {
   return ch ? ch.title : null;
 }
 export function worldOpen(c, i) {
-  if (i <= 0) return true;
+  if (TESTER || i <= 0) return true;
   return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterDone(c, ch)));
 }
 

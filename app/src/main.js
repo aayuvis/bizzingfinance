@@ -10,7 +10,7 @@ import { companionFigure, shelterView, wardrobeView } from './companionview.js';
 import { receiptSlip } from './keepsakes.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
@@ -96,6 +96,7 @@ function render() {
         <button class="chip money" data-act="nav" data-arg="money"
           title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
         <span class="chip streak" title="Days in a row">${ico('streak', '', 15)} ${c.streak.days.length}</span>
+        ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on — everything is open">TESTER</button>' : ''}
         <button class="iconbtn" data-act="mode" aria-label="Light or dark">${ico(R.mode === 'dark' ? 'moon' : 'sun', '', 19)}</button>
         <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico('family', '', 19)}</button>
       </div>
@@ -435,6 +436,15 @@ on('mode', () => {
   render();
 });
 on('sound', () => { R.s.settings.sound = !R.s.settings.sound; setSound(R.s.settings.sound); sfx.click(); render(); });
+/* tester mode: every gate opens; the child's record is untouched (content.js) */
+on('tester', () => {
+  R.s.settings.tester = !R.s.settings.tester; setTester(R.s.settings.tester); sim.save(R.s);
+  toast(R.s.settings.tester ? 'Tester mode on — everything is open' : 'Tester mode off'); sfx.click(); render();
+});
+on('tJump', (lv) => { if (!R.s.settings.tester) return; const l = sim.jumpLevel(C(), +lv); sim.save(R.s); toast('Level ' + l); sfx.level(); render(); });
+on('tMoney', () => { if (!R.s.settings.tester) return; sim.testerTopUp(C(), 100); sim.save(R.s); sfx.coin(); toast('Topped up'); render(); });
+on('tBell', () => { if (!R.s.settings.tester) return; sim.protoSkipWeek(C(), R.s); sim.save(R.s); toast('The bell is ready — ring it on Home'); render(); });
+on('tDone', () => { if (!R.s.settings.tester) return; const c = C(); ALL_CARDS.forEach((k) => { if (!c.learn.done[k.id]) c.learn.done[k.id] = { t: Date.now(), right: 0, tester: true }; }); sim.save(R.s); toast('Every card marked done (tester)'); render(); });
 
 /* onboarding */
 on('obNext', () => {
@@ -984,6 +994,7 @@ if (R.mode) document.documentElement.setAttribute('data-mode', R.mode);
 R.s = sim.load();
 if (R.s && R.s.kids.length) {
   setSound(R.s.settings.sound);
+  setTester(!!R.s.settings.tester);
   sim.touchDay(sim.kid(R.s));
   readHash();
 }

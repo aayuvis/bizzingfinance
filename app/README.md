@@ -93,6 +93,13 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 
 ## Rules this code keeps
 
+- **Tester mode opens gates; it never rewrites the child.** The grown-up's page (behind the
+  PIN) has a Tester mode toggle. With it on, `content.js`'s gate helpers — `isOpen`,
+  `worldOpen`, `chapterLocked`, `levelAtLeast`, `gameOpen`, and `town.isOpen` — all pass, and
+  a red TESTER pill sits in the bar. The learn record, level and money stay exactly what they
+  were. **A view that compares `c.learn.level` by hand is a gate tester mode cannot open** —
+  go through the helpers. The tester tools (jump the ladder, top up, bring pay day forward,
+  mark every card done) move things by the sim's rules and leave a labelled trace.
 - **Paper on a ground, and rows inside it — never a box inside a box.** The page is the
   world's tint with the family's dot motif; a card is a sheet lifted off it, without a
   border. Inside a card the day is ROWS (`.qrow`, `.jbeat`) separated by hairlines, an icon
