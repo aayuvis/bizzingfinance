@@ -122,6 +122,22 @@ of four dispositions:
 | Counted, never typed numbers | — | ✓ | **Built** on the landing |
 | Named gaps, not fakes | — | ✓ | **Have** — the clock notice, the shelter's yearly cost, the test-out's "cards stay unread" |
 
+## The proposal, and what happened to it
+
+The eight items proposed after the first pass. Seven are built; one was
+declined by the product owner.
+
+| # | Proposal | State |
+|---|---|---|
+| 1 | Objectives for the five empty strands | **Built** — 36 new rungs across EARN, KEEP, GROW, OWE and GUARD, 108 retrieval items. The validator caught 30 places where a transfer surface was the same as its teaching surface; all re-mapped, and the town now records nine kinds of transfer evidence |
+| 2 | Sources on every stated figure | **Built** — `sources.js` registers every figure as a dial of this town or a citation; two ten-year projections were hard-coding a 7% return under a caption that claimed it was the town's, and now go through one named dial; `test/sources.mjs` fails a card that breaks the rule |
+| 3 | The painted walk per region | **Built** — five panoramas, each carrying the measured height of its own road so a stop stands on it |
+| 4 | A daily puzzle the house shares | **Built** — today's till: a receipt with one price missing, three tries, one wage, a spoiler-free share, and nowhere to keep a streak |
+| 5 | Arithmetic placement | **Built** — twelve rungs, stopped at two wrong in a row, writing a ceiling the town obeys. The Jar Shed's percentages now gate on the arithmetic rather than the level |
+| 6 | Accounts and cloud backup with consent | **Partly built** — the file backup, the consent switch and the allow-list are in and tested; there is still no server, and the app says so plainly rather than pretending |
+| 7 | Recorded answers to "Ask at home" | **Built** — microphone on a real tap only, track stopped on stop, audio in IndexedDB, never in the household blob |
+| 8 | Hindi narration | **Declined** by the product owner |
+
 ## Still open
 
 - A per-strand weak-pattern view once the other five strands carry objectives.
