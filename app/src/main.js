@@ -336,9 +336,10 @@ function overlay() {
 
   if (o.kind === 'more') {
     const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
-    return box(`<div class="eyebrow" style="margin-bottom:10px">Everything else</div>
-      <div class="stack" style="gap:8px">
-        ${rest.map((t) => `<button class="opt" data-act="nav" data-arg="${t.k}">${t.g} &nbsp;${t.n}</button>`).join('')}
+    return box(`<div class="eyebrow" style="margin-bottom:6px">Everything else</div>
+      <div class="rows" style="margin:0 -22px -10px">
+        ${rest.map((t) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="${t.k}">
+          <span class="iw">${ico(t.g, t.g, 20)}</span><b style="font-size:15px">${t.n}</b></button>`).join('')}
       </div>`);
   }
   return '';

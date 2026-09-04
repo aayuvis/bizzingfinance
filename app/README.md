@@ -82,6 +82,9 @@ build rides along at `/bizzington.html`.
 | `src/main.js` | Shell, hash routing, overlays, and every `data-act` in one table. |
 | `src/ui.js` `src/fmt.js` `src/art.js` | Dispatch, sound, confetti · currency and locale · the cast, drawn art with the hand-authored SVG as fallback. |
 | `src/art-gen.js` | Generated. Portraits and plates as data URIs. Rebuild with `tools/art/process.py`, never hand-edit. |
+| `src/hero.js` | The screen header: where you are, in type, with the place painted beside it and the one number that matters. Every top-level screen opens with one. |
+| `src/companion.js` `src/companionview.js` `src/keepsakes.js` | The creature she raises (docs/10), how it is drawn and dressed, and the things she keeps — the first receipt, the morning after. |
+| `src/buildings-gen.js` `src/companions-gen.js` `src/covers-gen.js` | Generated. Painted building sprites with measured zones, 45 companion sprites with measured accessory anchors, and a painted cover per Arcade game. `tools/art/` regenerates each; never hand-edit. |
 
 `state → render()` returning a string, clicks dispatched by `[data-act]` — the Bizzing Bee
 idiom, kept deliberately. Views never compute money; `sim.js` does.

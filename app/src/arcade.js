@@ -8,6 +8,8 @@
 import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
 import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say, ico } from './art.js';
+import { hero } from './hero.js';
+import { COVERS } from './covers-gen.js';
 import { ASSETS, STOCK, CHAPTERS, chapterDone } from './content.js';
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
@@ -43,31 +45,36 @@ export const GAMES = [
 export function viewArcade() {
   if (R.game) return R.game.view();
   const c = K();
-  const tile = (g) => {
-    const open = !g.needs || chapterDone(c, g.needs);
+  /* a cover per game — a painting when tools/art has drawn it, the game's
+     own tint until then — with the words on a veil across the bottom */
+  const cover = (g, o = {}) => {
+    const open = o.open != null ? o.open : (!g.needs || chapterDone(c, g.needs));
     const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
-    return `<button class="card" data-act="${open ? 'game' : 'lockedGame'}" data-arg="${g.id}" style="text-align:left;width:100%;${open ? '' : 'opacity:.62'}">
-      <div class="row"><span style="${open ? '' : 'opacity:.45'}">${ico('quest', open ? g.em : '🔒', 30)}</span>
-        <div class="grow"><b style="font-size:16px">${esc(g.name)}</b>
-          <p class="small muted">${open ? esc(g.blurb) : 'Finish “' + esc(ch.title) + '” to open this'}</p></div>
-        <span class="pill">${open ? g.keys : 'learn first'}</span></div></button>`;
+    const art = COVERS[g.id];
+    return `<button class="cover${o.big ? ' big' : ''}${open ? '' : ' locked'}" data-act="${open ? (o.act || 'game') : 'lockedGame'}" data-arg="${o.arg || g.id}"
+      style="${art ? `--cover:url(${art.src});` : ''}--ja:${o.tint || 'var(--action)'}">
+      <span class="cv-art"></span><span class="cv-veil"></span>
+      <span class="cv-body">
+        <span class="row" style="gap:6px">${open ? '' : `<span class="pill">${ico('lock', '🔒', 11)} learn first</span>`}${open && g.keys ? `<span class="cv-keys">${esc(g.keys)}</span>` : ''}</span>
+        <b>${esc(g.name)}</b>
+        <span class="small">${open ? esc(g.blurb) : 'Finish “' + esc(ch ? ch.title : '') + '” to open this'}</span>
+      </span>
+    </button>`;
   };
+  const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
+    blurb: 'Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer.' };
+  const m40open = c.learn.level >= 13;
   return `<div class="stack">
-    ${say('pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.')}
-    <button class="card" data-act="nav" data-arg="market40" style="text-align:left;width:100%;border-color:var(--action)">
-      <div class="row">${ico('chartUp','📊',36)}
-        <div class="grow"><b style="font-size:16px">The Market Game</b>
-          <p class="small muted">Forty companies that do not exist, forty years of things happening to them.
-            Study one, say what would hurt it, then put money behind your answer.</p></div>
-        <span class="pill">13+</span></div></button>
-    <div class="eyebrow">The board game · about ten minutes, and nobody goes bankrupt</div>
-    ${GAMES.filter((g) => g.kind === 'board').map(tile).join('')}
-    <div class="eyebrow" style="margin-top:6px">A few minutes each</div>
-    ${GAMES.filter((g) => g.kind === 'action').map(tile).join('')}
-    <div class="eyebrow" style="margin-top:6px">Quick drills — a minute each, no reflexes required</div>
-    ${GAMES.filter((g) => g.kind === 'drill').map(tile).join('')}
-    ${c.market.best ? `<div class="card"><div class="eyebrow">Best Market Cup finish</div>
-      <p style="font-weight:800">${esc(c.market.best)}</p></div>` : ''}
+    ${hero({ eyebrow: 'Practise it', title: 'The Arcade', who: 'pip',
+      line: 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.' })}
+    ${cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)' })}
+    <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
+    ${GAMES.filter((g) => g.kind === 'board').map((g) => cover(g, { big: true, tint: 'var(--treasure)' })).join('')}
+    <div class="sect"><b>A few minutes each</b><i></i></div>
+    <div class="covers">${GAMES.filter((g) => g.kind === 'action').map((g) => cover(g)).join('')}</div>
+    <div class="sect"><b>Quick drills · no reflexes required</b><i></i></div>
+    <div class="covers">${GAMES.filter((g) => g.kind === 'drill').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
+    ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ''}
   </div>`;
 }
 

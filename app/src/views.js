@@ -6,6 +6,9 @@ import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { BLD } from './buildings-gen.js';
+import { ART } from './art-gen.js';
+import { hero } from './hero.js';
+import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';
 import { companionCard, companionFigure } from './companionview.js';
 import { overnightCard, receiptSlip } from './keepsakes.js';
@@ -481,40 +484,37 @@ function nextThing(c) {
 /* ══ WORLDS — the road, and what opens at the end of each one ═════════ */
 export function viewWorlds() {
   const c = K();
+  const PLATE = { market: 'world-market', harbour: 'world-harbour', clock: 'world-clock', exchange: 'world-exchange', works: 'world-works' };
+  const title = (id) => { const ch = CHAPTERS.find((x) => x.id === id); return ch ? ch.title : id; };
   return `<div class="stack">
-    ${say('pip', 'Five places, and you walk them in order. You move on when you have finished learning where you are — not when you have earned enough. That is the whole rule.')}
+    ${hero({ eyebrow: 'Travel', title: 'Five places', who: 'pip',
+      line: 'Five places, and you walk them in order. You move on when you have finished learning where you are — not when you have earned enough. That is the whole rule.' })}
     ${WORLDS.map((w, i) => {
       const open = worldOpen(c, i);
       const here = (c.world || 0) === i;
       const left = w.chapters.filter((ch) => !chapterDone(c, ch));
       const done = w.chapters.length - left.length;
-      return `<div class="card" style="${here ? 'border-color:var(--action);box-shadow:var(--sh-raised)' : open ? '' : 'opacity:.66'}">
-        <div class="row" style="gap:12px">
-          ${ico(open ? w.em : '🔒', open ? w.em : '🔒', 30)}
-          <div class="grow">
-            <div class="eyebrow">${esc(w.rank)}${here ? ' · you are here' : ''}</div>
-            <h3 style="font-size:18px;margin:1px 0 3px">${esc(w.name)}</h3>
-            <p class="small muted">${esc(w.blurb)}</p>
-          </div>
-          ${here ? '<span class="pill gold">here</span>'
-            : open ? `<button class="btn sm" data-act="travel" data-arg="${i}">Go →</button>`
-            : ''}
-        </div>
-        <div class="row" style="margin-top:11px;gap:8px;flex-wrap:wrap">
-          <span class="pill">opens ${esc(w.opens)}</span>
-          <span class="grow"></span>
-          <span class="small muted">${done}/${w.chapters.length} chapters</span>
-        </div>
-        <div class="bar" style="margin-top:6px"><i style="width:${done / w.chapters.length * 100}%;background:${done === w.chapters.length ? 'var(--grow)' : 'var(--action)'}"></i></div>
-        ${!open && i > 0 ? `<p class="small muted" style="margin-top:8px">Finish
-          ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch))
-            .map((ch) => '“' + esc(CHAPTERS.find((x) => x.id === ch).title) + '”').join(' and ') || 'the last stretch'}
-          in ${esc(WORLDS[i - 1].name)} to walk on.</p>` : ''}
-        ${here && left.length ? `<p class="small muted" style="margin-top:8px">Still to learn here:
-          ${left.map((ch) => '<b>' + esc(CHAPTERS.find((x) => x.id === ch).title) + '</b>').join(', ')}.</p>` : ''}
-        ${here && !left.length && i < WORLDS.length - 1 ? `<p class="small" style="margin-top:8px;color:var(--grow);font-weight:700">
-          Everything here is learned. The road is open.</p>` : ''}
-      </div>`;
+      const plate = ART[PLATE[w.id] || ('world-' + w.id)];
+      const note = !open && i > 0
+        ? `Finish ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch)).map((ch) => '“' + esc(title(ch)) + '”').join(' and ') || 'the last stretch'} in ${esc(WORLDS[i - 1].name)} to walk on.`
+        : here && left.length ? `Still to learn here: ${left.map((ch) => '<b>' + esc(title(ch)) + '</b>').join(', ')}.`
+        : here && !left.length && i < WORLDS.length - 1 ? 'Everything here is learned. The road is open.' : '';
+      return `<button class="poster${here ? ' here' : ''}${open ? '' : ' locked'}" data-act="${open && !here ? 'travel' : 'noop'}" data-arg="${i}"
+        style="--ja:${w.tint};${plate ? `--plate:url(${plate})` : ''}">
+        <span class="pv"></span>
+        <span class="pb">
+          <span class="eyebrow">${esc(w.rank)}${here ? ' · you are here' : open ? '' : ' · not yet'}</span>
+          <b>${esc(w.name)}</b>
+          <span class="small">${esc(w.blurb)}</span>
+          ${w.opens ? `<span class="small" style="opacity:.85">${esc(w.opens)}</span>` : ''}
+          ${note ? `<span class="small" style="opacity:.9">${note}</span>` : ''}
+          <span class="row" style="gap:8px;margin-top:8px">
+            <span class="bar grow"><i style="width:${done / w.chapters.length * 100}%"></i></span>
+            <span class="small tabnum">${done}/${w.chapters.length} chapters</span>
+            ${here ? '<span class="pill gold">here</span>' : open ? '<span class="pill">Go →</span>' : `<span class="pill">${ico('lock', '🔒', 12)}</span>`}
+          </span>
+        </span>
+      </button>`;
     }).join('')}
   </div>`;
 }
@@ -531,26 +531,19 @@ export function viewLearn() {
   const rank = rankObj(c.learn.level);
 
   return `<div class="stack">
-    <div class="card">
-      <div class="row"><div class="grow">
-        <div class="eyebrow">${ico(rank.em, rank.em, 15)} ${rank.name} · level ${c.learn.level} of 30</div>
-        <h2 style="margin:2px 0 0">${c.learn.xp} XP</h2>
-        <p class="small muted">Learning ${esc(rank.of)}.</p></div>
-        <div class="small muted" style="text-align:right">${bar.need} XP to<br>level ${c.learn.level + 1}</div></div>
-      <div class="bar" style="margin-top:10px"><i style="width:${bar.pct * 100}%"></i></div>
-      <div class="row" style="margin-top:12px;gap:6px;flex-wrap:wrap">
+    ${hero({ eyebrow: `${ico(rank.em, rank.em, 14)} ${rank.name} · level ${c.learn.level} of 30`, title: 'Learn',
+      big: `${c.learn.xp} XP`, sub: `${bar.need} XP to level ${c.learn.level + 1}`, figure: face('nana', 118),
+      who: 'pip', line: 'Every card ends with one question. Get it right and the town grows. Get it wrong and I tell you why — that counts too.' })}
+    <div class="ladder">
+      <div class="bar"><i style="width:${bar.pct * 100}%"></i></div>
+      <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
         ${RANKS.map((r) => `<span class="pill ${c.learn.level >= r.at ? 'gold' : ''}">${ico(r.em, r.em, 14)} ${r.name}<span style="font-family:var(--mono);opacity:.7"> L${r.at}</span></span>`).join('')}
       </div>
+      <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+        <button class="wchip" data-act="shelf" data-arg="words">${ico('lesson', '📖', 16)} Money Words · ${GLOSSARY.length}</button>
+        <button class="wchip" data-act="nav" data-arg="arcade">${ico('arcade', '🎮', 16)} Practise it</button>
+      </div>
     </div>
-    <div class="grid2">
-      <button class="card" data-act="shelf" data-arg="words" style="text-align:left">
-        <div class="row">${ico('lesson', '📖', 24)}<div class="grow">
-        <p style="font-weight:800">Money Words</p><p class="small muted">${GLOSSARY.length} terms, in plain English.</p></div></div></button>
-      <button class="card" data-act="nav" data-arg="arcade" style="text-align:left">
-        <div class="row">${ico('arcade', '🎮', 24)}<div class="grow">
-        <p style="font-weight:800">Practise it</p><p class="small muted">Six games. Wages into the same wallet.</p></div></div></button>
-    </div>
-    ${say('pip', 'Every card ends with one question. Get it right and the town grows. Get it wrong and I tell you why — that counts too.')}
     <div class="chapts">
       ${CHAPTERS.map((ch) => {
         const done = ch.cards.filter((x) => c.learn.done[x.id]).length;
@@ -583,15 +576,14 @@ function opensWhat(id) { return OPENS[id]; }
 
 function viewCard(card) {
   const c = K(), st = c.learn.drill;
+  const who = CAST[card.who] || CAST.pip;
   return `<div class="stack">
-    <button class="small muted" data-act="closeCard">← All chapters</button>
+    <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} All chapters</button>
+    ${hero({ eyebrow: esc(CHAPTERS.find((x) => x.id === card.ch).title), title: esc(card.title) })}
     ${lessonBlock(card.id)}
-    <div class="card stack">
-      <div class="eyebrow">${esc(CHAPTERS.find((x) => x.id === card.ch).title)}</div>
-      <h2>${esc(card.title)}</h2>
-      ${say(card.who, card.teach)}
-      <div style="background:var(--tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px;border-left:3px solid var(--action)">
-        <span class="eyebrow">For instance</span><br>${esc(card.eg)}</div>
+    <div class="card reading">
+      <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
+      <div class="aside"><span class="eyebrow">For instance</span>${esc(card.eg)}</div>
     </div>
     ${(() => {
       /* One question at a time, permuted independently, the verdict at the
@@ -670,13 +662,10 @@ function viewWallet() {
   const c = K();
   const jobs = sim.jobsToday(c);
   return `<div class="stack">
-    <div class="card">
-      <div class="eyebrow">In your pocket</div>
-      <div class="big" style="font-size:38px;color:var(--treasure-deep)">${money(c.money.wallet)}</div>
-      <p class="small muted">${c.band === 'sprout'
+    ${hero({ eyebrow: 'In your pocket', title: 'Your wallet', big: money(c.money.wallet), bigStyle: 'color:var(--treasure-deep)', sub: 'right now', art: 'stall',
+      line: c.band === 'sprout'
         ? 'This can never go below zero — debt comes later, when it is taught.'
-        : 'Everything below is dated, because a statement you cannot read is a statement you cannot argue with.'}</p>
-    </div>
+        : 'Everything below is dated, because a statement you cannot read is a statement you cannot argue with.' })}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
       <p class="small muted" style="margin:3px 0 10px">Each job once a day. You are selling an hour, not a thing.</p>
@@ -714,12 +703,8 @@ function viewPlace() {
   const M = c.home.mortgage;
 
   return `<div class="stack">
-    <div class="card">
-      <div class="row">${ico(h.em, h.em, 34)}<div class="grow">
-        <div class="eyebrow">You live here</div>
-        <h2 style="font-size:21px;margin:2px 0 3px">${esc(h.name)}</h2>
-        <p class="small muted">${esc(h.blurb)}</p></div></div>
-    </div>
+    ${hero({ eyebrow: 'You live here', title: esc(h.name), line: esc(h.blurb), art: 'home-' + Math.min(4, c.home.tier || 0),
+      big: money(left), bigStyle: left >= 0 ? '' : 'color:var(--spend)', sub: 'left over a week' })}
 
     <div class="card">
       <div class="eyebrow">Every pay day, whether the week went well or not</div>
@@ -780,7 +765,8 @@ function viewJars() {
   const max = Math.max(1, ...Object.values(j));
   const tot = r.spend + r.save + r.grow + r.give;
   return `<div class="stack">
-    ${say('nana', 'Split it the moment it lands. What sits in one pile gets spent as one pile — that is the entire trick, and it is sixty years old.')}
+    ${hero({ eyebrow: 'The Jar Shed', title: 'Four jars', big: money(sim.jarTotal(c)), sub: 'in the jars', art: 'jars', who: 'nana',
+      line: 'Split it the moment it lands. What sits in one pile gets spent as one pile — that is the entire trick, and it is sixty years old.' })}
     <div class="card">
       <div class="jars">
         ${Object.keys(JARMETA).map((k) => `<div class="jar">
@@ -830,7 +816,8 @@ function viewJars() {
 function viewGoals() {
   const c = K();
   return `<div class="stack">
-    ${say('pip', 'Name the thing and price it. Dividing turns a wish into a date — and the yard shows the date, not encouragement.')}
+    ${hero({ eyebrow: 'The Build Yard', title: 'Goals', art: 'yard', who: 'pip',
+      line: 'Name the thing and price it. Dividing turns a wish into a date — and the yard shows the date, not encouragement.' })}
     <div class="card stack">
       <div class="eyebrow">Start something</div>
       <div class="row" style="gap:8px;flex-wrap:wrap">
@@ -869,12 +856,11 @@ function viewBank() {
   const offer = sim.loanOffer(c, 40, 8);
   const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(Math.max(b.balance, price(50)) * Math.pow(1 + b.rate, y * 52)) }));
   return `<div class="stack">
-    ${say('nana', 'Interest is rent on money. Leave it here and the bank pays you rent for using it. Borrow, and you pay. Same idea — the only question is which side you are standing on.')}
+    ${hero({ eyebrow: 'Clocktower Square', title: 'The Bank', big: money(b.balance), bigStyle: 'color:var(--save)', sub: 'in the vault', art: 'bank', who: 'nana',
+      line: 'Interest is rent on money. Leave it here and the bank pays you rent for using it. Borrow, and you pay. Same idea — the only question is which side you are standing on.' })}
     <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">In the vault</div>
-        <div class="big" style="font-size:32px;color:var(--save)">${money(b.balance)}</div></div>
-        <div style="text-align:right"><div class="eyebrow">Every pay day</div>
-        <div class="big" style="font-size:20px">${(b.rate * 100).toFixed(0)}%</div></div></div>
+      <div class="row"><div class="grow"><div class="eyebrow">Every pay day</div>
+        <div class="big" style="font-size:24px">${(b.rate * 100).toFixed(0)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">of what is in the vault</span></div></div></div>
       <p class="small muted" style="margin-top:8px">Next pay day this adds <b>${money(Math.round(b.balance * b.rate))}</b> — that is ${money(b.balance)} × ${(b.rate * 100).toFixed(0)}%, shown rather than hidden.</p>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-act="bankIn" ${c.money.jars.save <= 0 ? 'disabled' : ''}>Deposit ${money(Math.min(price(10), Math.max(0, c.money.jars.save)))} from Save</button>
@@ -961,14 +947,11 @@ function viewExchange() {
   const val = sim.holdingsValue(c);
   const sp = sim.spread(c);
   return `<div class="stack">
-    ${say(c.market.lastMove >= 0 ? 'bo' : 'bea', c.market.lastMove >= 0
-      ? 'Up on the week! I said it would be. I say that every week.'
-      : 'Down on the week. I said so. I also say that every week — one of us is always right and neither of us knows.')}
+    ${hero({ eyebrow: 'The Exchange Quarter', title: 'The Exchange', big: money(val), sub: 'your holdings', art: 'exchange', who: c.market.lastMove >= 0 ? 'bo' : 'bea',
+      line: c.market.lastMove >= 0 ? 'Up on the week! I said it would be. I say that every week.' : 'Down on the week. I said so. I also say that every week — one of us is always right and neither of us knows.' })}
     <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">Your holdings</div>
-        <div class="big" style="font-size:30px">${money(val)}</div></div>
-        <div style="text-align:right"><div class="eyebrow">Grow jar</div>
-        <div class="big" style="font-size:20px">${money(c.money.jars.grow)}</div></div></div>
+      <div class="row"><div class="grow"><div class="eyebrow">Grow jar — what you can buy with</div>
+        <div class="big" style="font-size:24px">${money(c.money.jars.grow)}</div></div></div>
       <p class="small muted" style="margin-top:6px">${sp === 0 ? 'Nothing owned yet. Buy from the Grow jar — that is money you will not need soon.'
         : sp === 1 ? 'One thing. Your whole week now depends on somebody else’s Tuesday.'
         : 'Spread across ' + sp + '. Bad news in one can no longer sink the lot.'}</p>
@@ -1019,7 +1002,8 @@ function viewBusiness() {
   const c = K();
   if (!c.venture) {
     return `<div class="stack">
-      ${say('nana', 'A stall of your own. You set the price, you carry the cost, and you find out the difference between a good week and a week that only looked good.')}
+      ${hero({ eyebrow: "Nana's shutters", title: 'A stall of your own', art: 'shop', who: 'nana',
+        line: 'A stall of your own. You set the price, you carry the cost, and you find out the difference between a good week and a week that only looked good.' })}
       <div class="card">
         <div class="eyebrow">Open your own</div>
         <h2 style="margin:3px 0 6px;font-size:22px">Start a stall</h2>
@@ -1041,8 +1025,9 @@ function viewBusiness() {
     <b style="font-variant-numeric:tabular-nums;${tone ? 'color:' + tone : ''}">${val2}</b></div>`;
 
   return `<div class="stack">
+    ${hero({ eyebrow: `Week ${v.traded}`, title: esc(v.name), art: 'shop' })}
     <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">${esc(v.name)} · week ${v.traded}</div>
+      <div class="row"><div class="grow"><div class="eyebrow">What your share is worth</div>
         <div class="big" style="font-size:28px">${money(val.yours)}</div>
         <p class="small muted">what your share is worth${v.outsideEquity > 0
           ? ' — you own ' + Math.round((1 - v.outsideEquity) * 100) + '%' : ''}</p></div>
@@ -1152,7 +1137,9 @@ export function viewStore() {
   const c = K();
   const nowT = Date.now();
   return `<div class="stack">
-    ${say('mags', 'Some of this earns its keep and some of it is just lovely — and I have written which is which, plus what else the money could have been. My old boss called that commercial suicide.')}
+    ${hero({ eyebrow: 'Market Row', title: 'The General Store', art: 'shop', who: 'mags',
+      line: 'Some of this earns its keep and some of it is just lovely — and I have written which is which, plus what else the money could have been. My old boss called that commercial suicide.' })}
+    <div class="card pad0"><div class="rows" style="margin:0">
     ${SHOP.map((it) => {
       const p = price(it.units);
       const owned = c.shop.owned.includes(it.id);
@@ -1163,9 +1150,9 @@ export function viewStore() {
       const waiting = cool && nowT < cool;
       const hrs = waiting ? Math.ceil((cool - nowT) / 3600000) : 0;
       const afford = c.money.wallet + c.money.jars.spend >= p;
-      return `<div class="card">
-        <div class="row">${ico(it.em, it.em, 28)}
-          <div class="grow"><b style="font-size:15.5px">${esc(it.name)}</b>
+      return `<div class="qrow block">
+        <div class="row" style="align-items:flex-start;gap:12px"><span class="iw">${ico(it.em, it.em, 22)}</span>
+          <div class="grow" style="min-width:0"><b style="font-size:15.5px">${esc(it.name)}</b>
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
         ${it.gives ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:9px">${ico('gear', '⚙', 15)} ${esc(it.gives)}</p>` : ''}
@@ -1182,6 +1169,7 @@ export function viewStore() {
                  <button class="btn ghost sm" data-act="buyItem" data-arg="${it.id}" ${afford ? '' : 'disabled'}>${it.gives ? 'Buy it' : 'Buy it anyway'}</button>`}
         </div></div>`;
     }).join('')}
+    </div></div>
     <p class="small muted" style="text-align:center">Nothing here costs real money, and there is no path from this screen to a payment form. That is a rule, not an oversight.</p>
   </div>`;
 }
@@ -1194,16 +1182,13 @@ export function viewProgress() {
   const scamsAll = c.postbox.log.filter((l) => l.scam).length;
   const rank = rankObj(c.learn.level);
   return `<div class="stack">
-    <div class="card">
-      <div class="eyebrow">Net worth, every decision so far</div>
-      <div class="big" style="font-size:32px;color:var(--action)">${money(sim.netWorth(c))}</div>
-      ${sparkline(vals.length > 1 ? vals : [0, sim.netWorth(c)], 300, 54, 'var(--action)')}
-      <p class="small muted">The one chart a card app can't draw: it only has your last statement, and this has every decision since you opened your stall.</p>
-    </div>
-    <div class="grid3">
-      <div class="card"><div class="eyebrow">Streak</div><div class="big">${ico('streak', '🔥', 22)} ${c.streak.days.length}</div><p class="small muted">days in a row</p></div>
-      <div class="card"><div class="eyebrow">Rank</div><div class="big" style="font-size:20px">${ico(rank.em, rank.em, 15)} ${rank.name}</div><p class="small muted">level ${c.learn.level} of 30</p></div>
-      <div class="card"><div class="eyebrow">Letters</div><div class="big">${c.postbox.log.length}</div><p class="small muted">${scamsAll ? scams + ' of ' + scamsAll + ' scams spotted' : 'no scams yet'}</p></div>
+    ${hero({ eyebrow: 'Every decision so far', title: 'Progress', big: money(sim.netWorth(c)), bigStyle: 'color:var(--action)', sub: 'net worth' })}
+    <div class="sparkwrap">${sparkline(vals.length > 1 ? vals : [0, sim.netWorth(c)], 300, 54, 'var(--action)')}
+      <p class="small muted">The one chart a card app can't draw: it only has your last statement, and this has every decision since you opened your stall.</p></div>
+    <div class="moneyline stats">
+      <div><div class="k">Streak</div><div class="v">${ico('streak', '🔥', 18)} ${c.streak.days.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">days</span></div></div>
+      <div><div class="k">Rank</div><div class="v">${ico(rank.em, rank.em, 16)} ${rank.name} <span class="small muted" style="font-family:var(--ui);font-weight:600">L${c.learn.level}</span></div></div>
+      <div><div class="k">Letters</div><div class="v">${c.postbox.log.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">${scamsAll ? scams + '/' + scamsAll + ' scams spotted' : ''}</span></div></div>
     </div>
     <div class="card">
       <div class="eyebrow">Chapters</div>
@@ -1346,10 +1331,9 @@ export function viewParents() {
   const c = K(), s = R.s;
   const w = weekSummary(c);
   return `<div class="stack">
+    ${hero({ eyebrow: 'For the grown-up', title: `${esc(c.name)}'s week`, figure: face('nana', 96),
+      line: 'Observation, never a grade on the child. The simulator is a window into instincts no quiz gives you.' })}
     <div class="card">
-      <div class="eyebrow">For the grown-up</div>
-      <h2 style="margin:2px 0 4px">${esc(c.name)}'s week</h2>
-      <p class="small muted">Observation, never a grade on the child. The simulator is a window into instincts no quiz gives you.</p>
       <div class="row" style="margin-top:13px;gap:8px">
         <button class="btn grow" data-act="nav" data-arg="report">📄 This week's report</button>
         <button class="btn ghost sm" data-act="lock">Lock</button>
@@ -1496,6 +1480,8 @@ export function viewCollection() {
   const c = K();
   const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
   return `<div class="stack">
+    ${hero({ eyebrow: 'Kept, never given', title: 'The Collection', figure: co.has(c) ? companionFigure(c, 110) : '',
+      line: 'A badge marks a decision. A keepsake is a thing you did. Nothing on these shelves arrives for showing up.' })}
     <div class="card">
       <div class="eyebrow">Keepsakes</div>
       ${(c.keepsakes || []).length

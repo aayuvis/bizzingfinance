@@ -65,16 +65,18 @@ export function hasLesson(id) { return !!LOADERS[id]; }
 export function lessonBlock(id) {
   if (!LOADERS[id]) return '';
   const L = MEDIA[id];
-  return `<div class="card lesson" id="lessonstage" data-lesson="${id}">
-    <div class="row"><div class="grow"><div class="eyebrow">Nana Bizz explains</div>
-      <h3 style="font-size:17px">${L ? esc(L.title) : '…'}</h3></div>
-      <span class="pill">${L ? Math.round(L.beats.reduce((t, b) => t + b.dur, 0)) + 's' : '…'}</span></div>
+  return `<div class="card lesson pad0" id="lessonstage" data-lesson="${id}">
     <div class="lstage-holder"></div>
-    <p class="lcap small"></p>
-    <div class="row" style="gap:8px;margin-top:4px">
-      <button class="btn sm" data-l="toggle">▶ Watch</button>
-      <button class="btn ghost sm" data-l="restart" hidden>↻ Again</button>
-      <span class="ldots grow" style="text-align:right"></span>
+    <div class="lfoot">
+      <div class="row"><div class="grow"><div class="eyebrow">Nana Bizz explains</div>
+        <b style="font-size:15px">${L ? esc(L.title) : '…'}</b></div>
+        <span class="pill">${L ? Math.round(L.beats.reduce((t, b) => t + b.dur, 0)) + 's' : '…'}</span></div>
+      <p class="lcap small"></p>
+      <div class="row" style="gap:8px;margin-top:6px">
+        <button class="btn sm" data-l="toggle">▶ Watch</button>
+        <button class="btn ghost sm" data-l="restart" hidden>↻ Again</button>
+        <span class="ldots grow" style="text-align:right"></span>
+      </div>
     </div>
   </div>`;
 }

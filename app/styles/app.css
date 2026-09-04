@@ -132,7 +132,7 @@ input{font:inherit; color:inherit}
 
 /* ── learn ───────────────────────────────────────────────────── */
 .chapts{display:grid;gap:12px}
-.opt{display:block;width:100%;padding:13px 15px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);font-weight:650;font-size:14.5px;transition:border-color .12s,background .12s}
+.opt{display:block;width:100%;padding:12px 18px;border-radius:24px;border:1.5px solid var(--line);background:var(--surface);font-weight:650;font-size:14.5px;transition:border-color .12s,background .12s;box-shadow:var(--sh)}
 .opt:hover{border-color:color-mix(in srgb,var(--action) 45%,var(--line))}
 .opt.ok{border-color:var(--grow);background:var(--grow-tint)}
 .opt.no{border-color:var(--spend);background:var(--spend-tint)}
@@ -401,3 +401,62 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .mnav{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none;margin:0 -2px}
 .mnav::-webkit-scrollbar{display:none}
 .mnav button{flex:0 0 auto;white-space:nowrap;box-shadow:var(--sh)}
+
+/* ══ the screen header (hero.js) ══════════════════════════════════════════
+   Where you are, in type, with the place painted beside it. */
+.shero{position:relative;display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:end;padding:6px 4px 2px}
+.shero.noart{grid-template-columns:1fr}
+.shero h1{font-size:28px;line-height:1.05;letter-spacing:-.012em;margin-top:3px}
+.shero .sh-num{display:flex;align-items:baseline;gap:8px;margin-top:8px;flex-wrap:wrap}
+.shero .sh-num .big{font-size:38px;line-height:1}
+.shero .sh-line{display:flex;gap:9px;align-items:flex-start;margin-top:10px;font-size:14.5px;line-height:1.5;max-width:60ch}
+.shero .sh-line .who{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:0 0 auto;display:block;margin-top:1px;background:var(--tint)}
+.shero .sh-art{width:148px;height:auto;max-height:150px;object-fit:contain;filter:drop-shadow(0 8px 14px rgb(12 30 34 / .14));align-self:end;justify-self:end}
+.shero .sh-art.fig{display:grid;place-items:center;width:auto;filter:none}
+.shero .sh-art.fig .who{border-radius:50%;overflow:hidden;display:block;background:var(--tint)}
+@media (max-width:400px){ .shero .sh-art{width:112px} .shero h1{font-size:25px} .shero .sh-num .big{font-size:32px} }
+.ladder{padding:4px 4px 0}
+.sparkwrap{padding:0 4px}
+.sparkwrap svg.spark{display:block;width:100%;height:76px}
+.moneyline.stats .v{font-size:17px;display:flex;align-items:center;gap:6px}
+
+/* ── posters (Worlds) and covers (Arcade): a painting with the words on a veil ── */
+.poster,.cover{position:relative;display:block;width:100%;overflow:hidden;text-align:left;color:#fff;border-radius:var(--r-xl);
+  background-color:color-mix(in srgb,var(--ja) 55%,#1a2a2e);background-image:var(--plate,var(--cover,none));background-size:cover;background-position:center 38%;
+  box-shadow:0 2px 6px rgb(12 30 34 / .08),0 14px 34px rgb(12 30 34 / .12);transition:transform .12s ease}
+.poster:active,.cover:active{transform:translateY(1px)}
+.poster .pv,.cover .cv-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgb(10 22 26 / .04) 0%,rgb(10 22 26 / .30) 42%,rgb(10 22 26 / .84) 100%)}
+.poster .pb,.cover .cv-body{position:relative;display:flex;flex-direction:column;gap:3px;padding:16px 16px 14px;min-height:172px;justify-content:flex-end}
+.poster .eyebrow,.cover .cv-keys{color:rgb(255 255 255 / .82)}
+.poster .pb b,.cover .cv-body b{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.12;text-shadow:0 1px 10px rgb(10 20 24 / .6);text-wrap:balance}
+.poster .pb .small,.cover .cv-body .small{color:rgb(255 255 255 / .92);text-shadow:0 1px 8px rgb(10 20 24 / .65);line-height:1.4}
+.poster .bar{background:rgb(255 255 255 / .28);height:5px;border-radius:999px;overflow:hidden}
+.poster .bar i{display:block;height:100%;background:#fff;border-radius:999px}
+.poster .pill,.cover .pill{background:rgb(255 255 255 / .92);color:#16252A;border:0}
+.poster.here{box-shadow:0 0 0 3px var(--action),0 14px 34px rgb(12 30 34 / .14)}
+.poster.locked,.cover.locked{filter:saturate(.35)}
+.poster.locked .pb b,.cover.locked .cv-body b{opacity:.9}
+.covers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cover .cv-body{min-height:150px;padding:12px 12px 11px}
+.cover .cv-body b{font-size:17px}
+.cover .cv-body .small{font-size:12.5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cover.big .cv-body{min-height:188px;padding:16px 16px 14px}
+.cover.big .cv-body b{font-size:22px}
+.cover.big .cv-body .small{font-size:13.5px;-webkit-line-clamp:3}
+.cv-keys{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+@media (max-width:360px){ .covers{grid-template-columns:1fr} }
+
+/* the wordmark stays until the bar truly cannot fit it */
+@media (max-width:430px){ .brand span{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:nowrap;font-size:16px} .chip{padding:5px 9px;font-size:12.5px} }
+@media (max-width:360px){ .brand span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
+
+/* ── the card view: a page, not three boxes ─────────────────────────────── */
+.backlink{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:700;font-size:14px;padding:2px 4px}
+.lesson.pad0 .lstage-holder{margin-top:0}
+.lesson.pad0 .lstage{border-radius:0;border:0;height:236px}
+.lesson .lfoot{padding:12px 16px 14px}
+.reading .sh-line{font-size:15.5px;line-height:1.6}
+.reading .sh-line .who{width:34px;height:34px;border-radius:50%;overflow:hidden;flex:0 0 auto;display:block;background:var(--tint)}
+.reading .nm{display:block;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.aside{margin-top:12px;background:var(--tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px;border-left:3px solid var(--action)}
+.aside .eyebrow{display:block;margin-bottom:3px}
