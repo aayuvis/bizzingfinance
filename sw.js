@@ -89,3 +89,7 @@ self.addEventListener('fetch', (e) => {
         (req.mode === 'navigate' ? caches.match('./index.html') : Promise.reject(new Error('offline'))))
   );
 });
+
+/* The update bar (main.js) asks the waiting worker to take over; the page
+   reloads on controllerchange so the child sees the new build once, cleanly. */
+self.addEventListener('message', (e) => { if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting(); });

@@ -711,6 +711,26 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 /* when the TESTER pill is in the bar, the wordmark folds so the bar still fits a phone */
 @media (max-width:520px){ .topbar-in:has(.chip.tester) .brand span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
 
+/* ── settings: segmented controls, and the two device preferences ───────── */
+.seg{display:inline-flex;background:var(--tint);border-radius:999px;padding:3px;gap:2px;flex:0 0 auto}
+.seg button{padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:800;color:var(--muted);font:inherit;font-weight:800;font-size:12.5px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+.field.sm{padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-weight:700;font-size:13px;max-width:170px}
+html[data-text="large"] #app{zoom:1.12}
+html[data-motion="reduced"] *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+
+/* the one-tap new-version bar, above the tab bar */
+.updatebar{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;background:var(--action);color:var(--action-ink);border-radius:999px;padding:11px 20px;font:inherit;font-weight:800;font-size:13.5px;box-shadow:0 8px 24px rgb(12 30 34 / .28);white-space:nowrap;animation:pop .4s cubic-bezier(.2,1.5,.4,1) both}
+
+/* the mala: one bead per real-world deed */
+.beads{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.beads i{width:14px;height:14px;border-radius:50%;background:linear-gradient(160deg,#FFD24D,#C8791B);box-shadow:inset 0 -2px 0 rgba(140,86,10,.35),0 1px 2px rgba(0,0,0,.15)}
+.today .qrow.block.done{background:var(--grow-tint)}
+
+.stop.testout .sttitle{font-size:14.5px;font-weight:700}
+.stgo.ghost{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.stop.chk .med{border-style:dashed}
+
 </style>
 </head>
 <body>
@@ -1415,7 +1435,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   }
   var CONF = ["#F0B429", "#0E6B78", "#178A4C", "#C4453C", "#8A5BD6", "#2E7FA8"];
   function confetti(n) {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.getAttribute("data-motion") === "reduced") return;
     const wrap = document.createElement("div");
     wrap.className = "conf";
     wrap.setAttribute("aria-hidden", "true");
@@ -1475,6 +1495,33 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   ];
   function nWord(n) {
     return WORDS[n] !== void 0 ? WORDS[n] : String(n);
+  }
+  var sayRate = 1;
+  function setSayRate(r) {
+    sayRate = r || 1;
+  }
+  function canSay() {
+    return typeof speechSynthesis !== "undefined" && typeof SpeechSynthesisUtterance !== "undefined";
+  }
+  function pickVoice() {
+    const vs = speechSynthesis.getVoices() || [];
+    return vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang)) || null;
+  }
+  function say(text) {
+    if (!canSay() || !text) return false;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, " ").trim());
+      const v = pickVoice();
+      if (v) u.voice = v;
+      u.lang = v && v.lang || "en-IN";
+      u.rate = sayRate;
+      u.pitch = 1;
+      speechSynthesis.speak(u);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   // src/fmt.js
@@ -1976,7 +2023,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         style="width:100%;height:100%;object-fit:cover;display:block">` : c.svg;
     return `<span class="who" style="${size ? `width:${size}px;height:${size}px` : ""}">${inner}</span>`;
   }
-  function say(who, text) {
+  function say2(who, text) {
     const c = CAST[who] || CAST.pip;
     return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
   }
@@ -2048,6 +2095,16 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     return LOADERS[id]().then((m) => MEDIA[id] = m.default);
   }
   var clipURL = (key) => "voice/lessons/" + key + ".mp3";
+  var RATE2 = 1;
+  function setRate(r) {
+    RATE2 = r || 1;
+    if (P && P.audio) {
+      try {
+        P.audio.playbackRate = RATE2;
+      } catch (e) {
+      }
+    }
+  }
   var ITEM_ICON = {
     roti: "roti",
     roof: "home",
@@ -2217,6 +2274,12 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       return;
     }
     P.audio = new Audio(clipURL(b.key));
+    try {
+      P.audio.playbackRate = RATE2;
+      P.audio.preservesPitch = true;
+      P.audio.mozPreservesPitch = true;
+    } catch (e) {
+    }
     P.audio.onended = () => advance();
     P.audio.onerror = () => {
       P.timer = setTimeout(() => advance(), 200);
@@ -2441,7 +2504,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   var KEY = "bzf_profile";
   var OLD = "bzf_v1";
   var DEV = "bzf_device";
-  var SCHEMA = 7;
+  var SCHEMA = 8;
   function read(k, fallback) {
     try {
       const raw = localStorage.getItem(k);
@@ -2479,7 +2542,15 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     },
     loadDevice(k, fb) {
       const d = read(DEV, {});
-      return d[k] === void 0 ? fb : d[k];
+      if (d[k] !== void 0) return d[k];
+      if (k === "mode") {
+        try {
+          const m = localStorage.getItem("bzf_mode");
+          if (m) return m;
+        } catch (e) {
+        }
+      }
+      return fb;
     },
     saveDevice(k, v) {
       const d = read(DEV, {});
@@ -2503,6 +2574,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       else if (blob.v === 4) blob = v4_to_v5(blob);
       else if (blob.v === 5) blob = v5_to_v6(blob);
       else if (blob.v === 6) blob = v6_to_v7(blob);
+      else if (blob.v === 7) blob = v7_to_v8(blob);
       else break;
     }
     return blob;
@@ -2573,6 +2645,15 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (k.overnight === void 0) k.overnight = null;
     });
     old.v = 7;
+    return old;
+  }
+  function v7_to_v8(old) {
+    old.kids.forEach((k) => {
+      if (!k.deeds) k.deeds = [];
+      if (k.learn && !k.learn.testedOut) k.learn.testedOut = {};
+      if (k.learn && !k.learn.checkpoints) k.learn.checkpoints = {};
+    });
+    old.v = 8;
     return old;
   }
 
@@ -4202,7 +4283,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     return TESTER;
   }
   function chapterLocked(c, ch) {
-    return !TESTER && c.learn.level < ch.lv;
+    return !TESTER && c.learn.level < ch.lv && !(c.learn.testedOut || {})[ch.id];
   }
   function levelAtLeast(c, lv) {
     return TESTER || c.learn.level >= lv;
@@ -5077,6 +5158,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     "steady-hand": { em: "\u{1FAA8}", name: "Steady hand", desc: "Did nothing on a red day. Hardest move there is." },
     "adopted": { em: "\u{1F43E}", name: "Took someone home", desc: "A one-off cost, and a weekly one for keeps." },
     "first-receipt": { em: "\u{1F9FE}", name: "The first receipt", desc: "Bought with shifts you worked. Kept for good." },
+    "did-one": { em: "\u2705", name: "Did one", desc: "A money thing done in the real world, not the town." },
+    "ten-deeds": { em: "\u{1F4FF}", name: "Ten deeds", desc: "Ten real-world money things, done and kept." },
+    "tested-out": { em: "\u{1F393}", name: "Tested out", desc: "Already knew a chapter, and proved it in six questions." },
+    "checkpoint": { em: "\u{1F6A9}", name: "Checkpoint", desc: "A whole chapter, mixed up, passed." },
     "dressed-up": { em: "\u{1F380}", name: "Dressed up", desc: "Bought a want, on purpose, with a full bowl already paid for." },
     "well-fed": { em: "\u{1F963}", name: "Ten full bowls", desc: "Ten pay days running, the food bill was met." },
     "all-grown": { em: "\u{1F31F}", name: "All grown", desc: "Raised from tiny to grown. Steady feeding did that." },
@@ -5161,7 +5246,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         nextPay: nextPayDay(now2, 5),
         bank: { balance: 0, rate: 0.02, opened: false, loan: null, trust: 50, repaid: 0 }
       },
-      learn: { xp: 0, level: 1, done: {}, openCard: null, drill: null },
+      learn: { xp: 0, level: 1, done: {}, openCard: null, drill: null, testedOut: {}, checkpoints: {} },
       market: newMarket((now2 ^ 2654435769) >>> 0),
       biz: null,
       streak: { days: [dayIndex(now2)], last: dayIndex(now2) },
@@ -5169,6 +5254,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       companion: null,
       keepsakes: [],
       overnight: null,
+      deeds: [],
       shop: { owned: [], cooling: {} },
       jobs: {},
       home: { tier: 0, since: now2, mortgage: null },
@@ -6094,8 +6180,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     return { in: inn, out, put, net: inn - out, n: t.length };
   }
   function earnRate(c) {
-    const today = dayLedger(c).in;
-    if (today > 0) return today;
+    const today2 = dayLedger(c).in;
+    if (today2 > 0) return today2;
     const days = {};
     c.money.txns.filter((x) => x.kind === "in").forEach((x) => {
       const d = dayIndex(x.t);
@@ -6506,6 +6592,135 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   </div>`;
   }
 
+  // src/daily.js
+  var DEEDS = [
+    { id: "price-one", text: "Find the price of one thing today \u2014 in a shop, on a menu or online \u2014 and say it out loud." },
+    { id: "receipt", text: "Look at any receipt. Find the total, and one line that added to it." },
+    { id: "coins", text: "Count the coins in a jar, a purse or a pocket, and say the amount in words." },
+    { id: "give-up", text: "Pick one thing you want this week, and name the thing you would give up to have it." },
+    { id: "per-unit", text: "Find something sold in two sizes. Work out which is cheaper for what you get." },
+    { id: "advert", text: "Spot one advert today and say, in one sentence, what it wants you to do." },
+    { id: "need-want", text: "Name one need and one want in your own room." },
+    { id: "ten-of", text: "Say the price of your favourite snack. Then say what ten of them would cost." },
+    { id: "today-only", text: 'Find a "today only" or "hurry" sign, and say what feeling it is trying to make.' },
+    { id: "percent", text: 'Find any percentage on a poster, a box or a screen, and say it as "for every hundred".' },
+    { id: "change", text: "Next time someone pays in cash, work out the change before the till does." },
+    { id: "weeks", text: "Choose something you would like to save for. Guess how many weeks it would take at your Save rate." },
+    { id: "free", text: 'Find something "free" today and say what it costs somebody, somewhere.' },
+    { id: "label", text: "Read a price label properly: the price, the size, and the price per unit if it shows one." },
+    { id: "later", text: 'Want something today? Say "I will decide tomorrow", and see if you still want it.' },
+    { id: "made", text: "Pick one thing in the room and guess three costs that went into making it." }
+  ];
+  var ASKS = [
+    "What was the first thing you ever saved up for?",
+    "What did a sweet or an ice cream cost when you were my age?",
+    "What is the best thing you ever bought \u2014 and the worst?",
+    "Did you ever borrow something and have to give back more than you took?",
+    "What do you do before you buy something big?",
+    "What is a scam you saw through?",
+    "Which shop did you love as a child, and what did it sell?",
+    "Was there something you wanted badly and were glad you did not buy?",
+    "What is one money word you wish someone had explained to you earlier?",
+    "How did you keep money as a child \u2014 a tin, a purse, a pocket?",
+    "What did a bus ride or a comic cost when you were small?",
+    "What is one thing you would tell yourself at my age about money?"
+  ];
+  var today = () => dayIndex(Date.now());
+  function deedOfDay(d = today()) {
+    return DEEDS[d % DEEDS.length];
+  }
+  function askOfWeek(d = today()) {
+    return ASKS[Math.floor(d / 7) % ASKS.length];
+  }
+  function wordOfDay(d = today()) {
+    const g = GLOSSARY[d % GLOSSARY.length];
+    return { term: g[0], meaning: g[1], eg: g[2] };
+  }
+  function tipOfDay(c, d = today()) {
+    const read2 = ALL_CARDS.filter((k2) => c.learn.done[k2.id] && k2.eg);
+    if (!read2.length) return null;
+    const k = read2[d % read2.length];
+    return { card: k, text: k.eg, title: k.title };
+  }
+  function deedDoneToday(c, d = today()) {
+    return (c.deeds || []).some((x) => x.day === d);
+  }
+  function didDeed(c, d = today()) {
+    if (!c.deeds) c.deeds = [];
+    if (deedDoneToday(c, d)) return false;
+    const deed2 = deedOfDay(d);
+    c.deeds.push({ id: deed2.id, day: d, t: Date.now(), text: deed2.text });
+    if (c.deeds.length === 1) badge(c, "did-one");
+    if (c.deeds.length === 10) badge(c, "ten-deeds");
+    stamp(c);
+    return true;
+  }
+  function deedCount(c) {
+    return (c.deeds || []).length;
+  }
+
+  // src/quiz.js
+  var N = 6;
+  var PASS = 5;
+  var passMark = (n) => Math.max(1, Math.min(PASS, n - 1));
+  function chapter(id) {
+    return CHAPTERS.find((x) => x.id === id);
+  }
+  function build(ch, d = dayIndex(Date.now())) {
+    const pairs = [];
+    ch.cards.forEach((card) => {
+      for (let qi = 0; qi < drillCount(card); qi++) pairs.push([card.id, qi]);
+    });
+    if (!pairs.length) return [];
+    const step = Math.max(1, Math.floor(pairs.length / N)), start2 = d % pairs.length, out = [];
+    for (let i = 0; i < pairs.length && out.length < N; i++) out.push(pairs[(start2 + i * step) % pairs.length]);
+    return out;
+  }
+  function start(chId, mode) {
+    const ch = chapter(chId);
+    if (!ch) return null;
+    return { kind: "quiz", mode, ch: chId, items: build(ch), i: 0, right: 0, pick: null, done: false };
+  }
+  function current(o) {
+    const [cid, qi] = o.items[o.i];
+    const card = chapter(o.ch).cards.find((k) => k.id === cid);
+    return { card, dq: shuffledDrill(card, qi) };
+  }
+  function answer(o, i) {
+    if (o.pick != null || o.done) return;
+    const { dq } = current(o);
+    o.pick = { i: +i, ok: +i === dq.answer, why: dq.why };
+    if (o.pick.ok) o.right += 1;
+  }
+  function next(o) {
+    if (o.pick == null) return;
+    o.i += 1;
+    o.pick = null;
+    if (o.i >= o.items.length) o.done = true;
+  }
+  function finish(c, o) {
+    if (!o.done || o.settled) return null;
+    o.settled = true;
+    const pass = o.right >= passMark(o.items.length), pct = Math.round(o.right / o.items.length * 100);
+    if (o.mode === "testout") {
+      if (pass) {
+        c.learn.testedOut = c.learn.testedOut || {};
+        c.learn.testedOut[o.ch] = true;
+        badge(c, "tested-out");
+        addXP(c, 20);
+      }
+    } else {
+      c.learn.checkpoints = c.learn.checkpoints || {};
+      c.learn.checkpoints[o.ch] = Math.max(c.learn.checkpoints[o.ch] || 0, pct);
+      if (pass) {
+        badge(c, "checkpoint");
+        addXP(c, 15);
+      }
+    }
+    stamp(c);
+    return { pass, pct };
+  }
+
   // src/buildings-gen.js
   var BLD = {
     "bank": { w: 380, h: 262, src: "data:image/webp;base64,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" },
@@ -6723,7 +6938,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const xOf = (i) => startX + i * SPAN;
     const plate = art("world-" + world.id);
     const lanterns = Array.from({ length: 7 }, (_, i) => lantern(70 + i * ((W2 - 140) / 6), i < Math.min(7, streak))).join("");
-    const build = (p, idx) => {
+    const build2 = (p, idx) => {
       p = { ...p, x: xOf(idx) };
       const on2 = isOpen(c, p.sub);
       let art2 = "";
@@ -6787,7 +7002,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     <rect x="0" y="${H - 8}" width="${W2}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || "you")}</text>` : ""}
     <rect x="0" y="${G + 28}" width="${W2}" height="6" fill="var(--road)" opacity=".7"/>
-    ${here.map(build).join("")}
+    ${here.map(build2).join("")}
     ${deeds}
     ${companionOnStreet(c, here, xOf)}
     ${here.some((p) => p.key === "wallet") ? `<g aria-hidden="true" transform="translate(${xOf(here.findIndex((p) => p.key === "wallet")) + 145},204) scale(.72)"><g class="bob">
@@ -6813,7 +7028,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   // src/ledger.js
   var ledger_exports = {};
   __export(ledger_exports, {
-    answer: () => answer,
+    answer: () => answer2,
     available: () => available,
     beat: () => beat,
     mathsCeiling: () => mathsCeiling,
@@ -7495,9 +7710,9 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const o = opts || {};
     const now2 = o.now || Date.now();
     const dueList = due(c, now2);
-    const next = available(c, o.mathsMet)[0] || null;
+    const next2 = available(c, o.mathsMet)[0] || null;
     const lastShape = c.mastery && c.mastery.lastShape;
-    const preferTeach = lastShape === "retrieve" && next && dueList.length <= 1;
+    const preferTeach = lastShape === "retrieve" && next2 && dueList.length <= 1;
     if (dueList.length && !preferTeach) {
       const ob = dueList[0];
       const r = record(c, ob.id);
@@ -7508,9 +7723,9 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         overdue: Math.max(0, Math.round((now2 - r.due) / 864e5))
       };
     }
-    if (next) {
-      const card = teachCard(next, allCards);
-      if (card) return { shape: "teach", objective: next, card };
+    if (next2) {
+      const card = teachCard(next2, allCards);
+      if (card) return { shape: "teach", objective: next2, card };
     }
     if (dueList.length) {
       const ob = dueList[0];
@@ -7518,7 +7733,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     }
     return null;
   }
-  function answer(c, bt, ok, now2) {
+  function answer2(c, bt, ok, now2) {
     if (!c.mastery) c.mastery = blank();
     c.mastery.lastShape = bt.shape;
     if (bt.shape === "teach") {
@@ -7923,18 +8138,18 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (won.length) {
         g.done = true;
         g.winner = won.sort((a, b) => indep(b) - indep(a))[0];
-        finish();
+        finish2();
         return true;
       }
       if (g.players[0].laps >= MAX_LAPS) {
         g.done = true;
         g.winner = g.players.slice().sort((a, b) => indep(b) - indep(a))[0];
-        finish();
+        finish2();
         return true;
       }
       return false;
     };
-    const finish = () => {
+    const finish2 = () => {
       stop2();
       const me = g.players[0];
       g.mine = indep(me);
@@ -8161,7 +8376,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
                     owns ${p2.own.length} \xB7 earns ${p2.own.reduce((t, x) => t + SQUARES[x].inc, 0)} a lap \xB7 spends ${p2.expenses}</span></span>
                   <span class="p" style="font-size:17px">${Math.round(indep(p2) * 100)}%</span></div>`).join("")}
             </div>
-            ${say("nana", "Nobody went bankrupt and nobody had to. You win this one when the things you own pay for the life you lead \u2014 that is the only definition of rich worth chasing.")}
+            ${say2("nana", "Nobody went bankrupt and nobody had to. You win this one when the things you own pay for the life you lead \u2014 that is the only definition of rich worth chasing.")}
             <p class="small muted">Earned ${money(g.won)}.</p>
             <button class="btn wide" data-act="gquit">Back to the arcade</button>
           </div></div>`;
@@ -8420,7 +8635,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     <div style="font-size:44px">${em}</div>
     <h2>${esc(title)}</h2>
     <p class="muted">${sub}</p>
-    ${line2 ? say(who || "pip", line2) : ""}
+    ${line2 ? say2(who || "pip", line2) : ""}
     <p class="small muted">Earned ${money(wage)}, straight into your wallet.</p>
     <button class="btn wide" data-act="gquit">Back to the arcade</button></div>`;
   }
@@ -8681,7 +8896,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       } else sfx.bad();
       R.render();
     };
-    const next = () => {
+    const next2 = () => {
       if (st.pick == null) return;
       st.pick = null;
       st.i++;
@@ -8702,7 +8917,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
           return;
         }
         if (e.key === "Enter") {
-          next();
+          next2();
           return;
         }
         const n = parseInt(e.key, 10);
@@ -8710,7 +8925,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       },
       act(n, arg) {
         if (n === cfg.pickAct) choose(+arg);
-        else if (n === cfg.nextAct) next();
+        else if (n === cfg.nextAct) next2();
       },
       view() {
         if (st.done) return `<div class="stack">${hud(["Done"])}
@@ -8867,7 +9082,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       const steady = Math.max(0, 30 - Math.round(churn / 8));
       return { ret: rt, div, steady, total: rt + div + steady };
     };
-    const next = () => {
+    const next2 = () => {
       if (st.done) return;
       st.divSum += effective();
       const row = ret[st.round];
@@ -8892,11 +9107,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       st.botHold.Panicker = nextPan;
       st.bots["Boring Bella"] = Math.round(st.bots["Boring Bella"] * (1 + row.basket));
       st.round++;
-      if (st.round >= ROUNDS) finish();
+      if (st.round >= ROUNDS) finish2();
       else sfx.click();
       R.render();
     };
-    const finish = () => {
+    const finish2 = () => {
       st.done = true;
       const c = K2();
       st.score = scoreOf(st.me, st.divSum / ROUNDS, st.churn);
@@ -8932,13 +9147,13 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
           R.render();
         } else if (e.key === "ArrowRight") adjust(ids[st.sel], 10);
         else if (e.key === "ArrowLeft") adjust(ids[st.sel], -10);
-        else if (e.key === "Enter") next();
+        else if (e.key === "Enter") next2();
       },
       act(n, arg) {
         if (n === "mcAdj") {
           const [id, d] = arg.split(":");
           adjust(id, +d);
-        } else if (n === "mcNext") next();
+        } else if (n === "mcNext") next2();
         else if (n === "mcSel") {
           st.sel = ASSETS.findIndex((a) => a.id === arg);
           R.render();
@@ -8971,7 +9186,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
               <div class="sep" style="margin:10px 0"></div>
               <div class="row"><span class="grow" style="font-weight:800">Total</span><span class="big" style="font-size:22px">${sc.total}</span></div>
             </div>
-            ${say(
+            ${say2(
             st.table[0].who === "Boring Bella" ? "bea" : "bo",
             st.table[0].who === "Boring Bella" ? "Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat." : "You beat Bella this time. Run another six weeks and see whether that keeps happening \u2014 that question <b>is</b> the game."
           )}
@@ -9054,7 +9269,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     };
-    const finish = () => {
+    const finish2 = () => {
       if (st.done) return;
       st.done = true;
       stop2();
@@ -9079,13 +9294,13 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       st.charge = 0;
       if (st.money < 20) {
         st.ruined = true;
-        finish();
+        finish2();
         return;
       }
       if (actual < 0) sfx.bad();
       else sfx.coin();
       if (st.year >= YEARS) {
-        finish();
+        finish2();
         return;
       }
       R.render();
@@ -9243,7 +9458,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     };
-    const finish = () => {
+    const finish2 = () => {
       if (st.done) return;
       st.done = true;
       stop2();
@@ -9321,7 +9536,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         }
       }
       if (st.t >= LEN) {
-        finish();
+        finish2();
         return;
       }
       const tl = document.getElementById("srTime");
@@ -9372,7 +9587,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
               </div>
             </div>
             <p class="small muted">${st.lost} customer${st.lost === 1 ? "" : "s"} gave up waiting.</p>
-            ${say("nana", st.revenue > 0 && st.profit <= 0 ? "You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent." : "Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.")}
+            ${say2("nana", st.revenue > 0 && st.profit <= 0 ? "You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent." : "Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.")}
             <p class="small muted">Earned ${money(st.won)}.</p>
             <button class="btn wide" data-act="gquit">Back to the arcade</button>
           </div></div>`;
@@ -9626,7 +9841,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (iv) cancelAnimationFrame(iv);
       iv = 0;
     };
-    const finish = (sold) => {
+    const finish2 = (sold) => {
       if (st.done) return;
       st.done = true;
       st.sold = sold;
@@ -9664,11 +9879,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         R.render();
       }
       if (st.panic >= 100) {
-        finish(true);
+        finish2(true);
         return;
       }
       if (st.t >= LEN) {
-        finish(false);
+        finish2(false);
         return;
       }
       const el2 = document.getElementById("stPanic");
@@ -9711,7 +9926,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         }
       },
       act(n) {
-        if (n === "stSell") finish(true);
+        if (n === "stSell") finish2(true);
         else if (n === "stPlan") calm();
       },
       view() {
@@ -9729,7 +9944,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
                   <div style="font-weight:800;color:${st.sold ? "var(--spend)" : "var(--grow)"}">${st.sold ? st.soldAt : st.after}</div></div>
               </div>
             </div>
-            ${say(st.sold ? "bea" : "nana", st.sold ? "I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go." : "A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.")}
+            ${say2(st.sold ? "bea" : "nana", st.sold ? "I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go." : "A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.")}
             <p class="small muted">Earned ${money(st.won)}. Fictional market, real behaviour, nothing here is advice.</p>
             <button class="btn wide" data-act="gquit">Back to the arcade</button>
           </div></div>`;
@@ -9745,7 +9960,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
               <i id="stPanic" style="width:${st.panic}%;background:linear-gradient(90deg,var(--treasure),var(--spend));transition:width .2s linear"></i></div>
           </div>
           <div id="stChart">${sparkline(st.line, 300, 62, "var(--spend)")}</div>
-          ${sh ? say(sh[0], esc(sh[1])) : say("bo", "It is going to be fine. Probably. I say that every week too.")}
+          ${sh ? say2(sh[0], esc(sh[1])) : say2("bo", "It is going to be fine. Probably. I say that every week too.")}
           <div class="card" style="box-shadow:none;border-style:dashed">
             <div class="eyebrow">Your plan, in your words</div>
             <p style="font-weight:650;font-size:14.5px">"I'm in for five years. I won't sell before then unless the company stops making anything."</p>
@@ -11691,7 +11906,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   function viewPick(g) {
     return `<div class="stack">
     <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="arcade">\u2190 Leave</button>
-    ${say("bo", "Forty companies, forty years, and none of them exist. Everything that happens to them happens for a reason you can find. Pick a decade.")}
+    ${say2("bo", "Forty companies, forty years, and none of them exist. Everything that happens to them happens for a reason you can find. Pick a decade.")}
     ${ACTS.map((a) => `<button class="card" data-act="mgAct" data-arg="${a.id}" style="text-align:left;width:100%">
       <div class="eyebrow">Act ${a.id + 1} \xB7 years ${a.from + 1}\u2013${a.from + a.years}</div>
       <h3 style="font-size:19px;margin:3px 0 4px">${esc(a.name)}</h3>
@@ -11869,8 +12084,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   }
   function viewReview(g) {
     const act = ACTS[g.act];
-    const end = netWorth2(g), start = g.startWorth || 1e4;
-    const ret = end / start - 1;
+    const end = netWorth2(g), start2 = g.startWorth || 1e4;
+    const ret = end / start2 - 1;
     const s = simFor(g.seed);
     const cast = castFor(g.seed, g.act);
     const best2 = cast.map((co) => ({ co, m: s.years[co.id][g.year].value / s.years[co.id][act.from].value - 1 })).sort((a, b) => b.m - a.m);
@@ -11879,7 +12094,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <div style="text-align:center"><div style="font-size:40px">${ret >= 0 ? "\u{1F4C8}" : "\u{1F4C9}"}</div>
         <div class="eyebrow">${esc(act.name)} \xB7 ten years</div>
         <h2 style="margin:4px 0 2px;font-size:26px">${money(end)}</h2>
-        <p style="color:${pctTone(ret)};font-weight:800">${arrow(ret)} ${Math.abs(ret * 100).toFixed(0)}% from ${money(start)}</p></div>
+        <p style="color:${pctTone(ret)};font-weight:800">${arrow(ret)} ${Math.abs(ret * 100).toFixed(0)}% from ${money(start2)}</p></div>
     </div>
     <div class="card">
       <div class="eyebrow">How well you read them</div>
@@ -11895,7 +12110,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
           <span class="pill" style="margin-left:7px">${(g.holdings[b.co.id] || 0) > 0 ? "held" : "\u2014"}</span></div>`).join("")}
       </div>
     </div>
-    ${say("bea", ret >= 0 ? "A good decade. Now do the next one, where the rate goes the other way, and find out how much of that was you." : "A hard decade. Everyone gets one. The question is whether the things you got wrong were the things you said would go wrong.")}
+    ${say2("bea", ret >= 0 ? "A good decade. Now do the next one, where the rate goes the other way, and find out how much of that was you." : "A hard decade. Everyone gets one. The question is whether the things you got wrong were the things you said would go wrong.")}
     <button class="btn wide" data-act="mgPick">Choose another decade \u2192</button>
   </div>`;
   }
@@ -12019,7 +12234,20 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     </div>
     <div class="rail">
       <span class="railline" aria-hidden="true"><span style="height:${pct}%"></span></span>
-      ${ns.map((s) => stopRow(c, s)).join("")}
+      ${w.chapters.map((chId) => {
+      const ch = CHAPTERS.find((x) => x.id === chId);
+      if (!ch) return "";
+      const mine = ns.filter((s) => s.ch.id === chId);
+      const allDone = mine.length && mine.every((s) => s.done);
+      const lockedByLevel = mine.length && mine[0].lockedCh;
+      return `${lockedByLevel && open ? `<button class="stop testout" data-act="testout" data-arg="${chId}" style="--ja:${w.tint}">
+            <span class="med">${ico("lock", "\u{1F512}", 13)}</span>
+            <span class="stbody"><span class="sttitle">Already know \u201C${esc(ch.title)}\u201D?</span>
+              <span class="sttag">Opens at level ${ch.lv} \u2014 or a few questions at full difficulty, all but one right, and it opens now. Failing costs nothing.</span>
+              <span class="stgo ghost">Test out \u2192</span></span></button>` : ""}
+          ${mine.map((s) => stopRow(c, s)).join("")}
+          ${allDone ? checkpointRow(c, ch, w) : ""}`;
+    }).join("")}
       ${!open && wi > 0 ? `<p class="small muted" style="padding:6px 4px 2px 44px">Finish ${esc(WORLDS[wi - 1].name)} to walk on.</p>` : ""}
     </div>
   </section>`;
@@ -12033,6 +12261,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <div class="row" style="gap:7px;flex-wrap:wrap;margin-top:8px">
         <button class="wchip" data-act="shelf" data-arg="words">${ico("lesson", "\u{1F4D6}", 15)} Money Words \xB7 ${GLOSSARY.length}</button>
         <button class="wchip" data-act="nav" data-arg="arcade">${ico("arcade", "\u{1F3AE}", 15)} Practise it</button>
+        ${(() => {
+      const n = reviseList(c).length;
+      return `<button class="wchip${n ? " hot" : ""}" data-act="shelf" data-arg="revise">${ico("moon", "\u{1F501}", 15)} Revise${n ? " \xB7 " + n : ""}</button>`;
+    })()}
       </div>
     </div>
     ${levelBar(c)}
@@ -12056,6 +12288,45 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     ${actSection(c, wi, r, { solo: true })}
   </div>`;
   }
+  function checkpointRow(c, ch, w) {
+    const pct = (c.learn.checkpoints || {})[ch.id];
+    const passed = pct != null && pct >= Math.round(PASS / N * 100);
+    return `<button class="stop ${passed ? "passed" : "open"} chk" data-act="checkpoint" data-arg="${ch.id}" style="--ja:${w.tint}">
+    <span class="med ${passed ? "passed" : ""}">${passed ? "\u2713" : "\u25C6"}</span>
+    <span class="stbody"><span class="sttitle">Checkpoint \xB7 ${esc(ch.title)}</span>
+      <span class="sttag">Mixed questions, nothing new${pct != null ? ` \xB7 best ${pct}%` : ""}</span></span>
+    ${pct != null ? `<span class="small" style="color:${passed ? "var(--grow)" : "var(--muted)"};font-weight:800">${pct}%</span>` : ""}
+  </button>`;
+  }
+  function reviseList(c) {
+    const now2 = Date.now();
+    const due2 = due(c, now2).map((o) => ({ o, why: "due for a look" }));
+    const missed = OBJECTIVES.filter((o) => {
+      const r = c.mastery && c.mastery.rec[o.id];
+      return r && r.hist && r.hist.filter((h) => !h.ok).length >= 2;
+    }).filter((o) => !due2.some((d) => d.o.id === o.id)).map((o) => ({ o, why: "missed more than once" }));
+    return due2.concat(missed);
+  }
+  function viewRevise(c) {
+    const rows = reviseList(c);
+    const cardOf = (id) => {
+      for (const ch of CHAPTERS) {
+        const k = ch.cards.find((x) => x.id === id);
+        if (k) return { k, ch };
+      }
+      return null;
+    };
+    return `<div class="stack atlas">
+    <button class="backlink" data-act="shelf" data-arg="">${ico("back", "\u2190", 16)} The map</button>
+    <div><h1 style="font-size:26px">Revise</h1><p class="small muted">Things due for another look, and things missed more than once. Read from your record \u2014 nothing here is a guess.</p></div>
+    ${rows.length ? `<div class="card pad0"><div class="rows" style="margin:0">${rows.map(({ o, why }) => {
+      const t = cardOf(o.teach);
+      return `<button class="qrow" style="width:100%;text-align:left" data-act="card" data-arg="${o.teach}">
+        <span class="iw">${ico(why === "due for a look" ? "moon" : "quest", "\u{1F501}", 20)}</span>
+        <span class="grow" style="min-width:0"><b style="font-size:14.5px">${esc(o.short || o.objective)}</b><div class="small muted">${t ? esc(t.k.title) + " \xB7 " + esc(t.ch.title) + " \xB7 " : ""}${why}</div></span></button>`;
+    }).join("")}</div></div>` : `<div class="card"><p class="small muted">Nothing to revise. That is not nothing \u2014 it means everything you have met is holding.</p></div>`}
+  </div>`;
+  }
 
   // src/views.js
   var K5 = () => kid(R.s);
@@ -12063,14 +12334,15 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const step = draft2.step || 0;
     const shell3 = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
     const first = R.s ? R.s.kids.length === 0 : true;
+    if (step === 0 && first && !draft2.go) return landing();
     if (step === 0) {
       return shell3(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : "A new stall on Market Row"}</h1>
-        <p class="muted" style="margin-top:8px">${first ? "A town where you get a stall, a wallet, and every mistake is made with money that isn't real." : "Another child, their own town, their own money. Nothing is shared between them."}</p>
+        <p class="muted" style="margin-top:8px">${first ? "A town where you get a stall, a wallet and four jars \u2014 and learn money by running your own." : "Another child, their own town, their own money. Nothing is shared between them."}</p>
       </div>
-      ${say("nana", first ? "I am shutting up my shop at the end of the road, and the smallest stall on Market Row is going spare. What shall I call you?" : "Another one! There is always a stall going. What is this one called?")}
+      ${say2("nana", first ? "I am shutting up my shop at the end of the road, and the smallest stall on Market Row is going spare. What shall I call you?" : "Another one! There is always a stall going. What is this one called?")}
       <div class="card stack">
         <label class="eyebrow" for="nm">Name</label>
         <input id="nm" data-field="name" value="${esc(draft2.name || "")}" placeholder="Type a name" autocomplete="off"
@@ -12081,14 +12353,14 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     }
     if (step === 1) {
       return shell3(`
-      ${say("pip", `Good to meet you, <b>${esc(draft2.name)}</b>. How old are you? It changes what the street shows \u2014 no debt and no market before they are taught.`)}
+      ${say2("pip", `Good to meet you, <b>${esc(draft2.name)}</b>. How old are you? It changes what the street shows \u2014 no debt and no market before they are taught.`)}
       <div class="card stack">
         <button class="opt" data-act="obBand" data-arg="sprout"><b>8 to 10</b><br><span class="small muted">Sprout \u2014 coins, earning, saving. Nothing can go negative.</span></button>
         <button class="opt" data-act="obBand" data-arg="builder"><b>11 and up</b><br><span class="small muted">Builder \u2014 budgets, the bank, the Exchange, a shop of your own.</span></button>
       </div>`);
     }
     return shell3(`
-    ${say("pip", "Last one. Which money do you count in? You can change it later and the town converts \u2014 it does not start over.")}
+    ${say2("pip", "Last one. Which money do you count in? You can change it later and the town converts \u2014 it does not start over.")}
     <div class="card stack">
       ${Object.keys(CURRENCIES).map((k) => `<button class="opt" data-act="obCur" data-arg="${k}">
         <b style="font-size:18px">${CURRENCIES[k].sign}</b> &nbsp;${CURRENCIES[k].name}
@@ -12291,7 +12563,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const d = daysToPay(c);
     const g = c.money.goals.find((x) => !x.done);
     const sprout = c.band === "sprout";
-    const today = nextThing(c);
+    const today2 = nextThing(c);
     const strip = sprout ? `<div class="moneyline">
         <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
         <div><div class="k">Saved up</div><div class="v">${money(c.money.jars.save + c.money.jars.grow)}</div></div></div>` : `<div class="moneyline">
@@ -12319,6 +12591,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     ${greeting(c)}
 
     ${strip}
+
+    ${todayCard(c)}
 
     ${journeys(c)}
 
@@ -12351,7 +12625,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       const fx = townFixes(c).filter((f) => !f.locked);
       const tp = townProgress(c);
       if (!fx.length) return "";
-      const next = fx.find((f) => !f.done) || fx[0];
+      const next2 = fx.find((f) => !f.done) || fx[0];
       return `<div class="card">
         <div class="row"><div class="grow"><div class="eyebrow">Put it right \xB7 ${esc(world.name)}</div>
           <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
@@ -12381,7 +12655,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 
 
 
-    ${has(c) ? say("pip", hometalk(c)) : ""}
+    ${has(c) ? say2("pip", hometalk(c)) : ""}
   </div>`;
   }
   function closingTime(c, quests) {
@@ -12420,7 +12694,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
           <div class="small muted">${r.sub}</div></span></div>`).join("")}
     </div>
-    ${say("pip", "Stopping when the day is done is a money skill too. The town keeps going without you \u2014 the fountain does not un-mend overnight.")}
+    ${say2("pip", "Stopping when the day is done is a money skill too. The town keeps going without you \u2014 the fountain does not un-mend overnight.")}
   </div>`;
   }
   function lessonBeat(c) {
@@ -12513,6 +12787,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       if (card) return viewCard(card);
     }
     if (R.shelf === "words") return viewGlossary();
+    if (R.shelf === "revise") return viewRevise(c);
     if (R.shelf && R.shelf.startsWith("act:")) return viewAct(c, +R.shelf.slice(4) || 0);
     return viewAtlas(c);
   }
@@ -12526,6 +12801,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
       <div class="aside"><span class="eyebrow">For instance</span>${esc(card.eg)}</div>
+      ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico("sound", "\u{1F50A}", 15)} Read it to me</button></div>` : ""}
     </div>
     ${(() => {
       const total = drillCount(card);
@@ -12566,7 +12842,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     ${rows.length === 0 ? '<div class="card"><p class="muted">Nothing by that name yet.</p></div>' : ""}
     <div class="card pad0">
       ${rows.map((g, i) => `<div style="padding:13px 16px;${i ? "border-top:1px solid var(--line-soft)" : ""}">
-        <b style="font-size:15px">${esc(g[0])}</b>
+        <div class="row"><b style="font-size:15px;flex:1">${esc(g[0])}</b>${canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="gloss:${esc(g[0])}" aria-label="Read it to me">${ico("sound", "\u{1F50A}", 14)}</button>` : ""}</div>
         <p style="font-size:14px;margin-top:2px">${esc(g[1])}</p>
         <p class="small muted" style="margin-top:3px">${esc(g[2])}</p></div>`).join("")}
     </div>
@@ -12641,8 +12917,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const cost = weeklyCost(c);
     const income = weeklyIncome(c);
     const left = income - cost;
-    const next = HOMES[c.home.tier + 1];
-    const chk = next ? canMove(c, c.home.tier + 1) : null;
+    const next2 = HOMES[c.home.tier + 1];
+    const chk = next2 ? canMove(c, c.home.tier + 1) : null;
     const M2 = c.home.mortgage;
     return `<div class="stack">
     ${hero({
@@ -12677,19 +12953,19 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <p class="small muted" style="margin-top:7px">This one ends. Rent never does \u2014 that is the whole difference between renting and owning.</p>
     </div>` : ""}
 
-    ${next ? `<div class="card">
+    ${next2 ? `<div class="card">
       <div class="eyebrow">Next along the street</div>
-      <div class="row" style="margin-top:4px">${ico(next.em, next.em, 28)}
-        <div class="grow"><b style="font-size:16px">${esc(next.name)}</b>
-          <p class="small muted">${esc(next.blurb)}</p></div></div>
+      <div class="row" style="margin-top:4px">${ico(next2.em, next2.em, 28)}
+        <div class="grow"><b style="font-size:16px">${esc(next2.name)}</b>
+          <p class="small muted">${esc(next2.blurb)}</p></div></div>
       <div class="stack" style="gap:5px;margin-top:11px;font-size:14px">
-        <div class="row"><span class="grow muted">Deposit, once</span><b>${money(price(next.deposit))}</b></div>
+        <div class="row"><span class="grow muted">Deposit, once</span><b>${money(price(next2.deposit))}</b></div>
         <div class="row"><span class="grow muted">Every week after that</span>
-          <b>${money(price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food))}</b></div>
+          <b>${money(price(next2.rent) + next2.bills.reduce((t, b) => t + price(b.units), 0) + price(next2.food))}</b></div>
         <div class="sep"></div>
         <div class="row"><span class="grow" style="font-weight:800">Which would leave you</span>
-          <b style="color:${income - (price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food)) > 0 ? "var(--ink)" : "var(--spend)"}">
-            ${money(income - (price(next.rent) + next.bills.reduce((t, b) => t + price(b.units), 0) + price(next.food)))} a week</b></div>
+          <b style="color:${income - (price(next2.rent) + next2.bills.reduce((t, b) => t + price(b.units), 0) + price(next2.food)) > 0 ? "var(--ink)" : "var(--spend)"}">
+            ${money(income - (price(next2.rent) + next2.bills.reduce((t, b) => t + price(b.units), 0) + price(next2.food)))} a week</b></div>
       </div>
       <button class="btn wide" style="margin-top:12px" data-act="move" data-arg="${c.home.tier + 1}" ${chk.ok ? "" : "disabled"}>
         ${chk.ok ? "Take it \u2192" : "Need " + money(chk.deposit || 0) + " for the deposit"}</button>
@@ -12699,7 +12975,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <h3 style="margin:8px 0 4px">You own where you live</h3>
       <p class="muted small">Top of the street. The only thing left to grow is what your money earns while you sleep.</p></div>`}
 
-    ${say("nana", c.home.tier === 0 ? "A room of your own and rent going out on Friday. Everything else in this town is built on that one fact." : "Notice what changed when you moved \u2014 not just the rent. Every room you add adds a bill behind it.")}
+    ${say2("nana", c.home.tier === 0 ? "A room of your own and rent going out on Friday. Everything else in this town is built on that one fact." : "Notice what changed when you moved \u2014 not just the rent. Every room you add adds a bill behind it.")}
   </div>`;
   }
   var JARMETA = {
@@ -13091,7 +13367,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <button class="btn sm" data-act="vDraw" data-arg="200" ${v.cash < 200 ? "disabled" : ""}>Draw ${money(200)}</button></div>
     </div>
 
-    ${say("nana", "The two numbers to keep your eye on are the one you must sell to stand still, and the gap between what you earned and what actually arrived. Everything else is detail.")}
+    ${say2("nana", "The two numbers to keep your eye on are the one you must sell to stand still, and the gap between what you earned and what actually arrived. Everything else is detail.")}
   </div>`;
   }
   function viewStore() {
@@ -13185,7 +13461,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         this device and a determined child could get past it. It is here so the pay-day clock is
         not one tap away.</p>
     </div>
-    ${say("nana", "There is nothing behind here a child needs. What they need is on the other side of that button \u2014 the town, the work, and the deciding.")}
+    ${say2("nana", "There is nothing behind here a child needs. What they need is on the other side of that button \u2014 the town, the work, and the deciding.")}
   </div>`;
   }
   function viewReport() {
@@ -13301,6 +13577,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 
     <div class="card">
       <div class="eyebrow">Talk together</div>
+      <p class="small" style="margin-top:6px">\u{1F4AC} <b>This week's question, from ${esc(c.name)} to you:</b> \u201C${esc(askOfWeek())}\u201D \u2014 it is on their Home too. About your own story, never about the family's money.</p>
       <div class="stack" style="gap:7px;margin-top:8px">
         ${w.prompts.map((p) => `<p class="small">\u{1F4AC} ${esc(p)}</p>`).join("")}
       </div>
@@ -13440,6 +13717,13 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       line: "A badge marks a decision. A keepsake is a thing you did. Nothing on these shelves arrives for showing up."
     })}
     <div class="card">
+      <div class="eyebrow">Things you did</div>
+      ${(c.deeds || []).length ? `
+        <div class="beads" aria-hidden="true">${(c.deeds || []).slice(-30).map(() => "<i></i>").join("")}</div>
+        <p class="small muted" style="margin-top:6px">${deedCount(c)} ${deedCount(c) === 1 ? "thing" : "things"} done out in the real world. Never full, never checked, never goes down.</p>
+        <div class="rows" style="margin-top:6px">${(c.deeds || []).slice(-5).reverse().map((d) => `<div class="qrow"><span class="iw">${ico("check", "\u2705", 18)}</span><span class="grow small">${esc(d.text)}</span><span class="small muted">${shortDate(d.t)}</span></div>`).join("")}</div>` : `<p class="small muted" style="margin-top:4px">A bead here is a money thing you did in the real world \u2014 the "Do one" on Home. Not for reading; for doing.</p>`}
+    </div>
+    <div class="card">
       <div class="eyebrow">Keepsakes</div>
       ${(c.keepsakes || []).length ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => receiptSlip(k)).join("")}</div>` : `<p class="small muted" style="margin-top:4px">Your first receipt goes here \u2014 the thing you bought, the shifts that paid for it, the weeks it took. Nothing on this shelf is given. It is kept.</p>`}
     </div>
@@ -13459,10 +13743,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     <div class="card">
       <div class="eyebrow">People you've met</div>
       <div class="grid3" style="margin-top:10px">
-        ${Object.keys(CAST).map((k) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center">
-          <div style="width:54px;height:54px;margin:0 auto;border-radius:50%;overflow:hidden">${CAST[k].svg}</div>
+        ${Object.keys(CAST).map((k) => `<button data-act="castCard" data-arg="${k}" style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;font:inherit;color:inherit">
+          <div style="width:54px;height:54px;margin:0 auto;border-radius:50%;overflow:hidden">${face(k, 54)}</div>
           <div style="font-weight:800;font-size:13.5px;margin-top:5px">${esc(CAST[k].name)}</div>
-          <div class="small muted" style="font-size:11.5px;line-height:1.35">${esc(CAST[k].role)}</div></div>`).join("")}
+          <div class="small muted" style="font-size:11.5px;line-height:1.35">${esc(CAST[k].role)}</div></button>`).join("")}
       </div>
     </div>
     <div class="card">
@@ -13477,6 +13761,137 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     }).join("")}
       </div>
     </div>
+  </div>`;
+  }
+  function settingsSheet(R2) {
+    const s = R2.s, c = K5();
+    const seg = (act, opts, cur2) => `<span class="seg">${opts.map(([v, l]) => `<button data-act="${act}" data-arg="${v}" aria-pressed="${cur2 === v}">${l}</button>`).join("")}</span>`;
+    const row = (t, sub, ctl) => `<div class="qrow"><span class="grow" style="min-width:0"><b style="font-size:14px">${t}</b>${sub ? `<div class="small muted">${sub}</div>` : ""}</span>${ctl}</div>`;
+    const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return `
+    <div class="eyebrow">Settings</div>
+    <h2 style="margin:4px 0 2px">How Bizzington looks and sounds</h2>
+    <div class="sect"><b>Look</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Appearance", "Follows the device unless you choose.", seg("mode", [["light", "Light"], ["dark", "Dark"], ["system", "System"]], R2.mode || "system"))}
+      ${row("Text size", "Larger type on every screen.", seg("text", [["normal", "Normal"], ["large", "Large"]], R2.text || "normal"))}
+      ${row("Motion", "Reduced turns off the confetti and the bobbing.", seg("motion", [["full", "Full"], ["reduced", "Reduced"]], R2.motion || "full"))}
+      ${row("Sound", "Clicks, coins and the bell.", seg("sound", [["on", "On"], ["off", "Off"]], s.settings.sound ? "on" : "off"))}
+      ${row("Narration speed", 'Nana in the lessons, and "Read it to me".', seg("rate", [["slow", "Slower"], ["normal", "Normal"]], R2.rate === "slow" ? "slow" : "normal"))}
+    </div>
+    ${s.parent.pin && !s.parent.gate ? `<div class="sect"><b>Grown-ups only</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Money, children and tester mode", "Behind the PIN. Unlock on the grown-up's page and come back.", '<button class="btn ghost sm" data-act="nav" data-arg="parents">Unlock</button>')}
+    </div>` : `<div class="sect"><b>Money</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Currency", "Changing it converts the town rather than resetting it.", `<select class="field sm" data-field="cur" data-live="1">${Object.keys(CURRENCIES).map((k) => `<option value="${k}" ${c.currency === k ? "selected" : ""}>${CURRENCIES[k].sign} ${CURRENCIES[k].name}</option>`).join("")}</select>`)}
+      ${row("Pay day", "The bell rings once a week, on this day.", `<select class="field sm" data-field="payday" data-live="1">${DAYS.map((d, i) => `<option value="${i}" ${(c.family.payWeekday == null ? 5 : c.family.payWeekday) === i ? "selected" : ""}>${d}</option>`).join("")}</select>`)}
+      ${row("Mode", c.band === "sprout" ? "Sprout: no debt, no market, nothing below zero." : "Builder: the whole town, including borrowing.", `<button class="btn ghost sm" data-act="band">${c.band === "sprout" ? "Sprout (8\u201310)" : "Builder (11+)"}</button>`)}
+    </div>
+    <div class="sect"><b>Children</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${s.kids.map((k, i) => row(esc(k.name), `Level ${k.learn.level} \xB7 ${k.band === "sprout" ? "Sprout" : "Builder"}`, i === s.active ? '<span class="pill gold">playing</span>' : `<button class="btn ghost sm" data-act="switchKid" data-arg="${i}">Switch</button>`)).join("")}
+      ${row("Another child", "Their own town, their own money.", '<button class="btn ghost sm" data-act="addKid">Add</button>')}
+    </div>
+    <div class="sect"><b>For testers</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Tester mode", s.settings.tester ? "On \u2014 every gate is open; the record is untouched. Tools are on the grown-up's page." : "Opens every chapter, world, building and game without changing what " + esc(c.name) + " has learned.", seg("tester", [["on", "On"], ["off", "Off"]], s.settings.tester ? "on" : "off"))}
+    </div>`}
+    <div class="sect"><b>Help</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Something not right?", "Note it here. It stays on this device until you copy it out.", '<button class="btn ghost sm" data-act="bug">Report</button>')}
+    </div>
+    ${R2.install ? `<div class="sect"><b>This device</b><i></i></div>
+    <div class="rows" style="margin:0 -22px">
+      ${row("Install Bizzington", "Its own icon, full screen, works offline.", '<button class="btn sm" data-act="install">Install</button>')}
+    </div>` : ""}
+    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico("family", "\u{1F46A}", 15)} Grown-up's page</button>
+      <button class="btn ghost sm" data-act="about">${ico("lesson", "\u{1F4D6}", 15)} About</button>
+      <button class="btn ghost sm" data-act="nav" data-arg="collection">${ico("quest", "\u{1F3C5}", 15)} Collection</button>
+      <span class="grow"></span>
+      <button class="btn sm" data-act="closeOv">Done</button>
+    </div>`;
+  }
+  var VERSION = "2026-09-04";
+  function aboutSheet() {
+    return `
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
+      <div class="small muted">Bizzing Finance \xB7 build ${VERSION}</div></div></div>
+    <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own \u2014 with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
+    <div class="sect"><b>How it was made</b><i></i></div>
+    <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
+    <p class="small muted" style="margin-top:8px">Every number is Bizzington's own arithmetic. There are no real interest rates, no real returns and no real companies in it, and no path from any screen to a payment form.</p>
+    <div class="sect"><b>Type</b><i></i></div>
+    <p class="small muted"><b>Fraunces</b> by Undercase Type, <b>Hanken Grotesk</b> by Hanken Design Co., and <b>Sono</b> by Tyler Finck \u2014 all under the SIL Open Font License, bundled so the app works with no network at all.</p>
+    <div class="sect"><b>The family</b><i></i></div>
+    <p class="small muted">Third of three: <b>Bizzing Bee</b> teaches spelling, <b>Bizzing India</b> teaches the India a child has not lived in, and this one teaches money. Same rules in all three: no ads, no tracking, nothing sold to a child.</p>
+    <div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`;
+  }
+  function todayCard(c) {
+    const deed2 = deedOfDay(), done = deedDoneToday(c);
+    const w = wordOfDay(), ask = askOfWeek(), tip = tipOfDay(c);
+    const sayBtn = (key) => canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="${key}" aria-label="Read it to me">${ico("sound", "\u{1F50A}", 15)}</button>` : "";
+    return `<div class="card pad0 today">
+    <div class="rows" style="margin:0">
+      <div class="qrow block${done ? " done" : ""}">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico(done ? "check" : "quest", done ? "\u2705" : "\u2B50", 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Do one</span>
+            <p style="font-size:14.5px;margin-top:2px">${esc(deed2.text)}</p>
+            <div class="small muted" style="margin-top:3px">${done ? "Done, and kept on your shelf." : "Out in the real world. Nothing to type \u2014 just say when it is done."}</div></span>
+          ${done ? '<span class="pill grow">\u2713</span>' : '<button class="btn sm" data-act="deed">I did it</button>'}
+        </div>
+      </div>
+      <div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico("lesson", "\u{1F4D6}", 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Carry one</span>
+            <p style="margin-top:2px"><b style="font-family:var(--display);font-size:20px">${esc(w.term)}</b> <span class="small muted">\xB7 ${esc(w.meaning)}</span></p>
+            <div class="small muted" style="margin-top:3px">${esc(w.eg)}</div></span>
+          ${sayBtn("word")}
+        </div>
+      </div>
+      <div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico("family", "\u{1F4AC}", 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Ask at home this week</span>
+            <p style="font-size:14.5px;margin-top:2px">\u201C${esc(ask)}\u201D</p>
+            <div class="small muted" style="margin-top:3px">About their own story, never about the family's money.</div></span>
+          ${sayBtn("ask")}
+        </div>
+      </div>
+      ${tip ? `<div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico("receipt", "\u{1F4A1}", 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Remember this one</span>
+            <p class="small" style="margin-top:2px">${esc(tip.text)}</p>
+            <div class="small muted" style="margin-top:3px">From <button class="small" style="font-weight:800;color:var(--action)" data-act="card" data-arg="${tip.card.id}">${esc(tip.title)}</button></div></span>
+        </div>
+      </div>` : ""}
+    </div>
+  </div>`;
+  }
+  function landing() {
+    const counts2 = [[ALL_CARDS.length, "lessons, each narrated"], [GAMES.length, "games, keyboard and touch"], [WORLDS.length, "worlds to walk"], [Object.keys(BADGES).length, "badges for decisions"]];
+    return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
+    <div style="text-align:center">${mark(64)}
+      <div class="eyebrow" style="margin-top:12px">Bizzing Finance</div>
+      <h1 style="font-size:clamp(30px,8vw,40px);line-height:1.05;margin-top:4px">Earn it, keep it, grow it \u2014 in a town of your own.</h1>
+      <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own \u2014 and a grown-up's page that reports what they learned, not how long they stayed.</p>
+    </div>
+    <button class="btn wide" style="font-size:16px;min-height:52px" data-act="obStart">Start free \u2192</button>
+    <div class="moneyline stats" style="justify-content:space-between">
+      ${counts2.map(([n, l]) => `<div><div class="v" style="font-size:24px">${n}</div><div class="k">${l}</div></div>`).join("")}
+    </div>
+    <div class="card pad0"><div class="rows" style="margin:0">
+      ${[
+      ["lock", "No real money, ever", "No card, no bank link, no cash-out. The simulator is closed, and that is the point."],
+      ["family", "Nothing leaves this device", "A first name and an age band. No email, no photo, no tracking, no ads."],
+      ["receipt", "Every number is Bizzington's own", "No real interest rates, no real returns, no real companies \u2014 and nothing is investment advice."]
+    ].map(([ic, t, sub]) => `<div class="qrow"><span class="iw">${ico(ic, "\u2713", 20)}</span><span class="grow"><b style="font-size:14.5px">${t}</b><div class="small muted">${sub}</div></span></div>`).join("")}
+    </div></div>
+    <p class="small muted" style="text-align:center">Third of the Bizzing family, after <b>Bizzing Bee</b> and <b>Bizzing India</b>. <button class="small" style="color:var(--action);font-weight:800" data-act="about">How it was made \u2192</button></p>
   </div>`;
   }
 
@@ -13542,7 +13957,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
           title="Your money \u2014 this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
         <span class="chip streak" title="Days in a row">${ico("streak", "", 15)} ${c.streak.days.length}</span>
         ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on \u2014 everything is open">TESTER</button>' : ""}
-        <button class="iconbtn" data-act="mode" aria-label="Light or dark">${ico(R.mode === "dark" ? "moon" : "sun", "", 19)}</button>
+        <button class="iconbtn" data-act="settings" aria-label="Settings">${ico("gear", "", 19)}</button>
         <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico("family", "", 19)}</button>
       </div>
       <nav class="nav" aria-label="Sections">
@@ -13555,6 +13970,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       ${bar.map((t) => `<button data-act="${t.k === "more" ? "more" : "nav"}" data-arg="${t.k}"
         aria-current="${s.ui.nav === t.k ? "page" : "false"}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join("")}
     </nav>
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzington is ready \xB7 Reload</button>' : ""}
     ${R.overlay ? overlay() : ""}`;
     if (R.game && R.game.mount) R.game.mount();
     mountLesson();
@@ -13589,6 +14005,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <div class="grow"><div class="eyebrow">${from ? esc(from.name) : "Sender unknown"}</div>
         <h3 style="font-size:19px">${esc(L.title)}</h3></div></div>
       <p style="font-size:15px;line-height:1.6;background:var(--tint);border-radius:var(--r-md);padding:13px 15px">${esc(L.body)}</p>
+      ${canSay() ? `<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="say" data-arg="letter:${L.id}">${ico("sound", "\u{1F50A}", 14)} Read it to me</button></div>` : ""}
       ${o.result ? `<div style="margin-top:12px;background:${o.result.good ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>
            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? "+" : "\u2212"}${money(Math.abs(o.result.money))}</span>` : ""}
@@ -13599,6 +14016,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
             ${L.choices.map((ch, i) => `<button class="opt" data-act="letterPick" data-arg="${i}">${esc(ch.label)}</button>`).join("")}
            </div>`}`);
     }
+    if (o.kind === "settings") return box(settingsSheet(R), true);
+    if (o.kind === "quiz") return box(quizView(o), true);
+    if (o.kind === "cast") return box(castCard(o.who), true);
+    if (o.kind === "bug") return box(bugSheet(), true);
+    if (o.kind === "about") return box(aboutSheet(), true);
     if (o.kind === "shelter") return box(shelterView(o));
     if (o.kind === "wardrobe") return box(wardrobeView(C3()));
     if (o.kind === "receipt") return box(`
@@ -13639,7 +14061,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       ${p.mortgageCleared ? '<div style="margin-top:10px;background:var(--grow-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px"><b>Mortgage cleared.</b> You own where you live outright. Rent would still be going out today.</div>' : ""}
       ${(p.independence || []).map((id) => `<div style="margin-top:10px;background:var(--treasure-tint);border-radius:var(--r-md);padding:11px 13px;font-size:14px">
         <b>${BADGES[id].em} ${esc(BADGES[id].name)}</b> \u2014 ${esc(BADGES[id].desc)}</div>`).join("")}
-      ${say("pip", p.split ? "Split before you could think about it. That is the point of a rule." : "Open the Jar Shed and set a rule \u2014 then this happens by itself.")}
+      ${say2("pip", p.split ? "Split before you could think about it. That is the point of a rule." : "Open the Jar Shed and set a rule \u2014 then this happens by itself.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market \u2192</button>`);
     }
     if (o.kind === "level") {
@@ -13672,7 +14094,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       </div>
       ${Object.keys(d.spoiled || {}).length ? `<div style="margin-top:11px;background:var(--spend-tint);border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">
         ${Object.keys(d.spoiled).map((k) => d.spoiled[k] + " " + STOCK.find((s) => s.id === k).name.toLowerCase()).join(", ")} melted overnight \u2014 stock you had already paid for.</div>` : ""}
-      ${say("nana", d.profit >= 0 ? "Revenue is the number people brag about. That one at the bottom is the one that decides whether you are open next year." : "A loss is information, not a verdict. Look at what the weather wanted and what you had on the counter.")}
+      ${say2("nana", d.profit >= 0 ? "Revenue is the number people brag about. That one at the bottom is the one that decides whether you are open next year." : "A loss is information, not a verdict. Look at what the weather wanted and what you had on the counter.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Close up \u2192</button>`);
     }
     if (o.kind === "moved") {
@@ -13689,7 +14111,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <div class="row"><span class="grow" style="font-weight:800">Left each week</span>
           <span class="big" style="font-size:21px;color:${left > 0 ? "var(--grow)" : "var(--spend)"}">${money(left)}</span></div>
       </div>
-      ${say("nana", left > 0 ? "Every room you add adds a bill behind it. That is not a warning \u2014 it is just the arithmetic, and now you have seen it." : "That is more going out than coming in. It is survivable for a while and it is not survivable forever. Worth knowing now.")}
+      ${say2("nana", left > 0 ? "Every room you add adds a bill behind it. That is not a warning \u2014 it is just the arithmetic, and now you have seen it." : "That is more going out than coming in. It is survivable for a while and it is not survivable forever. Worth knowing now.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Settle in \u2192</button>`);
     }
     if (o.kind === "randry") {
@@ -13702,7 +14124,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         border-radius:var(--r-md);padding:13px 15px;font-weight:650">
         You earned <b>${money(r.net)}</b> this week. <b>${money(r.receivables)}</b> of your sales
         has not been paid for yet, and the rent went out anyway.</div>
-      ${say("nana", "This is the one that closes more shops than a bad idea ever did. Profit is what you earned. Cash is what turned up. You can be right about the first and still be shut on Friday because of the second \u2014 so from now on, watch the till, not the takings.")}
+      ${say2("nana", "This is the one that closes more shops than a bad idea ever did. Profit is what you earned. Cash is what turned up. You can be right about the first and still be shut on Friday because of the second \u2014 so from now on, watch the till, not the takings.")}
       <div class="row" style="gap:8px;margin-top:14px">
         <button class="btn ghost grow" data-act="closeOv">I see it</button>
         <button class="btn grow" data-act="vBorrow" data-arg="500">Borrow ${money(500)}</button>
@@ -13716,7 +14138,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <h2 style="margin:4px 0 8px;font-size:24px">${money(d.cash)} in the till</h2></div>
       <div style="margin-top:12px;background:var(--spend-tint);color:var(--spend);border-radius:var(--r-md);padding:12px 14px;font-weight:700">
         And ${money(d.costPerYear)} a year of profit is theirs now. For good.</div>
-      ${say("nana", "That money did not come from nowhere. You did not borrow it, so there is nothing to repay \u2014 you sold a piece of every rupee this shop will ever make. Sometimes that is exactly right. Just never let anyone tell you it was free.")}
+      ${say2("nana", "That money did not come from nowhere. You did not borrow it, so there is nothing to repay \u2014 you sold a piece of every rupee this shop will ever make. Sometimes that is exactly right. Just never let anyone tell you it was free.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">I understand</button>`);
     }
     if (o.kind === "mended") {
@@ -13731,7 +14153,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <div style="margin-top:10px;text-align:center"><div style="font-size:13px;font-weight:800;letter-spacing:.02em;
         display:inline-block;background:#C9A227;color:#3A2C0A;border-radius:7px;padding:7px 15px">${esc(C3().name || "You")}</div>
         <p class="small muted" style="margin-top:6px">Your name goes on it, out in the street, for good.</p></div>
-      ${say("pip", "That is yours now, and it stays. Every day from here it pays you back a little \u2014 which is the whole difference between spending on a thing and spending on a thing that <b>does</b> something.")}
+      ${say2("pip", "That is yours now, and it stays. Every day from here it pays you back a little \u2014 which is the whole difference between spending on a thing and spending on a thing that <b>does</b> something.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Go and look \u2192</button>`);
     }
     if (o.kind === "world") {
@@ -13743,7 +14165,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
         <p class="muted">${esc(w.blurb)}</p></div>
       <div style="margin-top:14px;background:var(--action-tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px">
         <b>Opens here:</b> ${esc(w.opens)}</div>
-      ${say("pip", "New street, new work going, new things to learn. You got here by finishing the last lot \u2014 that is the only way anybody gets anywhere in this town.")}
+      ${say2("pip", "New street, new work going, new things to learn. You got here by finishing the last lot \u2014 that is the only way anybody gets anywhere in this town.")}
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Look around \u2192</button>`);
     }
     if (o.kind === "between") {
@@ -13751,7 +14173,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       return box(`
       <div class="eyebrow">While you're here</div>
       <h3 style="font-size:19px;margin:4px 0 8px">${esc(card.title)}</h3>
-      ${say(card.who, "One card. Three minutes. Then back to it.")}
+      ${say2(card.who, "One card. Three minutes. Then back to it.")}
       <div class="row" style="gap:8px;margin-top:14px">
         <button class="btn grow" data-act="betweenGo" data-arg="${card.id}">Read it</button>
         <button class="btn ghost" data-act="closeOv">Not now</button>
@@ -13763,6 +14185,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
       <div class="rows" style="margin:0 -22px -10px">
         ${rest.map((t) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="${t.k}">
           <span class="iw">${ico(t.g, t.g, 20)}</span><b style="font-size:15px">${t.n}</b></button>`).join("")}
+        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="settings"><span class="iw">${ico("gear", "\u2699", 20)}</span><b style="font-size:15px">Settings</b></button>
+        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="about"><span class="iw">${ico("lesson", "\u{1F4D6}", 20)}</span><b style="font-size:15px">About Bizzington</b></button>
       </div>`);
     }
     return "";
@@ -13933,23 +14357,86 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     }
     render();
   });
-  on("mode", () => {
-    R.mode = R.mode === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-mode", R.mode);
-    try {
-      localStorage.setItem("bzf_mode", R.mode);
-    } catch (e) {
+  function applyDevice() {
+    const h = document.documentElement;
+    if (R.mode) h.setAttribute("data-mode", R.mode);
+    else h.removeAttribute("data-mode");
+    if (R.text === "large") h.setAttribute("data-text", "large");
+    else h.removeAttribute("data-text");
+    if (R.motion === "reduced") h.setAttribute("data-motion", "reduced");
+    else h.removeAttribute("data-motion");
+  }
+  on("mode", (m) => {
+    R.mode = m === "system" ? null : m || (R.mode === "dark" ? "light" : "dark");
+    Store.saveDevice("mode", R.mode);
+    applyDevice();
+    render();
+  });
+  on("text", (v) => {
+    R.text = v === "large" ? "large" : null;
+    Store.saveDevice("text", R.text);
+    applyDevice();
+    render();
+  });
+  on("motion", (v) => {
+    R.motion = v === "reduced" ? "reduced" : null;
+    Store.saveDevice("motion", R.motion);
+    applyDevice();
+    render();
+  });
+  on("settings", () => {
+    R.overlay = { kind: "settings" };
+    sfx.click();
+    render();
+  });
+  on("rate", (v) => {
+    R.rate = v === "slow" ? "slow" : null;
+    Store.saveDevice("rate", R.rate);
+    applyRate();
+    render();
+  });
+  function applyRate() {
+    const r = R.rate === "slow" ? 0.82 : 1;
+    setRate(r);
+    setSayRate(r);
+  }
+  on("say", (key) => {
+    const c = C3();
+    let text = "";
+    if (key === "word") {
+      const w = wordOfDay();
+      text = `${w.term}. ${w.meaning} ${w.eg}`;
+    } else if (key === "ask") text = askOfWeek();
+    else if (key.startsWith("card:")) {
+      const k = ALL_CARDS.find((x) => x.id === key.slice(5));
+      if (k) text = `${k.title}. ${String(k.teach).replace(/<[^>]+>/g, "")} For instance: ${k.eg}`;
+    } else if (key.startsWith("gloss:")) {
+      const g = GLOSSARY.find((x) => x[0] === key.slice(6));
+      if (g) text = `${g[0]}. ${g[1]} ${g[2]}`;
+    } else if (key.startsWith("letter:") && R.overlay && R.overlay.letter) {
+      const L = R.overlay.letter;
+      text = `${L.title}. ${L.body}`;
+    }
+    if (!say(text)) toast("This device has no reading voice");
+  });
+  on("deed", () => {
+    const c = C3();
+    if (didDeed(c)) {
+      save(R.s);
+      sfx.good();
+      confetti(20);
+      toast("Kept. That is one more thing you actually did.");
     }
     render();
   });
-  on("sound", () => {
-    R.s.settings.sound = !R.s.settings.sound;
+  on("sound", (v) => {
+    R.s.settings.sound = v ? v === "on" : !R.s.settings.sound;
     setSound(R.s.settings.sound);
     sfx.click();
     render();
   });
-  on("tester", () => {
-    R.s.settings.tester = !R.s.settings.tester;
+  on("tester", (v) => {
+    R.s.settings.tester = v ? v === "on" : !R.s.settings.tester;
     setTester(R.s.settings.tester);
     save(R.s);
     toast(R.s.settings.tester ? "Tester mode on \u2014 everything is open" : "Tester mode off");
@@ -14053,8 +14540,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   });
   function cardById(id) {
     if (!id) return null;
-    const chapter = ALL_CARDS.find((x) => x.id === id);
-    if (chapter) return chapter;
+    const chapter2 = ALL_CARDS.find((x) => x.id === id);
+    if (chapter2) return chapter2;
     const extra = NEW_CARD_LIST.find((x) => x.id === id);
     if (extra) return extra;
     const m = /^(.+)#(\d+)$/.exec(id);
@@ -14099,7 +14586,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
     const first = !c.learn.done[id];
     const bt = c.learn.beat;
     if (bt && bt.cardId === id && !bt.answered) {
-      answer(c, { shape: bt.shape, objective: objective(bt.obj), card }, right);
+      answer2(c, { shape: bt.shape, objective: objective(bt.obj), card }, right);
       bt.answered = true;
       if (bt.shape === "retrieve") questTick(c, "lesson", 1);
     }
@@ -14763,8 +15250,8 @@ So it costs ${money(offer.cost)}.`);
   on("gquit", () => {
     quitGame();
     const c = C3();
-    const next = ALL_CARDS.find((x) => !c.learn.done[x.id] && C3().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
-    if (next && Math.random() < 0.7) R.overlay = { kind: "between", card: next };
+    const next2 = ALL_CARDS.find((x) => !c.learn.done[x.id] && C3().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
+    if (next2 && Math.random() < 0.7) R.overlay = { kind: "between", card: next2 };
     render();
   });
   GAME_ACTS.forEach((a) => {
@@ -14819,9 +15306,12 @@ So it costs ${money(offer.cost)}.`);
       R.game.key(e);
       return;
     }
-    if (e.key === "Escape" && R.overlay) {
-      R.overlay = null;
-      render();
+    if (e.key === "Escape") {
+      if (R.overlay) {
+        R.overlay = null;
+        render();
+      } else if (C3() && C3().learn.openCard) fire("closeCard");
+      else if (R.shelf) fire("shelf", "");
     }
   });
   window.addEventListener("hashchange", () => {
@@ -14837,12 +15327,12 @@ So it costs ${money(offer.cost)}.`);
       render();
     }
   });
-  try {
-    R.mode = localStorage.getItem("bzf_mode") || null;
-  } catch (e) {
-    R.mode = null;
-  }
-  if (R.mode) document.documentElement.setAttribute("data-mode", R.mode);
+  R.mode = Store.loadDevice("mode", null);
+  R.text = Store.loadDevice("text", null);
+  R.motion = Store.loadDevice("motion", null);
+  R.rate = Store.loadDevice("rate", null);
+  applyDevice();
+  applyRate();
   R.s = load();
   if (R.s && R.s.kids.length) {
     setSound(R.s.settings.sound);
@@ -14853,10 +15343,63 @@ So it costs ${money(offer.cost)}.`);
   render();
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !window.BZF_SINGLE) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        const watch = (w) => {
+          if (!w) return;
+          w.addEventListener("statechange", () => {
+            if (w.state === "installed" && navigator.serviceWorker.controller) {
+              R.update = w;
+              render();
+            }
+          });
+        };
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          R.update = reg.waiting;
+          render();
+        }
+        reg.addEventListener("updatefound", () => watch(reg.installing));
+      }).catch(() => {
+      });
+      let swapped = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (swapped) return;
+        swapped = true;
+        location.reload();
       });
     });
   }
+  on("update", () => {
+    if (R.update) {
+      R.update.postMessage({ type: "SKIP_WAITING" });
+      R.update = null;
+      toast("Swapping to the new build\u2026");
+      render();
+    }
+  });
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    R.install = e;
+    if (R.overlay && R.overlay.kind === "settings") render();
+  });
+  on("install", async () => {
+    const e = R.install;
+    if (!e) return;
+    R.install = null;
+    try {
+      await e.prompt();
+    } catch (x) {
+    }
+    render();
+  });
+  on("about", () => {
+    R.overlay = { kind: "about" };
+    sfx.click();
+    render();
+  });
+  window.addEventListener("appinstalled", () => {
+    R.install = null;
+    toast("Installed");
+  });
   window.BZF = {
     R,
     sim: sim_exports,
@@ -14872,6 +15415,145 @@ So it costs ${money(offer.cost)}.`);
     fire,
     key: (id, qi) => shuffledDrill(ALL_CARDS.find((c) => c.id === id), qi || 0).answer
   };
+  function quizView(o) {
+    const ch = chapter(o.ch), c = C3();
+    const head = `<div class="eyebrow">${o.mode === "testout" ? "Test out" : "Checkpoint"} \xB7 ${esc(ch.title)}</div>`;
+    if (o.done) {
+      const r = finish(c, o) || { pass: o.right >= passMark(o.items.length), pct: Math.round(o.right / o.items.length * 100) };
+      return `${head}<h2 style="margin:4px 0 8px">${o.right} of ${o.items.length}</h2>
+      <p class="small">${o.mode === "testout" ? r.pass ? `That is enough. <b>${esc(ch.title)}</b> is open \u2014 its cards are still there to read, and none of them are marked done, because you have not read them.` : `Not this time, and it cost nothing. Read one of its cards when the level arrives, or try again tomorrow \u2014 the questions will be different.` : r.pass ? `Checkpoint passed. The whole chapter, mixed up, and it held.` : `Not yet. The rail shows where to look \u2014 the cards you got wrong are worth a second read.`}</p>
+      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">${r.pass && o.mode === "testout" ? "Walk in \u2192" : "Back to the map"}</button></div>`;
+    }
+    const { dq } = current(o);
+    const p = o.pick;
+    return `${head}
+    <div class="row" style="margin-top:4px"><span class="small muted grow">Question ${o.i + 1} of ${o.items.length}</span><span class="small muted tabnum">${o.right} right</span></div>
+    <h3 style="font-size:18px;margin:8px 0 10px">${esc(dq.q)}</h3>
+    <div class="stack" style="gap:8px">
+      ${dq.opts.map((opt, i) => {
+      let k = "";
+      if (p) k = i === dq.answer ? " ok" : i === p.i ? " no" : "";
+      return `<button class="opt${k}" data-act="quizPick" data-arg="${i}" ${p ? "disabled" : ""}><span class="k">${"ABCD"[i]}</span>${esc(opt)}</button>`;
+    }).join("")}
+    </div>
+    ${p ? `<div style="background:${p.ok ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:12px 14px;font-size:14px;margin-top:10px"><b>${p.ok ? "That's it." : "Not quite \u2014"}</b> ${esc(p.why)}</div>
+      <button class="btn wide" style="margin-top:12px" data-act="quizNext">${o.i + 1 >= o.items.length ? "See how it went \u2192" : "Next question \u2192"}</button>` : ""}`;
+  }
+  on("testout", (chId) => {
+    const o = start(chId, "testout");
+    if (!o || !o.items.length) return;
+    R.overlay = o;
+    sfx.click();
+    render();
+  });
+  on("checkpoint", (chId) => {
+    const o = start(chId, "checkpoint");
+    if (!o || !o.items.length) return;
+    R.overlay = o;
+    sfx.click();
+    render();
+  });
+  on("quizPick", (i) => {
+    const o = R.overlay;
+    if (!o || o.kind !== "quiz") return;
+    answer(o, i);
+    if (o.pick.ok) sfx.good();
+    else sfx.bad();
+    render();
+  });
+  on("quizNext", () => {
+    const o = R.overlay;
+    if (!o || o.kind !== "quiz") return;
+    next(o);
+    if (o.done) {
+      const r = finish(C3(), o);
+      save(R.s);
+      if (r && r.pass) {
+        sfx.level();
+        confetti(40);
+      }
+    }
+    render();
+  });
+  var LORE = {
+    pip: { line: 'Your neighbour on Market Row, and the first to say "there is work going".', quote: "Wages from in here land in the same wallet as everything else. There is no second, magic money.", why: "Pip is the voice of the street: jobs, quests, the postbox, and the plain sentence when a number needs one." },
+    nana: { line: "Ran the shop at the end of the road for sixty years, and is shutting it up.", quote: "Split it the moment it lands. What sits in one pile gets spent as one pile.", why: "Nana Bizz teaches: every lesson is hers, and so are the jars, the Bank, and the shop she hands over." },
+    mags: { line: "Bizzington's best salesperson, and honest about it.", quote: "Some of this earns its keep and some of it is just lovely \u2014 and I have written which is which.", why: 'Mags runs the General Store and sends most of the letters. When something is "today only", it is usually her.' },
+    bo: { line: "Sure the market is going up. Always.", quote: "Up on the week! I said it would be. I say that every week.", why: "Bo and Bea argue on the Exchange steps so you can hear both sides and do nothing, which is usually right." },
+    bea: { line: "Sure the market is going down. Always.", quote: "Down on the week. Sell? No. I only say that so you notice the feeling.", why: "Bea is the other half of the argument. Neither of them is a forecast; they are the two voices in your own head." }
+  };
+  function castCard(who) {
+    const p = CAST[who] || CAST.pip, l = LORE[who] || LORE.pip;
+    return `<div style="text-align:center">${face(who, 120)}</div>
+    <div class="eyebrow" style="text-align:center;margin-top:10px">Someone you've met</div>
+    <h2 style="text-align:center;margin:2px 0 2px">${esc(p.name)}</h2>
+    <p class="small muted" style="text-align:center">${esc(p.role)}</p>
+    <p class="small" style="margin-top:12px">${esc(l.line)}</p>
+    <div class="aside" style="margin-top:10px"><span class="eyebrow">In their words</span>\u201C${esc(l.quote)}\u201D <span class="small muted">\u2014 ${esc(p.name)}</span></div>
+    <p class="small muted" style="margin-top:10px">${esc(l.why)}</p>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">Back</button></div>`;
+  }
+  on("castCard", (who) => {
+    R.overlay = { kind: "cast", who };
+    sfx.click();
+    render();
+  });
+  on("obStart", () => {
+    draft.go = true;
+    render();
+    window.scrollTo(0, 0);
+  });
+  var BUG_CATS = ["Something broke", "Looks wrong", "A number or a word", "An idea"];
+  function bugSheet() {
+    const list = Store.loadDevice("bugs", []);
+    const cat = R.bugCat || BUG_CATS[0];
+    return `<div class="eyebrow">Something not right?</div><h2 style="margin:4px 0 6px">Note it here</h2>
+    <p class="small muted">Saved on this device only. Copy them out to send them on \u2014 nothing is sent by the app.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px">${BUG_CATS.map((k) => `<button class="wchip${cat === k ? " hot" : ""}" data-act="bugCat" data-arg="${k}">${k}</button>`).join("")}</div>
+    <textarea class="field" data-field="bugtext" rows="3" placeholder="What happened, and where?" style="width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-size:14px">${esc(R.fields.bugtext || "")}</textarea>
+    <div class="row" style="gap:8px;margin-top:10px"><span class="grow"></span><button class="btn sm" data-act="bugSave">Save note</button></div>
+    ${list.length ? `<div class="sect"><b>${list.length} saved</b><i></i></div>
+      <div class="rows" style="margin:0 -22px">${list.slice(-8).reverse().map((b) => `<div class="qrow"><span class="grow"><b style="font-size:13.5px">${esc(b.cat)}</b> <span class="small muted">\xB7 ${esc(b.where)} \xB7 ${new Date(b.t).toLocaleDateString()}</span><div class="small">${esc(b.text)}</div></span></div>`).join("")}</div>
+      <div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost sm" data-act="bugCopy">Copy all</button><button class="btn ghost sm" data-act="bugClear">Clear</button><span class="grow"></span><button class="btn ghost sm" data-act="closeOv">Done</button></div>` : `<div class="row" style="margin-top:12px"><span class="grow"></span><button class="btn ghost sm" data-act="closeOv">Done</button></div>`}`;
+  }
+  on("bug", () => {
+    R.overlay = { kind: "bug" };
+    sfx.click();
+    render();
+  });
+  on("bugCat", (k) => {
+    R.bugCat = k;
+    render();
+  });
+  on("bugSave", () => {
+    const text = (R.fields.bugtext || "").trim();
+    if (!text) {
+      toast("Write a line first");
+      return;
+    }
+    const list = Store.loadDevice("bugs", []);
+    list.push({ t: Date.now(), cat: R.bugCat || BUG_CATS[0], text, where: location.hash || "#/", build: VERSION, size: innerWidth + "\xD7" + innerHeight });
+    Store.saveDevice("bugs", list.slice(-60));
+    R.fields.bugtext = "";
+    toast("Saved on this device");
+    sfx.good();
+    render();
+  });
+  on("bugCopy", async () => {
+    const list = Store.loadDevice("bugs", []);
+    const txt = list.map((b) => `[${new Date(b.t).toISOString()}] ${b.cat} \xB7 ${b.where} \xB7 build ${b.build} \xB7 ${b.size}
+${b.text}`).join("\n\n");
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast("Copied");
+    } catch (e) {
+      toast("Could not copy on this device");
+    }
+  });
+  on("bugClear", () => {
+    Store.saveDevice("bugs", []);
+    render();
+  });
 })();
 
 </script>
