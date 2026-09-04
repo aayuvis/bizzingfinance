@@ -9,6 +9,8 @@ import { BLD } from './buildings-gen.js';
 import { ART } from './art-gen.js';
 import { hero } from './hero.js';
 import { viewAtlas, viewAct } from './atlas.js';
+import * as daily from './daily.js';
+import { canSay } from './ui.js';
 import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';
 import { companionCard, companionFigure } from './companionview.js';
@@ -277,6 +279,8 @@ export function viewHome() {
     ${greeting(c)}
 
     ${strip}
+
+    ${todayCard(c)}
 
     ${journeys(c)}
 
@@ -591,6 +595,7 @@ function viewCard(card) {
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
       <div class="aside"><span class="eyebrow">For instance</span>${esc(card.eg)}</div>
+      ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico('sound', '🔊', 15)} Read it to me</button></div>` : ''}
     </div>
     ${(() => {
       /* One question at a time, permuted independently, the verdict at the
@@ -633,7 +638,7 @@ function viewGlossary() {
     ${rows.length === 0 ? '<div class="card"><p class="muted">Nothing by that name yet.</p></div>' : ''}
     <div class="card pad0">
       ${rows.map((g, i) => `<div style="padding:13px 16px;${i ? 'border-top:1px solid var(--line-soft)' : ''}">
-        <b style="font-size:15px">${esc(g[0])}</b>
+        <div class="row"><b style="font-size:15px;flex:1">${esc(g[0])}</b>${canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="gloss:${esc(g[0])}" aria-label="Read it to me">${ico('sound', '🔊', 14)}</button>` : ''}</div>
         <p style="font-size:14px;margin-top:2px">${esc(g[1])}</p>
         <p class="small muted" style="margin-top:3px">${esc(g[2])}</p></div>`).join('')}
     </div>
@@ -1365,6 +1370,7 @@ export function viewParents() {
 
     <div class="card">
       <div class="eyebrow">Talk together</div>
+      <p class="small" style="margin-top:6px">💬 <b>This week's question, from ${esc(c.name)} to you:</b> “${esc(daily.askOfWeek())}” — it is on their Home too. About your own story, never about the family's money.</p>
       <div class="stack" style="gap:7px;margin-top:8px">
         ${w.prompts.map((p) => `<p class="small">💬 ${esc(p)}</p>`).join('')}
       </div>
@@ -1508,6 +1514,14 @@ export function viewCollection() {
     ${hero({ eyebrow: 'Kept, never given', title: 'The Collection', figure: co.has(c) ? companionFigure(c, 110) : '',
       line: 'A badge marks a decision. A keepsake is a thing you did. Nothing on these shelves arrives for showing up.' })}
     <div class="card">
+      <div class="eyebrow">Things you did</div>
+      ${(c.deeds || []).length ? `
+        <div class="beads" aria-hidden="true">${(c.deeds || []).slice(-30).map(() => '<i></i>').join('')}</div>
+        <p class="small muted" style="margin-top:6px">${daily.deedCount(c)} ${daily.deedCount(c) === 1 ? 'thing' : 'things'} done out in the real world. Never full, never checked, never goes down.</p>
+        <div class="rows" style="margin-top:6px">${(c.deeds || []).slice(-5).reverse().map((d) => `<div class="qrow"><span class="iw">${ico('check', '✅', 18)}</span><span class="grow small">${esc(d.text)}</span><span class="small muted">${shortDate(d.t)}</span></div>`).join('')}</div>`
+        : `<p class="small muted" style="margin-top:4px">A bead here is a money thing you did in the real world — the "Do one" on Home. Not for reading; for doing.</p>`}
+    </div>
+    <div class="card">
       <div class="eyebrow">Keepsakes</div>
       ${(c.keepsakes || []).length
         ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => receiptSlip(k)).join('')}</div>`
@@ -1570,6 +1584,7 @@ export function settingsSheet(R) {
       ${row('Text size', 'Larger type on every screen.', seg('text', [['normal', 'Normal'], ['large', 'Large']], R.text || 'normal'))}
       ${row('Motion', 'Reduced turns off the confetti and the bobbing.', seg('motion', [['full', 'Full'], ['reduced', 'Reduced']], R.motion || 'full'))}
       ${row('Sound', 'Clicks, coins and the bell.', seg('sound', [['on', 'On'], ['off', 'Off']], s.settings.sound ? 'on' : 'off'))}
+      ${row('Narration speed', 'Nana in the lessons, and "Read it to me".', seg('rate', [['slow', 'Slower'], ['normal', 'Normal']], R.rate === 'slow' ? 'slow' : 'normal'))}
     </div>
     <div class="sect"><b>Money</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
@@ -1618,4 +1633,53 @@ export function aboutSheet() {
     <div class="sect"><b>The family</b><i></i></div>
     <p class="small muted">Third of three: <b>Bizzing Bee</b> teaches spelling, <b>Bizzing India</b> teaches the India a child has not lived in, and this one teaches money. Same rules in all three: no ads, no tracking, nothing sold to a child.</p>
     <div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`;
+}
+
+
+/* ── Today: do one, carry one, ask at home, a tip (daily.js) ─────────────
+   India's Home carries a deed, a word and a question for the family; this
+   is the same three, in money. One card, three hairline rows, no boxes. */
+function todayCard(c) {
+  const deed = daily.deedOfDay(), done = daily.deedDoneToday(c);
+  const w = daily.wordOfDay(), ask = daily.askOfWeek(), tip = daily.tipOfDay(c);
+  const sayBtn = (key) => canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="${key}" aria-label="Read it to me">${ico('sound', '🔊', 15)}</button>` : '';
+  return `<div class="card pad0 today">
+    <div class="rows" style="margin:0">
+      <div class="qrow block${done ? ' done' : ''}">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico(done ? 'check' : 'quest', done ? '✅' : '⭐', 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Do one</span>
+            <p style="font-size:14.5px;margin-top:2px">${esc(deed.text)}</p>
+            <div class="small muted" style="margin-top:3px">${done ? 'Done, and kept on your shelf.' : 'Out in the real world. Nothing to type — just say when it is done.'}</div></span>
+          ${done ? '<span class="pill grow">✓</span>' : '<button class="btn sm" data-act="deed">I did it</button>'}
+        </div>
+      </div>
+      <div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico('lesson', '📖', 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Carry one</span>
+            <p style="margin-top:2px"><b style="font-family:var(--display);font-size:20px">${esc(w.term)}</b> <span class="small muted">· ${esc(w.meaning)}</span></p>
+            <div class="small muted" style="margin-top:3px">${esc(w.eg)}</div></span>
+          ${sayBtn('word')}
+        </div>
+      </div>
+      <div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico('family', '💬', 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Ask at home this week</span>
+            <p style="font-size:14.5px;margin-top:2px">“${esc(ask)}”</p>
+            <div class="small muted" style="margin-top:3px">About their own story, never about the family's money.</div></span>
+          ${sayBtn('ask')}
+        </div>
+      </div>
+      ${tip ? `<div class="qrow block">
+        <div class="row" style="gap:11px;align-items:flex-start">
+          <span class="iw">${ico('receipt', '💡', 20)}</span>
+          <span class="grow" style="min-width:0"><span class="eyebrow">Remember this one</span>
+            <p class="small" style="margin-top:2px">${esc(tip.text)}</p>
+            <div class="small muted" style="margin-top:3px">From <button class="small" style="font-weight:800;color:var(--action)" data-act="card" data-arg="${tip.card.id}">${esc(tip.title)}</button></div></span>
+        </div>
+      </div>` : ''}
+    </div>
+  </div>`;
 }

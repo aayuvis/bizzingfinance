@@ -46,6 +46,8 @@ const clipURL = (key) => 'voice/lessons/' + key + '.mp3';
 import { ico } from './art.js';
 import { esc } from './ui.js';
 
+let RATE = 1;
+export function setRate(r) { RATE = r || 1; if (P && P.audio) { try { P.audio.playbackRate = RATE; } catch (e) {} } }
 export const ITEM_ICON = { roti: 'roti', roof: 'home', medicine: 'medicine',
   cake: 'cake', game: 'arcade', chain: 'chain', umbrella: 'parasol',
   coin: 'coin', coin2: 'coin', wallet: 'wallet', jars: 'jars', bank: 'bank',
@@ -168,6 +170,7 @@ function playBeat() {
     return;
   }
   P.audio = new Audio(clipURL(b.key));
+  try { P.audio.playbackRate = RATE; P.audio.preservesPitch = true; P.audio.mozPreservesPitch = true; } catch (e) {}
   P.audio.onended = () => advance();
   /* a clip that never arrives must not strand a child on beat four: the
      measured duration is a hard backstop, cancelled the moment audio ends */

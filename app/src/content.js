@@ -419,7 +419,7 @@ export function chapterDone(c, id) {
 let TESTER = false;
 export function setTester(on) { TESTER = !!on; }
 export function tester() { return TESTER; }
-export function chapterLocked(c, ch) { return !TESTER && c.learn.level < ch.lv; }
+export function chapterLocked(c, ch) { return !TESTER && c.learn.level < ch.lv && !((c.learn.testedOut || {})[ch.id]); }
 export function levelAtLeast(c, lv) { return TESTER || c.learn.level >= lv; }
 export function gameOpen(c, g) { return TESTER || !g.needs || chapterDone(c, g.needs); }
 
@@ -926,6 +926,10 @@ export const BADGES = {
   'steady-hand':       { em: '🪨', name: 'Steady hand',       desc: 'Did nothing on a red day. Hardest move there is.' },
   'adopted':           { em: '🐾', name: 'Took someone home',  desc: 'A one-off cost, and a weekly one for keeps.' },
   'first-receipt':     { em: '🧾', name: 'The first receipt',  desc: 'Bought with shifts you worked. Kept for good.' },
+  'did-one':           { em: '✅', name: 'Did one',            desc: 'A money thing done in the real world, not the town.' },
+  'ten-deeds':         { em: '📿', name: 'Ten deeds',          desc: 'Ten real-world money things, done and kept.' },
+  'tested-out':        { em: '🎓', name: 'Tested out',         desc: 'Already knew a chapter, and proved it in six questions.' },
+  'checkpoint':        { em: '🚩', name: 'Checkpoint',         desc: 'A whole chapter, mixed up, passed.' },
   'dressed-up':        { em: '🎀', name: 'Dressed up',         desc: 'Bought a want, on purpose, with a full bowl already paid for.' },
   'well-fed':          { em: '🥣', name: 'Ten full bowls',     desc: 'Ten pay days running, the food bill was met.' },
   'all-grown':         { em: '🌟', name: 'All grown',          desc: 'Raised from tiny to grown. Steady feeding did that.' },

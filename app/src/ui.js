@@ -122,3 +122,29 @@ export function sparkline(vals, w, h, color) {
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
   'nine', 'ten', 'eleven', 'twelve'];
 export function nWord(n) { return WORDS[n] !== undefined ? WORDS[n] : String(n); }
+
+
+/* ── read to me ───────────────────────────────────────────────────────────
+   India reads everything aloud and falls back to the device's own voice
+   when there is no clip; here the cards, the letters and the glossary have
+   no recorded clip, so the device voice IS the reader. An Indian English
+   voice first, then any English. Rate follows the narration-speed setting. */
+let sayRate = 1;
+export function setSayRate(r) { sayRate = r || 1; }
+export function canSay() { return typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; }
+function pickVoice() {
+  const vs = speechSynthesis.getVoices() || [];
+  return vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang)) || null;
+}
+export function say(text) {
+  if (!canSay() || !text) return false;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
+    const v = pickVoice(); if (v) u.voice = v;
+    u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
+    speechSynthesis.speak(u);
+    return true;
+  } catch (e) { return false; }
+}
+export function hush() { try { if (canSay()) speechSynthesis.cancel(); } catch (e) {} }

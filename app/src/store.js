@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 7;
+export const SCHEMA = 8;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -48,6 +48,7 @@ function migrate(blob) {
     else if (blob.v === 4) blob = v4_to_v5(blob);
     else if (blob.v === 5) blob = v5_to_v6(blob);
     else if (blob.v === 6) blob = v6_to_v7(blob);
+    else if (blob.v === 7) blob = v7_to_v8(blob);
     else break;
   }
   return blob;
@@ -132,5 +133,16 @@ function v6_to_v7(old) {
     if (k.overnight === undefined) k.overnight = null;
   });
   old.v = 7;
+  return old;
+}
+
+/* v8: deeds (daily.js), test-outs and checkpoints (atlas.js). */
+function v7_to_v8(old) {
+  old.kids.forEach((k) => {
+    if (!k.deeds) k.deeds = [];
+    if (k.learn && !k.learn.testedOut) k.learn.testedOut = {};
+    if (k.learn && !k.learn.checkpoints) k.learn.checkpoints = {};
+  });
+  old.v = 8;
   return old;
 }

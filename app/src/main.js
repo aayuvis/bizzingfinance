@@ -1,16 +1,18 @@
 /* main.js — boot, shell, routing, and every action in one table.
    state -> render() -> string -> innerHTML; clicks dispatch by [data-act]. */
 
-import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound } from './ui.js';
+import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound, say as speak, setSayRate, canSay } from './ui.js';
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST, ico, mark } from './art.js';
 import { mountLesson } from './lessonplayer.js';
 import * as co from './companion.js';
 import { companionFigure, shelterView, wardrobeView } from './companionview.js';
 import { receiptSlip } from './keepsakes.js';
+import * as daily from './daily.js';
+import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester, GLOSSARY } from './content.js';
 import * as sim from './sim.js';
 import { Store } from './store.js';
 import * as ledger from './ledger.js';
@@ -154,6 +156,7 @@ function overlay() {
         <div class="grow"><div class="eyebrow">${from ? esc(from.name) : 'Sender unknown'}</div>
         <h3 style="font-size:19px">${esc(L.title)}</h3></div></div>
       <p style="font-size:15px;line-height:1.6;background:var(--tint);border-radius:var(--r-md);padding:13px 15px">${esc(L.body)}</p>
+      ${canSay() ? `<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="say" data-arg="letter:${L.id}">${ico('sound', '🔊', 14)} Read it to me</button></div>` : ''}
       ${o.result
         ? `<div style="margin-top:12px;background:${o.result.good ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>
            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
@@ -451,6 +454,19 @@ on('mode', (m) => {
 on('text', (v) => { R.text = v === 'large' ? 'large' : null; Store.saveDevice('text', R.text); applyDevice(); render(); });
 on('motion', (v) => { R.motion = v === 'reduced' ? 'reduced' : null; Store.saveDevice('motion', R.motion); applyDevice(); render(); });
 on('settings', () => { R.overlay = { kind: 'settings' }; sfx.click(); render(); });
+on('rate', (v) => { R.rate = v === 'slow' ? 'slow' : null; Store.saveDevice('rate', R.rate); applyRate(); render(); });
+function applyRate() { const r = R.rate === 'slow' ? 0.82 : 1; setRate(r); setSayRate(r); }
+/* read it to me: the device's own voice, since these have no recorded clip */
+on('say', (key) => {
+  const c = C(); let text = '';
+  if (key === 'word') { const w = daily.wordOfDay(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
+  else if (key === 'ask') text = daily.askOfWeek();
+  else if (key.startsWith('card:')) { const k = ALL_CARDS.find((x) => x.id === key.slice(5)); if (k) text = `${k.title}. ${String(k.teach).replace(/<[^>]+>/g, '')} For instance: ${k.eg}`; }
+  else if (key.startsWith('gloss:')) { const g = GLOSSARY.find((x) => x[0] === key.slice(6)); if (g) text = `${g[0]}. ${g[1]} ${g[2]}`; }
+  else if (key.startsWith('letter:') && R.overlay && R.overlay.letter) { const L = R.overlay.letter; text = `${L.title}. ${L.body}`; }
+  if (!speak(text)) toast('This device has no reading voice');
+});
+on('deed', () => { const c = C(); if (daily.didDeed(c)) { sim.save(R.s); sfx.good(); confetti(20); toast('Kept. That is one more thing you actually did.'); } render(); });
 on('sound', (v) => { R.s.settings.sound = v ? v === 'on' : !R.s.settings.sound; setSound(R.s.settings.sound); sfx.click(); render(); });
 /* tester mode: every gate opens; the child's record is untouched (content.js) */
 on('tester', (v) => {
@@ -993,7 +1009,11 @@ document.addEventListener('keydown', (e) => {
     R.game.key(e);
     return;
   }
-  if (e.key === 'Escape' && R.overlay) { R.overlay = null; render(); }
+  if (e.key === 'Escape') {
+    if (R.overlay) { R.overlay = null; render(); }
+    else if (C() && C().learn.openCard) fire('closeCard');
+    else if (R.shelf) fire('shelf', '');
+  }
 });
 window.addEventListener('hashchange', () => {
   if (!R.s || !R.s.kids.length) return;
@@ -1004,8 +1024,8 @@ window.addEventListener('hashchange', () => {
 });
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
-R.mode = Store.loadDevice('mode', null); R.text = Store.loadDevice('text', null); R.motion = Store.loadDevice('motion', null);
-applyDevice();
+R.mode = Store.loadDevice('mode', null); R.text = Store.loadDevice('text', null); R.motion = Store.loadDevice('motion', null); R.rate = Store.loadDevice('rate', null);
+applyDevice(); applyRate();
 
 R.s = sim.load();
 if (R.s && R.s.kids.length) {
