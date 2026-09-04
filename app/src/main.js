@@ -10,6 +10,7 @@ import { companionFigure, shelterView, wardrobeView } from './companionview.js';
 import { receiptSlip } from './keepsakes.js';
 import * as daily from './daily.js';
 import * as quiz from './quiz.js';
+import * as srcs from './sources.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
@@ -176,6 +177,7 @@ function overlay() {
   if (o.kind === 'cast') return box(castCard(o.who), true);
   if (o.kind === 'bug') return box(bugSheet(), true);
   if (o.kind === 'about') return box(aboutSheet(), true);
+  if (o.kind === 'sources') return box(sourcesSheet(o.key), true);
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
   if (o.kind === 'receipt') return box(`
@@ -655,7 +657,14 @@ on('letterPick', (i) => {
   c.postbox.answered = true;
   c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
   sim.questTick(c, 'letter', 1);
-  if (L.scam && ch.safe) sim.questTick(c, 'scam', 1);
+  if (L.scam && ch.safe) {
+    sim.questTick(c, 'scam', 1);
+    /* she saw the shape and did not hand anything over — the only place in the
+       app where GUARD can be demonstrated rather than answered */
+    mastery.transfer(c, 'GUARD-2', 'letter', 'saw through "' + L.title + '" and gave nothing away');
+    mastery.transfer(c, 'GUARD-1', 'letter', 'kept the secrets when "' + L.title + '" asked for them');
+    mastery.transfer(c, 'GUARD-6', 'letter', 'answered a scam letter safely instead of quietly');
+  }
   sim.stamp(c);
   R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
   if (delta > 0) sfx.coin(); else if (L.scam && !ch.safe) sfx.bad(); else sfx.good();
@@ -702,16 +711,31 @@ on('job', (id) => {
     }
   }
   const a = sim.doJob(c, id);
-  if (a) { sfx.coin(); toast('+' + money(a)); }
+  if (a) {
+    sfx.coin(); toast('+' + money(a));
+    /* transfer evidence, unprompted: she chose work and it paid. The rate one
+       only counts when a better-paying job was on the board and she took it. */
+    mastery.transfer(c, 'EARN-1', 'wallet', 'worked ' + row.name + ' for ' + money(a));
+    const best = sim.jobsToday(c).filter((j) => !j.done).reduce((m, j) => Math.max(m, j.amt || 0), 0);
+    if (a >= best) mastery.transfer(c, 'EARN-4', 'wallet', 'took the best-paying shift on the board');
+  }
   render();
 });
 
 /* jars, goals */
-on('jarIn', (k) => { sim.toJar(C(), k, price(2)) ? sfx.coin() : toast('Wallet is empty'); render(); });
+on('jarIn', (k) => {
+  const c = C();
+  if (sim.toJar(c, k, price(2))) { sfx.coin(); mastery.transfer(c, 'KEEP-2', 'jars', 'moved money into the ' + k + ' jar rather than leaving it in one pile'); }
+  else toast('Wallet is empty');
+  render();
+});
 on('jarOut', (k) => { sim.fromJar(C(), k, price(2)) ? sfx.click() : toast('That jar is empty'); render(); });
 on('rule', (arg) => {
-  const [k, d] = arg.split(':'), r = C().money.rules;
+  const c = C(), [k, d] = arg.split(':'), r = c.money.rules;
   r[k] = Math.max(0, Math.min(100, r[k] + +d));
+  /* a rule set on an ORDINARY day is the objective; one set with pay day
+     already due is deciding in the shop, and does not count */
+  if (!sim.payDue(c, R.s)) mastery.transfer(c, 'KEEP-2', 'jars', 'set the pay-day rule to ' + r[k] + ' for ' + k + ', on a day nothing was tempting');
   sfx.click(); render();
 });
 on('addGoal', () => {
@@ -720,6 +744,7 @@ on('addGoal', () => {
   if (!n) { toast('Name it first'); return; }
   if (!a || a <= 0) { toast('How much does it cost?'); return; }
   sim.addGoal(C(), n, a);
+  mastery.transfer(C(), 'KEEP-4', 'goals', 'named "' + n + '" and priced it at ' + money(a));
   R.fields.goalName = ''; R.fields.goalAmt = '';
   sfx.good(); toast('Scaffolding up'); render();
 });
@@ -738,7 +763,12 @@ on('autoGoal', (id) => {
 on('raidGoal', (id) => { if (sim.raidGoal(C(), id)) { sfx.bad(); toast('Scaffolding came down'); } render(); });
 
 /* bank */
-on('bankIn', () => { sim.bankIn(C(), price(10)) ? sfx.coin() : toast('Nothing in the Save jar'); render(); });
+on('bankIn', () => {
+  const c = C();
+  if (sim.bankIn(c, price(10))) { sfx.coin(); mastery.transfer(c, 'GROW-1', 'bank', 'left money with the bank rather than in the jar'); }
+  else toast('Nothing in the Save jar');
+  render();
+});
 on('bankOut', () => { sim.bankOut(C(), price(10)); sfx.click(); render(); });
 on('loan', () => {
   const c = C();
@@ -766,12 +796,27 @@ on('loan', () => {
   }
   sim.takeLoan(c, offer); sfx.coin(); toast('Borrowed — and you knew the cost first'); render();
 });
-on('repay', () => { const a = sim.repayLoan(C(), C().money.wallet); if (a) { sfx.coin(); toast('Repaid ' + money(a)); } render(); });
+on('repay', () => {
+  const c = C(), had = c.money.wallet;
+  const a = sim.repayLoan(c, had);
+  if (a) {
+    sfx.coin(); toast('Repaid ' + money(a));
+    /* the objective is paying when the money had somewhere else to be — so
+       it counts only when the wallet had something to lose */
+    if (had > a) mastery.transfer(c, 'OWE-4', 'loans', 'repaid ' + money(a) + ' with ' + money(had) + ' in the wallet');
+  }
+  render();
+});
 
 /* exchange */
 on('buy', (id) => {
-  if (!sim.buyAsset(C(), id, price(5))) { toast('Fill the Grow jar first'); return; }
-  sfx.coin(); render();
+  const c = C();
+  if (!sim.buyAsset(c, id, price(5))) { toast('Fill the Grow jar first'); return; }
+  sfx.coin();
+  /* a spread is only a spread once there are two of them */
+  const held = Object.keys(c.market.holdings || {}).filter((k) => c.market.holdings[k] > 0);
+  if (held.length >= 2) mastery.transfer(c, 'GROW-5', 'portfolio', 'held ' + held.length + ' different things rather than one');
+  render();
 });
 on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
 
@@ -868,6 +913,7 @@ on('cool', (id) => {
     decisions.log(c, { objective: 'CHOOSE-2', surface: 'store', chose: 'wait',
       label: 'sleeping on it', alternatives: [{ id: it.id, cost: price(it.units), label: it.name }] });
     mastery.transfer(c, 'CHOOSE-2', 'store', 'walked away from ' + it.name + ' to think about it');
+    mastery.transfer(c, 'GUARD-3', 'store', 'slept on ' + it.name + ' instead of buying it now');
   }
   toast('Come back tomorrow — see if you still want it');
   sfx.click(); render();
@@ -1145,3 +1191,26 @@ on('bugCopy', async () => {
   try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch (e) { toast('Could not copy on this device'); }
 });
 on('bugClear', () => { Store.saveDevice('bugs', []); render(); });
+
+
+/* ── where a number comes from (sources.js) ───────────────────────────── */
+function sourcesSheet(key) {
+  const one = srcs.source(key);
+  const row = (k, v) => `<div class="qrow block">
+    <div class="row"><b class="grow" style="font-size:14.5px">${esc(v.what)}</b>
+      <span class="pill ${v.kind === 'own' ? '' : 'gold'}">${v.kind === 'own' ? "the town's own" : 'cited'}</span></div>
+    <div class="small" style="margin-top:2px"><b>${esc(v.value())}</b></div>
+    <p class="small muted" style="margin-top:4px">${esc(v.says)}</p>
+    <div class="small muted" style="margin-top:4px;font-family:var(--mono);font-size:11px">${esc(v.where)}</div>
+  </div>`;
+  return `<div class="eyebrow">Where this comes from</div>
+    <h2 style="margin:4px 0 6px">${one ? esc(one.what) : 'Every number in Bizzington'}</h2>
+    <p class="small muted">Rule six of this app: never teach a number from memory. Every figure below is either a dial of this town, said plainly, or a real figure with a real citation.</p>
+    <div class="rows" style="margin:10px -22px 0">
+      ${(one ? [[key, one]] : srcs.ownNumbers()).map(([k, v]) => row(k, v)).join('')}
+    </div>
+    ${one ? `<div class="row" style="margin-top:12px"><button class="btn ghost sm" data-act="sources">See all of them</button><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`
+      : `<p class="small muted" style="margin-top:12px">${srcs.cited().length ? '' : 'Nothing in the app currently states a real-world figure. When one does, its citation appears here before the number appears on screen.'}</p>
+         <div class="row" style="margin-top:12px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`}`;
+}
+on('sources', (key) => { R.overlay = { kind: 'sources', key: key || '' }; sfx.click(); render(); });

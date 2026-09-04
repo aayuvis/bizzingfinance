@@ -38,6 +38,13 @@ export const CAL = {
   growthNoise: 1.1,
 
   inflTarget: 3.0,        /* what the bank is aiming at                     */
+  /* The Grow jar's long-run rate. This is a DIAL OF THIS TOWN, not a real
+     return, and nothing in the app may present it as one: rule six says never
+     teach a number from memory, so where this figure is shown to a child it
+     is labelled as Bizzington's own. It sits here so there is exactly one of
+     it — a projection that hard-codes its own rate is a number claiming a
+     provenance it does not have. */
+  growTarget: 7.0,
   inflPull: 0.045,        /* how fast it returns to target, per week        */
   inflFromGrowth: 0.055,  /* a hot town raises prices, with a lag           */
   inflNoise: 0.55,
@@ -138,3 +145,10 @@ export function explain(s) {
   else if (s.phase === 'boom') bits.push('the town is busy');
   return bits.length ? bits.join(', ') : 'the town is steady';
 }
+
+
+/* The town's own long-run growth, as a multiplier over `years`. Every
+   projection in the app goes through this, so the rate is named in one place
+   and the sentence beside it is true. */
+export function townGrowth(years) { return Math.pow(1 + CAL.growTarget / 100, years); }
+export const GROW_LABEL = "Bizzington's own Grow-jar rate — the town's number, not a real market's";

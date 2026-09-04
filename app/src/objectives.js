@@ -23,6 +23,8 @@
    life fastest and because the town already has surfaces that can show it
    (docs/05 Part D, order of work).                                          */
 
+import { MORE_OBJECTIVES } from './objectives-more.js';
+
 /* Cards the chapters do not already carry. Same shape as content.js cards, so
    the same renderer and the same shuffledDrill answer-permutation apply. */
 const NEW_CARDS = [
@@ -266,6 +268,10 @@ export const OBJECTIVES = [
   },
 ];
 
+/* The other five strands live in their own file because this one is long
+   enough; they are the same schema and validate() sees them too. */
+OBJECTIVES.push(...MORE_OBJECTIVES);
+
 /* ── lookups ─────────────────────────────────────────────────────────────── */
 export const NEW_CARD_LIST = NEW_CARDS;
 const BY_ID = Object.fromEntries(OBJECTIVES.map((o) => [o.id, o]));
@@ -279,7 +285,7 @@ export const STRANDS = ['EARN', 'CHOOSE', 'KEEP', 'GROW', 'OWE', 'GUARD'];
    quietly poorer than it claims. validate() fails on it, so the list and the
    code cannot drift apart. Add a surface here only when you have written the
    call, not when you intend to. */
-export const INSTRUMENTED = ['store', 'goals', 'loans', 'letter'];
+export const INSTRUMENTED = ['store', 'goals', 'loans', 'letter', 'wallet', 'jars', 'bank', 'portfolio', 'business'];
 
 /* The teaching card for an objective, whether it lives in a chapter or here. */
 export function teachCard(o, allCards) {

@@ -5,6 +5,7 @@ import { esc, sparkline, clamp, nWord } from './ui.js';
 import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
 import { townSVG, PLACES } from './town.js';
+import { townGrowth, GROW_LABEL } from './world.js';
 import { BLD } from './buildings-gen.js';
 import { ART } from './art-gen.js';
 import { hero } from './hero.js';
@@ -22,6 +23,7 @@ import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
+import { STRANDS } from './objectives.js';
 import * as mastery from './mastery.js';
 import * as report from './report.js';
 import { OBJECTIVES, objective, teachCard } from './objectives.js';
@@ -999,9 +1001,9 @@ function viewExchange() {
       <div class="grid3">
         ${[1, 5, 10, 30].map((y) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:10px 12px">
           <div class="small muted">in ${y} year${y > 1 ? 's' : ''}</div>
-          <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(Math.round(val * Math.pow(1.07, y)))}</div></div>`).join('')}
+          <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(Math.round(val * townGrowth(y)))}</div></div>`).join('')}
       </div>
-      <p class="small muted" style="margin-top:9px">Bizzington's own simulated rate. Not advice, not a forecast, and not any real market.</p>
+      <p class="small muted" style="margin-top:9px">${esc(GROW_LABEL)}. Not advice, not a forecast, and not any real market. <button class="small" style="color:var(--action);font-weight:800" data-act="sources" data-arg="grow">Where this number comes from →</button></p>
     </div>
   </div>`;
 }
@@ -1160,7 +1162,7 @@ export function viewStore() {
       const owned = c.shop.owned.includes(it.id);
       const spendRate = Math.max(1, (c.family.allowance != null ? c.family.allowance : c.money.wage) * c.money.rules.spend / 100);
       const weeks = Math.max(1, Math.round(p / spendRate));
-      const grown = Math.round(p * Math.pow(1.07, 10));
+      const grown = Math.round(p * townGrowth(10));
       const cool = c.shop.cooling[it.id];
       const waiting = cool && nowT < cool;
       const hrs = waiting ? Math.ceil((cool - nowT) / 3600000) : 0;
@@ -1171,7 +1173,7 @@ export function viewStore() {
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
         ${it.gives ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:9px">${ico('gear', '⚙', 15)} ${esc(it.gives)}</p>` : ''}
-        <p class="small muted" style="margin-top:6px">That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</p>
+        <p class="small muted" style="margin-top:6px">That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years at <button class="small" style="color:var(--action);font-weight:700" data-act="sources" data-arg="grow">the town's own Grow-jar rate</button>.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</p>
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>'
             : waiting ? `<span class="pill">think it over · ${hrs}h left</span>`
@@ -1204,6 +1206,27 @@ export function viewProgress() {
       <div><div class="k">Streak</div><div class="v">${ico('streak', '🔥', 18)} ${c.streak.days.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">days</span></div></div>
       <div><div class="k">Rank</div><div class="v">${ico(rank.em, rank.em, 16)} ${rank.name} <span class="small muted" style="font-family:var(--ui);font-weight:600">L${c.learn.level}</span></div></div>
       <div><div class="k">Letters</div><div class="v">${c.postbox.log.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">${scamsAll ? scams + '/' + scamsAll + ' scams spotted' : ''}</span></div></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">The six strands</div>
+      <p class="small muted" style="margin:3px 0 10px">Not chapters read — objectives <b>held</b>. A strand fills as ${esc(c.name)} meets each rung, keeps it days later, and then does it somewhere nobody asked.</p>
+      <div class="rows" style="margin:0 -18px">
+        ${STRANDS.map((st) => {
+          const p = ledger.strandProgress(c, st);
+          const NAME = { EARN: 'Earning it', CHOOSE: 'Choosing', KEEP: 'Keeping it', GROW: 'Growing it', OWE: 'Borrowing', GUARD: 'Guarding it' };
+          const pct = p.all ? p.met / p.all * 100 : 0, hard = p.all ? p.retained / p.all * 100 : 0;
+          return `<div class="qrow block">
+            <div class="row"><b class="grow" style="font-size:14px">${esc(NAME[st] || st)}</b>
+              <span class="small muted tabnum">${p.retained} held · ${p.met} of ${p.all}</span></div>
+            <div class="bar" style="height:8px;margin-top:6px;position:relative">
+              <i style="width:${pct}%;background:var(--action-tint)"></i>
+              <i style="width:${hard}%;background:var(--grow);position:absolute;left:0;top:0"></i>
+            </div>
+            ${p.transferred ? `<div class="small" style="color:var(--grow);font-weight:700;margin-top:4px">${p.transferred} done unprompted, out in the town</div>` : ''}
+            ${p.lapsed ? `<div class="small" style="color:var(--spend);margin-top:4px">${p.lapsed} slipped — they are in Revise</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
     </div>
     <div class="card">
       <div class="eyebrow">Chapters</div>
@@ -1637,7 +1660,7 @@ export function aboutSheet() {
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own — with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
     <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
-    <p class="small muted" style="margin-top:8px">Every number is Bizzington's own arithmetic. There are no real interest rates, no real returns and no real companies in it, and no path from any screen to a payment form.</p>
+    <p class="small muted" style="margin-top:8px">Every number is Bizzington's own arithmetic. There are no real interest rates, no real returns and no real companies in it, and no path from any screen to a payment form. <button class="small" style="color:var(--action);font-weight:800" data-act="sources">Where every number comes from →</button></p>
     <div class="sect"><b>Type</b><i></i></div>
     <p class="small muted"><b>Fraunces</b> by Undercase Type, <b>Hanken Grotesk</b> by Hanken Design Co., and <b>Sono</b> by Tyler Finck — all under the SIL Open Font License, bundled so the app works with no network at all.</p>
     <div class="sect"><b>The family</b><i></i></div>
