@@ -229,7 +229,8 @@ input{font:inherit; color:inherit}
 @media (max-width:759px){ .nav{display:none} }
 
 /* ── cards & bits ────────────────────────────────────────────── */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);padding:16px}
+.card{background:var(--surface);border:0;border-radius:var(--r-xl);padding:18px;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 55%,transparent),0 2px 6px rgb(12 30 34 / .04),0 14px 34px rgb(12 30 34 / .06)}
 .card.pad0{padding:0;overflow:hidden}
 .stack{display:flex;flex-direction:column;gap:14px}
 .row{display:flex;align-items:center;gap:10px}
@@ -240,14 +241,14 @@ input{font:inherit; color:inherit}
 .big{font-family:var(--display);font-weight:800;font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .tabnum{font-variant-numeric:tabular-nums}
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 18px;border-radius:var(--r-md);
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 20px;min-height:44px;border-radius:var(--r-pill);
   background:var(--action);color:var(--action-ink);font-weight:800;font-size:15px;box-shadow:var(--edge);
   transition:transform .08s ease; text-align:center;
 }
 .btn:active{transform:translateY(1px)}
-.btn.ghost{background:var(--surface2);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:var(--sh);border:1px solid var(--line)}
 .btn.wide{width:100%}
-.btn.sm{padding:8px 13px;font-size:13.5px}
+.btn.sm{padding:7px 14px;min-height:36px;font-size:13.5px}
 .btn[disabled]{opacity:.45;pointer-events:none}
 .pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-sm);border:1px solid var(--line);color:var(--muted);background:var(--tint)}
 .pill.gold{color:var(--treasure-deep);background:var(--treasure-tint);border-color:color-mix(in srgb,var(--treasure) 45%,transparent)}
@@ -503,6 +504,89 @@ input{font:inherit; color:inherit}
 .ovrow b{font-size:13.5px}
 button.ovrow{cursor:pointer}
 button.ovrow.hot{border-color:var(--action)}
+
+/* ══ the ground, and fewer boxes ══════════════════════════════════════════
+   The siblings sit their paper on a tinted, dotted ground, so a card reads
+   as a sheet on a table rather than a box drawn on a box. Bizzington's ground
+   is its sky tint with the family's dot motif, and cards lost their borders
+   for a soft lift. Inside a card there are ROWS, never boxes: hairlines
+   between them, an icon in a tinted well, and at most one filled row — the
+   one thing to do now. */
+body{background-color:var(--paper);background-image:linear-gradient(180deg,var(--tint) 0,var(--paper) 560px);background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.11;
+  background-image:radial-gradient(color-mix(in srgb,var(--action) 70%,transparent) 1.2px,transparent 1.5px);background-size:24px 24px}
+#app{position:relative;z-index:1}
+.topbar{background:color-mix(in srgb,var(--tint) 84%,transparent);border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
+.content{padding-top:14px}
+.stack{gap:16px}
+
+/* the street bleeds to the edges on a phone: a picture, not a card */
+.town.hero{border:0;box-shadow:0 14px 34px rgb(12 30 34 / .10)}
+@media (max-width:700px){
+  .town.hero{margin:-14px calc(-1 * clamp(12px,3vw,24px)) 0;border-radius:0 0 var(--r-xl) var(--r-xl)}
+}
+
+/* the tab bar: the current tab is a filled block, the way India does it */
+.tabbar{padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));gap:6px;background:color-mix(in srgb,var(--surface) 96%,transparent)}
+.tabbar button{border-radius:14px;padding:7px 2px 6px;gap:3px}
+.tabbar button[aria-current="page"]{background:var(--action);color:var(--action-ink)}
+.tabbar [aria-current="page"] .ico{--ic:color-mix(in srgb,#fff 72%,var(--action))}
+
+/* rows */
+.iw{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:11px;background:var(--tint);flex:0 0 auto}
+.jbeat{background:transparent;border:0;border-radius:0;padding:11px 16px;border-top:1px solid var(--line-soft);box-shadow:none}
+.jbeat:first-child{border-top:0}
+.jbeat.hot2{background:color-mix(in srgb,var(--ja) 10%,var(--surface));border-top-color:transparent}
+.jbeat.hot2 + .jbeat{border-top-color:transparent}
+.jbeat.hot2 .iw{background:color-mix(in srgb,var(--ja) 18%,var(--surface))}
+.jrows{display:flex;flex-direction:column}
+.jny{border-left:0;padding-left:0}
+.jny .jfoot{padding:10px 16px 14px;margin-top:0}
+.rows{display:flex;flex-direction:column;margin:0 -18px}
+.qrow{display:flex;align-items:center;gap:11px;padding:10px 18px;border-top:1px solid var(--line-soft)}
+.qrow:first-child{border-top:0}
+.qrow.block{display:block}
+.qrow.done{opacity:.72}
+.qrow.done .iw{background:var(--grow-tint)}
+
+/* the door: the building, painted, on the journey's tint */
+.door{position:relative;display:block;width:100%;overflow:hidden;text-align:left;color:var(--ink);min-height:158px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--ja) 22%,var(--surface)) 0%,color-mix(in srgb,var(--ja) 8%,var(--surface)) 55%,var(--surface) 100%);
+  border-bottom:1px solid var(--line-soft)}
+.door img{position:absolute;right:2px;bottom:-2px;height:150px;width:auto;pointer-events:none;filter:drop-shadow(0 6px 10px rgb(12 30 34 / .12))}
+.door.locked img{filter:grayscale(1) opacity(.45)}
+.door .db{position:relative;display:flex;flex-direction:column;gap:3px;padding:16px 160px 14px 18px;min-height:158px;justify-content:flex-end}
+.door .eyebrow{color:color-mix(in srgb,var(--ja) 70%,var(--ink))}
+.door .dq{font-family:var(--display);font-weight:800;font-size:17px;line-height:1.2;text-wrap:balance}
+.door .dn{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.door .dn .big{font-size:30px;line-height:1}
+.door:active{filter:brightness(.98)}
+@media (max-width:400px){ .door img{height:128px} .door .db{padding-right:136px} }
+
+/* the money line: type on the ground */
+.moneyline{display:flex;align-items:flex-end;gap:16px 22px;flex-wrap:wrap;padding:2px 6px}
+.moneyline .k{font-size:10.5px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.moneyline .v{font-family:var(--display);font-weight:800;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.1}
+.moneyline .lead .v{font-size:34px}
+.moneyline .lead{margin-right:auto}
+
+/* the greeting */
+.greet{display:grid;grid-template-columns:112px 1fr;gap:12px 14px;align-items:start;padding:16px 16px 16px 14px}
+.greet .gfig{display:grid;place-items:center;min-height:112px}
+.greet .gfig .who{width:96px;height:96px;border-radius:50%;overflow:hidden;display:block;background:var(--tint)}
+.greet h2{font-size:24px;margin:1px 0 0}
+.greet .bub{background:var(--tint);border-radius:4px 16px 16px 16px;padding:11px 13px;font-size:14.5px;line-height:1.5;margin-top:9px}
+.greet .gco{margin-top:10px}
+.greet .care{max-width:none}
+.waiting{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.wchip{font-size:13px;font-weight:700;padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+.wchip.hot{background:var(--action);color:var(--action-ink);border-color:transparent}
+.wchip.quiet{color:var(--muted);box-shadow:none;background:transparent}
+@media (max-width:380px){ .greet{grid-template-columns:92px 1fr} }
+/* the Money sub-tabs: a row of pills on the ground, no box, and they scroll */
+.mnav{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none;margin:0 -2px}
+.mnav::-webkit-scrollbar{display:none}
+.mnav button{flex:0 0 auto;white-space:nowrap;box-shadow:var(--sh)}
 
 </style>
 </head>
@@ -6254,32 +6338,6 @@ button.ovrow.hot{border-color:var(--action)}
     <p class="small muted" style="margin-top:10px">Wallet: <b>${money(c.money.wallet)}</b></p>
     <button class="btn ghost wide" style="margin-top:10px" data-act="closeOv">Back</button>`;
   }
-  function companionCard(c) {
-    if (!has(c)) return `<div class="card cocard empty">
-    <div class="row">${ico("family", "\u{1F43E}", 30)}<div class="grow">
-      <div class="eyebrow">Someone to look after</div>
-      <p style="font-weight:800">Five who need homes</p>
-      <p class="small muted">The shelter behind the Jar Shed. ${money(price(C.adopt))} once, ${money(price(C.food))} a week for keeps.</p></div>
-      <button class="btn ghost sm" data-act="shelter">Meet them</button></div></div>`;
-    const p = get(c);
-    const can = canPlay(c);
-    return `<div class="card cocard ${p.mood}">
-    <div class="row" style="gap:14px;align-items:flex-start">
-      ${companionFigure(c, 118, { bob: p.mood === "happy" })}
-      <div class="grow" style="min-width:0">
-        <div class="eyebrow">${esc(KINDS[p.kind].name)} \xB7 ${STAGES[p.stage]} \xB7 ${p.paydays} pay ${p.paydays === 1 ? "day" : "days"} with you</div>
-        <h3 style="margin:2px 0 4px">${esc(p.name)}</h3>
-        <p class="small">${esc(line(c))}</p>
-        <div class="care"><i style="width:${p.care}%"></i></div>
-        <div class="small muted" style="margin-top:4px">Food ${money(weeklyCost2(c))} a week \xB7 fed ${p.fedRun} ${p.fedRun === 1 ? "week" : "weeks"} running${p.everMissed ? ` \xB7 went hungry ${p.everMissed}\xD7` : ""}</div>
-      </div>
-    </div>
-    <div class="row" style="gap:8px;margin-top:12px">
-      <button class="btn sm ${can ? "" : "ghost"}" data-act="play">${can ? "Play" : "Played today"}</button>
-      <button class="btn ghost sm" data-act="wardrobe">Wardrobe${p.wardrobe.length ? " \xB7 " + p.wardrobe.length : ""}</button>
-    </div>
-  </div>`;
-  }
 
   // src/keepsakes.js
   function receiptSlip(k, big) {
@@ -6291,33 +6349,6 @@ button.ovrow.hot{border-color:var(--action)}
     <div class="slip-line total"><span>Paid</span><i></i><b class="tabnum">${money(k.price)}</b></div>
     <p class="small">${paid}</p>
     <div class="slip-foot">${esc(k.who)} \xB7 level ${k.level} \xB7 the first receipt</div>
-  </div>`;
-  }
-  var cap = (w) => String(w).charAt(0).toUpperCase() + String(w).slice(1);
-  function overnightCard(c, state) {
-    const o = c.overnight;
-    if (!o || o.seen) return "";
-    const rows = [];
-    if (o.fuse) rows.push(["postbox", "A letter you were expecting", "Something you decided has come due.", true]);
-    else if (!c.postbox.answered) rows.push(["postbox", "A letter came", "One a day. Thirty seconds."]);
-    if (payDue(c, state)) rows.push(["payday", "The bell is ready to ring", "Wages in, bills out" + (has(c) ? `, ${esc(get(c).name)}'s food among them.` : "."), true]);
-    if (has(c) && canPlay(c)) rows.push(["play", `${esc(get(c).name)} waited by the door`, "A play is free, once a day."]);
-    const jobs = jobsToday(c).length;
-    if (jobs) rows.push([null, `${cap(nWord(jobs))} ${jobs === 1 ? "shift" : "shifts"} on the board`, "Fresh today, on Market Row."]);
-    const q = questList(c).length;
-    if (q) rows.push([null, `${cap(nWord(q))} new ${q === 1 ? "quest" : "quests"}`, "Small, and they pay."]);
-    if (!rows.length) return "";
-    const row = ([act, t, s, hot]) => act ? `<button class="ovrow${hot ? " hot" : ""}" data-act="${act}"><b>${t}</b><span class="small muted">${s}</span></button>` : `<div class="ovrow"><b>${t}</b><span class="small muted">${s}</span></div>`;
-    return `<div class="card overnight">
-    <div class="row" style="gap:12px;align-items:flex-start">
-      ${has(c) ? companionFigure(c, 72) : `<div style="width:56px;display:grid;place-items:center">${ico("moon", "\u{1F319}", 40)}</div>`}
-      <div class="grow" style="min-width:0">
-        <div class="eyebrow">${o.nights === 1 ? "Overnight" : `${cap(nWord(o.nights))} nights away`}</div>
-        <h3 style="margin:2px 0 8px">Welcome back, ${esc(c.name)}</h3>
-        <div class="stack" style="gap:5px">${rows.map(row).join("")}</div>
-      </div>
-    </div>
-    <div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn ghost sm" data-act="ovSeen">Got it</button></div>
   </div>`;
   }
 
@@ -11712,7 +11743,7 @@ button.ovrow.hot{border-color:var(--action)}
   }
   function beat2(act, arg, icon, title, sub2, right, hot) {
     return `<button class="jbeat${hot ? " hot2" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>
-    ${ico(icon, icon, 22)}
+    <span class="iw">${ico(icon, icon, 20)}</span>
     <span class="grow" style="min-width:0;text-align:left">
       <b>${title}</b><span class="small muted" style="display:block">${sub2}</span></span>
     ${right || ""}
@@ -11744,19 +11775,22 @@ button.ovrow.hot{border-color:var(--action)}
         `<span class="small muted tabnum">${Math.round(g.saved / g.target * 100)}%</span>`
       ) : ""
     ].join("");
-    const household = `<div class="card jny" style="--ja:var(--save)">
-    <div class="row">
-      <div class="grow"><div class="eyebrow">The Household</div>
-        <p class="cs">Can you cover your life \u2014 and what's left over?</p></div>
-      <div style="text-align:right"><div class="big" style="color:${left >= 0 ? "var(--ink)" : "var(--spend)"}">${money(left)}</div>
-        <div class="small muted">left over / week</div></div>
-    </div>
-    <div class="jstack">${hhBeats}</div>
-    <button class="jfoot" data-act="sub" data-arg="place">
+    const household = jcard({
+      accent: "var(--save)",
+      sprite: "home-" + Math.min(4, c.home && c.home.tier || 0),
+      act: "sub",
+      arg: "place",
+      eyebrow: "The Household",
+      question: "Can you cover your life \u2014 and what's left over?",
+      big: money(left),
+      bigStyle: left >= 0 ? "" : "color:var(--spend)",
+      sub: "left over / week",
+      rows: hhBeats,
+      foot: `<button class="jfoot" data-act="sub" data-arg="place">
       <span class="bar grow" style="height:6px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? "var(--grow)" : "var(--action)"}"></i></span>
       <span class="small muted tabnum">${Math.round(ind * 100)}% of your life pays for itself</span>
-    </button>
-  </div>`;
+    </button>`
+    });
     const jobs = jobsToday(c);
     const jleft = jobs.filter((j) => !j.done).length;
     const bizOpen = isOpen(c, "business") && c.biz;
@@ -11784,32 +11818,38 @@ button.ovrow.hot{border-color:var(--action)}
         true
       ) : ""
     ].join("");
-    const livelihood = `<div class="card jny" style="--ja:var(--treasure)">
-    <div class="row">
-      <div class="grow"><div class="eyebrow">The Livelihood</div>
-        <p class="cs">What is your time worth \u2014 and can you make it worth more?</p></div>
-      <div style="text-align:right"><div class="big">${jobs.length - jleft}/${jobs.length}</div>
-        <div class="small muted">shifts today</div></div>
-    </div>
-    <div class="jstack">${lvBeats || `<p class="small muted">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>`}</div>
-  </div>`;
+    const livelihood = jcard({
+      accent: "var(--treasure)",
+      sprite: bizOpen ? "shop" : "stall",
+      act: "sub",
+      arg: bizOpen ? "business" : "wallet",
+      eyebrow: "The Livelihood",
+      question: "What is your time worth \u2014 and can you make it worth more?",
+      big: `${jobs.length - jleft}/${jobs.length}`,
+      sub: "shifts today",
+      rows: lvBeats || `<p class="small muted" style="padding:12px 16px">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>`
+    });
     const bankOpen = isOpen(c, "bank"), exOpen = isOpen(c, "portfolio");
     let portfolio;
     if (!bankOpen && !exOpen) {
-      portfolio = `<div class="card jny" style="--ja:var(--grow)">
-      <div class="row">
-        <div class="grow"><div class="eyebrow">The Portfolio</div>
-          <p class="cs">Where does the left-over live \u2014 and what is it doing?</p></div>
-        ${ico("lock", "\u{1F512}", 22)}
-      </div>
-      <div class="jstack">${beat2(
-        "nav",
-        "learn",
-        "lesson",
-        "Opens with " + esc(needFor("bank") || "the Banking chapter"),
-        "The Bank takes deposits the day you understand what it does with them."
-      )}</div>
-    </div>`;
+      portfolio = jcard({
+        accent: "var(--grow)",
+        sprite: "bank",
+        locked: true,
+        act: "nav",
+        arg: "learn",
+        eyebrow: "The Portfolio",
+        question: "Where does the left-over live \u2014 and what is it doing?",
+        big: ico("lock", "\u{1F512}", 26),
+        sub: "not yet open",
+        rows: beat2(
+          "nav",
+          "learn",
+          "lesson",
+          "Opens with " + esc(needFor("bank") || "the Banking chapter"),
+          "The Bank takes deposits the day you understand what it does with them."
+        )
+      });
     } else {
       const invested = c.money.bank.balance + holdingsValue(c);
       const up = c.market.lastMove >= 0;
@@ -11826,18 +11866,70 @@ button.ovrow.hot{border-color:var(--action)}
         ) : "",
         c.learn.level >= 16 ? beat2("nav", "market40", "company", "The Market Game", "Forty companies, forty years, one decade at a time.") : ""
       ].join("");
-      portfolio = `<div class="card jny" style="--ja:var(--grow)">
-      <div class="row">
-        <div class="grow"><div class="eyebrow">The Portfolio</div>
-          <p class="cs">Where does the left-over live \u2014 and what is it doing?</p></div>
-        <div style="text-align:right"><div class="big">${money(invested)}</div>
-          <div class="small muted">invested</div></div>
-      </div>
-      <div class="jstack">${pfBeats}</div>
-    </div>`;
+      portfolio = jcard({
+        accent: "var(--grow)",
+        sprite: exOpen ? "exchange" : "bank",
+        act: "sub",
+        arg: exOpen ? "portfolio" : "bank",
+        eyebrow: "The Portfolio",
+        question: "Where does the left-over live \u2014 and what is it doing?",
+        big: money(invested),
+        sub: "invested",
+        rows: pfBeats
+      });
     }
     return `<div class="sect"><b>Your three journeys</b><i></i></div>
     ${household}${livelihood}${portfolio}`;
+  }
+  function jcard(o) {
+    const b = BLD[o.sprite];
+    return `<div class="card pad0 jny" style="--ja:${o.accent}">
+    <button class="door${o.locked ? " locked" : ""}" data-act="${o.act}" data-arg="${o.arg}">
+      ${b ? `<img src="${b.src}" alt="" width="${b.w}" height="${b.h}">` : ""}
+      <span class="db">
+        <span class="eyebrow">${o.eyebrow}</span>
+        <b class="dq">${o.question}</b>
+        <span class="dn"><span class="big"${o.bigStyle ? ` style="${o.bigStyle}"` : ""}>${o.big}</span><span class="small muted">${o.sub}</span></span>
+      </span>
+    </button>
+    <div class="jrows">${o.rows}</div>
+    ${o.foot || ""}
+  </div>`;
+  }
+  function greeting(c) {
+    const o = c.overnight, fresh = !!(o && !o.seen);
+    const has2 = has(c), p = get(c);
+    const h = (/* @__PURE__ */ new Date()).getHours();
+    const hello = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+    const line2 = has2 ? esc(line(c)) : hometalk(c);
+    const chips = [];
+    if (fresh) {
+      if (o.fuse) chips.push(["postbox", "", "A letter you were expecting", true]);
+      else if (!c.postbox.answered) chips.push(["postbox", "", "A letter came"]);
+      if (payDue(c, R.s)) chips.push(["payday", "", "Ring the bell", true]);
+      if (has2 && canPlay(c)) chips.push(["play", "", `${esc(p.name)} waited by the door`]);
+      const jobs = jobsToday(c).length;
+      if (jobs) chips.push(["sub", "wallet", `${nWord(jobs)} ${jobs === 1 ? "shift" : "shifts"} on the board`]);
+    }
+    const can = has2 && canPlay(c);
+    return `<div class="card greet">
+    <div class="gfig">${has2 ? companionFigure(c, 112, { bob: p.mood === "happy" }) : face("pip", 96)}</div>
+    <div class="gbody">
+      ${fresh ? `<span class="eyebrow">${o.nights === 1 ? "Overnight" : `${nWord(o.nights)} nights away`}</span>` : `<span class="eyebrow">${hello}</span>`}
+      <h2>${fresh ? "Welcome back, " : ""}${esc(c.name)}</h2>
+      <div class="bub">${line2}</div>
+      ${chips.length ? `<div class="waiting">${chips.map(([act, arg, t, hot]) => `<button class="wchip${hot ? " hot" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>${t}</button>`).join("")}
+        <button class="wchip quiet" data-act="ovSeen" aria-label="Got it">Got it</button></div>` : ""}
+      ${has2 ? `<div class="gco">
+          <span class="small muted">${esc(p.name)} \xB7 ${STAGES[p.stage]} ${esc(KINDS[p.kind].name).toLowerCase()} \xB7 ${p.paydays} pay ${p.paydays === 1 ? "day" : "days"} with you${p.everMissed ? ` \xB7 went hungry ${p.everMissed}\xD7` : ""}</span>
+          <div class="care ${p.mood}"><i style="width:${p.care}%"></i></div>
+          <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
+            <button class="btn sm ${can ? "" : "ghost"}" data-act="play">${can ? "Play" : "Played today"}</button>
+            <button class="btn ghost sm" data-act="wardrobe">Wardrobe${p.wardrobe.length ? " \xB7 " + p.wardrobe.length : ""}</button>
+          </div></div>` : `<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn ghost sm" data-act="shelter">${ico("family", "\u{1F43E}", 16)} Meet the five who need homes</button></div>`}
+    </div>
+  </div>`;
   }
   function viewHome() {
     const c = K5();
@@ -11846,10 +11938,10 @@ button.ovrow.hot{border-color:var(--action)}
     const g = c.money.goals.find((x) => !x.done);
     const sprout = c.band === "sprout";
     const today = nextThing(c);
-    const strip = sprout ? `<div class="strip two">
-        <div><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
-        <div><div class="k">Saved up</div><div class="v">${money(c.money.jars.save + c.money.jars.grow)}</div></div></div>` : `<div class="strip">
-        <div><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
+    const strip = sprout ? `<div class="moneyline">
+        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
+        <div><div class="k">Saved up</div><div class="v">${money(c.money.jars.save + c.money.jars.grow)}</div></div></div>` : `<div class="moneyline">
+        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
         <div><div class="k">Jars</div><div class="v">${money(jarTotal(c))}</div></div>
         <div><div class="k">Invested</div><div class="v">${money(c.money.bank.balance + holdingsValue(c))}</div></div>
         <div><div class="k">Net worth</div><div class="v" style="color:var(--action)">${money(netWorth(c))}</div></div></div>`;
@@ -11870,8 +11962,7 @@ button.ovrow.hot{border-color:var(--action)}
       <div class="town-cap"><span>${ico("streak", "\u{1F525}", 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} \xB7 ${rankFor(c.learn.level)}</span></div>
     </div>
 
-    ${overnightCard(c, R.s)}
-    ${companionCard(c)}
+    ${greeting(c)}
 
     ${strip}
 
@@ -11883,10 +11974,9 @@ button.ovrow.hot{border-color:var(--action)}
       <div class="row"><div class="grow"><div class="ct">Today's three</div>
         <p class="cs">Wages into the same wallet as everything else.</p></div>
         <span class="pill ${allDone ? "grow" : ""}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
-      <div class="stack" style="gap:8px;margin-top:11px">
-        ${quests.map((q) => `<div class="row" style="gap:10px;background:${q.claimed ? "var(--grow-tint)" : "var(--surface2)"};
-          border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          <span style="${q.claimed ? "opacity:.5" : ""}">${ico("quest", q.em, 26)}</span>
+      <div class="rows" style="margin-top:6px">
+        ${quests.map((q) => `<div class="qrow${q.claimed ? " done" : ""}">
+          <span class="iw" style="${q.claimed ? "opacity:.5" : ""}">${ico("quest", q.em, 20)}</span>
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${q.claimed ? "opacity:.6" : ""}">${esc(q.t)}</b>
             <div class="small muted">${q.claimed ? "Claimed." : esc(q.sub)}</div>
@@ -11912,11 +12002,10 @@ button.ovrow.hot{border-color:var(--action)}
         <div class="row"><div class="grow"><div class="eyebrow">Put it right \xB7 ${esc(world.name)}</div>
           <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
           <span class="pill ${tp.done === tp.all ? "grow" : ""}">${tp.done}/${tp.all} mended</span></div>
-        <div class="stack" style="gap:9px;margin-top:11px">
-          ${fx.map((f) => `<div style="background:${f.done ? "var(--grow-tint)" : "var(--surface2)"};
-            border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px">
+        <div class="rows" style="margin-top:6px">
+          ${fx.map((f) => `<div class="qrow block${f.done ? " done" : ""}">
             <div class="row" style="gap:10px">
-              <span style="${f.done ? "" : "filter:grayscale(.7) opacity(.75)"}">${ico(f.em, f.em, 21)}</span>
+              <span class="iw" style="${f.done ? "" : "filter:grayscale(.7) opacity(.75)"}">${ico(f.em, f.em, 20)}</span>
               <span class="grow" style="min-width:0">
                 <b style="font-size:14px">${esc(f.name)}</b>
                 <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div></span>
@@ -11938,7 +12027,7 @@ button.ovrow.hot{border-color:var(--action)}
 
 
 
-    ${say("pip", hometalk(c))}
+    ${has(c) ? say("pip", hometalk(c)) : ""}
   </div>`;
   }
   function closingTime(c, quests) {
@@ -11971,10 +12060,9 @@ button.ovrow.hot{border-color:var(--action)}
     </div>
     <p class="small muted" style="margin-top:10px">${led.net >= 0 ? `You kept ${money(led.net)} of it. The rest is either spent or working.` : `You spent ${money(-led.net)} more than came in today. That happens \u2014 it is what the jars are for.`}</p>
     <div class="eyebrow" style="margin-top:13px">Waiting for you tomorrow</div>
-    <div class="stack" style="gap:8px;margin-top:7px">
-      ${rows.slice(0, 3).map((r) => `<div class="row" style="gap:10px;background:var(--surface);
-        border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-        ${ico(r.em, r.em, 20)}
+    <div class="rows" style="margin-top:4px">
+      ${rows.slice(0, 3).map((r) => `<div class="qrow">
+        <span class="iw">${ico(r.em, r.em, 20)}</span>
         <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
           <div class="small muted">${r.sub}</div></span></div>`).join("")}
     </div>
@@ -12196,7 +12284,7 @@ button.ovrow.hot{border-color:var(--action)}
     const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name }));
     let sub = R.s.ui.sub;
     if (!subs.find((x) => x.k === sub && isOpen(c, x.k))) sub = "wallet";
-    const strip = `<div style="display:flex;gap:7px;flex-wrap:wrap;padding:11px;background:var(--tint);border-radius:var(--r-md);border:1px solid var(--line-soft)">
+    const strip = `<div class="mnav">
     ${subs.map((x) => {
       const open = isOpen(c, x.k);
       return `<button data-act="${open ? "sub" : "lockedSub"}" data-arg="${x.k}"
@@ -12220,9 +12308,9 @@ button.ovrow.hot{border-color:var(--action)}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
       <p class="small muted" style="margin:3px 0 10px">Each job once a day. You are selling an hour, not a thing.</p>
-      <div class="stack" style="gap:8px">
-        ${jobs.map((j) => `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
-          ${ico(j.em, j.em, 20)}
+      <div class="rows">
+        ${jobs.map((j) => `<div class="qrow${j.done ? " done" : ""}">
+          <span class="iw">${ico(j.em, j.em, 20)}</span>
           <span class="grow"><b style="font-size:14px">${esc(j.name)}</b><br><span class="small muted">for ${esc(j.who)}</span></span>
           ${j.done ? '<span class="pill grow">done today</span>' : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${money(j.amt)}</button>`}
         </div>`).join("")}
@@ -12683,10 +12771,8 @@ button.ovrow.hot{border-color:var(--action)}
           <div class="grow"><b style="font-size:15.5px">${esc(it.name)}</b>
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
-        ${it.gives ? `<div style="background:var(--grow-tint);color:var(--grow);border-radius:var(--r-md);padding:9px 12px;margin-top:10px;font-size:13px;font-weight:700">
-          \u2699 ${esc(it.gives)}</div>` : ""}
-        <div style="background:var(--treasure-tint);color:var(--treasure-deep);border-radius:var(--r-md);padding:9px 12px;margin-top:8px;font-size:13px;font-weight:650">
-          That's <b>${weeks} week${weeks > 1 ? "s" : ""}</b> of your Spend jar \u2014 or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? "" : " And it does nothing at all, which is allowed."}</div>
+        ${it.gives ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:9px">${ico("gear", "\u2699", 15)} ${esc(it.gives)}</p>` : ""}
+        <p class="small muted" style="margin-top:6px">That's <b>${weeks} week${weeks > 1 ? "s" : ""}</b> of your Spend jar \u2014 or <b>${money(grown)}</b> in ten years if it went in the Grow jar instead.${it.gives ? "" : " And it does nothing at all, which is allowed."}</p>
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>' : waiting ? `<span class="pill">think it over \xB7 ${hrs}h left</span>` : c.family.coolOff ? `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}">Think it over \u2192</button>` : `<button class="btn ghost sm" data-act="cool" data-arg="${it.id}" style="margin-right:8px">Think it over</button>
                  <button class="btn ghost sm" data-act="buyItem" data-arg="${it.id}" ${afford ? "" : "disabled"}>${it.gives ? "Buy it" : "Buy it anyway"}</button>`}
@@ -12757,9 +12843,8 @@ button.ovrow.hot{border-color:var(--action)}
   function viewReport() {
     const c = K5();
     const r = weekly(c, { money });
-    const row = (em, label2, body) => `<div class="row" style="gap:11px;align-items:flex-start;
-    background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px">
-    ${ico(em, em, 19)}<span class="grow" style="min-width:0">
+    const row = (em, label2, body) => `<div class="qrow" style="align-items:flex-start">
+    <span class="iw">${ico(em, em, 19)}</span><span class="grow" style="min-width:0">
     <b style="font-size:14px">${label2}</b><div class="small muted">${body}</div></span></div>`;
     return `<div class="stack">
     <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">\u2190 Grown-up's page</button>
