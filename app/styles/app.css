@@ -460,3 +460,62 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .reading .nm{display:block;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 .aside{margin-top:12px;background:var(--tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px;border-left:3px solid var(--action)}
 .aside .eyebrow{display:block;margin-bottom:3px}
+
+/* ══ the Money Atlas (atlas.js) ══════════════════════════════════════════ */
+.tierbar{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:11px 14px;box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 55%,transparent)}
+.tierpill{display:inline-flex;align-items:center;gap:6px;font-family:var(--display);font-weight:800;font-size:13px;background:var(--action-tint);color:var(--action);border-radius:999px;padding:5px 12px;white-space:nowrap}
+.tierbar .bar i{background:linear-gradient(90deg,var(--action),var(--treasure))}
+.aboard{position:relative;border-radius:22px;overflow:hidden;box-shadow:0 2px 6px rgb(12 30 34 / .08),0 14px 34px rgb(12 30 34 / .14);background:var(--tint)}
+.aboard img{display:block;width:100%;height:100%;object-fit:cover}
+.aroute{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.apin{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:4px;z-index:2;font:inherit;color:inherit}
+.apin .adot{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:rgba(22,30,34,.55);border:2px solid rgba(255,255,255,.78);box-shadow:0 4px 12px rgba(10,20,24,.45);color:#fff;font-family:var(--display);font-weight:800;font-size:14px;overflow:hidden}
+.apin.cur{z-index:3}
+.apin.cur .adot{width:52px;height:52px;background:linear-gradient(160deg,var(--ja),color-mix(in srgb,var(--ja) 60%,#1a2a2e));box-shadow:0 0 0 5px color-mix(in srgb,var(--ja) 30%,transparent),0 6px 16px rgba(10,20,24,.5)}
+.apin.done .adot{background:linear-gradient(160deg,#FFD24D,#C8791B);color:#4A2E00}
+.apin.locked .adot{border-color:rgba(255,255,255,.42)}
+.apin.shut .adot{filter:saturate(.3)}
+.apin .achip{display:grid;gap:0;background:rgba(14,24,28,.78);color:#fff;border-radius:12px;padding:5px 10px;text-align:center;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.18);max-width:120px}
+.apin .achip b{font-family:var(--display);font-size:12.5px;line-height:1.15;text-wrap:balance}
+.apin .achip i{font-style:normal;font-size:10.5px;opacity:.85;font-weight:700}
+.apin.cur .achip{border-color:color-mix(in srgb,var(--ja) 60%,transparent)}
+.apin .adot .cofig,.apin .adot .who{width:30px;height:30px;border-radius:50%;overflow:hidden;display:block}
+@media (max-width:400px){ .apin .achip{max-width:96px;padding:4px 7px} .apin .achip b{font-size:11px} .apin .adot{width:38px;height:38px} .apin.cur .adot{width:46px;height:46px} }
+/* an act: one painted card with its own weather */
+.act{position:relative;border-radius:22px;overflow:hidden;background:var(--surface);box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 55%,transparent),0 2px 6px rgb(12 30 34 / .04),0 14px 34px rgb(12 30 34 / .06)}
+.act.here{box-shadow:0 0 0 2px color-mix(in srgb,var(--ja) 60%,var(--line)),0 14px 34px rgb(12 30 34 / .10)}
+.act.shut{opacity:.78}
+.actban{position:relative;height:120px;background:var(--plate,linear-gradient(135deg,var(--ja),#1a2a2e)) center 40%/cover no-repeat;background-color:color-mix(in srgb,var(--ja) 40%,#1a2a2e)}
+.actscrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,22,26,.42) 0%,rgba(14,22,26,.05) 34%,rgba(14,22,26,.22) 62%,var(--surface) 100%)}
+.actrow{position:absolute;left:15px;right:15px;bottom:10px;display:flex;align-items:flex-end;gap:11px}
+.actguide{width:50px;height:50px;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(14,9,32,.45))}
+.actguide .who{display:block;width:50px;height:50px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.8)}
+.acttext{min-width:0;flex:1;display:grid}
+.acttext b{font-family:var(--display);font-weight:800;font-size:17.5px;line-height:1.1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.55)}
+.acttext i{font-style:normal;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.88);text-shadow:0 1px 4px rgba(0,0,0,.6);margin-top:2px}
+.aring{position:relative;display:inline-grid;place-items:center;flex:0 0 auto}
+.aring svg{position:absolute;inset:0;width:100%;height:100%}
+.aring b{position:relative;font-family:var(--display);font-variant-numeric:tabular-nums;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rail{position:relative;padding:14px 14px 16px}
+.railline{position:absolute;left:30px;top:30px;bottom:30px;width:2px;border-radius:2px;background:var(--line)}
+.railline span{position:absolute;left:0;right:0;top:0;border-radius:2px;background:linear-gradient(180deg,#FFD24D,var(--treasure));box-shadow:0 0 8px rgba(240,180,41,.45)}
+.stop{position:relative;display:block;width:100%;text-align:left;padding:11px 12px 11px 54px;margin-bottom:2px;border-radius:14px;font:inherit;color:inherit;background:transparent}
+.stop.cur{padding:15px 16px 15px 54px;margin-bottom:10px;background:linear-gradient(150deg,color-mix(in srgb,var(--ja) 14%,var(--surface)),var(--surface) 62%);box-shadow:0 0 0 1px color-mix(in srgb,var(--ja) 42%,var(--line)),0 6px 18px rgb(12 30 34 / .12)}
+.stop .med{position:absolute;left:0;top:16px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;z-index:2;font-family:var(--display);font-weight:800;font-size:13px;background:var(--surface);border:1.5px solid var(--line);color:var(--muted);overflow:hidden}
+.stop .med.passed{background:linear-gradient(160deg,#FFD24D,#E0922E);color:#4A2E00;border:0;box-shadow:0 2px 6px rgba(200,121,27,.34);font-size:15px}
+.stop .med.cur{background:linear-gradient(160deg,var(--ja),color-mix(in srgb,var(--ja) 60%,#1a2a2e));border:0;box-shadow:0 0 0 4px color-mix(in srgb,var(--ja) 22%,transparent),0 3px 9px rgba(26,18,54,.28)}
+.stop .med .cofig,.stop .med .who{width:30px;height:30px;border-radius:50%;overflow:hidden;display:block}
+.stop .stbody{display:grid;gap:2px;min-width:0}
+.stop .sttitle{font-family:var(--display);font-weight:600;font-size:14.5px;line-height:1.24}
+.stop.cur .sttitle{font-weight:800;font-size:16.5px}
+.stop.passed .sttitle{font-weight:700}
+.stop.locked .sttitle{color:var(--muted)}
+.stop .sttag{font-size:12px;color:var(--muted);font-weight:600}
+.stop .stblurb{font-size:12.5px;line-height:1.5;margin-top:6px;opacity:.85;max-width:44em}
+.stop .stgo{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:10px 18px;border-radius:999px;background:var(--action);color:var(--action-ink);font-weight:800;font-size:13.5px;justify-self:start}
+.stop:active{transform:translateY(1px)}
+
+/* the board pans on a phone, like the street: a map too small to read is a texture */
+.aboard-scroll{border-radius:22px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch;box-shadow:0 2px 6px rgb(12 30 34 / .08),0 14px 34px rgb(12 30 34 / .14)}
+.aboard-scroll .aboard{box-shadow:none}
+@media (max-width:600px){ .aboard-scroll .aboard{width:600px;max-width:none} }

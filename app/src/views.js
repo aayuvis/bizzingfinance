@@ -8,6 +8,7 @@ import { townSVG, PLACES } from './town.js';
 import { BLD } from './buildings-gen.js';
 import { ART } from './art-gen.js';
 import { hero } from './hero.js';
+import { viewAtlas, viewAct } from './atlas.js';
 import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';
 import { companionCard, companionFigure } from './companionview.js';
@@ -527,6 +528,12 @@ export function viewLearn() {
     if (card) return viewCard(card);
   }
   if (R.shelf === 'words') return viewGlossary();
+  /* Learn is the Money Atlas (atlas.js): one map, five regions, a rail of stops */
+  if (R.shelf && R.shelf.startsWith('act:')) return viewAct(c, +R.shelf.slice(4) || 0);
+  return viewAtlas(c);
+}
+function viewLearnOld() {
+  const c = K();
   const bar = sim.xpBar(c);
   const rank = rankObj(c.learn.level);
 
