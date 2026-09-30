@@ -131,32 +131,40 @@
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
 
   /* fixed semantics — identical in both modes */
-  --treasure:#F0B429; --treasure-tint:#FFF3D6; --treasure-deep:#8A5B00;
-  --grow:#178A4C;     --grow-tint:#E3F3E9;
-  --spend:#C4453C;    --spend-tint:#FBE9E7;
-  --give:#8A5BD6;     --give-tint:#EFE8FB;
-  --save:#2E7FA8;     --save-tint:#E2EFF6;
+  --treasure:#F5B31F; --treasure-tint:#FFEDB8; --treasure-deep:#8A5B00;
+  --grow:#148A4A;     --grow-tint:#DDF5E6;
+  --spend:#D2453A;    --spend-tint:#FFE6E1;
+  --give:#7F4FD6;     --give-tint:#EEE5FF;
+  --save:#1F78B4;     --save-tint:#DCEEFB;
+  /* several cards were written against --gold, which never existed; they
+     rendered untinted. It is treasure. */
+  --gold:var(--treasure); --gold-tint:var(--treasure-tint);
 }
 
-/* ---- light (the bare root) ---- */
+/* ---- light (the bare root) ----
+   v2: morning light, not an overcast afternoon. The v1 surfaces were grey-teal
+   on cream and every accent sat at low chroma, so the whole town read as
+   tired. Surfaces are warm now, the accent is a clear lagoon teal (5:1 on
+   white, still not gold, green or coral) and the sky is actually blue. */
 :root{
-  --paper:#FFFCF5; --surface:#FFFFFF; --surface2:#F4F6F5;
-  --tint:#EDF2F2; --line:#DCE5E4; --line-soft:#E9EFEE;
-  --ink:#16262A; --muted:#5B7075;
-  --action:#0E6B78; --action-ink:#FFFFFF; --action-tint:#E2EFF1;
-  --sky1:#CFE9EE; --sky2:#F6EFDC; --ground:#DCCFA8; --road:#C9BE9C;
-  --sh:0 1px 2px rgb(12 30 34 / .05);
-  --sh-raised:0 2px 6px rgb(12 30 34 / .07), 0 12px 30px rgb(12 30 34 / .07);
-  --sh-overlay:0 24px 64px rgb(12 30 34 / .28);
-  --edge:inset 0 -2.5px 0 rgb(0 0 0 / .16);
+  --paper:#FFF8EC; --surface:#FFFFFF; --surface2:#FFF3DF;
+  --tint:#F6ECDC; --line:#EEDFC6; --line-soft:#F5EAD8;
+  --ink:#1B2430; --muted:#5B6770;
+  --action:#00798A; --action-hi:#12A3AE; --action-ink:#FFFFFF; --action-tint:#DDF3F4;
+  --sky1:#BDE6F6; --sky2:#FFEFC6; --ground:#E6CF93; --road:#D8C08A;
+  --sh:0 1px 2px rgb(90 60 20 / .06);
+  --sh-raised:0 2px 6px rgb(90 60 20 / .07), 0 14px 30px rgb(90 60 20 / .09);
+  --sh-overlay:0 24px 64px rgb(40 24 8 / .30);
+  --edge:inset 0 -3px 0 rgb(0 0 0 / .18), inset 0 1px 0 rgb(255 255 255 / .25);
   --focus:0 0 0 3px color-mix(in srgb,var(--action) 34%,transparent);
+  --wash-top:#D9F1FA;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-mode="light"]){
     --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34;
     --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
     --ink:#E4EDEE; --muted:#93A7AC;
-    --action:#3FAEBC; --action-ink:#06262B; --action-tint:#12333A;
+    --action:#3FBCC8; --action-hi:#6FD6DE; --action-ink:#06262B; --action-tint:#12333A; --wash-top:#15303A;
     --treasure-tint:#33280F; --treasure-deep:#F0C25A;
     --grow:#5BC98C; --grow-tint:#0F2E20;
     --spend:#EC8B81; --spend-tint:#331916;
@@ -172,7 +180,7 @@
   --paper:#0F1A1D; --surface:#16252A; --surface2:#1B2E34;
   --tint:#132025; --line:#24373D; --line-soft:#1C2C32;
   --ink:#E4EDEE; --muted:#93A7AC;
-  --action:#3FAEBC; --action-ink:#06262B; --action-tint:#12333A;
+  --action:#3FBCC8; --action-hi:#6FD6DE; --action-ink:#06262B; --action-tint:#12333A; --wash-top:#15303A;
   --treasure-tint:#33280F; --treasure-deep:#F0C25A;
   --grow:#5BC98C; --grow-tint:#0F2E20;
   --spend:#EC8B81; --spend-tint:#331916;
@@ -765,6 +773,86 @@ html[data-motion="reduced"] *{animation-duration:.01ms!important;animation-itera
 .reclive{width:12px;height:12px;border-radius:50%;background:var(--spend);flex:0 0 auto;animation:recpulse 1.1s ease-in-out infinite}
 @keyframes recpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
 html[data-motion="reduced"] .reclive{animation:none}
+
+/* ══ v2 — morning light ══════════════════════════════════════════════════
+   The v1 town read as sad: grey-teal surfaces, grey labels, sepia paintings
+   under heavy black veils, and — for a new child — every Arcade cover
+   desaturated to 35% because everything starts locked. The first screen a
+   child sees was the greyest one in the app. This layer keeps every rule of
+   the family contract (one filled action, gold is money, green/coral are
+   money states) and puts the colour back:
+     · a sky wash behind everything, warm paper under it
+     · the paintings a little more saturated, and veils that stop at the words
+     · locked is a padlock, never grey — a child should want what's behind it
+     · labels and icon wells carry colour, in a fixed rotation so it reads as
+       a set rather than as decoration that means something */
+body{background-image:linear-gradient(180deg,var(--wash-top) 0,var(--paper) 520px)}
+body::before{opacity:.08}
+.topbar{background:color-mix(in srgb,var(--wash-top) 82%,transparent)}
+
+/* the paintings — every drawn plate in the app sits in an <svg> with an
+   <image>, an <img>, or a CSS background on one of these */
+svg:has(image),img,.cv-art,.poster,.cover,.actban,.lstage{filter:saturate(1.28) contrast(1.04) brightness(1.02)}
+.poster .pv,.cover .cv-veil{background:linear-gradient(180deg,transparent 0%,transparent 38%,rgb(16 28 40 / .35) 62%,rgb(16 28 40 / .78) 100%)}
+.actscrim{background:linear-gradient(180deg,rgba(14,22,26,.18) 0%,transparent 34%,transparent 58%,var(--surface) 100%)}
+.poster.locked,.cover.locked{filter:saturate(1.1) brightness(.97)}
+.poster .pill,.cover .pill{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgb(0 0 0 / .18);font-weight:700}
+
+/* buttons: the one thing to do should look pressable */
+.btn{background:linear-gradient(180deg,var(--action-hi),var(--action) 70%);box-shadow:var(--edge),0 4px 12px color-mix(in srgb,var(--action) 32%,transparent)}
+.btn.ghost{background:var(--surface);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--action) 30%,var(--line)),0 2px 6px rgb(90 60 20 / .06);color:var(--action);border:0}
+.tabbar button[aria-current="page"]{background:linear-gradient(180deg,var(--action-hi),var(--action));box-shadow:0 4px 12px color-mix(in srgb,var(--action) 35%,transparent)}
+.navbtn[aria-current="page"]{background:linear-gradient(180deg,var(--action-hi),var(--action))}
+
+/* cards: a warm lift, not a grey outline */
+.card{box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 2px 6px rgb(90 60 20 / .05),0 14px 32px rgb(90 60 20 / .08)}
+
+/* labels carry the accent; section rules become a coloured tab */
+.eyebrow{color:var(--action);font-weight:750}
+.sect b{color:var(--ink);font-family:var(--display);font-size:15px;font-weight:800;letter-spacing:0;text-transform:none}
+.sect b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:8px;vertical-align:1px;
+  background:linear-gradient(135deg,var(--treasure),var(--spend))}
+.sect i{background:linear-gradient(90deg,var(--line),transparent)}
+
+/* icon wells: a fixed five-colour rotation down a list */
+.iw{background:var(--save-tint);color:var(--save)}
+.rows > :nth-child(5n+2) .iw,.jrows > :nth-child(5n+2) .iw{background:var(--treasure-tint);color:var(--treasure-deep)}
+.rows > :nth-child(5n+3) .iw,.jrows > :nth-child(5n+3) .iw{background:var(--give-tint);color:var(--give)}
+.rows > :nth-child(5n+4) .iw,.jrows > :nth-child(5n+4) .iw{background:var(--action-tint);color:var(--action)}
+.rows > :nth-child(5n+5) .iw,.jrows > :nth-child(5n+5) .iw{background:var(--spend-tint);color:var(--spend)}
+.qrow.done .iw{background:var(--grow-tint);color:var(--grow)}
+
+/* progress bars: filled with light, on a warm track */
+.bar{background:color-mix(in srgb,var(--line) 70%,var(--surface))}
+.bar > i{background:linear-gradient(90deg,var(--action-hi),var(--action))}
+
+/* speech: the townsfolk talk in colour */
+.say .bub{background:color-mix(in srgb,var(--action-tint) 55%,var(--surface));border-color:color-mix(in srgb,var(--action) 18%,var(--line))}
+.say .nm{color:var(--action)}
+.say .who{border:2px solid #fff;box-shadow:0 3px 10px rgb(90 60 20 / .16);background:var(--treasure-tint)}
+
+/* the money line under the hero reads as a treasure shelf */
+.moneyline{background:linear-gradient(135deg,var(--treasure-tint),color-mix(in srgb,var(--treasure-tint) 40%,var(--surface)));
+  border-radius:var(--r-xl);padding:14px 16px;box-shadow:0 0 0 1px color-mix(in srgb,var(--treasure) 30%,transparent)}
+.moneyline .k{color:var(--treasure-deep)}
+.moneyline .lead .v{color:var(--treasure-deep)}
+
+/* Home keeps its long tail behind a fold — the town, not a scroll of cards */
+details.fold{border-radius:var(--r-xl)}
+details.fold > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:var(--r-xl);
+  background:var(--surface);box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 2px 6px rgb(90 60 20 / .05);font-weight:800}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2.5px solid var(--action);border-bottom:2.5px solid var(--action);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+details.fold[open] > summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+details.fold[open] > summary{margin-bottom:12px}
+details.fold .fsub{font-weight:500;color:var(--muted);font-size:13px}
+.greet .bub{background:color-mix(in srgb,var(--action-tint) 55%,var(--surface));border:1px solid color-mix(in srgb,var(--action) 18%,var(--line))}
+/* the small covers carry two lines of blurb, so their veil starts higher */
+.covers .cover .cv-veil{background:linear-gradient(180deg,transparent 0%,rgb(16 28 40 / .10) 22%,rgb(16 28 40 / .55) 52%,rgb(16 28 40 / .86) 100%)}
+/* The town's labels take var(--ink), which flips with the theme — but the
+   painted backdrop behind them does not, so in dark mode they were pale on a
+   pale sky. A paper-coloured halo reads on either. */
+.town svg text[fill="var(--ink)"]{paint-order:stroke;stroke:var(--paper);stroke-width:3.5px;stroke-linejoin:round}
 
 </style>
 </head>
@@ -10278,7 +10366,7 @@ ${marks}`;
       <span class="cv-body">
         <span class="row" style="gap:6px">${open ? "" : `<span class="pill">${ico("lock", "\u{1F512}", 11)} learn first</span>`}${open && g.keys ? `<span class="cv-keys">${esc(g.keys)}</span>` : ""}</span>
         <b>${esc(g.name)}</b>
-        <span class="small">${open ? esc(g.blurb) : "Finish \u201C" + esc(ch ? ch.title : "") + "\u201D to open this"}</span>
+        <span class="small">${open ? esc(g.blurb) : ch ? "Finish \u201C" + esc(ch.title) + "\u201D to open this" : esc(o.lock || "Opens later on")}</span>
       </span>
     </button>`;
     };
@@ -10290,6 +10378,7 @@ ${marks}`;
       blurb: "Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer."
     };
     const m40open = levelAtLeast(c, 13);
+    const m40 = cover(M40, { big: true, open: m40open, act: "nav", arg: "market40", tint: "var(--grow)", lock: "Opens at level 13" });
     return `<div class="stack">
     ${hero({
       eyebrow: "Practise it",
@@ -10297,13 +10386,14 @@ ${marks}`;
       who: "pip",
       line: "Wages from in here land in the same wallet as everything else. There is no second, magic money \u2014 that is on purpose."
     })}
-    ${cover(M40, { big: true, open: m40open, act: "nav", arg: "market40", tint: "var(--grow)" })}
+    ${m40open ? m40 : ""}
     <div class="sect"><b>The board game \xB7 nobody goes bankrupt</b><i></i></div>
     ${GAMES.filter((g) => g.kind === "board").map((g) => cover(g, { big: true, tint: "var(--treasure)" })).join("")}
     <div class="sect"><b>A few minutes each</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === "action").map((g) => cover(g)).join("")}</div>
     <div class="sect"><b>Quick drills \xB7 no reflexes required</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === "drill").map((g) => cover(g, { tint: "var(--save)" })).join("")}</div>
+    ${m40open ? "" : `<div class="sect"><b>Later on</b><i></i></div>${m40}`}
     ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ""}
   </div>`;
   }
@@ -14312,6 +14402,19 @@ ${marks}`;
     </div>
   </div>`;
   }
+  var FOLDS = /* @__PURE__ */ new Set();
+  if (typeof document !== "undefined") document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (d && d.matches && d.matches("details.fold")) {
+      if (d.open) FOLDS.add(d.dataset.fold);
+      else FOLDS.delete(d.dataset.fold);
+    }
+  }, true);
+  function fold(id, title, sub, icon, body) {
+    return `<details class="fold" data-fold="${id}"${FOLDS.has(id) ? " open" : ""}>
+    <summary><span class="iw">${ico(icon, "", 20)}</span><span class="grow" style="min-width:0">${esc(title)}<div class="fsub">${sub}</div></span></summary>
+    ${body}</details>`;
+  }
   function viewHome() {
     const c = K5();
     const due2 = payDue(c, R.s);
@@ -14347,12 +14450,6 @@ ${marks}`;
 
     ${strip}
 
-    ${tillCard(c)}
-
-    ${todayCard(c)}
-
-    ${journeys(c)}
-
     ${lessonBeat(c)}
 
     <div class="card">
@@ -14376,6 +14473,29 @@ ${marks}`;
 
     ${closingTime(c, quests)}
 
+    ${journeys(c)}
+
+    <div class="sect"><b>A little more for today</b><i></i></div>
+
+    ${(() => {
+      const p = puzzle(), st = stateOf(c, p.day);
+      return fold(
+        "till",
+        "Today's till \u2014 what did one cost?",
+        st.done ? "Solved. A fresh receipt tomorrow." : "A puzzle. Everyone in the house gets the same one.",
+        "receipt",
+        tillCard(c)
+      );
+    })()}
+
+    ${fold(
+      "today",
+      "Do one \xB7 carry one \xB7 ask at home",
+      deedDoneToday(c) ? "Today's deed is done." : "Something to do in the real world, a money word, and a question for supper.",
+      "quest",
+      todayCard(c)
+    )}
+
     <div class="sect"><b>The town</b><i></i></div>
 
     ${(() => {
@@ -14383,7 +14503,12 @@ ${marks}`;
       const tp = townProgress(c);
       if (!fx.length) return "";
       const next3 = fx.find((f) => !f.done) || fx[0];
-      return `<div class="card">
+      return fold(
+        "town",
+        `Put the town right \xB7 ${tp.done}/${tp.all} mended`,
+        next3.done ? "Everything here is mended." : `Next: ${esc(next3.name)} \u2014 ${money(next3.put)} of ${money(next3.cost)} in`,
+        "town",
+        `<div class="card">
         <div class="row"><div class="grow"><div class="eyebrow">Put it right \xB7 ${esc(world.name)}</div>
           <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
           <span class="pill ${tp.done === tp.all ? "grow" : ""}">${tp.done}/${tp.all} mended</span></div>
@@ -14404,13 +14529,9 @@ ${marks}`;
                  </div>`}
           </div>`).join("")}
         </div>
-      </div>`;
+      </div>`
+      );
     })()}
-
-
-
-
-
 
     ${has(c) ? say2("pip", hometalk(c)) : ""}
   </div>`;
@@ -15830,7 +15951,7 @@ ${marks}`;
       ${bar.map((t) => `<button data-act="${t.k === "more" ? "more" : "nav"}" data-arg="${t.k}"
         aria-current="${s.ui.nav === t.k ? "page" : "false"}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join("")}
     </nav>
-    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzington is ready \xB7 Reload</button>' : ""}
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready \xB7 Reload</button>' : ""}
     ${R.overlay ? overlay() : ""}`;
     if (R.game && R.game.mount) R.game.mount();
     mountLesson();
