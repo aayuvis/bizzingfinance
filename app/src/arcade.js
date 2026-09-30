@@ -70,7 +70,7 @@ export function viewArcade() {
   const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level 13' });
   return `<div class="stack">
     ${hero({ eyebrow: 'Practise it', title: 'The Arcade', who: 'pip',
-      line: 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.' })}
+      line: 'Game wages go into your one wallet. There\'s no second, magic money.' })}
     ${m40open ? m40 : ''}
     <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
     ${GAMES.filter((g) => g.kind === 'board').map((g) => cover(g, { big: true, tint: 'var(--treasure)' })).join('')}

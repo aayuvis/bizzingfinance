@@ -52,11 +52,11 @@ export function viewOnboard(draft) {
         ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ''}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : 'A new stall on Market Row'}</h1>
         <p class="muted" style="margin-top:8px">${first
-          ? "A town where you get a stall, a wallet and four jars — and learn money by running your own."
+          ? "Get a stall, a wallet and four jars — and learn money by running them."
           : 'Another child, their own town, their own money. Nothing is shared between them.'}</p>
       </div>
       ${say('nana', first
-        ? 'I am shutting up my shop at the end of the road, and the smallest stall on Market Row is going spare. What shall I call you?'
+        ? 'The smallest stall on Market Row is going spare. It\'s yours! What shall I call you?'
         : 'Another one! There is always a stall going. What is this one called?')}
       <div class="card stack">
         <label class="eyebrow" for="nm">Name</label>
@@ -128,7 +128,7 @@ function journeys(c) {
   ].join('');
 
   const household = jcard({ accent: 'var(--save)', sprite: 'home-' + Math.min(4, (c.home && c.home.tier) || 0), act: 'sub', arg: 'place',
-    eyebrow: 'The Household', question: "Can you cover your life — and what's left over?",
+    eyebrow: 'The Household', question: 'Can you pay for your life?',
     big: money(left), bigStyle: left >= 0 ? '' : 'color:var(--spend)', sub: 'left over / week', rows: hhBeats,
     foot: `<button class="jfoot" data-act="sub" data-arg="place">
       <span class="bar grow" style="height:6px"><i style="width:${Math.min(100, ind * 100)}%;background:${ind >= 1 ? 'var(--grow)' : 'var(--action)'}"></i></span>
@@ -154,7 +154,7 @@ function journeys(c) {
   ].join('');
 
   const livelihood = jcard({ accent: 'var(--treasure)', sprite: bizOpen ? 'shop' : 'stall', act: 'sub', arg: bizOpen ? 'business' : 'wallet',
-    eyebrow: 'The Livelihood', question: 'What is your time worth — and can you make it worth more?',
+    eyebrow: 'The Livelihood', question: 'What is your time worth?',
     big: `${jobs.length - jleft}/${jobs.length}`, sub: 'shifts today',
     rows: lvBeats || `<p class="small muted" style="padding:12px 16px">No work posted in ${esc(WORLDS[c.world || 0].name)} today.</p>` });
 
@@ -163,21 +163,21 @@ function journeys(c) {
   let portfolio;
   if (!bankOpen && !exOpen) {
     portfolio = jcard({ accent: 'var(--grow)', sprite: 'bank', locked: true, act: 'nav', arg: 'learn',
-      eyebrow: 'The Portfolio', question: 'Where does the left-over live — and what is it doing?',
+      eyebrow: 'The Portfolio', question: 'Where does spare money go?',
       big: ico('lock', '🔒', 26), sub: 'not yet open',
       rows: beat('nav', 'learn', 'lesson', 'Opens with ' + esc(needFor('bank') || 'the Banking chapter'),
-        'The Bank takes deposits the day you understand what it does with them.') });
+        'Learn what a bank does, and it opens.') });
   } else {
     const invested = c.money.bank.balance + sim.holdingsValue(c);
     const up = c.market.lastMove >= 0;
     const pfBeats = [
       bankOpen ? beat('sub', 'bank', 'bank', 'The Bank', `${money(c.money.bank.balance)} on deposit, earning while you sleep.`) : '',
-      exOpen ? beat('sub', 'portfolio', 'chartUp', 'The Exchange', `Market day — see what moved. Most days the right move is nothing.`,
+      exOpen ? beat('sub', 'portfolio', 'chartUp', 'The Exchange', `See what moved. Most days, do nothing.`,
         `<span class="pill ${up ? 'grow' : 'spendp'}">${up ? '▲' : '▼'}</span>`, true) : '',
       levelAtLeast(c, 16) ? beat('nav', 'market40', 'company', 'The Market Game', 'Forty companies, forty years, one decade at a time.') : '',
     ].join('');
     portfolio = jcard({ accent: 'var(--grow)', sprite: exOpen ? 'exchange' : 'bank', act: 'sub', arg: exOpen ? 'portfolio' : 'bank',
-      eyebrow: 'The Portfolio', question: 'Where does the left-over live — and what is it doing?',
+      eyebrow: 'The Portfolio', question: 'Where does spare money go?',
       big: money(invested), sub: 'invested', rows: pfBeats });
   }
 
@@ -307,7 +307,7 @@ export function viewHome() {
 
     <div class="card">
       <div class="row"><div class="grow"><div class="ct">Today's three</div>
-        <p class="cs">Wages into the same wallet as everything else.</p></div>
+        <p class="cs">Pay goes straight into your wallet.</p></div>
         <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
       <div class="rows" style="margin-top:6px">
         ${quests.map((q) => `<div class="qrow${q.claimed ? ' done' : ''}">
@@ -349,7 +349,7 @@ export function viewHome() {
       return fold('town', `Put the town right · ${tp.done}/${tp.all} mended`,
         next.done ? 'Everything here is mended.' : `Next: ${esc(next.name)} — ${money(next.put)} of ${money(next.cost)} in`, 'town', `<div class="card">
         <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
-          <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
+          <p class="small muted">Money spent on something useful keeps paying you back.</p></div>
           <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
         <div class="rows" style="margin-top:6px">
           ${fx.map((f) => `<div class="qrow block${f.done ? ' done' : ''}">
@@ -420,7 +420,7 @@ function closingTime(c, quests) {
         <span class="grow" style="min-width:0"><b style="font-size:14px">${esc(r.t)}</b>
           <div class="small muted">${r.sub}</div></span></div>`).join('')}
     </div>
-    ${say('pip', 'Stopping when the day is done is a money skill too. The town keeps going without you — the fountain does not un-mend overnight.')}
+    ${say('pip', 'Knowing when to stop is a money skill too. The town will be here tomorrow.')}
   </div>`;
 }
 
@@ -494,12 +494,12 @@ function todaysWork(c) {
 
 function hometalk(c) {
   const lv = c.learn.level;
-  if (lv < 6) return "Your stall's open. There's work on Market Row most days — and learn a card or two, because the shed round the back has four jars in it and they change everything.";
-  if (lv < 8) return 'Shed is yours. Split the money the moment it lands, before it has a chance to become one big pile.';
-  if (lv < 11) return 'Build Yard next. Name something you want and it starts going up floor by floor. Fair warning: raid the fund and the scaffolding comes back down.';
-  if (lv < 16) return "Bank's open. The clock strikes every pay day and a little interest lands. Boring. Boring is exactly the point.";
-  if (lv < 23) return 'Exchange is open — Bo and Bea are already arguing. Buy from the Grow jar, never the Spend jar.';
-  return "Nana's shutters came off. That's your shop now. Buy for less than you sell for, and count the difference honestly.";
+  if (lv < 6) return "Your stall's open! Do a job, learn a card — there are four jars waiting in the shed out back.";
+  if (lv < 8) return 'The shed is yours. Split your money the moment it lands.';
+  if (lv < 11) return 'The Build Yard is open. Name something you want and watch it go up. Raid it, and it comes down.';
+  if (lv < 16) return "The bank is open. A little interest lands every pay day. Boring is the point.";
+  if (lv < 23) return 'The Exchange is open. Buy from the Grow jar, never the Spend jar.';
+  return "Nana's shop is yours now. Buy for less than you sell for.";
 }
 
 function nextThing(c) {
@@ -519,7 +519,7 @@ export function viewWorlds() {
   const title = (id) => { const ch = CHAPTERS.find((x) => x.id === id); return ch ? ch.title : id; };
   return `<div class="stack">
     ${hero({ eyebrow: 'Travel', title: 'Five places', who: 'pip',
-      line: 'Five places, and you walk them in order. You move on when you have finished learning where you are — not when you have earned enough. That is the whole rule.' })}
+      line: 'Five places, walked in order. You move on by learning, not by earning.' })}
     ${WORLDS.map((w, i) => {
       const open = worldOpen(c, i);
       const here = (c.world || 0) === i;
@@ -704,10 +704,10 @@ function viewWallet() {
     ${hero({ eyebrow: 'In your pocket', title: 'Your wallet', big: money(c.money.wallet), bigStyle: 'color:var(--treasure-deep)', sub: 'right now', art: 'stall',
       line: c.band === 'sprout'
         ? 'This can never go below zero — debt comes later, when it is taught.'
-        : 'Everything below is dated, because a statement you cannot read is a statement you cannot argue with.' })}
+        : 'Every coin in and out, with its date.' })}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
-      <p class="small muted" style="margin:3px 0 10px">Each job once a day. You are selling an hour, not a thing.</p>
+      <p class="small muted" style="margin:3px 0 10px">One of each a day. You're selling your time.</p>
       <div class="rows">
         ${jobs.map((j) => `<div class="qrow${j.done ? ' done' : ''}">
           <span class="iw">${ico(j.em, j.em, 20)}</span>
@@ -805,7 +805,7 @@ function viewJars() {
   const tot = r.spend + r.save + r.grow + r.give;
   return `<div class="stack">
     ${hero({ eyebrow: 'The Jar Shed', title: 'Four jars', big: money(sim.jarTotal(c)), sub: 'in the jars', art: 'jars', who: 'nana',
-      line: 'Split it the moment it lands. What sits in one pile gets spent as one pile — that is the entire trick, and it is sixty years old.' })}
+      line: 'Split it the moment it lands. One pile gets spent as one pile.' })}
     <div class="card">
       <div class="jars">
         ${Object.keys(JARMETA).map((k) => `<div class="jar">
@@ -857,7 +857,7 @@ function viewGoals() {
   const c = K();
   return `<div class="stack">
     ${hero({ eyebrow: 'The Build Yard', title: 'Goals', art: 'yard', who: 'pip',
-      line: 'Name the thing and price it. Dividing turns a wish into a date — and the yard shows the date, not encouragement.' })}
+      line: 'Name it and price it. Dividing turns a wish into a date.' })}
     <div class="card stack">
       <div class="eyebrow">Start something</div>
       <div class="row" style="gap:8px;flex-wrap:wrap">
@@ -897,7 +897,7 @@ function viewBank() {
   const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(Math.max(b.balance, price(50)) * Math.pow(1 + b.rate, y * 52)) }));
   return `<div class="stack">
     ${hero({ eyebrow: 'Clocktower Square', title: 'The Bank', big: money(b.balance), bigStyle: 'color:var(--save)', sub: 'in the vault', art: 'bank', who: 'nana',
-      line: 'Interest is rent on money. Leave it here and the bank pays you rent for using it. Borrow, and you pay. Same idea — the only question is which side you are standing on.' })}
+      line: 'Interest is rent on money. Save, and the bank pays you. Borrow, and you pay.' })}
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Every pay day</div>
         <div class="big" style="font-size:24px">${(b.rate * 100).toFixed(0)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">of what is in the vault</span></div></div></div>
@@ -1043,7 +1043,7 @@ function viewBusiness() {
   if (!c.venture) {
     return `<div class="stack">
       ${hero({ eyebrow: "Nana's shutters", title: 'A stall of your own', art: 'shop', who: 'nana',
-        line: 'A stall of your own. You set the price, you carry the cost, and you find out the difference between a good week and a week that only looked good.' })}
+        line: 'Your own shop. You set the price, you carry the cost, you keep what\'s left.' })}
       <div class="card">
         <div class="eyebrow">Open your own</div>
         <h2 style="margin:3px 0 6px;font-size:22px">Start a stall</h2>
@@ -1178,7 +1178,7 @@ export function viewStore() {
   const nowT = Date.now();
   return `<div class="stack">
     ${hero({ eyebrow: 'Market Row', title: 'The General Store', art: 'shop', who: 'mags',
-      line: 'Some of this earns its keep and some of it is just lovely — and I have written which is which, plus what else the money could have been. My old boss called that commercial suicide.' })}
+      line: 'Some things here earn their keep, some are just lovely. Each tag says which.' })}
     <div class="card pad0"><div class="rows" style="margin:0">
     ${SHOP.map((it) => {
       const p = price(it.units);
@@ -1565,7 +1565,7 @@ export function viewCollection() {
   const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
   return `<div class="stack">
     ${hero({ eyebrow: 'Kept, never given', title: 'The Collection', figure: co.has(c) ? companionFigure(c, 110) : '',
-      line: 'A badge marks a decision. A keepsake is a thing you did. Nothing on these shelves arrives for showing up.' })}
+      line: 'Badges are for good decisions. Keepsakes are for things you did. Nothing here is for just showing up.' })}
     <div class="card">
       <div class="eyebrow">Things you did</div>
       ${(c.deeds || []).length ? `

@@ -118,6 +118,23 @@ export function actSection(c, wi, r, opts = {}) {
   const plate = ART[PLATE[w.id]];
   const status = st.here ? 'you are here' : st.done === st.total && st.total ? 'cleared' : st.done ? 'in progress' : open ? 'open' : 'ahead';
   const pct = ns.length ? Math.round(ns.filter((s) => s.done).length / ns.length * 100) : 0;
+  /* Every world but the one you are in is a banner you can open, not a list
+     of padlocks. Four worlds of greyed-out stops was most of the old Learn. */
+  if (opts.compact) {
+    const line = st.done === st.total && st.total ? `Cleared · all ${st.total} stops`
+      : open ? `${st.done} of ${st.total} stops`
+      : wi > 0 ? `Opens after ${esc(WORLDS[wi - 1].name)}` : '';
+    return `<button class="act compact${open ? '' : ' shut'}" data-act="shelf" data-arg="act:${wi}" style="--ja:${w.tint}">
+      <div class="actban" style="${plate ? `--plate:url(${plate})` : ''}">
+        <span class="actscrim"></span>
+        <div class="actrow">
+          <span class="actguide">${face(GUIDE[w.id] || 'pip', 44)}</span>
+          <span class="acttext"><b>${ROMAN[wi]} · ${esc(w.name)}</b><i>${open ? '' : ico('lock', '🔒', 11) + ' '}${line}</i></span>
+          ${ring(st.done, st.total, 40, st.done === st.total && st.total ? 'var(--grow)' : '#FFD24D')}
+        </div>
+      </div>
+    </button>`;
+  }
   return `<section class="act${st.here ? ' here' : ''}${open ? '' : ' shut'}" id="act-${wi}" style="--ja:${w.tint}">
     <div class="actban" style="${plate ? `--plate:url(${plate})` : ''}">
       <span class="actscrim"></span>
@@ -137,7 +154,7 @@ export function actSection(c, wi, r, opts = {}) {
         return `${lockedByLevel && open ? `<button class="stop testout" data-act="testout" data-arg="${chId}" style="--ja:${w.tint}">
             <span class="med">${ico('lock', '🔒', 13)}</span>
             <span class="stbody"><span class="sttitle">Already know “${esc(ch.title)}”?</span>
-              <span class="sttag">Opens at level ${ch.lv} — or a few questions at full difficulty, all but one right, and it opens now. Failing costs nothing.</span>
+              <span class="sttag">Opens at level ${ch.lv}. Or pass a short test to open it now — failing costs nothing.</span>
               <span class="stgo ghost">Test out →</span></span></button>` : ''}
           ${mine.map((s) => stopRow(c, s)).join('')}
           ${allDone ? checkpointRow(c, ch, w) : ''}`;
@@ -145,6 +162,25 @@ export function actSection(c, wi, r, opts = {}) {
       ${!open && wi > 0 ? `<p class="small muted" style="padding:6px 4px 2px 44px">Finish ${esc(WORLDS[wi - 1].name)} to walk on.</p>` : ''}
     </div>
   </section>`;
+}
+
+/* ── up next: the one thing Learn is for, before the map ─────────────── */
+function upNext(c, cur) {
+  if (!cur) return `<div class="card upnext"><div class="eyebrow">Every stop cleared</div>
+    <h2 style="margin-top:3px">You have walked the whole atlas</h2>
+    <p class="small muted" style="margin-top:4px">Revise keeps it fresh.</p></div>`;
+  if (cur.locked) return '';
+  const who = cur.card.who || 'pip';
+  const blurb = String(cur.card.teach || '').replace(/<[^>]+>/g, '').split(/(?<=[.!?])\s/)[0];
+  return `<button class="card upnext" data-act="card" data-arg="${cur.card.id}" style="--ja:${cur.w.tint}">
+    <span class="unfig">${face(who, 64)}</span>
+    <span class="grow" style="min-width:0">
+      <span class="eyebrow">Up next · ${esc(cur.w.name)}</span>
+      <b class="untitle">${esc(cur.card.title)}</b>
+      ${blurb ? `<span class="small muted unblurb">${esc(blurb)}</span>` : ''}
+      <span class="btn sm" style="margin-top:10px">Continue →</span>
+    </span>
+  </button>`;
 }
 
 /* ── the two screens ──────────────────────────────────────────────────── */
@@ -161,9 +197,10 @@ export function viewAtlas(c) {
       </div>
     </div>
     ${levelBar(c)}
+    ${upNext(c, cur)}
     ${board(c)}
-    <p class="small muted" style="margin:-6px 4px 0">Tap a region to walk it. ${cur ? `You are standing at <b>${esc(cur.card.title)}</b> in ${esc(cur.w.name)}.` : 'Every stop is cleared.'}</p>
-    ${WORLDS.map((w, wi) => actSection(c, wi, r)).join('')}
+    ${(() => { const here = cur ? cur.wi : WORLDS.length - 1;
+      return WORLDS.map((w, wi) => actSection(c, wi, r, { compact: wi !== here })).join(''); })()}
   </div>`;
 }
 /* ── the walk ─────────────────────────────────────────────────────────────
