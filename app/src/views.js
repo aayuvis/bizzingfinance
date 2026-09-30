@@ -49,6 +49,7 @@ export function viewOnboard(draft) {
     return shell(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
+        ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ''}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : 'A new stall on Market Row'}</h1>
         <p class="muted" style="margin-top:8px">${first
           ? "A town where you get a stall, a wallet and four jars — and learn money by running your own."
@@ -1647,7 +1648,7 @@ export function settingsSheet(R) {
     </div>
     ${R.install ? `<div class="sect"><b>This device</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
-      ${row('Install Bizzington', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
+      ${row('Install Bizzing Finance', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
     </div>` : ''}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '👪', 15)} Grown-up's page</button>
@@ -1663,11 +1664,11 @@ export function settingsSheet(R) {
    India credits every art tradition and Bee its typefaces; this app owes
    the same honesty about the image model, the synthesised narration and the
    three open fonts it ships. */
-export const VERSION = '2026-09-04';
+export const VERSION = '2026-09-30';
 export function aboutSheet() {
   return `
-    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
-      <div class="small muted">Bizzing Finance · build ${VERSION}</div></div></div>
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Finance</h2>
+      <div class="small muted">Set in Bizzington · build ${VERSION}</div></div></div>
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own — with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
     <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
