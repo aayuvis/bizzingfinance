@@ -780,6 +780,7 @@ ${o}`}const qe=[{m:"M1",can:"Counts and compares whole amounts",q:"Which is more
   </div>`}const se=()=>He(d.s);function Sh(e){const t=e.step||0,a=o=>`<div class="stack" style="max-width:520px;margin:5vh auto 0">${o}</div>`,n=d.s?d.s.kids.length===0:!0;return t===0&&n&&!e.go?ic():a(t===0?`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${de.pip.svg}</div>
+        ${n?'<div class="eyebrow">Bizzing Finance</div>':""}
         <h1 style="font-size:32px">${n?'Welcome to <em style="font-style:italic">Bizzington</em>':"A new stall on Market Row"}</h1>
         <p class="muted" style="margin-top:8px">${n?"A town where you get a stall, a wallet and four jars — and learn money by running your own.":"Another child, their own town, their own money. Nothing is shared between them."}</p>
       </div>
@@ -1714,7 +1715,7 @@ ${o}`}const qe=[{m:"M1",can:"Counts and compares whole amounts",q:"Which is more
     </div>
     ${e.install?`<div class="sect"><b>This device</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
-      ${o("Install Bizzington","Its own icon, full screen, works offline.",'<button class="btn sm" data-act="install">Install</button>')}
+      ${o("Install Bizzing Finance","Its own icon, full screen, works offline.",'<button class="btn sm" data-act="install">Install</button>')}
     </div>`:""}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn ghost sm" data-act="nav" data-arg="parents">${j("family","👪",15)} Grown-up's page</button>
@@ -1722,9 +1723,9 @@ ${o}`}const qe=[{m:"M1",can:"Counts and compares whole amounts",q:"Which is more
       <button class="btn ghost sm" data-act="nav" data-arg="collection">${j("quest","🏅",15)} Collection</button>
       <span class="grow"></span>
       <button class="btn sm" data-act="closeOv">Done</button>
-    </div>`}const $i="2026-09-04";function sc(){return`
-    <div class="row" style="gap:12px;align-items:center">${un(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
-      <div class="small muted">Bizzing Finance · build ${$i}</div></div></div>
+    </div>`}const $i="2026-09-30";function sc(){return`
+    <div class="row" style="gap:12px;align-items:center">${un(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Finance</h2>
+      <div class="small muted">Set in Bizzington · build ${$i}</div></div></div>
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own — with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
     <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>

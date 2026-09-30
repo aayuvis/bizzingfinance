@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Bizzington</title>
+<title>Bizzing Finance</title>
 <meta name="description" content="A town where kids 8+ get a wallet, a budget, a bank and a portfolio that are entirely simulated and entirely theirs.">
 <meta name="theme-color" content="#0E6B78">
 <!-- The webfonts are ours, on our own origin, and that is deliberate twice over.
@@ -775,13 +775,8 @@ html[data-motion="reduced"] .reclive{animation:none}
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __esm = (fn, res, err) => function __init() {
-    if (err) throw err[0];
-    try {
-      return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-    } catch (e) {
-      throw err = [e], e;
-    }
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   };
   var __export = (target, all) => {
     for (var name in all)
@@ -14098,6 +14093,7 @@ ${marks}`;
       return shell3(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
+        ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ""}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : "A new stall on Market Row"}</h1>
         <p class="muted" style="margin-top:8px">${first ? "A town where you get a stall, a wallet and four jars \u2014 and learn money by running your own." : "Another child, their own town, their own money. Nothing is shared between them."}</p>
       </div>
@@ -15590,7 +15586,7 @@ ${marks}`;
     </div>
     ${R2.install ? `<div class="sect"><b>This device</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
-      ${row("Install Bizzington", "Its own icon, full screen, works offline.", '<button class="btn sm" data-act="install">Install</button>')}
+      ${row("Install Bizzing Finance", "Its own icon, full screen, works offline.", '<button class="btn sm" data-act="install">Install</button>')}
     </div>` : ""}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico("family", "\u{1F46A}", 15)} Grown-up's page</button>
@@ -15600,11 +15596,11 @@ ${marks}`;
       <button class="btn sm" data-act="closeOv">Done</button>
     </div>`;
   }
-  var VERSION = "2026-09-04";
+  var VERSION = "2026-09-30";
   function aboutSheet() {
     return `
-    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzington</h2>
-      <div class="small muted">Bizzing Finance \xB7 build ${VERSION}</div></div></div>
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Finance</h2>
+      <div class="small muted">Set in Bizzington \xB7 build ${VERSION}</div></div></div>
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own \u2014 with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
     <p class="small muted">The characters, the buildings, the map, the five worlds and the arcade covers were drawn with an AI image model from written briefs, then chosen, keyed and edited by hand. The lesson narration was recorded with a synthetic voice from scripts a person wrote. No AI runs while the app runs: nothing your child types, taps or earns leaves this device, and no model writes to them, scores them or sees them.</p>
