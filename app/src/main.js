@@ -119,7 +119,7 @@ function render() {
       ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
         aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join('')}
     </nav>
-    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzington is ready · Reload</button>' : ''}
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready · Reload</button>' : ''}
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */

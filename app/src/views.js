@@ -247,6 +247,20 @@ function greeting(c) {
   </div>`;
 }
 
+/* Home used to be a 4,000-pixel column of cards, so nothing on it read as the
+   thing to do next. The daily extras fold away now; which ones a child left
+   open survives the re-render (string rendering replaces the DOM each time). */
+const FOLDS = new Set();
+if (typeof document !== 'undefined') document.addEventListener('toggle', (e) => {
+  const d = e.target;
+  if (d && d.matches && d.matches('details.fold')) { if (d.open) FOLDS.add(d.dataset.fold); else FOLDS.delete(d.dataset.fold); }
+}, true);
+function fold(id, title, sub, icon, body) {
+  return `<details class="fold" data-fold="${id}"${FOLDS.has(id) ? ' open' : ''}>
+    <summary><span class="iw">${ico(icon, '', 20)}</span><span class="grow" style="min-width:0">${esc(title)}<div class="fsub">${sub}</div></span></summary>
+    ${body}</details>`;
+}
+
 export function viewHome() {
   const c = K();
   const due = sim.payDue(c, R.s);
@@ -289,12 +303,6 @@ export function viewHome() {
 
     ${strip}
 
-    ${tillCard(c)}
-
-    ${todayCard(c)}
-
-    ${journeys(c)}
-
     ${lessonBeat(c)}
 
     <div class="card">
@@ -320,6 +328,17 @@ export function viewHome() {
 
     ${closingTime(c, quests)}
 
+    ${journeys(c)}
+
+    <div class="sect"><b>A little more for today</b><i></i></div>
+
+    ${(() => { const p = puz.puzzle(), st = puz.stateOf(c, p.day);
+      return fold('till', "Today's till — what did one cost?",
+        st.done ? 'Solved. A fresh receipt tomorrow.' : 'A puzzle. Everyone in the house gets the same one.', 'receipt', tillCard(c)); })()}
+
+    ${fold('today', 'Do one · carry one · ask at home',
+      daily.deedDoneToday(c) ? "Today's deed is done." : 'Something to do in the real world, a money word, and a question for supper.', 'quest', todayCard(c))}
+
     <div class="sect"><b>The town</b><i></i></div>
 
     ${(() => {
@@ -327,7 +346,8 @@ export function viewHome() {
       const tp = sim.townProgress(c);
       if (!fx.length) return '';
       const next = fx.find((f) => !f.done) || fx[0];
-      return `<div class="card">
+      return fold('town', `Put the town right · ${tp.done}/${tp.all} mended`,
+        next.done ? 'Everything here is mended.' : `Next: ${esc(next.name)} — ${money(next.put)} of ${money(next.cost)} in`, 'town', `<div class="card">
         <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
           <p class="small muted">Money spent on something that produces is not the same as money spent on something that doesn't.</p></div>
           <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
@@ -350,13 +370,8 @@ export function viewHome() {
                  </div>`}
           </div>`).join('')}
         </div>
-      </div>`;
+      </div>`);
     })()}
-
-
-
-
-
 
     ${co.has(c) ? say('pip', hometalk(c)) : ''}
   </div>`;

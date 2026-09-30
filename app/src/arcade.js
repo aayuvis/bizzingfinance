@@ -57,23 +57,28 @@ export function viewArcade() {
       <span class="cv-body">
         <span class="row" style="gap:6px">${open ? '' : `<span class="pill">${ico('lock', '🔒', 11)} learn first</span>`}${open && g.keys ? `<span class="cv-keys">${esc(g.keys)}</span>` : ''}</span>
         <b>${esc(g.name)}</b>
-        <span class="small">${open ? esc(g.blurb) : 'Finish “' + esc(ch ? ch.title : '') + '” to open this'}</span>
+        <span class="small">${open ? esc(g.blurb) : ch ? 'Finish “' + esc(ch.title) + '” to open this' : esc(o.lock || 'Opens later on')}</span>
       </span>
     </button>`;
   };
   const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
     blurb: 'Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer.' };
   const m40open = levelAtLeast(c, 13);
+  /* A locked headline game at the top of the Arcade told a new child the
+     best thing here was not for them. Open, it leads; locked, it waits at
+     the bottom with the level that opens it. */
+  const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level 13' });
   return `<div class="stack">
     ${hero({ eyebrow: 'Practise it', title: 'The Arcade', who: 'pip',
       line: 'Wages from in here land in the same wallet as everything else. There is no second, magic money — that is on purpose.' })}
-    ${cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)' })}
+    ${m40open ? m40 : ''}
     <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
     ${GAMES.filter((g) => g.kind === 'board').map((g) => cover(g, { big: true, tint: 'var(--treasure)' })).join('')}
     <div class="sect"><b>A few minutes each</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === 'action').map((g) => cover(g)).join('')}</div>
     <div class="sect"><b>Quick drills · no reflexes required</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === 'drill').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
+    ${m40open ? '' : `<div class="sect"><b>Later on</b><i></i></div>${m40}`}
     ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ''}
   </div>`;
 }

@@ -579,3 +579,83 @@ html[data-motion="reduced"] *{animation-duration:.01ms!important;animation-itera
 .reclive{width:12px;height:12px;border-radius:50%;background:var(--spend);flex:0 0 auto;animation:recpulse 1.1s ease-in-out infinite}
 @keyframes recpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
 html[data-motion="reduced"] .reclive{animation:none}
+
+/* ══ v2 — morning light ══════════════════════════════════════════════════
+   The v1 town read as sad: grey-teal surfaces, grey labels, sepia paintings
+   under heavy black veils, and — for a new child — every Arcade cover
+   desaturated to 35% because everything starts locked. The first screen a
+   child sees was the greyest one in the app. This layer keeps every rule of
+   the family contract (one filled action, gold is money, green/coral are
+   money states) and puts the colour back:
+     · a sky wash behind everything, warm paper under it
+     · the paintings a little more saturated, and veils that stop at the words
+     · locked is a padlock, never grey — a child should want what's behind it
+     · labels and icon wells carry colour, in a fixed rotation so it reads as
+       a set rather than as decoration that means something */
+body{background-image:linear-gradient(180deg,var(--wash-top) 0,var(--paper) 520px)}
+body::before{opacity:.08}
+.topbar{background:color-mix(in srgb,var(--wash-top) 82%,transparent)}
+
+/* the paintings — every drawn plate in the app sits in an <svg> with an
+   <image>, an <img>, or a CSS background on one of these */
+svg:has(image),img,.cv-art,.poster,.cover,.actban,.lstage{filter:saturate(1.28) contrast(1.04) brightness(1.02)}
+.poster .pv,.cover .cv-veil{background:linear-gradient(180deg,transparent 0%,transparent 38%,rgb(16 28 40 / .35) 62%,rgb(16 28 40 / .78) 100%)}
+.actscrim{background:linear-gradient(180deg,rgba(14,22,26,.18) 0%,transparent 34%,transparent 58%,var(--surface) 100%)}
+.poster.locked,.cover.locked{filter:saturate(1.1) brightness(.97)}
+.poster .pill,.cover .pill{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgb(0 0 0 / .18);font-weight:700}
+
+/* buttons: the one thing to do should look pressable */
+.btn{background:linear-gradient(180deg,var(--action-hi),var(--action) 70%);box-shadow:var(--edge),0 4px 12px color-mix(in srgb,var(--action) 32%,transparent)}
+.btn.ghost{background:var(--surface);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--action) 30%,var(--line)),0 2px 6px rgb(90 60 20 / .06);color:var(--action);border:0}
+.tabbar button[aria-current="page"]{background:linear-gradient(180deg,var(--action-hi),var(--action));box-shadow:0 4px 12px color-mix(in srgb,var(--action) 35%,transparent)}
+.navbtn[aria-current="page"]{background:linear-gradient(180deg,var(--action-hi),var(--action))}
+
+/* cards: a warm lift, not a grey outline */
+.card{box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 2px 6px rgb(90 60 20 / .05),0 14px 32px rgb(90 60 20 / .08)}
+
+/* labels carry the accent; section rules become a coloured tab */
+.eyebrow{color:var(--action);font-weight:750}
+.sect b{color:var(--ink);font-family:var(--display);font-size:15px;font-weight:800;letter-spacing:0;text-transform:none}
+.sect b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:8px;vertical-align:1px;
+  background:linear-gradient(135deg,var(--treasure),var(--spend))}
+.sect i{background:linear-gradient(90deg,var(--line),transparent)}
+
+/* icon wells: a fixed five-colour rotation down a list */
+.iw{background:var(--save-tint);color:var(--save)}
+.rows > :nth-child(5n+2) .iw,.jrows > :nth-child(5n+2) .iw{background:var(--treasure-tint);color:var(--treasure-deep)}
+.rows > :nth-child(5n+3) .iw,.jrows > :nth-child(5n+3) .iw{background:var(--give-tint);color:var(--give)}
+.rows > :nth-child(5n+4) .iw,.jrows > :nth-child(5n+4) .iw{background:var(--action-tint);color:var(--action)}
+.rows > :nth-child(5n+5) .iw,.jrows > :nth-child(5n+5) .iw{background:var(--spend-tint);color:var(--spend)}
+.qrow.done .iw{background:var(--grow-tint);color:var(--grow)}
+
+/* progress bars: filled with light, on a warm track */
+.bar{background:color-mix(in srgb,var(--line) 70%,var(--surface))}
+.bar > i{background:linear-gradient(90deg,var(--action-hi),var(--action))}
+
+/* speech: the townsfolk talk in colour */
+.say .bub{background:color-mix(in srgb,var(--action-tint) 55%,var(--surface));border-color:color-mix(in srgb,var(--action) 18%,var(--line))}
+.say .nm{color:var(--action)}
+.say .who{border:2px solid #fff;box-shadow:0 3px 10px rgb(90 60 20 / .16);background:var(--treasure-tint)}
+
+/* the money line under the hero reads as a treasure shelf */
+.moneyline{background:linear-gradient(135deg,var(--treasure-tint),color-mix(in srgb,var(--treasure-tint) 40%,var(--surface)));
+  border-radius:var(--r-xl);padding:14px 16px;box-shadow:0 0 0 1px color-mix(in srgb,var(--treasure) 30%,transparent)}
+.moneyline .k{color:var(--treasure-deep)}
+.moneyline .lead .v{color:var(--treasure-deep)}
+
+/* Home keeps its long tail behind a fold — the town, not a scroll of cards */
+details.fold{border-radius:var(--r-xl)}
+details.fold > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:var(--r-xl);
+  background:var(--surface);box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 2px 6px rgb(90 60 20 / .05);font-weight:800}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2.5px solid var(--action);border-bottom:2.5px solid var(--action);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+details.fold[open] > summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+details.fold[open] > summary{margin-bottom:12px}
+details.fold .fsub{font-weight:500;color:var(--muted);font-size:13px}
+.greet .bub{background:color-mix(in srgb,var(--action-tint) 55%,var(--surface));border:1px solid color-mix(in srgb,var(--action) 18%,var(--line))}
+/* the small covers carry two lines of blurb, so their veil starts higher */
+.covers .cover .cv-veil{background:linear-gradient(180deg,transparent 0%,rgb(16 28 40 / .10) 22%,rgb(16 28 40 / .55) 52%,rgb(16 28 40 / .86) 100%)}
+/* The town's labels take var(--ink), which flips with the theme — but the
+   painted backdrop behind them does not, so in dark mode they were pale on a
+   pale sky. A paper-coloured halo reads on either. */
+.town svg text[fill="var(--ink)"]{paint-order:stroke;stroke:var(--paper);stroke-width:3.5px;stroke-linejoin:round}
