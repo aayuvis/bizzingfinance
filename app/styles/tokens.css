@@ -38,7 +38,7 @@
    white, still not gold, green or coral) and the sky is actually blue. */
 :root{
   --paper:#FFF8EC; --surface:#FFFFFF; --surface2:#FFF3DF;
-  --tint:#F6ECDC; --line:#EEDFC6; --line-soft:#F5EAD8;
+  --tint:#E9F5F6; --line:#EEDFC6; --line-soft:#F5EAD8;
   --ink:#1B2430; --muted:#5B6770;
   --action:#00798A; --action-hi:#12A3AE; --action-ink:#FFFFFF; --action-tint:#DDF3F4;
   --sky1:#BDE6F6; --sky2:#FFEFC6; --ground:#E6CF93; --road:#D8C08A;

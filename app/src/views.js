@@ -684,10 +684,8 @@ export function viewMoney() {
   const strip = `<div class="mnav">
     ${subs.map((x) => {
       const open = chapterOpen(c, x.k);
-      return `<button data-act="${open ? 'sub' : 'lockedSub'}" data-arg="${x.k}"
-        style="padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800;border:1px ${open ? 'solid' : 'dashed'} var(--line);
-        background:${sub === x.k ? 'var(--action)' : (open ? 'var(--surface)' : 'transparent')};
-        color:${sub === x.k ? 'var(--action-ink)' : (open ? 'var(--ink)' : 'var(--muted)')}">
+      return `<button class="mtab${open ? '' : ' shut'}" data-act="${open ? 'sub' : 'lockedSub'}" data-arg="${x.k}"
+        aria-current="${sub === x.k ? 'page' : 'false'}">
         ${open ? '' : ico('lock', '🔒', 14) + ' '}${x.n}</button>`;
     }).join('')}</div>`;
 
@@ -756,7 +754,7 @@ function viewPlace() {
           <span class="big" style="font-size:22px;color:${left > 0 ? 'var(--ink)' : 'var(--spend)'}">${money(left)}</span></div>
       </div>
       <p class="small muted" style="margin-top:9px">${left > 0
-        ? 'That leftover is the only part you get to choose about. Everything above it already has a name.'
+        ? 'The leftover is the part you get to choose.'
         : 'Costs are bigger than income. That gap has to come from somewhere — savings, or somebody else.'}</p>
     </div>
 
@@ -785,7 +783,7 @@ function viewPlace() {
       </div>
       <button class="btn wide" style="margin-top:12px" data-act="move" data-arg="${c.home.tier + 1}" ${chk.ok ? '' : 'disabled'}>
         ${chk.ok ? 'Take it →' : 'Need ' + money(chk.deposit || 0) + ' for the deposit'}</button>
-      <p class="small muted" style="margin-top:8px">Nobody stops you moving somewhere you can barely afford. The number is right there, and the choice is yours.</p>
+      <p class="small muted" style="margin-top:8px">The number is right there. The choice is yours.</p>
     </div>` : `<div class="card" style="text-align:center;padding:24px">
       <div style="font-size:34px">🏡</div>
       <h3 style="margin:8px 0 4px">You own where you live</h3>
@@ -808,7 +806,7 @@ function viewJars() {
       line: 'Split it the moment it lands. One pile gets spent as one pile.' })}
     <div class="card">
       <div class="jars">
-        ${Object.keys(JARMETA).map((k) => `<div class="jar">
+        ${Object.keys(JARMETA).map((k) => `<div class="jar" style="--jc:${JARMETA[k][1]}">
           <div class="jarglass"><div class="jarfill" style="height:${Math.max(4, j[k] / max * 100)}%;background:${JARMETA[k][1]};opacity:.85"></div></div>
           <div class="jarlbl">${JARMETA[k][0]}<br><span class="jaramt">${money(j[k])}</span></div>
           <div class="row" style="gap:4px">
@@ -839,7 +837,7 @@ function viewJars() {
         ${tot === 100 ? 'Twenty coins, all spoken for. Good.' : 'That is ' + Math.round(tot / 5) + ' coins out of twenty. Every coin has to go somewhere.'}</p>
     </div>` : `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
-      <p class="small muted">Percent is only a way of writing it. Every line below is also sayable in coins — ${esc(String(Math.round(r.save / 5)))} coins in every twenty to Save, and so on.${ledger.mathsMeasured(c) ? '' : ' (The town is guessing at your arithmetic until you sit the maths check on the grown-up\'s page.)'}</p>
+      <p class="small muted">${esc(String(Math.round(r.save / 5)))} coins in every twenty go to Save, and so on — percent is just another way to write it.${ledger.mathsMeasured(c) ? '' : ' (Until a grown-up runs the maths check, the town is guessing what maths you know.)'}</p>
       ${Object.keys(JARMETA).map((k) => `<div class="row">
         <span style="width:58px;font-weight:800;font-size:13.5px;color:${JARMETA[k][1]}">${JARMETA[k][0]}</span>
         <div class="grow bar"><i style="width:${r[k]}%;background:${JARMETA[k][1]}"></i></div>
@@ -913,7 +911,7 @@ function viewBank() {
         <div class="big" style="font-size:24px">${b.trust}<span class="small muted"> / 100</span></div></div>
         <div style="text-align:right" class="small muted">${b.repaid} loan${b.repaid === 1 ? '' : 's'}<br>repaid in full</div></div>
       <div class="bar" style="margin-top:8px"><i style="width:${b.trust}%;background:${b.trust > 60 ? 'var(--grow)' : b.trust > 30 ? 'var(--treasure)' : 'var(--spend)'}"></i></div>
-      <p class="small muted" style="margin-top:7px">A memory of whether past borrowing came back — never a score of what kind of person you are. It goes up every time you repay, and it can always be rebuilt.</p>
+      <p class="small muted" style="margin-top:7px">It goes up every time you pay back. It's about the loans, not about you — and it can always be rebuilt.</p>
     </div>
 
     ${L ? `<div class="card" style="border-color:var(--spend)">
@@ -937,7 +935,7 @@ function viewBank() {
           <span class="big" style="font-size:20px;color:var(--spend)">${money(offer.cost)}</span></div>
       </div>
       <button class="btn wide" style="margin-top:12px" data-act="loan">Take the loan</button>
-      <p class="small muted" style="margin-top:8px">The total is shown before you agree, which is the whole of chapter six. A higher trust score makes the same loan cheaper.</p>
+      <p class="small muted" style="margin-top:8px">You see the full cost before you agree. Better trust makes the same loan cheaper.</p>
     </div>`}
 
     <div class="card">
@@ -947,7 +945,7 @@ function viewBank() {
           <div class="small muted">${p.y} year${p.y > 1 ? 's' : ''}</div>
           <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p.v)}</div></div>`).join('')}
       </div>
-      <p class="small muted" style="margin-top:9px">Bizzington's own made-up rate compounding weekly — not a real bank's, and not a forecast.</p>
+      <p class="small muted" style="margin-top:9px">The town's own made-up rate, not a real bank's — and not a forecast.</p>
     </div>
   </div>`;
 }
@@ -970,10 +968,8 @@ function worldCard(c) {
       ${stat('The town', (w.growth >= 0 ? '+' : '') + w.growth.toFixed(1) + '%',
         w.growth < 0 ? 'var(--spend)' : '')}
     </div>
-    <p class="small muted" style="margin-top:10px">Everything below is priced off these three
-      numbers — so when something moves there is always a reason, and it is usually the same
-      reason for more than one of them. This is Bizzington's own economy, not a forecast of
-      anybody's real one.</p>
+    <p class="small muted" style="margin-top:10px">Everything below moves with these three numbers. It's the town's
+      own economy, not a forecast of a real one.</p>
     ${locked.length ? `<div class="sep" style="margin:12px 0"></div>
       <div class="eyebrow">Not yet — the maths comes first</div>
       <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
@@ -992,7 +988,7 @@ function viewExchange() {
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Grow jar — what you can buy with</div>
         <div class="big" style="font-size:24px">${money(c.money.jars.grow)}</div></div></div>
-      <p class="small muted" style="margin-top:6px">${sp === 0 ? 'Nothing owned yet. Buy from the Grow jar — that is money you will not need soon.'
+      <p class="small muted" style="margin-top:6px">${sp === 0 ? 'Nothing owned yet. Buy from the Grow jar — money you won\'t need soon.'
         : sp === 1 ? 'One thing. Your whole week now depends on somebody else’s Tuesday.'
         : 'Spread across ' + sp + '. Bad news in one can no longer sink the lot.'}</p>
     </div>
@@ -1020,7 +1016,7 @@ function viewExchange() {
     }).join('')}
     <div class="card">
       <div class="eyebrow">⏳ The Time Machine</div>
-      <p class="small muted" style="margin:4px 0 10px">The only place in Bizzington where the clock is compressed — because compounding cannot be felt at human speed, and a child who never feels it has not learned it.</p>
+      <p class="small muted" style="margin:4px 0 10px">Jump ahead in time and watch money grow on money.</p>
       <div class="grid3">
         ${[1, 5, 10, 30].map((y) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:10px 12px">
           <div class="small muted">in ${y} year${y > 1 ? 's' : ''}</div>
@@ -1047,8 +1043,8 @@ function viewBusiness() {
       <div class="card">
         <div class="eyebrow">Open your own</div>
         <h2 style="margin:3px 0 6px;font-size:22px">Start a stall</h2>
-        <p class="small muted">You put in ${money(price(150))} to begin. It buys stock and covers the
-          rent while you find your price. Nothing here is real money and none of it ever will be.</p>
+        <p class="small muted">Put in ${money(price(150))} to start. It buys stock and pays the rent
+          while you find your price.</p>
         <button class="btn wide" style="margin-top:12px" data-act="openVenture">Open it</button>
       </div></div>`;
   }
@@ -1196,7 +1192,7 @@ export function viewStore() {
             <p class="small muted">${esc(it.desc)}</p></div>
           <div style="text-align:right"><div class="big" style="font-size:19px">${money(p)}</div></div></div>
         ${it.gives ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:9px">${ico('gear', '⚙', 15)} ${esc(it.gives)}</p>` : ''}
-        <p class="small muted" style="margin-top:6px">That's <b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years at <button class="small" style="color:var(--action);font-weight:700" data-act="sources" data-arg="grow">the town's own Grow-jar rate</button>.${it.gives ? '' : ' And it does nothing at all, which is allowed.'}</p>
+        <p class="small muted" style="margin-top:6px"><b>${weeks} week${weeks > 1 ? 's' : ''}</b> of your Spend jar — or <b>${money(grown)}</b> in ten years at <button class="small" style="color:var(--action);font-weight:700" data-act="sources" data-arg="grow">the town's rate</button>.${it.gives ? '' : ' It does nothing at all — and that\'s allowed.'}</p>
         <div class="row" style="margin-top:10px"><span class="grow"></span>
           ${owned ? '<span class="pill grow">yours</span>'
             : waiting ? `<span class="pill">think it over · ${hrs}h left</span>`
@@ -1224,7 +1220,7 @@ export function viewProgress() {
   return `<div class="stack">
     ${hero({ eyebrow: 'Every decision so far', title: 'Progress', big: money(sim.netWorth(c)), bigStyle: 'color:var(--action)', sub: 'net worth' })}
     <div class="sparkwrap">${sparkline(vals.length > 1 ? vals : [0, sim.netWorth(c)], 300, 54, 'var(--action)')}
-      <p class="small muted">The one chart a card app can't draw: it only has your last statement, and this has every decision since you opened your stall.</p></div>
+      <p class="small muted">What you're worth, after every decision since you opened your stall.</p></div>
     <div class="moneyline stats">
       <div><div class="k">Streak</div><div class="v">${ico('streak', '🔥', 18)} ${c.streak.days.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">days</span></div></div>
       <div><div class="k">Rank</div><div class="v">${ico(rank.em, rank.em, 16)} ${rank.name} <span class="small muted" style="font-family:var(--ui);font-weight:600">L${c.learn.level}</span></div></div>
@@ -1232,7 +1228,7 @@ export function viewProgress() {
     </div>
     <div class="card">
       <div class="eyebrow">The six strands</div>
-      <p class="small muted" style="margin:3px 0 10px">Not chapters read — objectives <b>held</b>. A strand fills as ${esc(c.name)} meets each rung, keeps it days later, and then does it somewhere nobody asked.</p>
+      <p class="small muted" style="margin:3px 0 10px">A strand fills when you learn something, still know it days later, and use it somewhere new.</p>
       <div class="rows" style="margin:0 -18px">
         ${STRANDS.map((st) => {
           const p = ledger.strandProgress(c, st);
@@ -1572,26 +1568,34 @@ export function viewCollection() {
         <div class="beads" aria-hidden="true">${(c.deeds || []).slice(-30).map(() => '<i></i>').join('')}</div>
         <p class="small muted" style="margin-top:6px">${daily.deedCount(c)} ${daily.deedCount(c) === 1 ? 'thing' : 'things'} done out in the real world. Never full, never checked, never goes down.</p>
         <div class="rows" style="margin-top:6px">${(c.deeds || []).slice(-5).reverse().map((d) => `<div class="qrow"><span class="iw">${ico('check', '✅', 18)}</span><span class="grow small">${esc(d.text)}</span><span class="small muted">${shortDate(d.t)}</span></div>`).join('')}</div>`
-        : `<p class="small muted" style="margin-top:4px">A bead here is a money thing you did in the real world — the "Do one" on Home. Not for reading; for doing.</p>`}
+        : `<p class="small muted" style="margin-top:4px">Every "Do one" from Home that you do in real life adds a bead here.</p>`}
     </div>
     <div class="card">
       <div class="eyebrow">Keepsakes</div>
       ${(c.keepsakes || []).length
         ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => receiptSlip(k)).join('')}</div>`
-        : `<p class="small muted" style="margin-top:4px">Your first receipt goes here — the thing you bought, the shifts that paid for it, the weeks it took. Nothing on this shelf is given. It is kept.</p>`}
+        : `<p class="small muted" style="margin-top:4px">Your first purchase goes here, with the shifts that paid for it. Nothing here is given — it's earned.</p>`}
     </div>
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Badges</div>
         <h2 style="margin:2px 0 0">${have} of ${Object.keys(BADGES).length}</h2></div></div>
-      <div class="grid3" style="margin-top:12px">
-        ${Object.keys(BADGES).map((k) => {
-          const b = BADGES[k], has = c.badges.includes(k);
-          return `<div style="background:${has ? 'var(--treasure-tint)' : 'var(--tint)'};border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has ? 1 : .45}">
-            <div>${ico(has ? b.em : 'lock', has ? b.em : '🔒', 24)}</div>
-            <div style="font-weight:800;font-size:13px;margin-top:3px">${esc(b.name)}</div>
-            <div class="small muted" style="font-size:11.5px;line-height:1.35">${has ? esc(b.desc) : 'not yet'}</div></div>`;
-        }).join('')}
-      </div>
+      ${(() => {
+        /* Fifty padlocks was most of this screen for a new child. What she has
+           comes first, the next six are shown in full with what earns them, and
+           the rest wait in a fold. */
+        const keys = Object.keys(BADGES);
+        const got = keys.filter((k) => c.badges.includes(k)), ahead = keys.filter((k) => !c.badges.includes(k));
+        const tile = (k, hint) => { const b = BADGES[k], has = c.badges.includes(k);
+          return `<div class="badge${has ? ' got' : ''}">
+            <div class="bic">${ico(has ? b.em : 'lock', has ? b.em : '🔒', 24)}</div>
+            <div class="bnm">${esc(b.name)}</div>
+            <div class="small muted bds">${has || hint ? esc(b.desc) : 'Not yet'}</div></div>`; };
+        return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile).join('')}</div>` : ''}
+          ${ahead.length ? `<div class="eyebrow" style="margin-top:14px">Next to earn</div>
+            <div class="grid3" style="margin-top:8px">${ahead.slice(0, 6).map((k) => tile(k, true)).join('')}</div>` : ''}
+          ${ahead.length > 6 ? `<div style="margin-top:12px">${fold('badges', `${ahead.length - 6} more to find`, 'Every one marks a decision, not a visit.', 'medal',
+            `<div class="grid3">${ahead.slice(6).map(tile).join('')}</div>`)}</div>` : ''}`;
+      })()}
     </div>
     <div class="card">
       <div class="eyebrow">People you've met</div>
@@ -1604,7 +1608,7 @@ export function viewCollection() {
     </div>
     <div class="card">
       <div class="eyebrow">The town museum · money of the world</div>
-      <p class="small muted" style="margin:4px 0 10px">Real notes and coins, unlocked as you climb — a quiet way to teach that money is an agreement rather than a law of nature.</p>
+      <p class="small muted" style="margin:4px 0 10px">Real money from around the world, unlocked as you climb.</p>
       <div class="grid3">
         ${Object.keys(CURRENCIES).map((k, i) => {
           const has = c.currency === k || levelAtLeast(c, (i + 1) * 4);
