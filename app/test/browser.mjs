@@ -170,10 +170,13 @@ async function run(label, vp, isMobile, scheme) {
   await page.evaluate(() => window.BZF.fire('closeCard'));
 
   /* B6 · back stays in the app */
-  await goto('#/money/wallet');
-  /* a broken history can navigate off the app — that is a failed check, not a crash */
+  /* navigate the way a child does — through the app — so the history under
+     test is the app's own, not entries this test wrote */
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.evaluate(() => window.BZF.fire('nav', 'learn')); await page.waitForTimeout(250);
+  await page.evaluate(() => window.BZF.fire('nav', 'money')); await page.waitForTimeout(250);
   for (let i = 0; i < 2; i++) { await page.goBack({ timeout: 4000 }).catch(() => {}); await page.waitForTimeout(300); }
-  ok(`${label}: the back button stays inside the app`, page.url().startsWith(URL0), page.url());
+  ok(`${label}: the back button stays inside the app`, page.url().startsWith(URL0) && /#\/home/.test(page.url()), page.url());
 
   /* M3 · the grown-ups area needs the PIN */
   await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
@@ -254,10 +257,12 @@ async function demo() {
   await ctx.close();
 }
 
-await run('desktop', { width: 1280, height: 860 }, false, 'light');
-await run('phone', { width: 390, height: 844 }, true, 'light');
-await run('phone-dark', { width: 390, height: 844 }, true, 'dark');
-await demo();
+/* a run that throws is a failed check with a name, never a bare crash */
+const safely = async (label, f) => { try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
+await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
+await safely('phone', () => run('phone', { width: 390, height: 844 }, true, 'light'));
+await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, true, 'dark'));
+await safely('demo', demo);
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);
