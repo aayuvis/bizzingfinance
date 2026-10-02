@@ -2783,7 +2783,7 @@ html[data-bz-dark] .town.night svg image{filter:none}
     if (!APPS.test(app) || !(event in EARN)) return 0;
     const o = load(), k = kid(o, who);
     if (!k) return 0;
-    const today2 = k.ledger.filter((x) => x.a === app && x.n > 0 && day(x.t) === day(now2)).reduce((a, x) => a + x.n, 0);
+    const today2 = k.ledger.filter((x) => x.a === app && x.n > 0 && x.why in EARN && day(x.t) === day(now2)).reduce((a, x) => a + x.n, 0);
     const n = Math.min(EARN[event], Math.max(0, DAILY_CAP - today2));
     if (!n) return 0;
     k.coins += n;
