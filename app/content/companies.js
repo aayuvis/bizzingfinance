@@ -14,7 +14,10 @@
    and one without, come apart the moment inflation arrives — and the child
    can read WHY off the numbers rather than being told.
 
-   All figures are Bizzington's own and describe nobody's real accounts.  */
+   All figures are Bizzington's own and describe nobody's real accounts. No
+   description carries a real-world identifier — no store, restaurant or member
+   COUNT, no "trillions", no home town — because a count is how a thin disguise is
+   seen through (FIX-FINANCE S4; test/market40.mjs holds it).  */
 
 /* growth      secular trend, % a year, before the cycle
    cyc         how hard earnings swing with the economy (1 = with it)
@@ -41,7 +44,7 @@ const C = (id, name, ticker, sector, what, how, who, risk, model, dna) =>
 export const COMPANIES = [
   /* ── Everyday things ─────────────────────────────────────────────── */
   C('bigbox', 'Prairie Mart', 'PRM', 'staples',
-    'Four thousand enormous stores selling everything, cheaply.',
+    'Enormous stores in every town, selling everything, cheaply.',
     'Buys in quantities nobody can match and passes on just enough of it.',
     'Half the country, most weeks.',
     'Wafer-thin margins. A one-point cost rise erases a third of the profit.',
@@ -99,7 +102,7 @@ export const COMPANIES = [
     'Contracted renewables — a bond in disguise',
     { rev0: 3400, margin: 0.24, growth: 16, cyc: 0.2, rateSens: 2.5, pricing: 0.15, disrupt: 0.15, debt: 2.7, payout: 0.35 }),
   C('pipeline', 'Continental Pipeline', 'CPL', 'energy',
-    'Six thousand miles of pipe, and a fee for everything that goes through.',
+    'Miles and miles of pipe, and a fee for everything that goes through.',
     'Paid by volume on long contracts, whatever the oil price does.',
     'Producers who have no other way to move it.',
     'Enormous debt, and a permit process that can stop a project dead.',
@@ -123,7 +126,7 @@ export const COMPANIES = [
     { rev0: 52000, margin: 0.24, growth: 5, cyc: 1.7, rateSens: -1.0, pricing: 0.5, disrupt: 0.35, debt: 0, payout: 0.4 }),
   C('cardnet', 'Vantage Network', 'VNT', 'finance',
     'The rails a card payment runs on. It touches the money and never holds it.',
-    'A few basis points on trillions, and almost no cost per extra transaction.',
+    'A tiny slice of every payment, and almost no cost per extra one.',
     'Banks and merchants, on every swipe.',
     'Regulators capping the fee, and rivals building rails around it.',
     'Payment network — a toll on commerce itself',
@@ -135,8 +138,8 @@ export const COMPANIES = [
     'One bad hurricane season costs more than a decade of careful underwriting.',
     'Insurance — paid upfront, liable for years',
     { rev0: 24000, margin: 0.10, growth: 6, cyc: 0.6, rateSens: -0.7, pricing: 0.6, disrupt: 0.3, debt: 0.2, payout: 0.5 }),
-  C('assetmgr', 'Bellwether Asset', 'BWA', 'finance',
-    'Index funds. Trillions of other people’s money, for a very small fee.',
+  C('assetmgr', 'Steady Basket Funds', 'STB', 'finance',
+    'Baskets of the whole market, holding other people’s money for a very small fee.',
     'Charges a fraction of a percent on assets, and assets grow by themselves.',
     'Pension funds and anyone with a retirement account.',
     'The fee only ever goes down, because that is the whole competition.',
@@ -154,7 +157,7 @@ export const COMPANIES = [
   C('devices', 'Summit Devices', 'SMD', 'tech',
     'Phones, laptops and watches, and the services people buy on them.',
     'Sells hardware at a margin nobody else in hardware gets, then sells services on top.',
-    'A billion people who replace the phone every few years.',
+    'Families everywhere who replace the phone every few years.',
     'One boring product cycle and the whole thesis is questioned.',
     'Premium hardware plus a services annuity',
     { rev0: 120000, margin: 0.25, growth: 8, cyc: 1.0, rateSens: 1.0, pricing: 0.9, disrupt: 0.4, debt: 0.4, payout: 0.3 }),
@@ -181,16 +184,16 @@ export const COMPANIES = [
     { rev0: 21000, margin: 0.34, growth: 17, cyc: 2.2, rateSens: 1.6, pricing: 0.8, disrupt: 0.5, debt: 0.2, payout: 0.2 }),
   C('stream', 'Nightfall Studios', 'NFS', 'tech',
     'Films and series on a monthly subscription, in ninety countries.',
-    'Spends billions making things, then charges a little to hundreds of millions.',
+    'Spends a fortune making shows, then charges a little to a great many homes.',
     'Households who forget they are subscribed.',
-    'Every rival is spending the same billions for the same evening.',
+    'Every rival is spending the same fortune for the same evening.',
     'Subscription content — enormous fixed cost',
     { rev0: 32000, margin: 0.11, growth: 15, cyc: 0.8, rateSens: 1.8, pricing: 0.6, disrupt: 0.5, debt: 1.0, payout: 0 }),
 
   /* ── Health ──────────────────────────────────────────────────────── */
   C('pharma', 'Ashford Pharmaceutical', 'AFP', 'health',
     'Invents medicines. Most attempts fail; the successes pay for everything.',
-    'A decade and billions, then a patent and five very profitable years.',
+    'Ten years and a fortune, then a patent and five very profitable years.',
     'Health systems and insurers, once it works.',
     'One failed trial erases a decade in an afternoon. And patents expire.',
     'Research pharma — binary outcomes on a clock',
@@ -203,7 +206,7 @@ export const COMPANIES = [
     'Generic manufacture — cost is the only edge',
     { rev0: 12000, margin: 0.07, growth: 5, cyc: 0.2, rateSens: 0.9, pricing: 0.3, disrupt: 0.3, debt: 1.1, payout: 0.3 }),
   C('hospitals', 'Sentinel Health', 'SNH', 'health',
-    'A hundred and eighty hospitals, and the beds are mostly full.',
+    'Hospitals in many towns, and the beds are mostly full.',
     'Charges per procedure and per night, and argues with insurers about both.',
     'Patients, insurers, and the government.',
     'Its costs are wages, and wages only go one way.',
@@ -212,7 +215,7 @@ export const COMPANIES = [
   C('healthins', 'Cornerstone Health Plans', 'CHP', 'health',
     'Health insurance for employers, and the pharmacy benefits alongside it.',
     'Collects premiums, pays claims, and keeps the gap.',
-    'Employers, and eighty million members.',
+    'Employers, and the families of the people who work for them.',
     'A single policy change in Washington can rewrite the whole business.',
     'Managed care — regulated margin, enormous scale',
     { rev0: 96000, margin: 0.04, growth: 9, cyc: 0.2, rateSens: 0.7, pricing: 0.5, disrupt: 0.35, debt: 0.4, payout: 0.3 }),
@@ -262,15 +265,15 @@ export const COMPANIES = [
     { rev0: 34000, margin: 0.10, growth: 3, cyc: 1.9, rateSens: 1.2, pricing: 0.35, disrupt: 0.25, debt: 1.3, payout: 0.45 }),
 
   /* ── Things you want ─────────────────────────────────────────────── */
-  C('coffee', 'Harbor Roasters', 'HRB', 'consumer',
-    'Thirty-two thousand coffee shops, and an app most customers pay through.',
+  C('coffee', 'Lantern Lane Coffee', 'LLN', 'consumer',
+    'Coffee shops on busy corners, and an app most customers pay through.',
     'Sells a cheap commodity at a very high price, in a comfortable room.',
     'Commuters, every single morning.',
     'A recession turns a daily habit into a weekly treat.',
     'Premium retail habit — the brand justifies the price',
     { rev0: 32000, margin: 0.14, growth: 8, cyc: 1.4, rateSens: 1.0, pricing: 0.85, disrupt: 0.3, debt: 1.1, payout: 0.45 }),
   C('burgers', 'Copper Kettle', 'CKT', 'consumer',
-    'Forty thousand restaurants, and it owns barely any of them.',
+    'Restaurants on every high street, and it owns barely any of them.',
     'Franchisees run the shops and pay a royalty plus rent on the land.',
     'Everybody, cheaply, quickly.',
     'Fashion and health, and franchisees who can revolt over fees.',
@@ -284,14 +287,14 @@ export const COMPANIES = [
     'Athletic brand — outsourced manufacture, owned demand',
     { rev0: 30000, margin: 0.12, growth: 8, cyc: 1.5, rateSens: 0.9, pricing: 0.75, disrupt: 0.4, debt: 0.4, payout: 0.35 }),
   C('airline', 'Blue Ridge Air', 'BRA', 'consumer',
-    'Flies people between a hundred and forty airports.',
+    'Flies people between the big cities and the holiday ones.',
     'Fills seats. An empty seat is worth nothing the second the door shuts.',
     'Travellers, and more profitably the companies that send them.',
     'Fuel, wages and leases are fixed. The fare is not.',
     'Airline — high fixed cost, perishable product',
     { rev0: 26000, margin: 0.05, growth: 6, cyc: 2.4, rateSens: 1.9, pricing: 0.35, disrupt: 0.25, debt: 2.3, payout: 0.1 }),
   C('hotels', 'Camden Hotels', 'CMD', 'consumer',
-    'Hotels in six hundred cities, most of them owned by somebody else.',
+    'Hotels in a great many cities, most of them owned by somebody else.',
     'Runs them for a fee and a share, and owns the loyalty programme.',
     'Business travellers, and everyone else at weekends.',
     'The first thing companies cut, and the first thing families cut.',
@@ -303,7 +306,7 @@ export const COMPANIES = [
     'Mobile and broadband. Towers, fibre, and a bill every month.',
     'Enormous fixed cost, then almost nothing per additional customer.',
     'Nearly everybody, monthly, for ever.',
-    'Spectrum auctions cost tens of billions and arrive on somebody else’s schedule.',
+    'The licence to use the airwaves costs a fortune and arrives on somebody else’s schedule.',
     'Network — fixed cost then pure margin',
     { rev0: 74000, margin: 0.15, growth: 2, cyc: 0.3, rateSens: 2.2, pricing: 0.6, disrupt: 0.3, debt: 2.5, payout: 0.7 }),
   C('utility', 'Allegheny Electric', 'ALE', 'infra',
@@ -328,7 +331,7 @@ export const COMPANIES = [
     'Waste — dull, regulated, and paid whatever happens',
     { rev0: 9200, margin: 0.17, growth: 5, cyc: 0.3, rateSens: 1.4, pricing: 0.8, disrupt: 0.15, debt: 1.5, payout: 0.5 }),
   C('towers', 'Summit Tower', 'SMT', 'infra',
-    'Forty thousand mobile masts, rented to the networks.',
+    'Mobile masts on hills and rooftops, rented to the networks.',
     'One mast, three tenants, and each extra tenant is nearly pure profit.',
     'Every mobile network, on twenty-year leases.',
     'Its customers keep merging, and each merger removes a tenant.',

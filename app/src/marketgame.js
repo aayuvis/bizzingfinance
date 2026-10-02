@@ -147,7 +147,8 @@ export function viewMarketGame() {
 function shell(g, body, sub) {
   const act = g.act === null ? null : ACTS[g.act];
   return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="arcade">← Leave</button>
+    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    <h1 class="sr">The Market Game</h1>
     ${act ? `<div class="card" style="border-color:var(--action)">
       <div class="row"><div class="grow"><div class="eyebrow">Act ${g.act + 1} of 4 · ${esc(act.name)}</div>
         <h3 style="font-size:17px;margin:1px 0">Year ${g.year - act.from + 1} of ${act.years}</h3>
@@ -160,7 +161,8 @@ function shell(g, body, sub) {
 
 function viewPick(g) {
   return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="arcade">← Leave</button>
+    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    <h1 style="font-size:28px">The Market Game</h1>
     ${say('bo', 'Forty companies, forty years, and none of them exist. Everything that happens to them happens for a reason you can find. Pick a decade.')}
     ${ACTS.map((a) => `<button class="card" data-act="mgAct" data-arg="${a.id}" style="text-align:left;width:100%">
       <div class="eyebrow">Act ${a.id + 1} · years ${a.from + 1}–${a.from + a.years}</div>

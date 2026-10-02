@@ -12,6 +12,7 @@ import { ART } from './art-gen.js';
 import { ATLAS, PINS } from './atlas-gen.js';
 import { WALKS } from './walks-gen.js';
 import { face, ico } from './art.js';
+import { kidBadge } from './shell.js';
 import { esc } from './ui.js';
 import * as sim from './sim.js';
 import * as mastery from './mastery.js';
@@ -59,7 +60,7 @@ function levelBar(c) {
 function pin(c, w, wi, x, y, st) {
   const state = st.total && st.done >= st.total ? 'done' : st.here ? 'cur' : st.done ? 'cur' : 'locked';
   const open = worldOpen(c, wi);
-  const av = state === 'cur' ? (co.has(c) ? companionFigure(c, 30) : face('pip', 30)) : '';
+  const av = state === 'cur' ? kidBadge(c, 30) : '';
   return `<button class="apin ${state}${open ? '' : ' shut'}" data-act="shelf" data-arg="act:${wi}" style="left:${x}%;top:${y}%;--ja:${w.tint}" title="${esc(w.name)}">
     <span class="adot">${av || `<b>${state === 'done' ? ico('star', '', 15) : ROMAN[wi]}</b>`}</span>
     <span class="achip"><b>${esc(w.name)}</b><i>${st.total ? `${st.done}/${st.total} stops` : 'ahead'}</i></span>
@@ -92,7 +93,7 @@ export function board(c) {
 /* ── one world's rail of stops ────────────────────────────────────────── */
 function medallion(c, s, kind) {
   if (kind === 'passed') return `<span class="med passed">${ico('check', '', 16)}</span>`;
-  if (kind === 'cur') return `<span class="med cur" style="--ja:${s.w.tint}">${co.has(c) ? companionFigure(c, 30, { bob: true }) : face('pip', 30)}</span>`;
+  if (kind === 'cur') return `<span class="med cur" style="--ja:${s.w.tint}">${kidBadge(c, 30)}<i class="medn">${s.n}</i></span>`;
   return `<span class="med ${kind}">${s.locked ? ico('lock', '🔒', 13) : s.n}</span>`;
 }
 function stopRow(c, s) {
@@ -230,7 +231,7 @@ function walk(c, w, ns, wi) {
         return `<button class="wstop ${kind}" style="left:${gap * (i + 1)}%;top:${y}%;--ja:${w.tint}"
           data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}"
           aria-label="Stop ${s.n}: ${esc(s.card.title)}">
-          <span class="wdot">${s.done ? ico('check', '', 16) : s.cur ? (co.has(c) ? companionFigure(c, 34, { bob: true }) : face('pip', 34)) : s.locked ? ico('lock', '🔒', 12) : s.n}</span>
+          <span class="wdot">${s.done ? ico('check', '', 16) : s.cur ? `${kidBadge(c, 34)}<i class="medn">${s.n}</i>` : s.locked ? ico('lock', '🔒', 12) : s.n}</span>
           ${s.cur ? `<span class="wcard">
             <span class="eyebrow">Stop ${s.n} of ${n}</span>
             <b>${esc(s.card.title)}</b>

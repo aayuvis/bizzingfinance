@@ -132,6 +132,15 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
   ok('a different seed is a different forty years', a !== c);
 }
 
+/* S4 · clearly fictional: no description carries a real-world count or scale that
+   would let a reader name the real firm behind it */
+{
+  const tells = COMPANIES.filter((c) => /thousand|million|billion|trillion|\b\d{3,}\b|Seattle|Cupertino|Bentonville/i.test([c.what, c.how, c.who, c.risk, c.model].join(' ')));
+  ok('no company description carries a real-world count, scale or home town', tells.length === 0, tells.map((c) => c.name).join(', '));
+  const tick = COMPANIES.map((c) => c.ticker);
+  ok('every ticker is unique and none is a legal form', new Set(tick).size === tick.length && !tick.some((t) => /^(LLC|INC|PLC|LTD)$/.test(t)));
+}
+
 console.log('─'.repeat(60));
 console.log(`${n - fails}/${n} passed`);
 process.exit(fails ? 1 : 0);

@@ -8,6 +8,8 @@ import { money, price } from './fmt.js';
 import { say, CAST } from './art.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
+import { plateFor } from './looks.js';
+const BOARD_SKIN = { 'board-harbour': 'harbour', 'board-clock': 'clock', 'board-festival': 'festival' };
 
 const K = () => sim.kid(R.s);
 
@@ -329,8 +331,10 @@ export function mainStreet() {
         </div>`;
       }).join('');
 
-      const middle = `<div style="grid-row:2/6;grid-column:2/6;display:flex;flex-direction:column;gap:8px;
-        padding:10px;background:var(--tint);border-radius:10px;overflow:auto">
+      /* a board bought in the Shop (familyviews.js EXTRAS) paints the middle as its world */
+      const skin = BOARD_SKIN[((sim.kid(R.s) || {}).fam || {}).board];
+      const middle = `<div class="msmid${skin ? ' skinned' : ''}" style="grid-row:2/6;grid-column:2/6;display:flex;flex-direction:column;gap:8px;
+        padding:10px;background:${skin ? `linear-gradient(color-mix(in srgb,var(--surface) 78%,transparent),color-mix(in srgb,var(--surface) 78%,transparent)),url(${plateFor(skin, !!R.dark)}) center/cover` : 'var(--tint)'};border-radius:10px;overflow:auto">
         <div class="row" style="gap:8px;flex-wrap:wrap">
           ${g.players.map((x) => `<span class="pill ${x === p ? 'gold' : ''}" style="font-size:10px">
             ${esc(x.name)} ${x.cash}</span>`).join('')}
@@ -356,7 +360,7 @@ export function mainStreet() {
           <p class="small muted" style="margin:3px 0 7px">${esc(g.card.body)}</p>
           <div class="stack" style="gap:5px">
             ${g.card.choices.map((ch, i) => `<button class="opt" style="padding:7px 9px;font-size:12px" data-act="mnCard" data-arg="${i}">${i + 1} · ${esc(ch.label)}</button>`).join('')}
-          </div></div>` : ''}
+          </div><p class="small muted" style="margin-top:5px">Press ${g.card.choices.map((_, i) => i + 1).join(' or ')}, or tap.</p></div>` : ''}
         ${g.phase === 'roll' ? `<button class="btn wide" data-act="mnRoll" ${p.human ? '' : 'disabled'}>
           ${p.human ? 'Roll · ⏎' : p.name + ' is thinking…'}</button>` : ''}
         ${g.phase === 'moving' ? `<div style="text-align:center;font-family:var(--display);font-weight:800;font-size:28px">🎲 ${g.die}</div>` : ''}

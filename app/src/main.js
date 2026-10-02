@@ -51,6 +51,7 @@ import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
 import { spend as spendCoins, balance as coinBalance } from './family/bizzing-wallet.js';
 import * as mistakes from './mistakes.js';
 import * as items from './items.js';
+import * as CERT from './cert.js';
 import { search as searchTown } from './search.js';
 
 const root = document.getElementById('app');
@@ -277,10 +278,26 @@ function overlay() {
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market →</button>`);
   }
 
+  if (o.kind === 'stopDone') {
+    const n = nextStep(c), k = cardById(o.id), drillN = k ? drillCount(k) : 1;
+    return box(`<div class="celebrate stopdone" style="text-align:center">
+      <div class="endfig">${shell.pipPose('cheer', 110)}<span class="endav">${kidBadge(c, 56)}</span></div>
+      ${o.firstEver ? `<div class="coinjar" aria-hidden="true"><i class="dropcoin"></i><span class="jarb"></span></div>` : ''}
+      <div class="eyebrow">${o.firstEver ? 'Your first stop on the Money Atlas' : 'Stop walked'}</div>
+      <h2 style="margin:4px 0 8px;font-size:26px">${esc(o.title)}</h2>
+      <ul class="cl">
+        <li>${ico('check', '', 16)} ${o.right ? `All ${nWord(drillN)} ${drillN === 1 ? 'question' : 'questions'} right first go` : 'Worked through every question — the second goes count as learning'}</li>
+        ${o.first ? `<li>${ico('coin', '', 16)} +5 Bizzing coins for finishing it${o.xp ? ` · +${o.xp} XP` : ''}</li>` : ''}
+        ${o.firstEver ? `<li>${ico('jars', '', 16)} Your first Bizzing coins — spend them in the Shop on a new face</li>` : ''}
+      </ul>
+      ${n && n.title ? `<p style="margin-top:10px">Next: <b>${esc(n.title)}</b></p>` : ''}
+      <button class="btn wide" style="margin-top:14px" data-act="stopNext">${n && n.button ? esc(n.button) : 'Continue'} →</button>
+      <button class="btn ghost wide" style="margin-top:8px" data-act="closeOv">Back to the Atlas</button></div>`);
+  }
   if (o.kind === 'sessionDone') {
     const s = o.sum;
     return box(`<div class="celebrate" style="text-align:center">
-      <div class="medal" aria-hidden="true">${ico('check', '✓', 44)}</div>
+      <div class="endfig">${shell.pipPose('cheer', 104)}<span class="endav">${kidBadge(c, 52)}</span></div>
       <div class="eyebrow">Today's session, done</div>
       <h2 style="margin:4px 0 8px;font-size:26px">That's the day's three</h2>
       <p class="muted">What you practised:</p>
@@ -293,8 +310,9 @@ function overlay() {
     const ch = CHAPTERS.find((x) => x.id === o.ch);
     const opens = { c3: 'the Jar Shed and the Build Yard', c5: 'the Bank', c6: 'borrowing', c7: 'the Exchange', c8: 'Bizz & Co' }[ch.id];
     return box(`<div class="celebrate" style="text-align:center">
-      <div class="medal" aria-hidden="true">${ico(ch.em, ch.em, 44)}</div>
-      <div class="eyebrow">Chapter finished</div>
+      <div class="endfig">${shell.pipPose('cheer', 110)}<span class="endav">${kidBadge(c, 56)}</span></div>
+      <div class="medal" aria-hidden="true">${ico(ch.em, ch.em, 36)}</div>
+      <div class="eyebrow">Chapter finished · +20 Bizzing coins</div>
       <h2 style="margin:4px 0 8px;font-size:28px">${esc(ch.title)}</h2>
       <p class="muted">You worked through all ${nWord(ch.cards.length)}:</p>
       <ul class="cl">${ch.cards.map((k) => `<li>${ico('check', '✓', 16)} ${esc(k.title)}</li>`).join('')}</ul>
@@ -317,7 +335,7 @@ function overlay() {
     const rank = rankObj(o.level);
     return box(`
       <div style="text-align:center">
-        <div style="width:96px;height:96px;margin:0 auto 8px;border-radius:50%;overflow:hidden">${CAST.pip.svg}</div>
+        <div class="endfig">${shell.pipPose('cheer', 104)}<span class="endav">${kidBadge(c, 52)}</span></div>
         <div class="eyebrow">Level ${o.level} · ${rank.em} ${rank.name}</div>
         <h2 style="margin:4px 0 8px;font-size:28px">${place ? esc(place.name) + ' is open' : 'Level ' + o.level}</h2>
         <p class="muted">${place ? esc(place.blurb) : 'Learning ' + esc(rank.of) + '.'}</p>
@@ -472,6 +490,15 @@ on('buyAcc', (id) => {
   else sfx.click();
   render();
 });
+on('cert', async (id) => {
+  if (!R.gate) return;
+  try {
+    const cv = await CERT.draw(C(), id); if (!cv) { toast('Not finished yet'); return; }
+    const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `${C().name}-${id}-certificate.png`;
+    document.body.appendChild(a); a.click(); a.remove(); toast('Certificate saved'); sfx.medal();
+  } catch (e) { toast('This device could not draw the certificate'); }
+});
+on('stopNext', () => { R.overlay = null; goContinue(); });
 on('closeOv', () => {
   /* the adoption letter's "meet them" closes into the shelter, not to Home */
   if (R.overlay && R.overlay.then === 'shelter') { R.overlay = { kind: 'shelter', pick: null, name: '' }; render(); return; }
@@ -818,7 +845,16 @@ on('cardDone', (id) => {
   /* J1: finishing a chapter is a moment, and it names what was done — the
      four lessons, what it opens — never how anyone else did. */
   if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
-  else if (res.leveled) levelUp(res); else { toast(res.gained ? '+' + res.gained + ' XP' : 'No XP for that one — the why is the useful part'); render(); }
+  else if (res.leveled) levelUp(res);
+  else {
+    /* F4 · every stop ends on a finish card: what was learned, what was earned, what
+       is next. The very first stop is a moment of its own (A8): a coin drops into the
+       Save jar on the street. */
+    const allStops = ALL_CARDS.filter((k) => c.learn.done[k.id]).length;
+    R.overlay = { kind: 'stopDone', id, title: card.title, right, firstEver: first && allStops === 1, first, xp: res.gained };
+    if (first) { sfx.level(); confetti(allStops === 1 ? 60 : 24); } else sfx.good();
+    render();
+  }
 });
 
 /* Open the day's beat. */
@@ -968,9 +1004,21 @@ on('job', (id) => {
 });
 
 /* jars, goals */
+/* E9 · evidence is a DECISION WITH AN ALTERNATIVE: a tap only counts as using what
+   was learned when something else was genuinely on offer — here, a thing in Mags'
+   store the wallet could have bought outright. A tap with nothing tempting is a tap. */
+function tempting(c, money0) {
+  return SHOP.find((it) => !(c.shop.owned || []).includes(it.id) && price(it.units) <= money0) || null;
+}
 on('jarIn', (k) => {
-  const c = C();
-  if (sim.toJar(c, k, price(2))) { sfx.coin(); mastery.transfer(c, 'KEEP-2', 'jars', 'moved money into the ' + k + ' jar rather than leaving it in one pile'); }
+  const c = C(), before = c.money.wallet, alt = tempting(c, before);
+  if (sim.toJar(c, k, price(2))) {
+    sfx.coin();
+    if (alt && k !== 'spend') {
+      mastery.transfer(c, 'KEEP-2', 'jars', `put money in the ${k} jar with ${alt.name.toLowerCase()} affordable in Mags' store`);
+      decisions.log(c, { objective: 'KEEP-2', surface: 'jars', chose: 'jar', label: 'The ' + k + ' jar', alternatives: [{ label: alt.name, cost: price(alt.units) }] });
+    }
+  }
   else toast('Wallet is empty');
   render();
 });
@@ -1021,7 +1069,14 @@ on('raidGoal', (id) => { if (sim.raidGoal(C(), id)) { sfx.bad(); toast('Scaffold
 /* bank */
 on('bankIn', () => {
   const c = C();
-  if (sim.bankIn(c, price(10))) { sfx.coin(); mastery.transfer(c, 'GROW-1', 'bank', 'left money with the bank rather than in the jar'); }
+  const alt = tempting(c, c.money.wallet + c.money.jars.save);
+  if (sim.bankIn(c, price(10))) {
+    sfx.coin();
+    if (alt) {
+      mastery.transfer(c, 'GROW-1', 'bank', `banked savings that could have bought ${alt.name.toLowerCase()}`);
+      decisions.log(c, { objective: 'GROW-1', surface: 'bank', chose: 'bank', label: 'The Bank', alternatives: [{ label: alt.name, cost: price(alt.units) }] });
+    }
+  }
   else toast('Nothing in the Save jar');
   render();
 });

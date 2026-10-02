@@ -46,7 +46,7 @@ export function openSay(w, ctx) {
 
 /* The plate for a place right now: the night painting on a dark page. */
 export function plateFor(placeId, dark) {
-  const w = LOOK_BY_PLACE[placeId] || LOOKS[0];
+  const w = LOOK_BY_PLACE[placeId] || LOOKS.find((x) => x.id === placeId) || LOOKS[0];
   return dark ? w.night : w.day;
 }
 

@@ -198,6 +198,25 @@ async function run(label, vp, isMobile, scheme) {
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   await page.click('[data-act="sessionStop"]').catch(() => {}); await page.waitForTimeout(200);
 
+  /* A8 · a new child reaches a right answer and a celebration inside two minutes */
+  {
+    const t0 = Date.now();
+    await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+    await page.click('.continue .cgo'); await page.waitForTimeout(300);
+    let celebrated = false, gotRight = false;
+    for (let guard = 0; guard < 8 && !celebrated; guard++) {
+      if (await page.locator('[data-act="cardDone"]').count()) { await page.click('[data-act="cardDone"]'); await page.waitForTimeout(300); celebrated = await page.evaluate(() => !!document.querySelector('.stopdone')); break; }
+      if (await page.locator('[data-act="nextQ"]').count()) { await page.click('[data-act="nextQ"]'); await page.waitForTimeout(120); continue; }
+      const k = await page.evaluate(() => { const c = window.BZF.R.s.kids[window.BZF.R.s.active]; return window.BZF.key(c.learn.openCard, (c.learn.drill && c.learn.drill.qi) || 0); });
+      await page.locator('.opt').nth(k).click(); await page.waitForTimeout(120);
+      gotRight = gotRight || await page.evaluate(() => !!document.querySelector('.fb.yes'));
+    }
+    const secs = (Date.now() - t0) / 1000;
+    ok(`${label}: a new child gets a right answer and a celebration inside two minutes`, gotRight && celebrated && secs < 120, `${secs.toFixed(1)}s · right ${gotRight} · celebration ${celebrated}`);
+    await shot('3-first-stop');
+    await page.evaluate(() => window.BZF.fire('closeOv'));
+  }
+
   /* O3 · #/continue opens the next step directly */
   await page.goto(URL0 + '#/continue'); await page.waitForTimeout(700);
   const opened = await page.evaluate(() => !!document.querySelector('.card.reading, .lstage, .lesson'));
@@ -210,7 +229,7 @@ async function run(label, vp, isMobile, scheme) {
     await page.evaluate(() => { window.__said = []; Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speak: (u) => window.__said.push(u.text), cancel: () => {}, getVoices: () => [] } }); Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, writable: true, value: function (t) { this.text = t; } }); });
     await page.click('.sayq'); await page.waitForTimeout(100);
     const said = await page.evaluate(() => window.__said[0] || '');
-    const q = (await page.textContent('.card h3')).trim();
+    const q = (await page.textContent('.card:has(.sayq) h3')).trim();
     ok(`${label}: the question and its answers can be read aloud`, said.startsWith(q) && /A: .+ B: .+/.test(said), said.slice(0, 60));
     const opts = page.locator('.opt');
     const texts = await opts.allTextContents();
@@ -292,6 +311,21 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   const go = async (h) => { await page.evaluate((x) => { location.hash = x; }, h); await page.waitForTimeout(500); };
   await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
 
+  /* C5 · every main screen has one heading and a way back (the tabs, or ☰) */
+  const dead = [];
+  for (const r of ['#/town', '#/learn', '#/money', '#/play', '#/shop', '#/collection', '#/medals', '#/me', '#/mistakes', '#/words', '#/store', '#/market40']) {
+    await go(r);
+    const v = await page.evaluate(() => ({ h1: document.querySelectorAll('main h1').length, back: !!document.querySelector('[data-act="drawer"]') && [...document.querySelectorAll('[role=tab][data-arg="home"]')].some((t) => t.offsetParent) }));
+    if (v.h1 !== 1 || !v.back) dead.push(r + ' ' + JSON.stringify(v));
+  }
+  ok(`${label}: every screen has one heading and a way back`, !dead.length, dead.slice(0, 3).join(' | '));
+  await go('#/home');
+  /* C3 · the avatar ▾ lists every child, with a grown-ups-only + */
+  await page.evaluate(() => window.BZF.fire('kids')); await page.waitForTimeout(150);
+  const kids = await page.evaluate(() => ({ n: document.querySelectorAll('.kidcard:not(.add)').length, add: !!document.querySelector('.kidcard.add') && /Grown-ups/.test(document.querySelector('.kidcard.add').textContent) }));
+  ok(`${label}: the switcher lists every child and a PIN-guarded “Add a child”`, kids.n === 1 && kids.add, JSON.stringify(kids));
+  await page.evaluate(() => window.BZF.fire('closeOv'));
+
   /* §4 tabs: five, Home first, the map second, no More */
   const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '.tabbar [role=tab]' : '.tabs [role=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
   ok(`${label}: five tabs — Home · Town · Learn · Money · Play — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play', tabs.join(','));
@@ -333,6 +367,13 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
     if (j.length) junk.push(r + ': ' + j.join(','));
     const w = await page.evaluate((W) => document.scrollingElement.scrollWidth > W + 1 ? document.scrollingElement.scrollWidth : 0, vp.width);
     if (w) over.push(r + ' ' + w);
+  }
+  /* the same inside a lesson, and inside the sheets */
+  for (const [what, act, arg] of [['a lesson', 'card', 'c1b'], ['Settings', 'settings', ''], ['the ☰ drawer', 'drawer', ''], ['the coin sheet', 'walletSheet', ''], ['the child switcher', 'kids', '']]) {
+    await page.evaluate(([a, g]) => window.BZF.fire(a, g || undefined), [act, arg]); await page.waitForTimeout(300);
+    const e = await page.evaluate((src) => { const re = new RegExp(src, 'u'); return [...document.querySelectorAll('button, [role=tab], nav, h1, h2, h3, .chip')].filter((x) => x.offsetParent && re.test(x.textContent.replace(/[0-9#*]/g, ''))).map((x) => x.textContent.trim().slice(0, 18)); }, EMOJI.source);
+    if (e.length) emo.push(what + ': ' + e.slice(0, 3).join(' / '));
+    await page.evaluate(() => { window.BZF.fire('closeOv'); window.BZF.fire('closeCard'); });
   }
   ok(`${label}: zero emoji in buttons, tabs, nav, headings and chips`, !emo.length, emo.slice(0, 3).join(' | '));
   ok(`${label}: no [object Object], {placeholder}, undefined or NaN on any screen`, !junk.length, junk.slice(0, 3).join(' | '));

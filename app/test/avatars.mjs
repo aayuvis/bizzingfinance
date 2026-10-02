@@ -51,5 +51,14 @@ ok(milestonesOf(c).length === 0, 'a new child has no milestones');
 ['c1a', 'c1b', 'c1c', 'c1d'].forEach((id) => { c.learn.done[id] = true; });
 ok(milestonesOf(c).includes('ch-c1'), 'finishing a chapter meets its milestone');
 
+/* C3 · a second child never inherits the first's faces, worlds or coins */
+{
+  const k2 = sim.newChild('Dev', 'builder', 'INR'); s.kids.push(k2);
+  c.fam.owned.push('corg');
+  ok(!k2.fam.owned.includes('corg') && k2.fam.owned !== c.fam.owned, 'a face bought by one child is not in the other child’s collection');
+  ok(balance('Dev') === 0 && balance('Tara') > 0, 'coins are kept per child');
+  ok(stateOf(CATALOGUE.find((a) => a.id === 'corg'), ctxFor(s, k2)).state !== 'owned', 'the switcher’s second child sees their own path, not the first child’s');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

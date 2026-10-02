@@ -18,12 +18,14 @@ for (const [label, vp, mob, scheme] of [['desk', { width: 1280, height: 860 }, f
   const page = await ctx.newPage(); const errs = [];
   page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   await page.goto(URL0 + (process.env.DEMO ? '?demo' : ''));
+  if (process.env.PLAN) await page.evaluate(() => { try { const s = JSON.parse(localStorage.getItem('bzf_profile') || 'null'); } catch (e) {} });
   if (!process.env.DEMO) {
     await page.waitForSelector('[data-act="obStart"]'); await page.click('[data-act="obStart"]');
     await page.fill('#nm', 'Asha'); await page.click('[data-act="obAvatar"]'); await page.click('[data-act="obNext"]');
     await page.locator('[data-act="obBand"]').last().click();
   }
   await page.waitForSelector('main'); await page.waitForTimeout(800);
+  if (process.env.LOOK) await page.evaluate((l) => { window.BZF.R.s.settings.plan = 'family'; window.BZF.fire('look', l); }, process.env.LOOK);
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   for (const r of routes) {
     await page.evaluate((x) => { location.hash = '#/' + x; }, r); await page.waitForTimeout(700);

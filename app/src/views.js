@@ -46,6 +46,7 @@ import { plateFor } from './looks.js';
 const dayIndexOf = (t) => Math.floor((t - new Date(t).getTimezoneOffset() * 60000) / 864e5);
 import { pipPose, kidBadge, coinSvg } from './shell.js';
 import * as ITEMS from './items.js';
+import * as CERT from './cert.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
 
@@ -686,7 +687,7 @@ function viewCard(card) {
       return `<div class="card stack">
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : 'One question'}</div>
       <div class="row" style="align-items:flex-start;gap:8px"><h3 class="grow" style="font-size:18px">${esc(dq.q)}</h3>
-        <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card.id}#${qi}" aria-label="Read the question and the answers to me">🔊</button></div>
+        <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card.id}#${qi}" aria-label="Read the question and the answers to me">${ico('sound', '', 18)}</button></div>
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
           let k = '';
@@ -1549,10 +1550,18 @@ export function viewParents() {
     ${reportCard(c)}
     <div class="card">
       <div class="row" style="gap:8px">
-        <button class="btn grow" data-act="nav" data-arg="report">📄 This week's report</button>
-        <button class="btn ghost sm" data-act="lock">Lock</button>
+        <button class="btn grow" data-act="nav" data-arg="report">${ico('page', '', 18)} This week's report</button>
+        <button class="btn ghost sm" data-act="lock">${ico('lock', '', 16)} Lock</button>
       </div>
       <a class="small" style="display:block;margin-top:10px;color:var(--action);font-weight:700" href="https://aayuvis.github.io/Bizzing_Schedule/">The whole family's week, across every Bizzing app → the Hive</a>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Certificates</div>
+      ${(() => { const e = CERT.earned(c); return e.length
+        ? `<p class="small muted" style="margin:4px 0 8px">Made on this device as a picture, for you to save and share as you choose. Nothing is uploaded.</p>
+           <div class="row" style="gap:8px;flex-wrap:wrap">${e.map((x) => `<button class="btn ghost sm" data-act="cert" data-arg="${x.id}">${ico('medal', '', 16)} ${esc(x.name)}</button>`).join('')}</div>`
+        : `<p class="small muted" style="margin-top:4px">When ${esc(c.name)} finishes every stop in a place — Market Row first — a certificate with their name, their avatar and what they mastered can be made here.</p>`; })()}
     </div>
 
     <div class="card">

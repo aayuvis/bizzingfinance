@@ -7,9 +7,9 @@
 html[data-text="s"] #app{zoom:.92}
 
 /* ── the frieze: a painted world behind the top bar, three layers of life ── */
-.frieze{position:absolute;left:0;right:0;top:0;height:calc(var(--tb) + 66px);overflow:hidden;z-index:0;pointer-events:none;
-  -webkit-mask-image:linear-gradient(#000 62%,transparent);mask-image:linear-gradient(#000 62%,transparent)}
-@media (max-width:899px){ .frieze{height:calc(var(--tb) + 22px)} }
+.frieze{position:absolute;left:0;right:0;top:0;height:calc(var(--tb) + 190px);overflow:hidden;z-index:0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(#000 45%,transparent);mask-image:linear-gradient(#000 45%,transparent)}
+@media (max-width:899px){ .frieze{height:calc(var(--tb) + 120px)} }
 .fz-plate{position:absolute;inset:-30px 0 0;background-size:cover;background-position:center 46%;
   transform:translateY(calc(var(--sy,0) * .25px));animation:fz-pan 60s ease-in-out infinite alternate}
 .fz-near{position:absolute;left:-5%;right:-5%;top:6px;height:34px;opacity:.9;transform:translateY(calc(var(--sy,0) * .55px));animation:fz-drift 18s ease-in-out infinite alternate}
@@ -21,7 +21,21 @@ html[data-text="s"] #app{zoom:.92}
 .fz-idle.hop{animation:fz-walk 30s steps(60) infinite}
 .fz-idle.fly{bottom:auto;top:8px;animation:fz-walk 26s linear infinite, fz-bob 2.2s ease-in-out infinite}
 .fz-idle.float{bottom:auto;top:6px;animation:fz-walk 44s linear infinite, fz-bob 4s ease-in-out infinite}
-.fz-scrim{position:absolute;inset:0;background:linear-gradient(color-mix(in srgb,var(--paper) 58%,transparent),color-mix(in srgb,var(--paper) 20%,transparent))}
+.fz-scrim{position:absolute;inset:0;background:linear-gradient(color-mix(in srgb,var(--paper) 22%,transparent) 0,color-mix(in srgb,var(--paper) 30%,transparent) 30%,color-mix(in srgb,var(--paper) 78%,transparent) 62%,var(--paper))}
+/* the world dresses the page, not only the bar: its paper, and a wash of its accent */
+body{background:radial-gradient(1200px 520px at 10% -120px,color-mix(in srgb,var(--action) 13%,transparent),transparent 70%),var(--paper)}
+html[data-world="market"]{--paper:#FFF6EA;--surface2:#FFEFDD}
+html[data-world="harbour"]{--paper:#F1F8F8;--surface2:#E3F2F3}
+html[data-world="clock"]{--paper:#F6F3FC;--surface2:#ECE8F8}
+html[data-world="exchange"]{--paper:#F2F7FB;--surface2:#E4EFF7}
+html[data-world="works"]{--paper:#FBF2EA;--surface2:#F6E5D7}
+html[data-world="festival"]{--paper:#F8F1FB;--surface2:#EEE2F6}
+html[data-bz-dark][data-world="market"]{--paper:#1A1512;--surface:#241D19;--surface2:#2E2520}
+html[data-bz-dark][data-world="harbour"]{--paper:#0F1A1D;--surface:#16252A;--surface2:#1B2E34}
+html[data-bz-dark][data-world="clock"]{--paper:#14131F;--surface:#1D1B2C;--surface2:#262338}
+html[data-bz-dark][data-world="exchange"]{--paper:#0F1720;--surface:#16212D;--surface2:#1C2A39}
+html[data-bz-dark][data-world="works"]{--paper:#1B1410;--surface:#261C17;--surface2:#30241D}
+html[data-bz-dark][data-world="festival"]{--paper:#17111F;--surface:#21192C;--surface2:#2B2139}
 @keyframes fz-pan{to{background-position:center 54%}}
 @keyframes fz-drift{to{transform:translate(3%,calc(var(--sy,0) * .55px))}}
 @keyframes fz-walk{to{left:calc(100% + 60px)}}
@@ -33,7 +47,7 @@ html[data-motion="reduced"] .fz-idle{left:12%}
 #app{position:relative;z-index:1}
 
 /* ── top bar (§3): 56px, Bee's order ── */
-.topbar{background:color-mix(in srgb,var(--paper) 70%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.topbar{background:color-mix(in srgb,var(--paper) 38%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
 .topbar-in{max-width:1100px;min-height:var(--tb);padding:6px clamp(10px,2.4vw,24px);gap:6px}
 .topbar .iconbtn{width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--surface) 82%,transparent);color:var(--ink);font-size:0}
 .topbar .iconbtn.hive{color:#B57E10}
@@ -226,3 +240,32 @@ html[data-bz-dark] .lstage{background:linear-gradient(rgb(8 12 30 / .1),rgb(8 12
 @media (min-width:900px){ .townpage .town.hero{max-width:860px;margin:0 auto;width:100%} }
 
 .ovx{position:absolute;right:10px;top:10px;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface2);z-index:2}
+
+/* ── finish screens (F4, L3, J6): Pip and the child's own face ── */
+.endfig{position:relative;display:inline-grid;place-items:center;margin:0 auto 4px}
+.endfig .endav{position:absolute;right:-26px;bottom:2px}
+.endbest{font-weight:700}
+.endbest b{font-family:var(--mono)}
+.coinjar{position:relative;width:70px;height:78px;margin:4px auto 0}
+.coinjar .jarb{position:absolute;left:10px;right:10px;bottom:0;height:52px;border:3px solid var(--plum);border-top-width:6px;border-radius:8px 8px 16px 16px;background:color-mix(in srgb,var(--save) 18%,transparent)}
+.coinjar .dropcoin{position:absolute;left:23px;top:-6px;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE9A3,#F0B429 60%,#C98A12);border:2px solid var(--plum);animation:dropcoin 1.1s .3s cubic-bezier(.5,0,.75,1.3) both}
+@keyframes dropcoin{from{transform:translateY(-40px);opacity:0}60%{opacity:1}to{transform:translateY(46px)}}
+@media (prefers-reduced-motion:reduce){ .coinjar .dropcoin{animation:none;transform:translateY(46px)} }
+html[data-motion="reduced"] .coinjar .dropcoin{animation:none;transform:translateY(46px)}
+/* the Atlas: the child's own face stands on the current stop, and it keeps its number (N12, J6) */
+.med.cur,.wdot{position:relative}
+.medn{position:absolute;right:-6px;bottom:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--plum);color:#fff;font:700 11px/18px var(--mono);font-style:normal;text-align:center}
+/* G6 · juice inside a round: number pops and a combo that lives only in this round */
+.gplay .stage{position:relative}
+.numpop{position:absolute;left:50%;top:38%;transform:translateX(-50%);font:800 26px/1 var(--mono);color:var(--grow);pointer-events:none;
+  text-shadow:0 2px 0 var(--surface);animation:numpop .7s ease-out both;z-index:3}
+@keyframes numpop{0%{opacity:0;transform:translate(-50%,8px) scale(.7)}30%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-40px) scale(1)}}
+.combo{color:var(--action);font-weight:800}
+.endcard .practised{font-size:14.5px}
+@media (prefers-reduced-motion:reduce){ .numpop{animation:none;opacity:0} }
+html[data-motion="reduced"] .numpop{animation:none;opacity:0}
+
+/* a toast never sits over Continue or the tab bar: it speaks from just under the top bar */
+.toast{top:calc(var(--tb) + 14px);bottom:auto;animation:toastdown .3s ease both}
+@keyframes toastdown{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+[hidden]{display:none!important}

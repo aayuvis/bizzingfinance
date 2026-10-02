@@ -14,6 +14,7 @@ import { ASSETS, STOCK, CHAPTERS, chapterDone, gameOpen, levelAtLeast } from './
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
+import { pipPose, kidBadge } from './shell.js';
 
 const K = () => sim.kid(R.s);
 
@@ -141,14 +142,27 @@ export function payout(n, label) {
 }
 let lastCapped = false;
 export function endCard(em, title, sub, wage, line, who) {
-  return `<div class="stage" style="justify-content:center;text-align:center">
-    <div style="font-size:44px">${em}</div>
+  /* §14 · a finish screen names what was practised and the child's own best — never
+     anyone else's. Pip cheers a good round and thinks about a hard one; the child's
+     own face is on it (J6). The best is the first number of the result, kept per game. */
+  const c = K(), n = (String(title).replace(/<[^>]+>/g, '').match(/-?\d+/) || [])[0];
+  let best = null, isNew = false;
+  if (current && n != null) {
+    if (!c.bests) c.bests = {};
+    const prev = c.bests[current];
+    if (prev == null || +n > prev) { isNew = prev != null; c.bests[current] = +n; }
+    best = c.bests[current];
+  }
+  const glum = ['😬', '💀', '👍', '📉'].includes(em);
+  return `<div class="stage endcard" style="justify-content:center;text-align:center">
+    <div class="endfig">${pipPose(glum ? 'think' : 'cheer', 104)}<span class="endav">${kidBadge(c, 56)}</span></div>
     <h2>${esc(title)}</h2>
     <p class="muted">${sub}</p>
+    ${best != null ? `<p class="endbest">${isNew ? 'A new best for you' : 'Your best'}: <b class="tabnum">${best}</b></p>` : ''}
     ${line ? say(who || 'pip', line) : ''}
     ${current && PRACTISED[current] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current])}</p>` : ''}
     <p class="small muted">${lastCapped ? `Played for practice: ${esc(current ? (GAMES.find((g) => g.id === current) || {}).name || 'this game' : 'this game')} pays for its first ${sim.GAME_PAYS} games a day. Tomorrow it pays again.` : `Earned ${money(wage)}, straight into your wallet.`}</p>
-    <button class="btn wide" data-act="gquit">Back to the arcade</button></div>`;
+    <button class="btn wide" data-act="gquit">Back to Play</button></div>`;
 }
 function shuffle(arr, seed) {
   const r = rng(seed);
@@ -166,7 +180,8 @@ function twoChoice(cfg) {
     if (st.done) return;
     const it = items[st.i];
     const ok = it.a === side || it.a === 'both';
-    if (ok) { st.right++; sfx.good(); } else sfx.bad();
+    if (ok) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
+    st.pop = ok ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
     /* Specific, never a bare "Yes." (D3): say what it was and, when the item
        carries one, why. */
     const sideLabel = (k) => (cfg.left.side === k ? cfg.left : cfg.right).label;
@@ -189,8 +204,8 @@ function twoChoice(cfg) {
         ${endCard(st.right >= items.length - 1 ? '🏅' : '👍', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
       const it = items[st.i];
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${items.length}`, `right ${st.right}`])}
-        <div class="stage">
+        ${hud([`${st.i + 1} / ${items.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}
+        <div class="stage">${st.pop ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
           ${cfg.card(it)}
           ${st.note ? `<div style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
           <div class="grow"></div>
@@ -332,7 +347,8 @@ function quizGame(cfg) {
   const choose = (n) => {
     if (st.done || st.pick != null) return;
     st.pick = n;
-    if (n === qs[st.i].a) { st.right++; sfx.good(); } else sfx.bad();
+    if (n === qs[st.i].a) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
+    st.pop = n === qs[st.i].a ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
     R.render();
   };
   const next = () => {
@@ -355,7 +371,7 @@ function quizGame(cfg) {
         ${endCard(st.right >= qs.length - 1 ? '🏅' : '👍', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
       const q = qs[st.i];
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${qs.length}`, `right ${st.right}`])}
+        ${hud([`${st.i + 1} / ${qs.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}${st.pop && st.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
         <div class="stage">
           <div class="gcard"><span class="em">${cfg.em}</span>
             <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>
