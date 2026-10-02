@@ -269,3 +269,5 @@ html[data-motion="reduced"] .numpop{animation:none;opacity:0}
 .toast{top:calc(var(--tb) + 14px);bottom:auto;animation:toastdown .3s ease both}
 @keyframes toastdown{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
 [hidden]{display:none!important}
+.crlane[aria-pressed="true"]{background:var(--action);color:var(--action-ink)}
+.srstall{display:block;width:150px;height:auto;margin:-4px auto 2px;filter:drop-shadow(0 6px 10px rgb(0 0 0 / .18))}

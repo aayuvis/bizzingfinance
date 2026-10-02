@@ -1448,7 +1448,7 @@ export function viewReport() {
     <span class="iw">${ico(em, em, 19)}</span><span class="grow" style="min-width:0">
     <b style="font-size:14px">${label}</b><div class="small muted">${body}</div></span></div>`;
   return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">← Grown-up's page</button>
+    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="parents">← Grown-ups</button>
     <div class="card">
       <div class="eyebrow">This week · ${shortDate(r.from)} – ${shortDate(r.to)}</div>
       <h2 style="margin:3px 0 8px;font-size:22px">${esc(r.child)}</h2>
@@ -1663,6 +1663,8 @@ export function viewParents() {
       <p class="small muted">For trying the app, not for a child. With it on, every gate opens — all eight chapters, the five worlds, the Jar Shed, the Build Yard, the Bank, the Exchange, the shop and every game — while ${esc(c.name)}'s learning record stays exactly what it is. A red TESTER pill sits in the bar the whole time it is on.</p>
       <div class="row"><span class="small grow">Unlock everything</span>
         <button class="btn ${s.settings.tester ? '' : 'ghost'} sm" data-act="tester">${s.settings.tester ? 'On' : 'Off'}</button></div>
+      <div class="row"><span class="small grow">Family plan <span class="muted">— a flag until the family server exists; it opens worlds 3–6 on this device and never sells coins</span></span>
+        <button class="btn ghost sm" data-act="planToggle" aria-pressed="${s.settings.plan === 'family'}">${s.settings.plan === 'family' ? 'On' : 'Off'}</button></div>
       ${s.settings.tester ? `
       <div class="rows" style="margin-top:4px">
         <div class="qrow"><span class="grow"><b style="font-size:14px">Jump the ladder</b><div class="small muted">Sets the level; XP follows. Level ${c.learn.level} now.</div></span>
@@ -1838,7 +1840,7 @@ export function settingsSheet(R) {
       ${row('Install Bizzing Finance', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
     </div>` : ''}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '👪', 15)} Grown-up's page</button>
+      <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '', 15)} Grown-ups</button>
       <button class="btn ghost sm" data-act="about">${ico('lesson', '📖', 15)} About</button>
       <button class="btn ghost sm" data-act="nav" data-arg="collection">${ico('quest', '🏅', 15)} Collection</button>
       <span class="grow"></span>

@@ -309,7 +309,7 @@ export function mainStreet() {
             </div>
             ${say('nana', 'Nobody went bankrupt and nobody had to. You win this one when the things you own pay for the life you lead — that is the only definition of rich worth chasing.')}
             <p class="small muted">Earned ${money(g.won)}.</p>
-            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+            <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
 

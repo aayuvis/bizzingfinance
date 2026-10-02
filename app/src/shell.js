@@ -157,7 +157,7 @@ export function settingsSheet(c, focus) {
       <h2 class="sh-title">${ico('gear', '', 22)} Settings</h2>
       <button class="iconbtn" data-act="closeOv" aria-label="Close settings">${ico('close', '', 20)}</button></div>
     <section class="scard" aria-labelledby="st-me"><h3 id="st-me">Me</h3>
-      ${row('Name', 'The same in every Bizzing app. A grown-up can change it.', `<span class="pill">${esc(c.name)}</span>`)}
+      ${row('Name', 'The same name in every Bizzing app, so your coins follow you.', `<span class="pill">${esc(c.name)}</span>`)}
       ${row('Avatar', esc(avatarName(c.avatar)), `<button class="btn ghost sm" data-act="nav" data-arg="collection">${kidBadge(c, 28)} Choose</button>`)}
       ${R.s.kids.length > 1 ? row('Switch child', `${R.s.kids.length} children on this device`, '<button class="btn ghost sm" data-act="kids">Switch</button>') : ''}
     </section>

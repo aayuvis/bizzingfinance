@@ -441,6 +441,34 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
 
   /* F3 · a wrong first answer went into "Ones to try again" */
   ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
+  /* G10 · every game answers the keyboard AND a tap (tester mode opens them all) */
+  {
+    const KEY = { cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1' };
+    await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
+    const bad = [];
+    for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
+      for (const how of ['key', 'tap']) {
+        await page.goto(URL0 + '#/play'); await page.waitForSelector('main');
+        await page.evaluate((g) => { window.BZF.fire('game', g); window.BZF.fire('gbegin', g); }, id); await page.waitForTimeout(250);
+        const before = await page.evaluate(() => (document.querySelector('.gplay') || {}).innerHTML || '');
+        const e0 = errors.length;
+        if (how === 'key') { await page.keyboard.down(KEY[id]); await page.waitForTimeout(id === 'cc' ? 600 : 80); await page.keyboard.up(KEY[id]); }
+        else {
+          const TAP = { mc: '[data-act="mcAdj"][data-arg$=":10"]', cr: '[data-act="crLane"][data-arg="3"]' };
+          const b = page.locator(TAP[id] ? `.gplay ${TAP[id]}` : '.gplay button[data-act]:not([data-act="gquit"]):not([disabled])').first();
+          if (await b.count()) { if (isMobile) await b.tap(); else await b.click(); } else bad.push(id + ':no-button');
+        }
+        await page.waitForTimeout(400);
+        const after = await page.evaluate(() => (document.querySelector('.gplay') || {}).innerHTML || '');
+        if (before === after) bad.push(`${id}:${how}`);
+        if (errors.length > e0) bad.push(`${id}:${how}:error`);
+        await page.evaluate(() => window.BZF.fire('gquit')); await page.evaluate(() => window.BZF.fire('closeOv'));
+      }
+    }
+    ok(`${label}: every game moves on a key and on a ${isMobile ? 'tap' : 'click'}`, !bad.length, bad.join(' '));
+    await page.evaluate(() => { window.BZF.R.s.settings.tester = false; window.BZF.setTester(false); });
+  }
+
   /* B10 · reload mid-journey: Continue points at the exact stop */
   await go('#/home');
   const before = (await page.textContent('.continue h2')).trim();
@@ -466,6 +494,15 @@ async function demo() {
   const stored = await page.evaluate(() => localStorage.getItem('bzf_profile'));
   ok('demo: nothing is saved — the real household is untouched', stored === null, stored ? stored.length + ' bytes written' : '');
   ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+  /* D10 · under reduced motion the world is one still frame: nothing runs */
+  const rctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  const rp = await rctx.newPage();
+  await rp.goto(URL0 + '?demo'); await rp.waitForSelector('.continue'); await rp.waitForTimeout(500);
+  const still = await rp.evaluate(() => ({ running: window.BZF.ambient.state().running, layers: window.BZF.ambient.state().layers, anim: getComputedStyle(document.querySelector('.fz-idle')).animationName }));
+  ok('reduced motion: the world stands still (three layers drawn, nothing running)', !still.running && still.layers >= 3 && still.anim === 'none', JSON.stringify(still));
+  await rctx.close();
+  return;
   await ctx.close();
 }
 

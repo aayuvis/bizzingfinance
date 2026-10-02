@@ -87,5 +87,11 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   ok(ids.length >= 11 && !missing.length, 'every game has three lines of how-to and a "you practised" line', missing.join(',') || ids.join(','));
 }
 
+/* E9 · a jar or bank tap is transfer evidence only with a real alternative on offer */
+{
+  const m = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  const jar = m.slice(m.indexOf("on('jarIn'"), m.indexOf("on('jarIn'") + 700), bank = m.slice(m.indexOf("on('bankIn'"), m.indexOf("on('bankIn'") + 700);
+  ok(/if \(alt && k !== 'spend'\)[\s\S]*mastery\.transfer\(c, 'KEEP-2'/.test(jar) && /if \(alt\)[\s\S]*mastery\.transfer\(c, 'GROW-1'/.test(bank), 'a jar or bank tap counts as transfer only when something tempting was affordable instead');
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

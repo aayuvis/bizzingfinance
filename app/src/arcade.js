@@ -10,6 +10,7 @@ import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say, ico } from './art.js';
 import { hero } from './hero.js';
 import { COVERS } from './covers-gen.js';
+import { BLD } from './buildings-gen.js';
 import { ASSETS, STOCK, CHAPTERS, chapterDone, gameOpen, levelAtLeast } from './content.js';
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
@@ -118,7 +119,7 @@ export function introView(id) {
         ${g.keys ? `<span class="pill">${esc(g.keys)}</span>` : ''}</div>
     </section>
     <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start →</button>
-    <button class="btn ghost wide" data-act="gback">Back to the arcade</button></div>`;
+    <button class="btn ghost wide" data-act="gback">Back to Play</button></div>`;
 }
 export function startGame(id, seed) {
   current = id;
@@ -596,7 +597,7 @@ function marketCup() {
                 ? 'Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat.'
                 : 'You beat Bella this time. Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.')}
             <p class="small muted">Earned ${money(st.won)}. Fictional companies, real market behaviour, nothing here is advice.</p>
-            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+            <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       return `<div class="stack">
@@ -694,14 +695,20 @@ function compoundClimb() {
     ctx.fillText('target', 6, y(TARGET) - 6);
     // the tower: one block a year, so compounding is a shape rather than a claim
     const bw = Math.max(6, (W - 40) / YEARS);
+    /* G5 · each year is a stack of painted coins, not a bar: a down year's top coins
+       turn coral, so a crash is a stack that shrank */
     st.hist.forEach((v, i) => {
-      const bx = 20 + i * bw;
+      const bx = 20 + i * bw, w = bw - 3, base = H - 14, topY = y(v);
       const grew = i === 0 || v >= st.hist[i - 1];
-      ctx.fillStyle = grew ? tok('--action', '#0E6B78') : tok('--spend', '#C4453C');
-      ctx.globalAlpha = i === st.hist.length - 1 ? 1 : 0.75;
-      ctx.fillRect(bx, y(v), bw - 3, H - 14 - y(v));
+      const n = Math.max(1, Math.floor((base - topY) / 6));
+      for (let k = 0; k < n; k++) {
+        const cy = base - 3 - k * 6, last = k >= n - 2;
+        ctx.beginPath(); ctx.ellipse(bx + w / 2, cy, w / 2, 3.2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = !grew && last ? '#E8846F' : (k % 2 ? '#F0B429' : '#E3A21E'); ctx.fill();
+        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(58,42,92,.55)'; ctx.stroke();
+      }
+      if (i === st.hist.length - 1) { ctx.beginPath(); ctx.ellipse(bx + w / 2, base - 3 - (n - 1) * 6, w / 2 + 2, 4.5, 0, 0, Math.PI * 2); ctx.strokeStyle = tok('--action', '#0E6B78'); ctx.lineWidth = 2; ctx.stroke(); }
     });
-    ctx.globalAlpha = 1;
     ctx.fillStyle = tok('--ink', '#16262A'); ctx.font = '800 15px system-ui'; ctx.textAlign = 'right';
     ctx.fillText(String(Math.round(st.money)), W - 8, Math.max(16, y(st.money) - 8));
   };
@@ -856,13 +863,14 @@ function stallRush() {
               ? 'You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent.'
               : 'Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.')}
             <p class="small muted">Earned ${money(st.won)}.</p>
-            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+            <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       return `<div class="stack">
         ${hud([`<span id="srTime">${Math.ceil((LEN - st.t) / 1000)}</span>s`,
           `took ${money(st.revenue)}`, `stock ${money(st.spent)}`, `lost ${st.lost}`])}
         <div class="stage">
+          ${BLD.stall ? `<img class="srstall" src="${BLD.stall.src}" alt="Your stall" width="${BLD.stall.w}" height="${BLD.stall.h}">` : ''}
           <div class="eyebrow">The queue</div>
           <div class="stack" style="gap:7px;min-height:132px">
             ${st.q.length ? st.q.map((c) => {
@@ -914,6 +922,9 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
   newTarget();
 
   const stop = () => { if (raf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(raf); raf = 0; };
+  /* the purse moves on the canvas; the lane buttons say where it is, for a keyboard
+     or a screen reader (no full re-render mid-flight) */
+  const lanes = () => { if (typeof document === 'undefined') return; document.querySelectorAll('.crlane').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.arg === st.lane))); };
   const end = () => {
     if (st.done) return;
     st.done = true;
@@ -1038,8 +1049,9 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
       if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
       if (e.key === 'ArrowLeft') st.lane = Math.max(0, st.lane - 1);
       else if (e.key === 'ArrowRight') st.lane = Math.min(LANES - 1, st.lane + 1);
+      lanes();
     },
-    act(n, arg) { if (n === 'crLane') st.lane = clamp(+arg, 0, LANES - 1); },
+    act(n, arg) { if (n === 'crLane') { st.lane = clamp(+arg, 0, LANES - 1); lanes(); } },
     view() {
       if (st.done) return `<div class="stack">${hud(['Done'])}
         ${endCard(st.round > 4 ? '🏅' : '🪙', st.exact + ' exact', 'Score ' + st.score + '.', st.won,
@@ -1050,7 +1062,7 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
           <div class="bar"><i id="crBar" style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? 'var(--spend)' : 'var(--action)'}"></i></div>
           <canvas id="crCanvas" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
-            ${[0, 1, 2, 3].map((i) => `<button class="btn ghost" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}
+            ${[0, 1, 2, 3].map((i) => `<button class="btn ghost crlane" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}" aria-pressed="${st.lane === i}">${i + 1}</button>`).join('')}
           </div>
           <p class="hint"><span id="crMsg">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, or tap a lane. Stop at exactly the amount.</p>
         </div></div>`;
@@ -1171,7 +1183,7 @@ function marketStorm() {
               ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go.'
               : 'A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.')}
             <p class="small muted">Earned ${money(st.won)}. Fictional market, real behaviour, nothing here is advice.</p>
-            <button class="btn wide" data-act="gquit">Back to the arcade</button>
+            <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       const sh = st.shout;

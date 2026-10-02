@@ -498,6 +498,7 @@ on('cert', async (id) => {
     document.body.appendChild(a); a.click(); a.remove(); toast('Certificate saved'); sfx.medal();
   } catch (e) { toast('This device could not draw the certificate'); }
 });
+on('planToggle', () => { if (!R.gate) return; R.s.settings.plan = R.s.settings.plan === 'family' ? 'free' : 'family'; sim.save(R.s); toast(R.s.settings.plan === 'family' ? 'Family plan on, on this device' : 'Family plan off'); render(); });
 on('stopNext', () => { R.overlay = null; goContinue(); });
 on('closeOv', () => {
   /* the adoption letter's "meet them" closes into the shelter, not to Home */
@@ -1448,7 +1449,7 @@ on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
-  ambient, audio, looks: LOOKS, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
+  ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   cardById, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 
