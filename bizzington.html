@@ -1019,6 +1019,40 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
 .badge.got .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;color:#4A2E00;
   background:linear-gradient(160deg,#FFD24D,#E0922E);box-shadow:0 0 0 3px #fff,0 3px 10px rgb(200 121 27 / .35)}
 .badge:not(.got) .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line)}
+/* read it to me (K1): a small speaker on every bubble and question */
+.sayit{display:inline-grid;place-items:center;width:30px;height:30px;margin-left:6px;vertical-align:middle;border-radius:50%;font-size:14px;background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+.fb .sayit{float:right;margin:-4px -4px 0 6px}
+.btn.sayq{flex:0 0 auto;padding:6px 10px}
+/* try it (D1) */
+.tryit{background:linear-gradient(160deg,var(--action-tint),var(--surface) 70%)}
+.tvars{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tvar{display:grid;gap:4px}
+.tvar b{min-width:46px;text-align:center;font-family:var(--display);font-size:20px}
+.tout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.tout > div{display:grid;background:var(--surface);border-radius:var(--r-md);padding:8px 10px;box-shadow:0 0 0 1px var(--line)}
+.tout b{font-family:var(--display);font-size:22px}
+
+/* ── games (F3, FAMILY-STANDARD §10) ─────────────────────────────────── */
+.gintro{position:relative;border-radius:var(--r-xl);overflow:hidden;min-height:300px;display:flex;color:#fff;
+  background:var(--cover,linear-gradient(135deg,var(--action),#0b3d45)) center 40%/cover no-repeat;box-shadow:0 14px 34px rgb(90 60 20 / .16)}
+.gintro .cv-veil{position:absolute;inset:0;background:linear-gradient(180deg,transparent 10%,rgb(16 28 40 / .55) 50%,rgb(16 28 40 / .88) 100%)}
+.gintro .gi-body{position:relative;margin-top:auto;padding:18px;display:grid;gap:8px}
+.gintro .eyebrow{color:rgb(255 255 255 / .9)}
+.gintro h1{font-size:30px;text-shadow:0 2px 12px rgb(0 0 0 / .45)}
+.gintro ol{margin:0;padding-left:20px;display:grid;gap:3px;font-size:15px;font-weight:600;text-shadow:0 1px 6px rgb(0 0 0 / .5)}
+.gintro .pill{justify-self:start;background:#fff;color:var(--ink);border:0}
+/* the painting stays behind the play screen, softened so the game reads */
+.gplay .stage{position:relative;isolation:isolate}
+.gplay .stage::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:.22;
+  background:var(--cover,none) center/cover no-repeat}
+.practised{background:var(--grow-tint);border-radius:var(--r-md);padding:10px 12px;font-size:14.5px}
+/* motion on every answer: right pops, wrong shakes */
+html[data-flash="ok"] .stage,html[data-flash="ok"] .opt.ok,html[data-flash="ok"] .fb.yes{animation:popok .38s cubic-bezier(.2,1.6,.4,1)}
+html[data-flash="no"] .stage,html[data-flash="no"] .opt.no,html[data-flash="no"] .fb.hold{animation:shake .38s ease}
+@keyframes popok{0%{transform:scale(.97)}60%{transform:scale(1.02)}100%{transform:none}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+@media (prefers-reduced-motion:reduce){ html[data-flash] .stage,html[data-flash] .opt,html[data-flash] .fb{animation:none !important} }
+:root[data-motion="reduced"] .stage,:root[data-motion="reduced"] .opt,:root[data-motion="reduced"] .fb{animation:none !important}
 
 </style>
 </head>
@@ -1683,6 +1717,16 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     o.start(t);
     o.stop(t + dur + 0.02);
   }
+  var flashT = null;
+  function flash(kind) {
+    if (typeof document === "undefined") return;
+    const r = document.documentElement;
+    r.dataset.flash = kind;
+    clearTimeout(flashT);
+    flashT = setTimeout(() => {
+      delete r.dataset.flash;
+    }, 520);
+  }
   var sfx = {
     click() {
       tone(520, 0.07, "triangle", 0.06);
@@ -1692,10 +1736,12 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
       tone(1320, 0.13, "triangle", 0.09, 0.06);
     },
     good() {
+      flash("ok");
       tone(660, 0.1, "sine", 0.12);
       tone(990, 0.16, "sine", 0.1, 0.08);
     },
     bad() {
+      flash("no");
       tone(220, 0.16, "sawtooth", 0.07);
       tone(170, 0.2, "sawtooth", 0.06, 0.08);
     },
@@ -2309,7 +2355,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   }
   function say2(who, text) {
     const c = CAST[who] || CAST.pip;
-    return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
+    return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}<button class="sayit" data-act="sayEl" aria-label="Read it to me">\u{1F50A}</button></div></div>`;
   }
   function ico(name, fallback, size) {
     const s = size || 24;
@@ -3299,7 +3345,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
       const indexR = basket / names.length - wk(P2.indexFee);
       const goldR = wk(P2.goldBase - P2.goldOnRealRate * s.real) + n() * P2.goldVol;
       const propR = wk(P2.propYield) + wk(s.inflation + (s.growth - CAL.growthMean) * P2.propOnGrowth) + n() * P2.propVol;
-      const step = {
+      const step2 = {
         cash: cashR,
         deposit: depR,
         bond: bondR,
@@ -3307,9 +3353,9 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
         gold: goldR,
         property: propR
       };
-      step.shares = weekly2.shares[weekly2.shares.length - 1];
+      step2.shares = weekly2.shares[weekly2.shares.length - 1];
       ids.forEach((id) => {
-        const rr = step[id];
+        const rr = step2[id];
         if (id !== "shares") weekly2[id].push(rr);
         series[id].push(Math.max(0.5, series[id][series[id].length - 1] * (1 + rr)));
       });
@@ -4023,6 +4069,119 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
         a: 0,
         why: "Before the first sale, the day is already seven down. Knowing your seven is knowing your floor."
       }
+    ],
+    /* stretch stops (C3) */
+    c7e: [
+      {
+        q: "Why is a small yearly fee worth checking before you choose where money grows?",
+        opts: ["It is taken once and forgotten", "It quietly takes growth every year", "It is always paid back later", "Fees only matter for big amounts"],
+        a: 1,
+        why: "Small and every year is exactly the shape that adds up."
+      },
+      {
+        q: "Two baskets grow at the same speed. Which ends up bigger?",
+        opts: ["The one with the fee", "The one without the fee", "They end the same", "Whichever started second"],
+        a: 1,
+        why: "Same growth, less taken out \u2014 the one without the fee stays ahead, and the gap widens."
+      }
+    ],
+    c7f: [
+      {
+        q: "Money grows 12 in every 100 each year. About how long to double?",
+        opts: ["About 6 years", "About 12 years", "About 24 years", "About 60 years"],
+        a: 0,
+        why: "72 \xF7 12 = 6. Faster growth halves the wait."
+      },
+      {
+        q: "What is the doubling trick good for?",
+        opts: ["A quick rough guess", "An exact promise", "Picking which company to buy", "Knowing next week's price"],
+        a: 0,
+        why: "It is a rule of thumb \u2014 quick and rough, never a promise about any real investment."
+      }
+    ],
+    c7g: [
+      {
+        q: "Why is it so hard to jump out of the Exchange and back in at the right moments?",
+        opts: ["You have to guess right twice", "Selling is not allowed", "Prices never change", "The bank stops you"],
+        a: 0,
+        why: "Leaving early and returning late both cost you \u2014 and nobody knows the turning points in advance."
+      },
+      {
+        q: "Which player usually does best over many seasons in the Market Cup?",
+        opts: ["The one who sells every red day", "The calm one who spreads money out and waits", "The one who buys whatever rose most", "The one who copies Bo"],
+        a: 1,
+        why: "Spread out, sit still, give it time. Boring is the winning move."
+      }
+    ],
+    c7h: [
+      {
+        q: "Why might money in a tin buy less in ten years?",
+        opts: ["Prices usually creep up", "Coins get lighter", "Tins leak", "Shops lose count"],
+        a: 0,
+        why: "The money keeps its number; the prices around it move."
+      },
+      {
+        q: "For money to really grow, what must it beat?",
+        opts: ["The rise in prices", "Your friend's savings", "Last week's weather", "The number on the note"],
+        a: 0,
+        why: "Growth that is slower than rising prices is shrinking in disguise."
+      }
+    ],
+    c8e: [
+      {
+        q: "What does break-even mean for a stall?",
+        opts: ["Sales have covered the fixed costs", "The stall is closing", "Every item is sold out", "Prices are cut in half"],
+        a: 0,
+        why: "Break-even is the line. Below it you are paying to open; above it you are earning."
+      },
+      {
+        q: "Rent is 200. Each sale leaves 10. How many sales to break even?",
+        opts: ["10", "20", "200", "2"],
+        a: 1,
+        why: "200 \xF7 10 = 20. Cover the rent first; profit starts after."
+      }
+    ],
+    c8f: [
+      {
+        q: "Why does a regular customer matter so much to a small stall?",
+        opts: ["They return without new effort", "They pay double", "They never complain", "They bring their own stock"],
+        a: 0,
+        why: "A returning customer is a sale you did not have to win again."
+      },
+      {
+        q: "A seller tricks a customer into an overpriced buy. What usually happens next?",
+        opts: ["The customer does not come back", "The customer tells everyone it was great", "Nothing at all", "The seller gets more regulars"],
+        a: 0,
+        why: "One sale won, one customer lost \u2014 usually for good."
+      }
+    ],
+    c8g: [
+      {
+        q: "Why is a full cupboard of unsold stock a worry?",
+        opts: ["The money is stuck until it sells", "Cupboards are expensive", "It means business is booming", "Stock always gets more valuable"],
+        a: 0,
+        why: "Money on a shelf cannot pay a bill. Some of it may go stale before it sells."
+      },
+      {
+        q: "What is the smart way to buy stock?",
+        opts: ["Buy what you know sells, a bit at a time", "Buy as much as you can afford", "Buy whatever is cheapest that day", "Buy only what you like"],
+        a: 0,
+        why: "Buy what moves, and watch what sits. That keeps money flowing."
+      }
+    ],
+    c8h: [
+      {
+        q: "Why does a shop keep some profit back instead of spending it all?",
+        opts: ["To pay for next week's stock and quiet weeks", "Because profit is not real money", "The landlord takes it later", "To make the shop look poor"],
+        a: 0,
+        why: "Profit kept in the shop is next week's stock and the cushion for a quiet week."
+      },
+      {
+        q: "How is splitting profit like the four jars?",
+        opts: ["Both split money the moment it arrives", "Both are only for grown-ups", "Neither needs a plan", "Both spend everything at once"],
+        a: 0,
+        why: "Decide the split first, then live inside it \u2014 for a wage or for a shop."
+      }
     ]
   };
 
@@ -4490,6 +4649,63 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
             a: 1,
             why: "When you need it decides where it goes \u2014 before asking what grows fastest."
           }
+        },
+        /* ── stretch stops (C3): the second half of the chapter goes further ── */
+        {
+          id: "c7e",
+          title: "Fees grow too",
+          who: "bea",
+          stretch: true,
+          teach: "A small fee taken <b>every year</b> does not just cost the fee. It also costs everything that fee would have grown into. Fees compound, the same as growth does.",
+          eg: "Two baskets grow the same. One takes a small fee each year. Years later it is behind by more than all the fees added up.",
+          drill: {
+            q: "Two funds grow alike, but one takes a small yearly fee. After twenty years, how far behind is it?",
+            opts: ["By exactly the fees it charged", "By more than the fees it charged", "Not at all \u2014 fees are tiny", "By less, because fees shrink"],
+            a: 1,
+            why: "Each fee also takes away the growth it would have earned, year after year."
+          }
+        },
+        {
+          id: "c7f",
+          title: "The doubling trick",
+          who: "bo",
+          stretch: true,
+          teach: "A quick way to guess how long money takes to <b>double</b>: divide 72 by the yearly growth. It is a rough guide, not a promise \u2014 but it makes slow growth easy to picture.",
+          eg: "Growing 6 a year in every 100: 72 \xF7 6 = 12. About twelve years to double.",
+          drill: {
+            q: "Money grows 8 in every 100 each year. Roughly how long until it doubles?",
+            opts: ["About 8 years", "About 9 years", "About 72 years", "About 80 years"],
+            a: 1,
+            why: "72 \xF7 8 = 9. Bigger growth, faster doubling \u2014 and it is only ever a rough guide."
+          }
+        },
+        {
+          id: "c7g",
+          title: "Staying in",
+          who: "nana",
+          stretch: true,
+          teach: "Jumping out when prices fall and back in when they rise sounds clever. Nobody can do it reliably. <b>Staying in</b> through the bad weeks usually beats guessing.",
+          eg: "Bo sold on a red day and missed the bounce the week after. Bea did nothing and was fine.",
+          drill: {
+            q: "The Exchange fell all week. What usually works out better for money you will not need for years?",
+            opts: ["Sell now and buy back when it feels safe", "Leave it where it is", "Move it all into one company", "Sell half, then decide each morning"],
+            a: 1,
+            why: "Guessing the bottom twice \u2014 when to leave and when to return \u2014 is how people lose the bounce."
+          }
+        },
+        {
+          id: "c7h",
+          title: "Prices creep up",
+          who: "pip",
+          stretch: true,
+          teach: "Most years, prices <b>creep up</b> a little. Money left in a tin keeps its number but buys a bit less. To really grow, money has to grow faster than prices.",
+          eg: "A snack that costs 10 now might cost 11 in a few years. The 10 in your tin did not change \u2014 what it buys did.",
+          drill: {
+            q: "Your tin holds the same money for five years while prices creep up. What happened?",
+            opts: ["It buys exactly what it did", "It buys a little less", "It buys more, because it waited", "It grew by itself"],
+            a: 1,
+            why: "Same number, smaller shopping bag. That is what rising prices do to money that sits still."
+          }
         }
       ]
     },
@@ -4551,6 +4767,63 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
             opts: ["Stock", "Rent", "Wrapping paper", "Nothing does"],
             a: 1,
             why: "Your fixed costs tell you the smallest week you can survive."
+          }
+        },
+        /* ── stretch stops (C3) ── */
+        {
+          id: "c8e",
+          title: "Break-even",
+          who: "mags",
+          stretch: true,
+          teach: "Before a shop makes any profit, it has to cover its fixed costs. The number of sales that does that is the <b>break-even</b>. Every sale after it is profit.",
+          eg: "Rent 240 a month. Each umbrella sells for 20 and costs 8, so it leaves 12. 240 \xF7 12 = 20 umbrellas to break even.",
+          drill: {
+            q: "Rent is 300 a month. Each sale leaves 15 after its own cost. How many sales to break even?",
+            opts: ["15", "20", "30", "300"],
+            a: 1,
+            why: "300 \xF7 15 = 20. The twenty-first sale is the first one that is profit."
+          }
+        },
+        {
+          id: "c8f",
+          title: "Customers who come back",
+          who: "nana",
+          stretch: true,
+          teach: "Finding a new customer takes effort every time. A customer who <b>comes back</b> costs almost nothing to keep. Fair prices and honest service are how a small shop grows.",
+          eg: "Nana's best customers have bought from her for twenty years. She never once tricked them.",
+          drill: {
+            q: "Which usually helps a small shop most over a year?",
+            opts: ["Customers who keep coming back", "One very big sale", "A sign that says LAST DAY every day", "Raising prices on regulars"],
+            a: 0,
+            why: "Regulars come back by themselves. Tricks win a sale and lose the customer."
+          }
+        },
+        {
+          id: "c8g",
+          title: "Stock that sits",
+          who: "mags",
+          stretch: true,
+          teach: "Stock you have not sold is <b>money stuck on a shelf</b>. It cannot pay rent, and some of it goes stale. Buy what sells, and watch what does not.",
+          eg: "Mags bought fifty umbrellas in a dry month. Her money sat in a cupboard until the rain came.",
+          drill: {
+            q: "A shop has lots of stock but cannot pay the rent. What went wrong?",
+            opts: ["Its money is stuck in unsold stock", "It sold too much", "Rent is always unfair", "It has too many customers"],
+            a: 0,
+            why: "Stock is money in a different shape. If it does not sell, it cannot pay anything."
+          }
+        },
+        {
+          id: "c8h",
+          title: "Paying yourself",
+          who: "nana",
+          stretch: true,
+          teach: "Not all profit is yours to spend. Some must <b>stay in the shop</b> for next week's stock and the quiet weeks. Owners split profit, just like jars split a wage.",
+          eg: "Nana keeps half her profit in the shop tin and takes half home. The shop never runs dry.",
+          drill: {
+            q: "Your stall made a good profit this week. What is the wise thing to do with it?",
+            opts: ["Take it all home", "Keep some in the stall for next week", "Spend it on decorations", "Give it all to the landlord"],
+            a: 1,
+            why: "Next week's stock is paid from this week's profit. Take it all and the stall starts empty."
           }
         }
       ]
@@ -7258,8 +7531,8 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
       for (let qi = 0; qi < drillCount(card2); qi++) pairs.push([card2.id, qi]);
     });
     if (!pairs.length) return [];
-    const step = Math.max(1, Math.floor(pairs.length / N)), start3 = d % pairs.length, out = [];
-    for (let i = 0; i < pairs.length && out.length < N; i++) out.push(pairs[(start3 + i * step) % pairs.length]);
+    const step2 = Math.max(1, Math.floor(pairs.length / N)), start3 = d % pairs.length, out = [];
+    for (let i = 0; i < pairs.length && out.length < N; i++) out.push(pairs[(start3 + i * step2) % pairs.length]);
     return out;
   }
   function start(chId, mode) {
@@ -7921,11 +8194,11 @@ ${marks}`;
     const world = WORLDS[c.world || 0] || WORLDS[0];
     const here = PLACES.filter((p) => world.places.includes(p.key));
     const SPAN = 155, PAD = 130;
-    const W2 = Math.max(640, PAD * 2 + here.length * SPAN);
-    const startX = Math.max(PAD, (W2 - here.length * SPAN) / 2);
+    const W3 = Math.max(640, PAD * 2 + here.length * SPAN);
+    const startX = Math.max(PAD, (W3 - here.length * SPAN) / 2);
     const xOf = (i) => startX + i * SPAN;
     const plate = art("world-" + world.id);
-    const lanterns = Array.from({ length: 7 }, (_, i) => lantern(70 + i * ((W2 - 140) / 6), i < Math.min(7, good))).join("");
+    const lanterns = Array.from({ length: 7 }, (_, i) => lantern(70 + i * ((W3 - 140) / 6), i < Math.min(7, good))).join("");
     const build2 = (p, idx) => {
       p = { ...p, x: xOf(idx) };
       const on2 = isOpen(c, p.sub);
@@ -7948,7 +8221,7 @@ ${marks}`;
     const mine = FIXES.filter((f) => f.world === world.id && c.fix && c.fix.done.includes(f.id));
     const VH = H + (mine.length ? DEED_H : 0);
     const deeds = mine.map((f, i) => deed(96 + i * 132, f.em, c.name || "You")).join("");
-    return `<svg viewBox="0 0 ${W2} ${VH}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
+    return `<svg viewBox="0 0 ${W3} ${VH}" preserveAspectRatio="xMidYMax meet" aria-label="Bizzington">
     <defs>
       <linearGradient id="wallShade" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0" stop-color="#000" stop-opacity="0"/>
@@ -7970,10 +8243,10 @@ ${marks}`;
         <stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/>
       </linearGradient>
     </defs>
-    <rect width="${W2}" height="${VH}" fill="url(#sky)"/>
-    ${plate ? `<image href="${plate}" x="0" y="0" width="${W2}" height="${H}"
+    <rect width="${W3}" height="${VH}" fill="url(#sky)"/>
+    ${plate ? `<image href="${plate}" x="0" y="0" width="${W3}" height="${H}"
       preserveAspectRatio="xMidYMid slice" opacity=".96"/>` : ""}
-    ${plate ? "" : `<rect width="${W2}" height="${G}" fill="${world.tint}" opacity=".22"/>`}
+    ${plate ? "" : `<rect width="${W3}" height="${G}" fill="${world.tint}" opacity=".22"/>`}
     ${plate ? "" : `<circle cx="852" cy="62" r="26" fill="#F0B429" opacity=".55"/>
     <g fill="rgba(255,255,255,.6)">
       <ellipse cx="150" cy="70" rx="34" ry="15"/><ellipse cx="178" cy="62" rx="24" ry="17"/>
@@ -7984,12 +8257,12 @@ ${marks}`;
     </g>
     <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>`}
     ${lanterns}
-    ${plate ? "" : `<rect x="0" y="${G}" width="${W2}" height="${VH - G}" fill="var(--ground)"/>
-    <rect x="0" y="${G}" width="${W2}" height="${VH - G}" fill="${world.tint}" opacity=".3"/>`}
-    ${mine.length ? `<rect x="0" y="${H - 8}" width="${W2}" height="${VH - H + 8}" fill="var(--ground)"/>
-    <rect x="0" y="${H - 8}" width="${W2}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
+    ${plate ? "" : `<rect x="0" y="${G}" width="${W3}" height="${VH - G}" fill="var(--ground)"/>
+    <rect x="0" y="${G}" width="${W3}" height="${VH - G}" fill="${world.tint}" opacity=".3"/>`}
+    ${mine.length ? `<rect x="0" y="${H - 8}" width="${W3}" height="${VH - H + 8}" fill="var(--ground)"/>
+    <rect x="0" y="${H - 8}" width="${W3}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || "you")}</text>` : ""}
-    <rect x="0" y="${G + 28}" width="${W2}" height="6" fill="var(--road)" opacity=".7"/>
+    <rect x="0" y="${G + 28}" width="${W3}" height="6" fill="var(--road)" opacity=".7"/>
     ${here.map(build2).join("")}
     ${deeds}
     ${companionOnStreet(c, here, xOf)}
@@ -10779,7 +11052,11 @@ ${marks}`;
     }
   ];
   function viewArcade() {
-    if (R.game) return R.game.view();
+    if (R.gameIntro) return introView(R.gameIntro);
+    if (R.game) {
+      const art2 = current3 && COVERS[current3];
+      return `<div class="gplay"${art2 ? ` style="--cover:url(${art2.src})"` : ""}>${R.game.view()}</div>`;
+    }
     const c = K2();
     const cover = (g, o = {}) => {
       const open = o.open != null ? o.open : gameOpen(c, g);
@@ -10822,7 +11099,47 @@ ${marks}`;
     ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ""}
   </div>`;
   }
+  var HOW = {
+    cr: ["Coins fall. Catch exactly the amount asked for.", "One too many is overpaying.", "Move with \u2190 \u2192 or drag."],
+    nw: ["A thing appears. Is it a need or a want?", "Some can be both \u2014 those are the interesting ones.", "Tap a side, or press \u2190 \u2192."],
+    ss: ["A message arrives. Real, or a trap?", "Traps rush you, flatter you, or want a secret kept.", "Tap a side, or press \u2190 \u2192."],
+    bb: ["A month of money. Bills arrive one at a time.", "Pay what you must, keep what you can.", "Tap a choice, or press 1 or 2."],
+    cc: ["Hold to let your money grow, let go to bank it.", "Grow too greedily and a crash can wipe it out.", "Hold space, or press and hold."],
+    sr: ["Sixty seconds of customers at your stall.", "Serve the right thing at the right price.", "Tap, or press 1\u20134 and R."],
+    st: ["The market swings wildly. Do you act?", "The winning move is usually to sit still.", "Space to act \u2014 or don't."],
+    mc: ["A season of the Exchange, a week at a time.", "Spread your money and keep your nerve.", "Arrows to choose, Enter to confirm."],
+    mn: ["The board game: buy shops, collect rent.", "Win when your street pays for your life.", "Enter to roll, Y or N to buy."],
+    tt: ["Monthly numbers, turned into yearly ones.", "Times twelve, in your head.", "Tap an answer, or press 1\u20134."],
+    sn: ["Guess where compounding lands.", "Nobody guesses high enough \u2014 try anyway.", "Tap an answer, or press 1\u20134."]
+  };
+  var PRACTISED = {
+    cr: "paying exact amounts and counting change",
+    nw: "telling needs from wants",
+    ss: "spotting the shape of a scam",
+    bb: "paying bills first and living inside a month",
+    cc: "how compounding grows \u2014 and why greed crashes it",
+    sr: "pricing and serving under time pressure",
+    st: "doing nothing on a red day",
+    mc: "spreading money out and keeping your nerve",
+    mn: "buying things that pay you back",
+    tt: "turning monthly costs into yearly ones",
+    sn: "how big compounding really gets"
+  };
+  var current3 = null;
+  function introView(id) {
+    const g = GAMES.find((x) => x.id === id) || { name: id, keys: "" }, art2 = COVERS[id], how = HOW[id] || [];
+    return `<div class="stack">
+    <section class="gintro" style="${art2 ? `--cover:url(${art2.src})` : ""}" aria-labelledby="gi-h">
+      <span class="cv-veil"></span>
+      <div class="gi-body"><span class="eyebrow">How to play</span><h1 id="gi-h">${esc(g.name)}</h1>
+        <ol>${how.map((h) => `<li>${esc(h)}</li>`).join("")}</ol>
+        ${g.keys ? `<span class="pill">${esc(g.keys)}</span>` : ""}</div>
+    </section>
+    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start \u2192</button>
+    <button class="btn ghost wide" data-act="gback">Back to the arcade</button></div>`;
+  }
   function startGame(id) {
+    current3 = id;
     const f = {
       cr: changeRush,
       nw: needsWants,
@@ -10865,6 +11182,7 @@ ${marks}`;
     <h2>${esc(title)}</h2>
     <p class="muted">${sub}</p>
     ${line2 ? say2(who || "pip", line2) : ""}
+    ${current3 && PRACTISED[current3] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current3])}</p>` : ""}
     <p class="small muted">Earned ${money(wage)}, straight into your wallet.</p>
     <button class="btn wide" data-act="gquit">Back to the arcade</button></div>`;
   }
@@ -11482,7 +11800,7 @@ ${marks}`;
     "jgLane"
   ];
   function compoundClimb() {
-    const YEARS = 15, START = 100, TARGET = 420, W2 = 360, H3 = 320;
+    const YEARS = 15, START = 100, TARGET = 420, W3 = 360, H3 = 320;
     const st = {
       year: 0,
       money: START,
@@ -11542,7 +11860,7 @@ ${marks}`;
         st.charge = 0;
       }
     };
-    const step = (ts) => {
+    const step2 = (ts) => {
       if (st.done) return;
       const dt = Math.min(60, ts - (prev || ts));
       prev = ts;
@@ -11550,15 +11868,15 @@ ${marks}`;
       draw();
       const bar = document.getElementById("ccCharge");
       if (bar) bar.style.width = st.charge.toFixed(1) + "%";
-      raf = requestAnimationFrame(step);
+      raf = requestAnimationFrame(step2);
     };
     const draw = () => {
       if (!ctx) return;
       const cs = getComputedStyle(document.documentElement);
       const tok2 = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
-      ctx.clearRect(0, 0, W2, H3);
+      ctx.clearRect(0, 0, W3, H3);
       ctx.fillStyle = tok2("--tint", "#EDF2F2");
-      ctx.fillRect(0, 0, W2, H3);
+      ctx.fillRect(0, 0, W3, H3);
       const top = Math.max(TARGET * 1.15, st.peak * 1.1);
       const y = (v) => H3 - 14 - v / top * (H3 - 40);
       ctx.setLineDash([5, 5]);
@@ -11566,14 +11884,14 @@ ${marks}`;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(0, y(TARGET));
-      ctx.lineTo(W2, y(TARGET));
+      ctx.lineTo(W3, y(TARGET));
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = tok2("--grow", "#178A4C");
       ctx.font = "600 11px system-ui";
       ctx.textAlign = "left";
       ctx.fillText("target", 6, y(TARGET) - 6);
-      const bw = Math.max(6, (W2 - 40) / YEARS);
+      const bw = Math.max(6, (W3 - 40) / YEARS);
       st.hist.forEach((v, i) => {
         const bx = 20 + i * bw;
         const grew = i === 0 || v >= st.hist[i - 1];
@@ -11585,7 +11903,7 @@ ${marks}`;
       ctx.fillStyle = tok2("--ink", "#16262A");
       ctx.font = "800 15px system-ui";
       ctx.textAlign = "right";
-      ctx.fillText(String(Math.round(st.money)), W2 - 8, Math.max(16, y(st.money) - 8));
+      ctx.fillText(String(Math.round(st.money)), W3 - 8, Math.max(16, y(st.money) - 8));
     };
     return {
       id: "cc",
@@ -11593,13 +11911,13 @@ ${marks}`;
         cv = document.getElementById("ccCanvas");
         if (!cv) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        cv.width = W2 * dpr;
+        cv.width = W3 * dpr;
         cv.height = H3 * dpr;
         ctx = cv.getContext("2d");
         if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (!st.done && !raf) {
           prev = 0;
-          raf = requestAnimationFrame(step);
+          raf = requestAnimationFrame(step2);
         }
         const btn = document.getElementById("ccBtn");
         if (btn) {
@@ -11651,7 +11969,7 @@ ${marks}`;
         return `<div class="stack">
         ${hud([`Year ${st.year + 1} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
         <div class="stage" style="min-height:0;padding:12px">
-          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W2}/${H3};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W3}/${H3};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           ${l ? `<div style="background:${l.pct >= 0 ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:10px 12px;font-size:13.5px;text-align:center">
             Year ${st.year}: <b>${l.pct >= 0 ? "+" : ""}${(l.pct * 100).toFixed(1)}%</b> \xB7 ${Math.round(l.before)} \u2192 ${Math.round(l.after)}</div>` : ""}
           <div>
@@ -11744,7 +12062,7 @@ ${marks}`;
       sfx.click();
       R.render();
     };
-    const step = (ts) => {
+    const step2 = (ts) => {
       if (st.done) return;
       const dt = Math.min(60, ts - (prev || ts));
       prev = ts;
@@ -11777,14 +12095,14 @@ ${marks}`;
         if (b) b.style.width = Math.max(0, c.patience * 100) + "%";
       });
       if (dirty) R.render();
-      raf = requestAnimationFrame(step);
+      raf = requestAnimationFrame(step2);
     };
     return {
       id: "sr",
       mount() {
         if (!st.done && !raf) {
           prev = 0;
-          raf = requestAnimationFrame(step);
+          raf = requestAnimationFrame(step2);
         }
       },
       stop: stop3,
@@ -11860,7 +12178,7 @@ ${marks}`;
   function changeRush() {
     const cur2 = CURRENCIES[currency()];
     const COINS = cur2.coins.slice(0, 5);
-    const LANES = 4, W2 = 360, H3 = 300;
+    const LANES = 4, W3 = 360, H3 = 300;
     const st = {
       target: 0,
       got: 0,
@@ -11914,7 +12232,7 @@ ${marks}`;
         sfx.click();
       }
     };
-    const step = (ts) => {
+    const step2 = (ts) => {
       if (st.done) return;
       const dt = Math.min(50, ts - (last || ts));
       last = ts;
@@ -11940,25 +12258,25 @@ ${marks}`;
       }
       if (st.flash) st.flash *= 0.93;
       draw();
-      raf = requestAnimationFrame(step);
+      raf = requestAnimationFrame(step2);
     };
     const draw = () => {
       if (!ctx) return;
       const cs = getComputedStyle(document.documentElement);
       const tok2 = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
-      ctx.clearRect(0, 0, W2, H3);
+      ctx.clearRect(0, 0, W3, H3);
       ctx.fillStyle = tok2("--tint", "#EDF2F2");
-      ctx.fillRect(0, 0, W2, H3);
+      ctx.fillRect(0, 0, W3, H3);
       ctx.strokeStyle = tok2("--line", "#DCE5E4");
       ctx.lineWidth = 1;
       for (let i = 1; i < LANES; i++) {
         ctx.beginPath();
-        ctx.moveTo(i * (W2 / LANES), 0);
-        ctx.lineTo(i * (W2 / LANES), H3);
+        ctx.moveTo(i * (W3 / LANES), 0);
+        ctx.lineTo(i * (W3 / LANES), H3);
         ctx.stroke();
       }
       st.drops.forEach((d) => {
-        const x = d.lane * (W2 / LANES) + W2 / LANES / 2;
+        const x = d.lane * (W3 / LANES) + W3 / LANES / 2;
         ctx.beginPath();
         ctx.arc(x, d.y, 15, 0, Math.PI * 2);
         ctx.fillStyle = tok2("--treasure", "#F0B429");
@@ -11969,7 +12287,7 @@ ${marks}`;
         ctx.textBaseline = "middle";
         ctx.fillText(String(d.v), x, d.y + 1);
       });
-      const bx = st.lane * (W2 / LANES) + W2 / LANES / 2;
+      const bx = st.lane * (W3 / LANES) + W3 / LANES / 2;
       ctx.fillStyle = st.flash > 0.1 ? tok2("--grow", "#178A4C") : st.flash < -0.1 ? tok2("--spend", "#C4453C") : tok2("--action", "#0E6B78");
       ctx.beginPath();
       ctx.moveTo(bx - 34, H3 - 34);
@@ -11989,14 +12307,14 @@ ${marks}`;
         cv = document.getElementById("crCanvas");
         if (!cv) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        cv.width = W2 * dpr;
+        cv.width = W3 * dpr;
         cv.height = H3 * dpr;
         ctx = cv.getContext("2d");
         if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (!st.done) {
           last = 0;
           stop3();
-          raf = requestAnimationFrame(step);
+          raf = requestAnimationFrame(step2);
         }
         cv.onpointerdown = (e) => {
           const r = cv.getBoundingClientRect();
@@ -12032,7 +12350,7 @@ ${marks}`;
         ${hud([`Need ${money(st.target)}`, `Got ${money(st.got)}`, "\u2764\uFE0F".repeat(Math.max(0, st.lives))])}
         <div class="stage" style="min-height:0;padding:12px">
           <div class="bar"><i style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? "var(--spend)" : "var(--action)"}"></i></div>
-          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W2}/${H3};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W3}/${H3};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
             ${[0, 1, 2, 3].map((i) => `<button class="btn ${st.lane === i ? "" : "ghost"}" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join("")}
           </div>
@@ -12235,7 +12553,7 @@ ${marks}`;
     return (cs.getPropertyValue(n) || f).trim() || f;
   }
   function shell(spec) {
-    const { jobId, st, step, draw, onKey, onPoint, controls, hint, finishLine } = spec;
+    const { jobId, st, step: step2, draw, onKey, onPoint, controls, hint, finishLine } = spec;
     const job = JOBS.find((j) => j.id === jobId) || { name: "Work", who: "the town" };
     const cfg = JOB_GAME[jobId];
     let raf = 0, last = 0, ctx = null, cv = null;
@@ -12258,7 +12576,7 @@ ${marks}`;
       if (st.done) return;
       const dt = Math.min(50, ts - (last || ts));
       last = ts;
-      step(dt, end);
+      step2(dt, end);
       if (ctx) draw(ctx);
       raf = requestAnimationFrame(loop);
     };
@@ -14518,6 +14836,93 @@ ${marks}`;
     return { practised: q.map((x) => x.t), paid, minutes: Math.max(1, Math.round((now2 - startedAt) / 6e4)) };
   }
 
+  // src/tryit.js
+  var W2 = {
+    c3b: {
+      title: "Split a pay day",
+      vars: { pay: [100, 20, 400, 20, "Pay"], save: [30, 0, 100, 10, "Save %"] },
+      compute: ({ pay, save: save3 }) => {
+        const s = Math.round(pay * save3 / 100), rest = pay - s;
+        return { rows: [["Into Save", s], ["Left for everything else", rest]], says: `${save3} in every 100 goes to Save: ${pay} \xD7 ${save3} \xF7 100 = ${s}.` };
+      }
+    },
+    c3d: {
+      title: "How many weeks?",
+      vars: { price: [600, 100, 2e3, 100, "Price"], weekly: [50, 10, 300, 10, "Saved a week"] },
+      compute: ({ price: price2, weekly: weekly2 }) => {
+        const w = Math.ceil(price2 / weekly2);
+        return { rows: [["Weeks", w]], says: `${price2} \xF7 ${weekly2} = ${(price2 / weekly2).toFixed(1).replace(/\.0$/, "")}, so ${w} pay days.` };
+      }
+    },
+    c4c: {
+      title: "The small monthly one",
+      vars: { monthly: [30, 5, 200, 5, "A month"] },
+      compute: ({ monthly }) => ({ rows: [["A year", monthly * 12]], says: `${monthly} \xD7 12 = ${monthly * 12}. Would you pay that in one go?` })
+    },
+    c6b: {
+      title: "What a loan really costs",
+      vars: { borrow: [500, 100, 2e3, 100, "Borrowed"], pay: [60, 10, 300, 10, "Paid a month"], months: [10, 2, 24, 1, "Months"] },
+      compute: ({ borrow: borrow2, pay, months }) => {
+        const t = pay * months, c = t - borrow2;
+        return { rows: [["Handed over", t], ["It cost", c]], says: `${pay} \xD7 ${months} = ${t}, minus the ${borrow2} borrowed = ${c}.${c < 0 ? " (That is less than you borrowed \u2014 not a real loan!)" : ""}` };
+      }
+    },
+    c7a: {
+      title: "Watch it snowball",
+      vars: { start: [100, 50, 1e3, 50, "Start"], grow: [10, 1, 20, 1, "Grows, per 100 a year"], years: [3, 1, 10, 1, "Years"] },
+      compute: ({ start: start3, grow, years }) => {
+        let v = start3;
+        const steps = [];
+        for (let y = 1; y <= years; y++) {
+          v = v * (1 + grow / 100);
+          steps.push(Math.round(v));
+        }
+        return { rows: [["After " + years + (years === 1 ? " year" : " years"), Math.round(v)], ["Added without you doing anything", Math.round(v) - start3]], says: `Year by year: ${steps.join(", ")}. Each step is bigger than the last.` };
+      }
+    },
+    c7f: {
+      title: "The doubling trick",
+      vars: { grow: [6, 1, 24, 1, "Grows, per 100 a year"] },
+      compute: ({ grow }) => ({ rows: [["About this many years to double", Math.round(72 / grow * 10) / 10]], says: `72 \xF7 ${grow} \u2248 ${Math.round(72 / grow * 10) / 10}. A rough guide, never a promise.` })
+    },
+    c8a: {
+      title: "Revenue, cost, profit",
+      vars: { sold: [40, 0, 120, 5, "Sold"], price: [20, 5, 60, 1, "Price each"], cost: [8, 1, 40, 1, "Cost each"] },
+      compute: ({ sold, price: price2, cost }) => {
+        const r = sold * price2, k = sold * cost;
+        return { rows: [["Revenue", r], ["Cost", k], ["Profit", r - k]], says: `${sold} \xD7 ${price2} = ${r} in, ${sold} \xD7 ${cost} = ${k} out, ${r - k} left.` };
+      }
+    },
+    c8e: {
+      title: "Find the break-even",
+      vars: { rent: [240, 60, 600, 20, "Rent"], price: [20, 5, 60, 1, "Price each"], cost: [8, 1, 40, 1, "Cost each"] },
+      compute: ({ rent, price: price2, cost }) => {
+        const each = price2 - cost;
+        if (each <= 0) return { rows: [["Sales to break even", "\u2014"]], says: `Each sale loses ${cost - price2}. No number of sales covers the rent.` };
+        const n = Math.ceil(rent / each);
+        return { rows: [["Each sale leaves", each], ["Sales to break even", n]], says: `${rent} \xF7 ${each} = ${(rent / each).toFixed(1).replace(/\.0$/, "")}, so ${n} sales. Sale ${n + 1} is profit.` };
+      }
+    }
+  };
+  var WIDGETS = W2;
+  function has2(id) {
+    return !!W2[id];
+  }
+  function values(id, state) {
+    const w = W2[id], st = state && state[id] || {};
+    return Object.fromEntries(Object.entries(w.vars).map(([k, [v0]]) => [k, st[k] != null ? st[k] : v0]));
+  }
+  function step(state, id, key, dir) {
+    const w = W2[id];
+    if (!w || !w.vars[key]) return state;
+    const [, min, max, inc] = w.vars[key], v = values(id, state);
+    const next4 = Math.max(min, Math.min(max, v[key] + (dir > 0 ? inc : -inc)));
+    return { ...state, [id]: { ...state && state[id], [key]: next4 } };
+  }
+  function run(id, state) {
+    return W2[id].compute(values(id, state));
+  }
+
   // src/drill.js
   function settled(p) {
     return !!p && (p.right || p.tries !== 1);
@@ -14635,7 +15040,7 @@ ${marks}`;
     return `<button class="stop ${kind}" data-act="${s.locked ? "locked" : "card"}" data-arg="${s.locked ? s.ch.lv : s.card.id}" style="--ja:${s.w.tint}">
     ${medallion(c, s, kind)}
     <span class="stbody">
-      <span class="sttitle">${esc(s.card.title)}</span>
+      <span class="sttitle">${esc(s.card.title)}${s.card.stretch ? ' <span class="pill gold" title="Goes further than the stops before it">stretch</span>' : ""}</span>
       <span class="sttag">${esc(s.ch.title)}${who ? " \xB7 " + esc(face(who) && "" || "") + esc(who === "nana" ? "Nana Bizz" : who === "mags" ? "Mags" : who === "bo" ? "Bo" : who === "bea" ? "Bea" : who) : ""}</span>
       ${blurb ? `<span class="stblurb">${esc(blurb)}</span>` : ""}
       ${s.cur ? `<span class="stgo">Continue \u2192</span>` : ""}
@@ -14871,11 +15276,11 @@ ${marks}`;
   // src/views.js
   var K5 = () => kid(R.s);
   function viewOnboard(draft2) {
-    const step = draft2.step || 0;
+    const step2 = draft2.step || 0;
     const shell3 = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
     const first = R.s ? R.s.kids.length === 0 : true;
-    if (step === 0 && first && !draft2.go) return landing();
-    if (step === 0) {
+    if (step2 === 0 && first && !draft2.go) return landing();
+    if (step2 === 0) {
       return shell3(`
       <div style="text-align:center">
         <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
@@ -14897,7 +15302,7 @@ ${marks}`;
         ${first ? "" : '<button class="small muted" style="text-align:center;width:100%" data-act="obCancel">Cancel</button>'}
       </div>`);
     }
-    if (step === 1) {
+    if (step2 === 1) {
       return shell3(`
       ${say2("pip", `Good to meet you, <b>${esc(draft2.name)}</b>. How old are you? It changes what the street shows \u2014 no debt and no market before they are taught.`)}
       <p class="small muted" style="text-align:center">Tap one and you're in. Money is counted in ${esc(CURRENCIES[guessCurrency()].name.toLowerCase())} \u2014 a grown-up can change that in settings.</p>
@@ -15065,29 +15470,29 @@ ${marks}`;
   }
   function greeting(c) {
     const o = c.overnight, fresh = !!(o && !o.seen);
-    const has2 = has(c), p = get(c);
+    const has3 = has(c), p = get(c);
     const h = (/* @__PURE__ */ new Date()).getHours();
     const hello = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-    const line2 = has2 ? esc(line(c)) : hometalk(c);
+    const line2 = has3 ? esc(line(c)) : hometalk(c);
     const chips = [];
     if (fresh) {
       if (o.fuse) chips.push(["postbox", "", "A letter you were expecting", true]);
       else if (!c.postbox.answered) chips.push(["postbox", "", "A letter came"]);
       if (payDue(c, R.s)) chips.push(["payday", "", "Ring the bell", true]);
-      if (has2 && canPlay(c)) chips.push(["play", "", `${esc(p.name)} waited by the door`]);
+      if (has3 && canPlay(c)) chips.push(["play", "", `${esc(p.name)} waited by the door`]);
       const jobs = jobsToday(c).length;
       if (jobs) chips.push(["sub", "wallet", `${nWord(jobs)} ${jobs === 1 ? "shift" : "shifts"} on the board`]);
     }
-    const can = has2 && canPlay(c);
+    const can = has3 && canPlay(c);
     return `<div class="card greet">
-    <div class="gfig">${has2 ? companionFigure(c, 112, { bob: p.mood === "happy" }) : face("pip", 96)}</div>
+    <div class="gfig">${has3 ? companionFigure(c, 112, { bob: p.mood === "happy" }) : face("pip", 96)}</div>
     <div class="gbody">
       ${fresh ? `<span class="eyebrow">${o.nights === 1 ? "Overnight" : `${nWord(o.nights)} nights away`}</span>` : `<span class="eyebrow">${hello}</span>`}
       <h2>${fresh ? "Welcome back, " : ""}${esc(c.name)}</h2>
       <div class="bub">${line2}</div>
       ${chips.length ? `<div class="waiting">${chips.map(([act, arg, t, hot]) => `<button class="wchip${hot ? " hot" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>${t}</button>`).join("")}
         <button class="wchip quiet" data-act="ovSeen" aria-label="Got it">Got it</button></div>` : ""}
-      ${has2 ? `<div class="gco">
+      ${has3 ? `<div class="gco">
           <span class="small muted">${esc(p.name)} \xB7 ${STAGES[p.stage]} ${esc(KINDS[p.kind].name).toLowerCase()} \xB7 ${p.paydays} pay ${p.paydays === 1 ? "day" : "days"} with you${p.everMissed ? ` \xB7 went hungry ${p.everMissed}\xD7` : ""}</span>
           <div class="care ${p.mood}"><i style="width:${p.care}%"></i></div>
           <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
@@ -15343,6 +15748,7 @@ ${marks}`;
       <div class="aside"><span class="eyebrow">For instance</span>${esc(card2.eg)}</div>
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card2.id}">${ico("sound", "\u{1F50A}", 15)} Read it to me</button></div>` : ""}
     </div>
+    ${tryBlock(card2)}
     ${(() => {
       const total = drillCount(card2);
       const live2 = st && st.card === card2.id && st.picks ? st : null;
@@ -15353,7 +15759,8 @@ ${marks}`;
       const last = qi === total - 1;
       return `<div class="card stack">
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : "One question"}</div>
-      <h3 style="font-size:18px">${esc(dq.q)}</h3>
+      <div class="row" style="align-items:flex-start;gap:8px"><h3 class="grow" style="font-size:18px">${esc(dq.q)}</h3>
+        <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card2.id}#${qi}" aria-label="Read the question and the answers to me">\u{1F50A}</button></div>
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
         let k = "";
@@ -15364,7 +15771,7 @@ ${marks}`;
       }).join("")}
       </div>
       ${hold ? `<div class="fb hold" role="status"><b>Not this time \u2014 and this is the useful bit:</b> ${esc(dq.why)}
-          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div></div>` : ""}
+          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">\u{1F50A}</button></div>` : ""}
       ${done ? `<div class="fb ${p.right ? "yes" : "no"}" role="status">
           <b>${p.right ? p.first === false ? "Got it on the second go." : "That\u2019s it." : "That one is " + esc(dq.opts[dq.answer]) + "."}</b> ${p.first === false || !p.right ? "" : esc(dq.why)}</div>` : ""}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question \u2192</button>` : ""}
@@ -15372,6 +15779,20 @@ ${marks}`;
     </div>`;
     })()}
   </div>`;
+  }
+  function tryBlock(card2) {
+    if (!has2(card2.id)) return "";
+    const w = WIDGETS[card2.id], v = values(card2.id, R.tryit), r = run(card2.id, R.tryit);
+    return `<section class="card tryit" aria-labelledby="try-${card2.id}">
+    <div class="eyebrow">Try it before the questions</div>
+    <h3 id="try-${card2.id}" style="font-size:18px;margin:2px 0 8px">${esc(w.title)}</h3>
+    <div class="tvars">${Object.entries(w.vars).map(([k, d]) => `<div class="tvar"><span class="small muted">${esc(d[4])}</span>
+      <div class="row" style="gap:6px"><button class="btn ghost sm" data-act="tryStep" data-arg="${card2.id}:${k}:-1" aria-label="Less ${esc(d[4])}">\u2212</button>
+        <b class="tabnum" aria-live="polite">${v[k]}</b>
+        <button class="btn ghost sm" data-act="tryStep" data-arg="${card2.id}:${k}:1" aria-label="More ${esc(d[4])}">+</button></div></div>`).join("")}</div>
+    <div class="tout">${r.rows.map(([k, n]) => `<div><span class="small muted">${esc(k)}</span><b class="tabnum">${esc(String(n))}</b></div>`).join("")}</div>
+    <p class="small" style="margin-top:8px" aria-live="polite">${esc(r.says)}</p>
+  </section>`;
   }
   function viewGlossary() {
     const q = (R.query || "").toLowerCase();
@@ -15740,7 +16161,7 @@ ${marks}`;
   </div>`;
   }
   function viewExchange() {
-    const c = K5(), step = c.market.step;
+    const c = K5(), step2 = c.market.step;
     const val = holdingsValue(c);
     const sp = spread(c);
     return `<div class="stack">
@@ -15762,7 +16183,7 @@ ${marks}`;
     ${CLASSES.filter((a) => mathsMet(c)(a.needs)).map((a) => {
       const series = c.market.series[a.id];
       if (!series) return "";
-      const p = series[step], prev = series[Math.max(0, step - 1)];
+      const p = series[step2], prev = series[Math.max(0, step2 - 1)];
       const mv = (p - prev) / prev;
       const u = c.market.holdings[a.id] || 0;
       return `<div class="card">
@@ -15771,7 +16192,7 @@ ${marks}`;
           <p class="small muted">${esc(a.one)}</p></div>
           <div style="text-align:right"><div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p)}</div>
           <div class="small" style="color:${mv >= 0 ? "var(--grow)" : "var(--spend)"};font-weight:700">${mv >= 0 ? "\u25B2" : "\u25BC"} ${Math.abs(mv * 100).toFixed(1)}%</div></div></div>
-        ${sparkline(series.slice(0, step + 1), 300, 40, mv >= 0 ? "var(--grow)" : "var(--spend)")}
+        ${sparkline(series.slice(0, step2 + 1), 300, 40, mv >= 0 ? "var(--grow)" : "var(--spend)")}
         <p class="small muted" style="margin:2px 0 6px">${esc(a.why)}</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
           <span class="pill">${u > 0 ? "you hold " + money(u * p) : "not held"}</span>
@@ -16335,11 +16756,11 @@ ${marks}`;
       const keys = Object.keys(BADGES);
       const got = keys.filter((k) => c.badges.includes(k)), ahead = keys.filter((k) => !c.badges.includes(k));
       const tile = (k, hint) => {
-        const b = BADGES[k], has2 = c.badges.includes(k);
-        return `<div class="badge${has2 ? " got" : ""}">
-            <div class="bic">${ico(has2 ? b.em : "lock", has2 ? b.em : "\u{1F512}", 24)}</div>
+        const b = BADGES[k], has3 = c.badges.includes(k);
+        return `<div class="badge${has3 ? " got" : ""}">
+            <div class="bic">${ico(has3 ? b.em : "lock", has3 ? b.em : "\u{1F512}", 24)}</div>
             <div class="bnm">${esc(b.name)}</div>
-            <div class="small muted bds">${has2 || hint ? esc(b.desc) : "Not yet"}</div></div>`;
+            <div class="small muted bds">${has3 || hint ? esc(b.desc) : "Not yet"}</div></div>`;
       };
       return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile).join("")}</div>` : ""}
           ${ahead.length ? `<div class="eyebrow" style="margin-top:14px">Next to earn</div>
@@ -16367,10 +16788,10 @@ ${marks}`;
       <p class="small muted" style="margin:4px 0 10px">Real money from around the world, unlocked as you climb.</p>
       <div class="grid3">
         ${Object.keys(CURRENCIES).map((k, i) => {
-      const has2 = c.currency === k || levelAtLeast(c, (i + 1) * 4);
-      return `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has2 ? 1 : 0.4}">
-            <div style="font-size:22px;font-weight:800">${has2 ? CURRENCIES[k].sign : "\u{1F512}"}</div>
-            <div style="font-weight:700;font-size:12.5px">${has2 ? esc(CURRENCIES[k].name) : "level " + (i + 1) * 4}</div></div>`;
+      const has3 = c.currency === k || levelAtLeast(c, (i + 1) * 4);
+      return `<div style="background:var(--tint);border-radius:var(--r-md);padding:12px;text-align:center;opacity:${has3 ? 1 : 0.4}">
+            <div style="font-size:22px;font-weight:800">${has3 ? CURRENCIES[k].sign : "\u{1F512}"}</div>
+            <div style="font-weight:700;font-size:12.5px">${has3 ? esc(CURRENCIES[k].name) : "level " + (i + 1) * 4}</div></div>`;
     }).join("")}
       </div>
     </div>
@@ -16486,7 +16907,7 @@ ${marks}`;
   </div>`;
   }
   function landing() {
-    const counts2 = [[ALL_CARDS.length, "lessons, each narrated"], [GAMES.length, "games, keyboard and touch"], [WORLDS.length, "worlds to walk"], [Object.keys(BADGES).length, "badges for decisions"]];
+    const counts2 = [[ALL_CARDS.length, "lessons, every one read aloud"], [GAMES.length, "games, keyboard and touch"], [WORLDS.length, "worlds to walk"], [Object.keys(BADGES).length, "badges for decisions"]];
     return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
     <div style="text-align:center">${mark(64)}
       <div class="eyebrow" style="margin-top:12px">Bizzing Finance</div>
@@ -17075,6 +17496,7 @@ ${marks}`;
   on("nav", (k) => {
     R.overlay = null;
     R.shelf = "";
+    R.gameIntro = null;
     if (R.game) quitGame();
     R.s.ui.nav = k;
     if (R.s.kids.length) C3().learn.openCard = null;
@@ -17207,9 +17629,27 @@ ${marks}`;
     setRate(r);
     setSayRate(r);
   }
+  on("tryStep", (arg) => {
+    const [id, k, d] = String(arg).split(":");
+    R.tryit = step(R.tryit || {}, id, k, +d);
+    sfx.click();
+    render();
+  });
+  on("sayEl", (_, ev) => {
+    const b = ev && ev.target && ev.target.closest(".bub, .fb, .t3card, .shero");
+    const t = b ? b.innerText.replace(/🔊/g, "").trim() : "";
+    if (!say(t)) toast("This device has no reading voice");
+  });
   on("say", (key) => {
     const c = C3();
     let text = "";
+    if (key.startsWith("q:")) {
+      const [id, qi] = key.slice(2).split("#"), card2 = cardById(id);
+      if (card2) {
+        const d = shuffledDrill(card2, +qi || 0);
+        text = `${d.q} ${d.opts.map((o, i) => `${"ABCD"[i]}: ${o}.`).join(" ")}`;
+      }
+    }
     if (key === "word") {
       const w = wordOfDay();
       text = `${w.term}. ${w.meaning} ${w.eg}`;
@@ -18024,11 +18464,11 @@ So it costs ${money(offer.cost)}.`);
     render();
   });
   on("allow", (d) => {
-    const c = C3(), step = price(5);
-    if (c.family.allowance == null) c.family.allowance = +d > 0 ? step : null;
+    const c = C3(), step2 = price(5);
+    if (c.family.allowance == null) c.family.allowance = +d > 0 ? step2 : null;
     else {
-      const v = c.family.allowance + step * +d;
-      c.family.allowance = v < step ? null : v;
+      const v = c.family.allowance + step2 * +d;
+      c.family.allowance = v < step2 ? null : v;
     }
     sfx.click();
     render();
@@ -18114,7 +18554,19 @@ So it costs ${money(offer.cost)}.`);
     const c = C3();
     questTick(c, "game", 1);
     if (id === "mn") questTick(c, "board", 1);
+    R.gameIntro = id;
+    R.s.ui.nav = "arcade";
+    sfx.click();
+    render();
+    window.scrollTo(0, 0);
+  });
+  on("gbegin", (id) => {
+    R.gameIntro = null;
     startGame(id);
+    render();
+  });
+  on("gback", () => {
+    R.gameIntro = null;
     render();
   });
   on("gquit", () => {
