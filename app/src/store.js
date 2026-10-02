@@ -24,8 +24,14 @@ export const Store = {
     if (!blob) { const legacy = read(OLD, null); if (legacy) blob = legacy; }
     return blob ? migrate(blob) : null;
   },
-  saveProfile(blob) { clearTimeout(pending); pending = setTimeout(() => write(KEY, blob), 150); },
-  saveNow(blob) { clearTimeout(pending); write(KEY, blob); },
+  /* The sample household (?demo) is never written: opening it must not touch
+     the real one (FAMILY-STANDARD §14). */
+  saveProfile(blob) { if (blob && blob.demo) return; clearTimeout(pending); pending = setTimeout(() => write(KEY, blob), 150); },
+  saveNow(blob) { if (blob && blob.demo) return; clearTimeout(pending); write(KEY, blob); },
+  /* The family's shared keys (bizzing.activity), READ here so the grown-ups'
+     card can show Time. Writing them is the family drop-ins' job, never this
+     app's own code. */
+  readFamily(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } },
   loadDevice(k, fb) {
     const d = read(DEV, {});
     if (d[k] !== undefined) return d[k];

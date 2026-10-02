@@ -4,6 +4,7 @@
 
    Nothing outside this module computes money. Views render what is here. */
 
+import { DEFAULT_AVATAR } from './avatars.js';
 import { Store } from './store.js';
 import { CLASSES, byId as classById, marketPath, classesFor } from './assetclasses.js';
 import * as biz from './business.js';
@@ -49,12 +50,13 @@ export function priceLevel(c) {
 export function inflatedSince(c) { return Math.round((priceLevel(c) - 1) * 100); }
 
 /* ── construction ────────────────────────────────────────────────────── */
-export function newChild(name, band, cur) {
+export function newChild(name, band, cur, avatar) {
   setCurrency(cur);
   const now = Date.now();
   return {
     id: 'k' + now.toString(36),
     name: name || 'Friend', band: band || 'builder', currency: cur || 'INR', created: now,
+    avatar: avatar || DEFAULT_AVATAR,
     money: {
       wallet: price(12),
       extraBills: [],

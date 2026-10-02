@@ -86,12 +86,14 @@ async function run(label, vp, isMobile, scheme) {
   await page.goto(URL0);
   await page.waitForSelector('[data-act="obStart"]');
   await shot('0-landing');
+  /* A4 · setup is a first name, a face and an age band: three answers */
   await page.click('[data-act="obStart"]');
   await page.fill('#nm', 'Asha');
+  await page.click('[data-act="obAvatar"][data-arg="koi"]');
   await page.click('[data-act="obNext"]');
   const bands = page.locator('[data-act="obBand"]'); await bands.last().click();
-  const cur = page.locator('[data-act="obCur"]'); if (await cur.count()) await cur.first().click();
   await page.waitForSelector('.continue');
+  ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('.kidbtn img[src*="koi"]').count() === 1);
   await page.waitForTimeout(3600);                 /* let the welcome confetti finish */
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   await shot('1-home');
@@ -121,8 +123,8 @@ async function run(label, vp, isMobile, scheme) {
 
   /* B6 · back stays in the app */
   await goto('#/money/wallet');
-  await page.goBack(); await page.waitForTimeout(300);
-  await page.goBack(); await page.waitForTimeout(300);
+  /* a broken history can navigate off the app — that is a failed check, not a crash */
+  for (let i = 0; i < 2; i++) { await page.goBack({ timeout: 4000 }).catch(() => {}); await page.waitForTimeout(300); }
   ok(`${label}: the back button stays inside the app`, page.url().startsWith(URL0), page.url());
 
   /* M3 · the grown-ups area needs the PIN */
@@ -130,6 +132,20 @@ async function run(label, vp, isMobile, scheme) {
   await page.click('.topbar [data-act="nav"][data-arg="parents"]');
   await page.waitForTimeout(300);
   ok(`${label}: the grown-ups area asks for the PIN`, await page.locator('[data-field="pin"]').count() === 1);
+
+  /* M1 · the grown-ups' card, behind the PIN: Time · Progress · Mastery */
+  await page.fill('[data-field="pin"]', '2468');
+  await page.click('[data-act="gateGo"]'); await page.waitForTimeout(300);
+  const rc = await page.evaluate(() => [...document.querySelectorAll('.rc-t .eyebrow')].map((e) => e.textContent.trim()));
+  ok(`${label}: the grown-ups' card shows Time, Progress and Mastery`, rc.join(',') === 'Time,Progress,Mastery', rc.join(','));
+  await page.click('[data-act="lock"]'); await page.waitForTimeout(200);
+
+  /* E1 · today's session walks the three */
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.click('[data-act="sessionStart"]'); await page.waitForTimeout(400);
+  ok(`${label}: starting today's session shows where you are in it`, /Today's session · \d of \d/.test(await page.textContent('.sessbar').catch(() => '')));
+  await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
+  await page.click('[data-act="sessionStop"]').catch(() => {}); await page.waitForTimeout(200);
 
   /* O3 · #/continue opens the next step directly */
   await page.goto(URL0 + '#/continue'); await page.waitForTimeout(700);
@@ -154,9 +170,25 @@ async function run(label, vp, isMobile, scheme) {
   await ctx.close();
 }
 
+/* A5 · ?demo: a labelled sample with weeks of progress that saves nothing */
+async function demo() {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage(); const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL0 + '?demo'); await page.waitForSelector('.continue'); await page.waitForTimeout(600);
+  ok('demo: the sample is labelled as a sample', /Sample/.test(await page.textContent('.demobar').catch(() => '')));
+  ok('demo: it opens on weeks of progress', /Stop (\d+) of/.test(await page.textContent('.continue .cprog')) && +(await page.textContent('.continue .cprog')).match(/Stop (\d+)/)[1] > 5);
+  await page.evaluate(() => { location.hash = '#/money/jars'; }); await page.waitForTimeout(400);
+  const stored = await page.evaluate(() => localStorage.getItem('bzf_profile'));
+  ok('demo: nothing is saved — the real household is untouched', stored === null, stored ? stored.length + ' bytes written' : '');
+  ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 await run('desktop', { width: 1280, height: 860 }, false, 'light');
 await run('phone', { width: 390, height: 844 }, true, 'light');
 await run('phone-dark', { width: 390, height: 844 }, true, 'dark');
+await demo();
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

@@ -44,14 +44,14 @@ export function demoState(now = Date.now()) {
   /* money: jobs, a pay-day split she changed herself, a goal under way */
   for (let w = 0; w < 6; w++) sim.earn(c, price(6), 'Stack crates', 'job');
   c.money.rules = { spend: 30, save: 40, grow: 20, give: 10 };
-  decisions.log(c, { t: start + 6 * DAY, surface: 'jars', chose: 'Save 40, Spend 30', label: 'Changed the pay-day split',
+  decisions.log(c, { t: now - 2 * DAY, surface: 'rules', chose: 'Spend 30 · Save 40 · Grow 20 · Give 10', label: 'Changed the pay-day split',
     alternatives: ['Leave it at Nana\'s 40/30/20/10'] });
   sim.toJar(c, 'save', price(14)); sim.toJar(c, 'grow', price(6)); sim.toJar(c, 'give', price(3));
   sim.addGoal(c, 'A cricket bat', price(90));
   sim.fundGoal(c, c.money.goals[c.money.goals.length - 1].id, price(8));
   sim.badge(c, 'cool-head'); sim.badge(c, 'scam-spotter');
   c.postbox.log.push({ id: 'l3', scam: true, safe: true, t: start + 9 * DAY });
-  decisions.log(c, { t: start + 9 * DAY, surface: 'letter', chose: 'Bin it and tell a grown-up', label: 'YOU HAVE WON 5,000!', alternatives: ['Pay the fee'] });
+  decisions.log(c, { t: now - 1 * DAY, surface: 'letter', chose: 'Bin it and tell a grown-up', label: 'YOU HAVE WON 5,000!', alternatives: ['Pay the fee'] });
   [0, 1, 3, 4].forEach((d) => sim.markGoodDay(c, now - d * DAY));
   c.lastDay = Math.floor((now - new Date(now).getTimezoneOffset() * 60000) / DAY);
   return s;

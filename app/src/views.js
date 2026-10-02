@@ -37,6 +37,9 @@ import { CAL } from './world.js';
 import * as biz from './business.js';
 import { R } from './runtime.js';
 import { nextStep, progress } from './next.js';
+import * as RC from './reportcard.js';
+import { Store } from './store.js';
+import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
 
 const K = () => sim.kid(R.s);
@@ -61,9 +64,14 @@ export function viewOnboard(draft) {
         ? 'The smallest stall on Market Row is going spare. It\'s yours! What shall I call you?'
         : 'Another one! There is always a stall going. What is this one called?')}
       <div class="card stack">
-        <label class="eyebrow" for="nm">Name</label>
-        <input id="nm" data-field="name" value="${esc(draft.name || '')}" placeholder="Type a name" autocomplete="off"
+        <label class="eyebrow" for="nm">First name</label>
+        <input id="nm" data-field="name" value="${esc((R.fields && R.fields.name) || draft.name || '')}" placeholder="Type a first name" autocomplete="off"
           style="padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);font-size:16px;font-weight:700;width:100%">
+        <div class="eyebrow" id="av-h" style="margin-top:4px">Pick a face</div>
+        <div class="avpick" role="radiogroup" aria-labelledby="av-h">
+          ${AVATAR_IDS.map((id) => `<button class="avopt" role="radio" aria-checked="${(draft.avatar || DEFAULT_AVATAR) === id}" aria-label="${id}" data-act="obAvatar" data-arg="${id}"><img src="${AVATARS[id].src}" alt="" width="56" height="56"></button>`).join('')}
+        </div>
+        <p class="small muted">A first name and a face. Never a surname, birthday, photo or email.</p>
         <button class="btn wide" data-act="obNext">Next →</button>
         ${first ? '' : '<button class="small muted" style="text-align:center;width:100%" data-act="obCancel">Cancel</button>'}
       </div>`);
@@ -71,18 +79,13 @@ export function viewOnboard(draft) {
   if (step === 1) {
     return shell(`
       ${say('pip', `Good to meet you, <b>${esc(draft.name)}</b>. How old are you? It changes what the street shows — no debt and no market before they are taught.`)}
+      <p class="small muted" style="text-align:center">Tap one and you're in. Money is counted in ${esc(CURRENCIES[guessCurrency()].name.toLowerCase())} — a grown-up can change that in settings.</p>
       <div class="card stack">
         <button class="opt" data-act="obBand" data-arg="sprout"><b>8 to 10</b><br><span class="small muted">Sprout — coins, earning, saving. Nothing can go negative.</span></button>
         <button class="opt" data-act="obBand" data-arg="builder"><b>11 and up</b><br><span class="small muted">Builder — budgets, the bank, the Exchange, a shop of your own.</span></button>
       </div>`);
   }
-  return shell(`
-    ${say('pip', 'Last one. Which money do you count in? You can change it later and the town converts — it does not start over.')}
-    <div class="card stack">
-      ${Object.keys(CURRENCIES).map((k) => `<button class="opt" data-act="obCur" data-arg="${k}">
-        <b style="font-size:18px">${CURRENCIES[k].sign}</b> &nbsp;${CURRENCIES[k].name}
-        <span class="small muted"> · ${new Intl.NumberFormat(CURRENCIES[k].locale).format(1200000)}</span></button>`).join('')}
-    </div>`);
+  return '';
 }
 
 /* ══ HOME — the town ══════════════════════════════════════════════════ */
@@ -383,6 +386,7 @@ function todaysThree(c, quests) {
           : `<div class="bar" style="height:5px;margin-top:auto"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
       </div>`).join('')}
     </div>
+    ${allDone ? '' : `<button class="btn ghost wide" style="margin-top:10px" data-act="sessionStart">${ico('run', '▶', 16)} Do today's three in one go — about seven minutes</button>`}
     ${allDone && !c.quests.bonus ? `<button class="btn ghost wide" style="margin-top:10px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
   </section>`;
 }
@@ -1422,17 +1426,38 @@ export function viewReport() {
   </div>`;
 }
 
+/* The one-glance card (M1): Time · Progress · Mastery, the family's three
+   measures, then the week's decisions from the log (M2). reportcard.js does
+   the counting; this only draws it. */
+function reportCard(c) {
+  const r = RC.card(c, Store.readFamily('bizzing.activity'));
+  const tile = (k, v, sub) => `<div class="rc-t"><span class="eyebrow">${k}</span><b>${v}</b><span class="small muted">${sub}</span></div>`;
+  return `<section class="card rc" aria-labelledby="rc-h">
+    <h2 id="rc-h" style="font-size:19px">${esc(c.name)} this week, at a glance</h2>
+    <div class="rc-row">
+      ${tile('Time', r.time.minutes ? `${r.time.minutes} min` : '—', r.time.minutes ? 'active minutes, from the family feed' : 'no active minutes logged yet')}
+      ${tile('Progress', `${r.progress.stops} / ${r.progress.of}`, `stops · ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} · ${esc(r.progress.rank)} L${r.progress.level}`)}
+      ${tile('Mastery', `${r.mastery.held.length} / ${r.mastery.of}`, `skills shown again after a gap · ${r.mastery.practising} being practised`)}
+    </div>
+    ${r.mastery.held.length ? `<p class="small" style="margin-top:10px"><b>Can now do:</b> ${r.mastery.held.slice(0, 4).map(esc).join(' · ')}</p>` : '<p class="small muted" style="margin-top:10px">Nothing is counted as learned until it is shown again after a gap of a week. The first ones arrive in week two.</p>'}
+    ${r.mastery.lapsed.length ? `<p class="small" style="margin-top:6px"><b>Slipped since it was solid — worth a chat:</b> ${r.mastery.lapsed.slice(0, 3).map(esc).join(' · ')}</p>` : ''}
+    ${r.decisions.length ? `<p class="small" style="margin-top:6px"><b>Decided:</b> ${r.decisions.slice(0, 3).map((d) => `${esc(d.label)} — ${esc(d.chose)}`).join(' · ')}</p>` : ''}
+  </section>`;
+}
+
 export function viewParents() {
   const c = K(), s = R.s;
   const w = weekSummary(c);
   return `<div class="stack">
     ${hero({ eyebrow: 'For the grown-up', title: `${esc(c.name)}'s week`, figure: face('nana', 96),
       line: 'Observation, never a grade on the child. The simulator is a window into instincts no quiz gives you.' })}
+    ${reportCard(c)}
     <div class="card">
-      <div class="row" style="margin-top:13px;gap:8px">
+      <div class="row" style="gap:8px">
         <button class="btn grow" data-act="nav" data-arg="report">📄 This week's report</button>
         <button class="btn ghost sm" data-act="lock">Lock</button>
       </div>
+      <a class="small" style="display:block;margin-top:10px;color:var(--action);font-weight:700" href="https://aayuvis.github.io/Bizzing_Schedule/">The whole family's week, across every Bizzing app → the Hive</a>
     </div>
 
     <div class="card">
@@ -1581,7 +1606,8 @@ function weekSummary(c) {
   const jobs = txns.filter((t) => t.cat === 'job');
   if (jobs.length) decisions.push({ em: '🧺', t: `Took ${jobs.length} job${jobs.length > 1 ? 's' : ''} on Market Row rather than waiting for pay day.` });
   if (c.money.jars.grow > 0) decisions.push({ em: '🌱', t: `Has ${money(c.money.jars.grow)} in the Grow jar — money deliberately set aside for far away.` });
-  if (sim.rulesChosen(c) && c.money.rules.save + c.money.rules.grow >= 50) decisions.push({ em: '📊', t: `Set the pay-day rule to keep ${c.money.rules.save + c.money.rules.grow}% back. Their choice, not a default.` });
+  const ruleD = (c.decisions || []).find((d) => d.surface === 'rules' && d.t >= since);
+  if (ruleD && sim.rulesChosen(c)) decisions.push({ em: '📊', t: `Changed the pay-day split to ${esc(ruleD.chose)}. Their choice — it is in the decision log.` });
   if (c.money.bank.loan) decisions.push({ em: '🤝', t: `Is repaying a loan and can see the total cost of it on screen.` });
   if (!decisions.length) decisions.push({ em: '🌤️', t: 'Nothing yet — a pay day or two will fill this in.' });
 
@@ -1800,6 +1826,7 @@ function landing() {
       <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own — and a grown-up's page that reports what they learned, not how long they stayed.</p>
     </div>
     <button class="btn wide" style="font-size:16px;min-height:52px" data-act="obStart">Start free →</button>
+    <a class="btn ghost wide" href="?demo" style="text-decoration:none">Peek inside a sample town first</a>
     <div class="moneyline stats" style="justify-content:space-between">
       ${counts.map(([n, l]) => `<div><div class="v" style="font-size:24px">${n}</div><div class="k">${l}</div></div>`).join('')}
     </div>

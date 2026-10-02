@@ -1,7 +1,7 @@
 /* main.js — boot, shell, routing, and every action in one table.
    state -> render() -> string -> innerHTML; clicks dispatch by [data-act]. */
 
-import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound, say as speak, setSayRate, canSay } from './ui.js';
+import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound, say as speak, setSayRate, canSay, nWord } from './ui.js';
 import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
 import { say, CAST, ico, mark, face } from './art.js';
 import { mountLesson } from './lessonplayer.js';
@@ -31,8 +31,10 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { nextStep } from './next.js';
+import { demoState } from './demo.js';
+import * as SESSION from './session.js';
 import * as drill from './drill.js';
-import { AVATARS } from './avatars.js';
+import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet, VERSION } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
@@ -139,6 +141,8 @@ function render() {
           aria-current="${s.ui.nav === t.k ? 'page' : 'false'}">${t.n}</button>`).join('')}
       </nav>
     </header>
+    ${R.session && R.s.ui.nav !== 'parents' ? sessionBar() : ''}
+    ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
     <main class="content">${sim.clockSuspect(s) ? clockWarning() : ''}${body}</main>
     <nav class="tabbar" aria-label="Primary">
       ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
@@ -259,6 +263,41 @@ function overlay() {
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market →</button>`);
   }
 
+  if (o.kind === 'sessionDone') {
+    const s = o.sum;
+    return box(`<div class="celebrate" style="text-align:center">
+      <div class="medal" aria-hidden="true">${ico('check', '✓', 44)}</div>
+      <div class="eyebrow">Today's session, done</div>
+      <h2 style="margin:4px 0 8px;font-size:26px">That's the day's three</h2>
+      <p class="muted">What you practised:</p>
+      <ul class="cl">${s.practised.map((t) => `<li>${ico('check', '✓', 16)} ${esc(t)}</li>`).join('')}</ul>
+      <p style="margin-top:10px;font-weight:700">${s.paid ? money(s.paid) + ' into your wallet' : 'All claimed already'} · about ${nWord(s.minutes)} ${s.minutes === 1 ? 'minute' : 'minutes'}</p>
+      <p class="small muted" style="margin-top:4px">Stopping when the day is done is a money skill too. Fresh ones tomorrow — nothing is lost for a day off.</p>
+      <button class="btn wide" style="margin-top:16px" data-act="closeOv">Back to the street</button></div>`);
+  }
+  if (o.kind === 'chapter') {
+    const ch = CHAPTERS.find((x) => x.id === o.ch);
+    const opens = { c3: 'the Jar Shed and the Build Yard', c5: 'the Bank', c6: 'borrowing', c7: 'the Exchange', c8: 'Bizz & Co' }[ch.id];
+    return box(`<div class="celebrate" style="text-align:center">
+      <div class="medal" aria-hidden="true">${ico(ch.em, ch.em, 44)}</div>
+      <div class="eyebrow">Chapter finished</div>
+      <h2 style="margin:4px 0 8px;font-size:28px">${esc(ch.title)}</h2>
+      <p class="muted">You worked through all ${nWord(ch.cards.length)}:</p>
+      <ul class="cl">${ch.cards.map((k) => `<li>${ico('check', '✓', 16)} ${esc(k.title)}</li>`).join('')}</ul>
+      ${opens ? `<p style="margin-top:10px;font-weight:700">That opens ${esc(opens)}.</p>` : ''}
+      ${o.level ? `<p class="small muted" style="margin-top:4px">And you reached level ${o.level}.</p>` : ''}
+      <button class="btn wide" style="margin-top:16px" data-act="closeOv">Keep going</button></div>`);
+  }
+  if (o.kind === 'goalBuilt') {
+    const g = C().money.goals.find((x) => x.id === o.id); if (!g) return '';
+    const weeks = Math.max(1, Math.round((Date.now() - (g.t || Date.now())) / (7 * 864e5)));
+    return box(`<div class="celebrate" style="text-align:center">
+      <div class="medal" aria-hidden="true">${ico('goal', '🏗️', 44)}</div>
+      <div class="eyebrow">${o.first ? 'Your first goal, built' : 'Goal built'}</div>
+      <h2 style="margin:4px 0 8px;font-size:28px">${esc(g.name)}</h2>
+      <p class="muted">${money(g.target)}, saved a piece at a time over ${nWord(weeks)} ${weeks === 1 ? 'week' : 'weeks'}. That is exactly how it is done.</p>
+      <button class="btn wide" style="margin-top:16px" data-act="closeOv">Keep going</button></div>`);
+  }
   if (o.kind === 'level') {
     const place = PLACES.find((p) => p.lv > o.from && p.lv <= o.level);
     const rank = rankObj(o.level);
@@ -442,6 +481,29 @@ on('closeOv', () => {
   R.overlay = null; render();
 });
 on('more', () => { R.overlay = { kind: 'more' }; render(); });
+/* ── today's session (E1, session.js) ─────────────────────────────────── */
+function sessionBar() {
+  const c = C(), st = SESSION.status(c, sim), n = SESSION.next(c, sim);
+  return `<div class="sessbar" role="status"><span class="dots" aria-hidden="true">${Array.from({ length: st.of }, (_, i) => `<i class="${i < st.done ? 'on' : ''}"></i>`).join('')}</span>
+    <span class="grow"><b>Today's session · ${st.done} of ${st.of}</b>${n ? ` <span class="small">next: ${esc(n.quest.t)}</span>` : ''}</span>
+    ${st.finished ? '<button class="btn ghost sm" data-act="sessionEnd">Finish</button>' : n ? '<button class="btn ghost sm" data-act="sessionGo">Go →</button>' : ''}
+    <button class="iconbtn" data-act="sessionStop" aria-label="Stop the session — nothing is lost">${ico('close', '✕', 15)}</button></div>`;
+}
+on('sessionStart', () => { R.session = { t: Date.now() }; sfx.click(); fire('sessionGo'); });
+on('sessionGo', () => {
+  const n = SESSION.next(C(), sim);
+  if (!n) { fire('sessionEnd'); return; }
+  R.overlay = null;
+  if (n.act === 'continue') goContinue(); else fire(n.act, n.arg);
+});
+on('sessionStop', () => { R.session = null; render(); });
+on('sessionEnd', () => {
+  const c = C(), sum = SESSION.finish(c, sim, (R.session && R.session.t) || Date.now());
+  R.session = null; sim.save(R.s);
+  sfx.level(); confetti(50);
+  R.overlay = { kind: 'sessionDone', sum }; R.s.ui.nav = 'home'; writeHash(); render();
+});
+
 on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
@@ -536,11 +598,14 @@ on('obNext', () => {
   if (!n) { toast('Type a name first'); return; }
   draft.name = n; draft.step = 1; sfx.click(); render();
 });
-on('obBand', (b) => { draft.band = b; draft.step = 2; sfx.click(); render(); });
+on('obAvatar', (id) => { if (AVATARS[id]) { draft.avatar = id; sfx.click(); render(); const el = document.getElementById('nm'); if (el && !draft.name) el.focus(); } });
+/* The band is the last question: tapping it makes the child. Setup asks a
+   first name, an avatar and an age band — nothing else, ever (A4). */
+on('obBand', (b) => { draft.band = b; fire('obCur', R.s && R.s.kids.length ? C().currency : guessCurrency()); });
 on('obCancel', () => { draft = { step: 0 }; R.adding = false; render(); });
 on('obCur', (cur) => {
   if (!R.s) R.s = sim.newState();
-  const child = sim.newChild(draft.name, draft.band, cur);
+  const child = sim.newChild(draft.name, draft.band, cur, draft.avatar);
   R.s.kids.push(child);
   R.s.active = R.s.kids.length - 1;
   R.s.ui = { nav: 'home', sub: 'wallet' };
@@ -628,9 +693,12 @@ on('cardDone', (id) => {
   c.learn.done[id] = true;
   if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, sim.cardXP(first, right));
-  if (ch && ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
+  const finished = ch && ch.cards.every((k) => c.learn.done[k.id]) && sim.badge(c, 'chapter-' + ch.id);
   c.learn.openCard = null; c.learn.drill = null;
-  if (res.leveled) levelUp(res); else { toast(res.gained ? '+' + res.gained + ' XP' : 'No XP for that one — the why is the useful part'); render(); }
+  /* J1: finishing a chapter is a moment, and it names what was done — the
+     four lessons, what it opens — never how anyone else did. */
+  if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
+  else if (res.leveled) levelUp(res); else { toast(res.gained ? '+' + res.gained + ' XP' : 'No XP for that one — the why is the useful part'); render(); }
 });
 
 /* Open the day's beat. */
@@ -787,6 +855,12 @@ on('jarOut', (k) => { sim.fromJar(C(), k, price(2)) ? sfx.click() : toast('That 
 on('rule', (arg) => {
   const c = C(), [k, d] = arg.split(':'), r = c.money.rules;
   r[k] = Math.max(0, Math.min(100, r[k] + +d));
+  /* The report reads choices from this log, never from state (M2): a run of
+     taps in one sitting is one decision, so the latest entry is updated. */
+  const top = (c.decisions || [])[0];
+  const said = `Spend ${r.spend} · Save ${r.save} · Grow ${r.grow} · Give ${r.give}`;
+  if (top && top.surface === 'rules' && Date.now() - top.t < 10 * 60000) { top.chose = said; top.t = Date.now(); }
+  else decisions.log(c, { surface: 'rules', label: 'Changed the pay-day split', chose: said, alternatives: ['Keep it as it was'] });
   /* a rule set on an ORDINARY day is the objective; one set with pay day
      already due is deciding in the shop, and does not count */
   if (!sim.payDue(c, R.s)) mastery.transfer(c, 'KEEP-2', 'jars', 'set the pay-day rule to ' + r[k] + ' for ' + k + ', on a day nothing was tempting');
@@ -805,7 +879,12 @@ on('addGoal', () => {
 on('fundGoal', (id) => {
   if (!sim.fundGoal(C(), id, price(5))) { toast('The Save jar is empty'); return; }
   const g = C().money.goals.find((x) => x.id === id);
-  if (g && g.done) { sfx.level(); confetti(40); toast('Built it!'); } else sfx.coin();
+  if (g && g.done && !g.celebrated) {
+    g.celebrated = true;
+    const first = C().money.goals.filter((x) => x.done).length === 1;
+    sfx.level(); confetti(first ? 80 : 45);
+    R.overlay = { kind: 'goalBuilt', id: g.id, first };
+  } else sfx.coin();
   render();
 });
 on('autoGoal', (id) => {
@@ -1132,7 +1211,9 @@ window.addEventListener('hashchange', () => {
 R.mode = Store.loadDevice('mode', null); R.text = Store.loadDevice('text', null); R.motion = Store.loadDevice('motion', null); R.rate = Store.loadDevice('rate', null);
 applyDevice(); applyRate();
 
-R.s = sim.load();
+/* ?demo: a sample household, labelled, never saved (demo.js, store.js). */
+R.demo = /[?&]demo\b/.test(location.search);
+R.s = R.demo ? demoState() : sim.load();
 if (R.s && R.s.kids.length) {
   setSound(R.s.settings.sound);
   setTester(!!R.s.settings.tester);
