@@ -31,6 +31,7 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { nextStep } from './next.js';
+import * as drill from './drill.js';
 import { AVATARS } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet, VERSION } from './views.js';
@@ -198,7 +199,7 @@ function overlay() {
         ? `<div style="margin-top:12px;background:${o.result.good ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>
            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? '+' : '−'}${money(Math.abs(o.result.money))}</span>` : ''}
-             <span class="pill grow">+${o.result.xp} XP</span>
+             ${o.result.xp ? `<span class="pill grow">+${o.result.xp} XP</span>` : ''}
              ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ''}</div>
            ${o.result.lasting ? `<p class="small" style="margin-top:9px;color:var(--muted)">${esc(o.result.lasting)}</p>` : ''}
            <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button>`
@@ -584,21 +585,18 @@ on('answer', (i) => {
   if (!card) return;
   let st = c.learn.drill;
   if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
-  if (st.picks[st.qi]) return;                       /* this question is answered */
-  const pick = +i;
-  const right = pick === shuffledDrill(card, st.qi).answer;
-  st.picks[st.qi] = { pick, right };
+  if (drill.settled(st.picks[st.qi])) return;        /* this question is answered */
+  const p = drill.pick(st, st.qi, +i, shuffledDrill(card, st.qi).answer);
   /* the card counts as RIGHT only when every question was right first try —
-     three questions answered by elimination is attention, not three passes */
-  const total = drillCount(card);
-  st.done = st.picks.filter(Boolean).length === total;
-  st.right = st.done && st.picks.every((p) => p && p.right);
-  if (right) sfx.good(); else sfx.bad();
+     a second-go answer is learning, not evidence of having known (drill.js) */
+  const t = drill.tally(st, drillCount(card));
+  st.done = t.done; st.right = t.right;
+  if (p.right) sfx.good(); else sfx.bad();
   render();
 });
 on('nextQ', () => {
   const c = C(), st = c.learn.drill;
-  if (!st || !st.picks || !st.picks[st.qi]) return;
+  if (!st || !st.picks || !drill.settled(st.picks[st.qi])) return;   /* a held question waits for its second go */
   st.qi += 1; sfx.click(); render();
 });
 on('cardDone', (id) => {
@@ -706,7 +704,7 @@ on('letterPick', (i) => {
     surface: 'letter', chose: ch.label, label: L.title,
     alternatives: L.choices.filter((x) => x !== ch).map((x) => x.label),
   });
-  const res = sim.addXP(c, ch.xp || 0);
+  const res = sim.addXP(c, sim.letterXP(ch));
   if (ch.badge) sim.badge(c, ch.badge);
   c.postbox.answered = true;
   c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
@@ -720,7 +718,7 @@ on('letterPick', (i) => {
     mastery.transfer(c, 'GUARD-6', 'letter', 'answered a scam letter safely instead of quietly');
   }
   sim.stamp(c);
-  R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
+  R.overlay.result = { note: ch.note, money: delta, xp: sim.letterXP(ch), badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
   if (delta > 0) sfx.coin(); else if (L.scam && !ch.safe) sfx.bad(); else sfx.good();
   render();
   if (res.leveled) setTimeout(() => levelUp(res), 900);

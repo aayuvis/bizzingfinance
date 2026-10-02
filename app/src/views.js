@@ -37,6 +37,7 @@ import { CAL } from './world.js';
 import * as biz from './business.js';
 import { R } from './runtime.js';
 import { nextStep, progress } from './next.js';
+import * as drill from './drill.js';
 
 const K = () => sim.kid(R.s);
 
@@ -655,6 +656,7 @@ function viewCard(card) {
       const qi = live ? Math.min(live.qi, total - 1) : 0;
       const dq = shuffledDrill(card, qi);
       const p = live && live.picks[qi];
+      const hold = drill.holding(p), done = drill.settled(p);
       const last = qi === total - 1;
       return `<div class="card stack">
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : 'One question'}</div>
@@ -662,15 +664,18 @@ function viewCard(card) {
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
           let k = '';
-          if (p) k = (i === dq.answer) ? ' ok' : (i === p.pick ? ' no' : '');
-          return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${p ? 'disabled' : ''}>
+          if (done) k = (i === dq.answer) ? ' ok' : (i === p.pick || i === p.wrong ? ' no' : '');
+          else if (hold && i === p.wrong) k = ' no';
+          return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${done || (hold && i === p.wrong) ? 'disabled' : ''}>
             <span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`;
         }).join('')}
       </div>
-      ${p ? `<div style="background:${p.right ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px">
-          <b>${p.right ? 'That’s it.' : 'Not quite — and this is the useful bit:'}</b> ${esc(dq.why)}</div>` : ''}
-      ${p && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
-      ${p && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
+      ${hold ? `<div class="fb hold" role="status"><b>Not this time — and this is the useful bit:</b> ${esc(dq.why)}
+          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div></div>` : ''}
+      ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
+          <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${p.first === false || !p.right ? '' : esc(dq.why)}</div>` : ''}
+      ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
+      ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
     </div>`; })()}
   </div>`;
 }

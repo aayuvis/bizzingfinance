@@ -796,6 +796,12 @@ export function bizCashOut(c) {
    guessing. Right first time pays; going back over a card you already know
    pays a little; a wrong answer pays nothing (its reward is the why). */
 export function cardXP(first, right) { return right ? (first ? 22 : 2) : 0; }
+/* A letter is a decision, and most have no single right answer, so most pay
+   no XP at all — they pay in money, consequences and badges. The exceptions
+   are the ones that DO have a right answer: seeing through a scam (`safe`)
+   and the choices that earn a decision badge. Paying a scam's fee used to
+   earn 6 XP. */
+export function letterXP(choice) { return choice && (choice.safe || choice.badge) ? (choice.xp || 0) : 0; }
 
 /* The pay-day split a new child starts with. A report may call the split a
    decision only when it is not this — on day one it is Nana's, not theirs. */

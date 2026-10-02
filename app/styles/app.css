@@ -789,3 +789,9 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   .home > .continue{grid-column:2;grid-row:1 / span 2;min-height:0}
   .home > h1.sr{position:absolute}
 }
+/* answer feedback (drill.js): a held wrong answer is amber, not red — it is
+   a second chance, not a verdict */
+.fb{border-radius:var(--r-md);padding:12px 14px;font-size:14px}
+.fb.yes{background:var(--grow-tint)}
+.fb.no{background:var(--spend-tint)}
+.fb.hold{background:var(--treasure-tint)}

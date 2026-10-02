@@ -126,7 +126,11 @@ function twoChoice(cfg) {
     const it = items[st.i];
     const ok = it.a === side || it.a === 'both';
     if (ok) { st.right++; sfx.good(); } else sfx.bad();
-    st.note = { ok, text: it.note || (ok ? 'Yes.' : cfg.wrongNote(it)) };
+    /* Specific, never a bare "Yes." (D3): say what it was and, when the item
+       carries one, why. */
+    const sideLabel = (k) => (cfg.left.side === k ? cfg.left : cfg.right).label;
+    const named = it.a === 'both' ? 'It can be both — that is the interesting kind.' : `${sideLabel(it.a)}.`;
+    st.note = { ok, text: ok ? (it.note ? `${named} ${it.note}` : named) : (it.note ? `${cfg.wrongNote(it)} ${it.note}` : cfg.wrongNote(it)) };
     st.i++;
     if (st.i >= items.length) { st.done = true; st.won = payout(Math.round(st.right * cfg.pay), cfg.name); }
     R.render();

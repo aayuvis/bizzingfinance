@@ -136,6 +136,20 @@ async function run(label, vp, isMobile, scheme) {
   const opened = await page.evaluate(() => !!document.querySelector('.card.reading, .lstage, .lesson'));
   ok(`${label}: #/continue opens the next step`, opened);
 
+  /* D3 · a wrong answer holds and says why; the second go settles it. The
+     first card is "Needs and wants", whose first answer is the umbrella. */
+  if (await page.locator('.opt').count()) {
+    const opts = page.locator('.opt');
+    const texts = await opts.allTextContents();
+    const right = texts.findIndex((t) => /umbrella/i.test(t)), wrong = right === 0 ? 1 : 0;
+    await opts.nth(wrong).click(); await page.waitForTimeout(150);
+    const held = await page.evaluate(() => ({ hold: !!document.querySelector('.fb.hold'), next: !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'), revealed: !!document.querySelector('.opt.ok') }));
+    ok(`${label}: a wrong answer holds, says why, and does not reveal or advance`, held.hold && !held.next && !held.revealed, JSON.stringify(held));
+    await opts.nth(right).click(); await page.waitForTimeout(150);
+    const settled = await page.evaluate(() => !!document.querySelector('.fb.yes') && !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'));
+    ok(`${label}: the second go settles it and offers Next`, settled);
+  } else ok(`${label}: the first card asks a question`, false);
+
   ok(`${label}: no errors and no third-party requests`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
