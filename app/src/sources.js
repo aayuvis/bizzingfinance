@@ -29,9 +29,16 @@ export const SOURCES = {
   bank: {
     kind: 'own',
     what: 'What the Bank pays',
-    value: () => 'set by the town each week',
+    value: () => 'the town\'s bank rate, a year — paid a fifty-second each pay day',
     where: 'world.js · the rate the town sets from its own inflation and growth',
     says: "Bizzington's bank moves its rate in response to Bizzington's own inflation, in Bizzington's own model. It is a working economy, not a copy of one.",
+  },
+  loan: {
+    kind: 'own',
+    what: 'What a Bank loan costs',
+    value: () => 'about 1% of the loan for each week you borrow, a little less as trust grows',
+    where: 'sim.js · loanOffer',
+    says: 'Short loans cost more than savings earn, in Bizzington as in most places — the bank keeps the difference. The total is always shown before you agree.',
   },
   inflation: {
     kind: 'own',

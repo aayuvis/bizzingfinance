@@ -590,10 +590,10 @@ on('cardDone', (id) => {
   const ch = card.ch ? CHAPTERS.find((x) => x.id === card.ch) : null;
   c.learn.done[id] = true;
   if (first && ch) sim.questTick(c, 'lesson', 1);
-  const res = sim.addXP(c, first ? (right ? 22 : 12) : 2);
+  const res = sim.addXP(c, sim.cardXP(first, right));
   if (ch && ch.cards.every((k) => c.learn.done[k.id])) sim.badge(c, 'chapter-' + ch.id);
   c.learn.openCard = null; c.learn.drill = null;
-  if (res.leveled) levelUp(res); else { toast('+' + res.gained + ' XP'); render(); }
+  if (res.leveled) levelUp(res); else { toast(res.gained ? '+' + res.gained + ' XP' : 'No XP for that one — the why is the useful part'); render(); }
 });
 
 /* Open the day's beat. */
@@ -695,6 +695,8 @@ on('payday', () => {
 });
 on('skipWeek', () => { sim.protoSkipWeek(C(), R.s); toast('Clock pushed to pay day'); fire('nav', 'home'); });
 on('grantXP', () => {
+  /* Rewrites the child's level, so it is a tester tool and nothing else. */
+  if (!R.s.settings.tester) return;
   const res = sim.addXP(C(), 200);
   if (res.leveled) levelUp(res); else { toast('+200 XP'); render(); }
 });

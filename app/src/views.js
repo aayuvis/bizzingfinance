@@ -888,18 +888,27 @@ function viewGoals() {
   </div>`;
 }
 
+/* Tools that rewrite the child's record exist only in tester mode, where the
+   record is already marked as not the child's own. test/trust.mjs holds every
+   grantXP button to living inside this function. */
+function testerTools() {
+  if (!R.s.settings.tester) return '';
+  return `<button class="btn ghost wide" data-act="grantXP">＋ Add 200 XP (tester)</button>`;
+}
+
 function viewBank() {
   const c = K(), b = c.money.bank;
   const L = b.loan;
   const offer = sim.loanOffer(c, 40, 8);
-  const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(Math.max(b.balance, price(50)) * Math.pow(1 + b.rate, y * 52)) }));
+  const ra = sim.bankRateAnnual(c), wk = sim.bankInterestWeekly(c);
+  const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(sim.bankProjection(c, y)) }));
   return `<div class="stack">
     ${hero({ eyebrow: 'Clocktower Square', title: 'The Bank', big: money(b.balance), bigStyle: 'color:var(--save)', sub: 'in the vault', art: 'bank', who: 'nana',
       line: 'Interest is rent on money. Save, and the bank pays you. Borrow, and you pay.' })}
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Every pay day</div>
-        <div class="big" style="font-size:24px">${(b.rate * 100).toFixed(0)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">of what is in the vault</span></div></div></div>
-      <p class="small muted" style="margin-top:8px">Next pay day this adds <b>${money(Math.round(b.balance * b.rate))}</b> — that is ${money(b.balance)} × ${(b.rate * 100).toFixed(0)}%, shown rather than hidden.</p>
+        <div class="big" style="font-size:24px">${ra.toFixed(2)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">a year — the town's rate</span></div></div></div>
+      <p class="small muted" style="margin-top:8px">Each pay day the bank pays a fifty-second of that: ${money(b.balance)} × ${ra.toFixed(2)}% ÷ 52 = <b>${wk.toFixed(2)}</b>. Bits smaller than a coin wait in the vault until they make a whole one.</p>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-act="bankIn" ${c.money.jars.save <= 0 ? 'disabled' : ''}>Deposit ${money(Math.min(price(10), Math.max(0, c.money.jars.save)))} from Save</button>
         <button class="btn ghost sm" data-act="bankOut" ${b.balance <= 0 ? 'disabled' : ''}>Take some out</button>
@@ -940,12 +949,13 @@ function viewBank() {
 
     <div class="card">
       <div class="eyebrow">The snowball, on this balance</div>
-      <div class="grid3" style="margin-top:8px">
+      ${b.balance > 0 ? `<div class="grid3" style="margin-top:8px">
         ${proj.map((p) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:10px 12px">
           <div class="small muted">${p.y} year${p.y > 1 ? 's' : ''}</div>
           <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p.v)}</div></div>`).join('')}
       </div>
-      <p class="small muted" style="margin-top:9px">The town's own made-up rate, not a real bank's — and not a forecast.</p>
+      <p class="small muted" style="margin-top:9px">Your ${money(b.balance)}, left alone at today's ${ra.toFixed(2)}% a year. The town's own rate — it moves, and this is not a forecast.</p>`
+      : `<p class="small muted" style="margin-top:6px">The vault is empty, and nothing grows on nothing. Put some of your Save jar in and this shows what it becomes.</p>`}
     </div>
   </div>`;
 }
@@ -1523,7 +1533,7 @@ export function viewParents() {
       <div class="eyebrow">Prototype tools</div>
       <p class="small muted">Pay day is a real week away, and the clock is client-side in this build. The shipping build takes it from the server so it cannot be advanced by winding the device forward.</p>
       <button class="btn ghost wide" data-act="skipWeek">⏩ Jump to the next pay day</button>
-      <button class="btn ghost wide" data-act="grantXP">＋ Add 200 XP (to see further up the street)</button>
+      ${testerTools()}
       <button class="btn ghost wide" style="color:var(--spend)" data-act="wipe">Start this household over</button>
     </div>
   </div>`;
@@ -1543,7 +1553,7 @@ function weekSummary(c) {
   const jobs = txns.filter((t) => t.cat === 'job');
   if (jobs.length) decisions.push({ em: '🧺', t: `Took ${jobs.length} job${jobs.length > 1 ? 's' : ''} on Market Row rather than waiting for pay day.` });
   if (c.money.jars.grow > 0) decisions.push({ em: '🌱', t: `Has ${money(c.money.jars.grow)} in the Grow jar — money deliberately set aside for far away.` });
-  if (c.money.rules.save + c.money.rules.grow >= 50) decisions.push({ em: '📊', t: `Set the pay-day rule to keep ${c.money.rules.save + c.money.rules.grow}% back. Their choice, not a default.` });
+  if (sim.rulesChosen(c) && c.money.rules.save + c.money.rules.grow >= 50) decisions.push({ em: '📊', t: `Set the pay-day rule to keep ${c.money.rules.save + c.money.rules.grow}% back. Their choice, not a default.` });
   if (c.money.bank.loan) decisions.push({ em: '🤝', t: `Is repaying a loan and can see the total cost of it on screen.` });
   if (!decisions.length) decisions.push({ em: '🌤️', t: 'Nothing yet — a pay day or two will fill this in.' });
 

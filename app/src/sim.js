@@ -21,6 +21,17 @@ function newMarket(seed) {
   return { seed, series, step: 8, lastMove: 1, holdings: {}, best: null };
 }
 export function marketWorld(c) { return worldAt(c.market.seed, c.market.step, MARKET_WEEKS); }
+/* ONE rate. The Bank used to pay a hard-coded 2% every week — about 180% a
+   year — while the Exchange showed the town's bank rate at ~4.5% a year. A
+   child who compared them learned that numbers here contradict each other.
+   The Bank now pays the town's own annual rate, a fifty-second of it each
+   pay day, and nothing else in the app may state a deposit rate. */
+export function bankRateAnnual(c) { return marketWorld(c).rate; }
+export function bankInterestWeekly(c) { return c.money.bank.balance * bankRateAnnual(c) / 100 / WEEKS_PER_YEAR; }
+/* What the vault grows to in `years` at today's town rate, paid weekly. */
+export function bankProjection(c, years) {
+  return c.money.bank.balance * Math.pow(1 + bankRateAnnual(c) / 100 / WEEKS_PER_YEAR, years * WEEKS_PER_YEAR);
+}
 export function marketWhy(c) { return explainWorld(marketWorld(c)); }
 export function marketClasses(c, mathsMet) { return classesFor(mathsMet); }
 
@@ -48,7 +59,7 @@ export function newChild(name, band, cur) {
       wallet: price(12),
       extraBills: [],
       jars: { spend: 0, save: 0, grow: 0, give: 0 },
-      rules: { spend: 40, save: 30, grow: 20, give: 10 },
+      rules: { ...DEFAULT_RULES },
       goals: [],
       txns: [{ id: 't0', t: now, kind: 'in', amt: price(12), label: 'Starting float from Nana', cat: 'gift' }],
       wage: price(20),
@@ -138,7 +149,7 @@ export function weeklyIncome(c) { return c.family.allowance != null ? c.family.a
 /* "Rich" is a ratio, not a number: what your money earns each week over what
    your life costs each week. At 100% you work because you choose to. */
 export function passiveWeekly(c) {
-  const bank = c.money.bank.balance * c.money.bank.rate;
+  const bank = bankInterestWeekly(c);
   const invested = holdingsValue(c) * 0.0075;          // Bizzington's own simulated drift
   const shop = c.biz && c.biz.log.length
     ? c.biz.log.slice(0, 4).reduce((t, l) => t + l.profit, 0) / Math.min(4, c.biz.log.length) * 3
@@ -493,8 +504,13 @@ export function runPayDay(c, state) {
     c.money.wallet += found; txn(c, 'in', found, 'The cat turned something up', 'gift'); out.cat = found;
   }
   if (c.money.bank.opened && c.money.bank.balance > 0) {
-    const i = Math.round(c.money.bank.balance * c.money.bank.rate);
-    if (i > 0) { c.money.bank.balance += i; txn(c, 'in', i, 'Bank interest', 'interest'); out.interest = i; }
+    /* Interest on a small balance is a fraction of a coin a week. It builds
+       up in the vault's pocket and is paid in whole coins, so a small saver
+       still earns exactly what the rate says rather than rounding to nothing. */
+    const b = c.money.bank;
+    b.accrued = (b.accrued || 0) + bankInterestWeekly(c);
+    const i = Math.floor(b.accrued);
+    if (i > 0) { b.accrued -= i; b.balance += i; txn(c, 'in', i, 'Bank interest', 'interest'); out.interest = i; }
   }
 
   const L = c.money.bank.loan;
@@ -774,6 +790,20 @@ export function bizCashOut(c) {
 }
 
 /* ── learning ────────────────────────────────────────────────────────── */
+/* XP moves on learning and nothing else. A wrong first answer used to pay
+   12 — more than half a right one — so a child could climb the ranks by
+   guessing. Right first time pays; going back over a card you already know
+   pays a little; a wrong answer pays nothing (its reward is the why). */
+export function cardXP(first, right) { return right ? (first ? 22 : 2) : 0; }
+
+/* The pay-day split a new child starts with. A report may call the split a
+   decision only when it is not this — on day one it is Nana's, not theirs. */
+export const DEFAULT_RULES = Object.freeze({ spend: 40, save: 30, grow: 20, give: 10 });
+export function rulesChosen(c) {
+  const r = c.money.rules;
+  return Object.keys(DEFAULT_RULES).some((k) => r[k] !== DEFAULT_RULES[k]);
+}
+
 export function addXP(c, n) {
   const before = c.learn.level;
   c.learn.xp += n;
