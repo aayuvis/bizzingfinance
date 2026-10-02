@@ -97,6 +97,12 @@ build rides along at `/bizzington.html`.
 | `src/companion.js` `src/companionview.js` `src/keepsakes.js` | The creature she raises (docs/10), how it is drawn and dressed, and the things she keeps — the first receipt, the morning after. |
 | `src/buildings-gen.js` `src/companions-gen.js` `src/covers-gen.js` | Generated. Painted building sprites with measured zones, 45 companion sprites with measured accessory anchors, and a painted cover per Arcade game. `tools/art/` regenerates each; never hand-edit. |
 
+| `src/shell.js` | The family chrome: top bar, five tabs, the ☰ drawer, Settings in the five sections, the coin sheet, the switcher, Privacy and Help. |
+| `src/catalogue.js` `src/looks.js` | The 96 avatars and the six worlds, through the family's `bizzing-avatars.js`; bought with Bizzing coins only. |
+| `src/familyviews.js` | Shop (Avatars · Worlds · Extras + coin history), Collection, My page card, Town, Ones to try again. |
+| `src/ambient.js` `src/audio.js` | A world's three layers of life behind the top bar; music and effects composed in code (`music/CREDITS.md`). |
+| `src/search.js` `src/mistakes.js` `src/items.js` `src/cert.js` `src/pin.js` | Search over the town · the mistakes deck · "Your turn" items (sort, order, amount) · world certificates · the hashed PIN. |
+
 `state → render()` returning a string, clicks dispatched by `[data-act]` — the Bizzing Bee
 idiom, kept deliberately. Views never compute money; `sim.js` does.
 
