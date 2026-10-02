@@ -34,6 +34,7 @@ import { nextStep } from './next.js';
 import { demoState } from './demo.js';
 import * as SESSION from './session.js';
 import * as family from './family.js';
+import * as TRY from './tryit.js';
 import * as drill from './drill.js';
 import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
@@ -575,6 +576,7 @@ function applyRate() { const r = R.rate === 'slow' ? 0.82 : 1; setRate(r); setSa
 /* read it to me: the device's own voice, since these have no recorded clip */
 /* K1 · read aloud with the device's voice: any speech bubble, any question
    with its options, any explanation. Nothing here is a recorded file. */
+on('tryStep', (arg) => { const [id, k, d] = String(arg).split(':'); R.tryit = TRY.step(R.tryit || {}, id, k, +d); sfx.click(); render(); });
 on('sayEl', (_, ev) => {
   const b = ev && ev.target && ev.target.closest('.bub, .fb, .t3card, .shero');
   const t = b ? b.innerText.replace(/🔊/g, '').trim() : '';

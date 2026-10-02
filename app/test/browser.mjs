@@ -149,6 +149,14 @@ async function run(label, vp, isMobile, scheme) {
   await goto('#/learn');
   await shot('2-learn');
 
+  /* D1 · try it: + changes the working */
+  await page.evaluate(() => window.BZF.fire('card', 'c3d')); await page.waitForTimeout(250);
+  const t0 = await page.textContent('.tryit .tout').catch(() => '');
+  await page.click('.tryit [data-arg="c3d:price:1"]').catch(() => {}); await page.waitForTimeout(150);
+  const t1 = await page.textContent('.tryit .tout').catch(() => '');
+  ok(`${label}: a try-it step changes its working when a number changes`, !!t0 && t0 !== t1, `${t0.replace(/\s+/g, ' ').trim()} → ${t1.replace(/\s+/g, ' ').trim()}`);
+  await page.evaluate(() => window.BZF.fire('closeCard'));
+
   /* B6 · back stays in the app */
   await goto('#/money/wallet');
   /* a broken history can navigate off the app — that is a failed check, not a crash */

@@ -39,6 +39,7 @@ import { R } from './runtime.js';
 import { nextStep, progress } from './next.js';
 import * as RC from './reportcard.js';
 import * as family from './family.js';
+import * as TRY from './tryit.js';
 import { Store } from './store.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
@@ -653,6 +654,7 @@ function viewCard(card) {
       <div class="aside"><span class="eyebrow">For instance</span>${esc(card.eg)}</div>
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico('sound', '🔊', 15)} Read it to me</button></div>` : ''}
     </div>
+    ${tryBlock(card)}
     ${(() => {
       /* One question at a time, permuted independently, the verdict at the
          end. A stale drill from the one-question era just starts over. */
@@ -684,6 +686,22 @@ function viewCard(card) {
       ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
     </div>`; })()}
   </div>`;
+}
+
+/* D1 · try it: change the numbers, watch the working (tryit.js) */
+function tryBlock(card) {
+  if (!TRY.has(card.id)) return '';
+  const w = TRY.WIDGETS[card.id], v = TRY.values(card.id, R.tryit), r = TRY.run(card.id, R.tryit);
+  return `<section class="card tryit" aria-labelledby="try-${card.id}">
+    <div class="eyebrow">Try it before the questions</div>
+    <h3 id="try-${card.id}" style="font-size:18px;margin:2px 0 8px">${esc(w.title)}</h3>
+    <div class="tvars">${Object.entries(w.vars).map(([k, d]) => `<div class="tvar"><span class="small muted">${esc(d[4])}</span>
+      <div class="row" style="gap:6px"><button class="btn ghost sm" data-act="tryStep" data-arg="${card.id}:${k}:-1" aria-label="Less ${esc(d[4])}">−</button>
+        <b class="tabnum" aria-live="polite">${v[k]}</b>
+        <button class="btn ghost sm" data-act="tryStep" data-arg="${card.id}:${k}:1" aria-label="More ${esc(d[4])}">+</button></div></div>`).join('')}</div>
+    <div class="tout">${r.rows.map(([k, n]) => `<div><span class="small muted">${esc(k)}</span><b class="tabnum">${esc(String(n))}</b></div>`).join('')}</div>
+    <p class="small" style="margin-top:8px" aria-live="polite">${esc(r.says)}</p>
+  </section>`;
 }
 
 function viewGlossary() {

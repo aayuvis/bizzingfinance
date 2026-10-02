@@ -50,5 +50,31 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   ok(sites.every((a) => /cardXP|letterXP|ch\.xp|200/.test(a)) && !sites.some((a) => /ch\.xp \|\| 0/.test(a)), 'every XP award in main.js goes through a learning rule (or the tester-only grant)', sites.join(' · '));
 }
 
+/* D1: try it — every widget belongs to a real lesson, stays in range, and
+   every sum it states is true at every setting it can reach */
+{
+  const TRY = await import('../src/tryit.js');
+  const { ALL_CARDS } = await import('../src/content.js');
+  const ids = Object.keys(TRY.WIDGETS);
+  ok(ids.length >= 8 && ids.every((id) => ALL_CARDS.some((c) => c.id === id)), 'every try-it belongs to a lesson', ids.join(','));
+  let checked = 0; const wrong = [];
+  const num = (x) => +String(x).replace(/,/g, '');
+  for (const id of ids) {
+    let st = {};
+    const keys = Object.keys(TRY.WIDGETS[id].vars);
+    for (let i = 0; i < 60; i++) {
+      st = TRY.step(st, id, keys[i % keys.length], i % 7 < 4 ? 1 : -1);
+      const v = TRY.values(id, st);
+      for (const k of keys) { const [, min, max] = TRY.WIDGETS[id].vars[k]; if (v[k] < min || v[k] > max) wrong.push(`${id}.${k} out of range`); }
+      const says = TRY.run(id, st).says;
+      for (const m of says.matchAll(/(\d[\d,.]*) ([×÷]) (\d[\d,.]*)(?: ÷ (\d+))? = (\d[\d,.]*)/g)) {
+        let val = m[2] === '×' ? num(m[1]) * num(m[3]) : num(m[1]) / num(m[3]); if (m[4]) val /= num(m[4]);
+        checked++; if (Math.abs(val - num(m[5])) > 0.051 && Math.abs(Math.round(val) - num(m[5])) > 0) wrong.push(`${id}: ${m[0]}`);
+      }
+    }
+  }
+  ok(checked > 100 && !wrong.length, 'every sum a try-it shows is true, at every setting', `${checked} sums · ${wrong.slice(0, 2).join(' | ')}`);
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

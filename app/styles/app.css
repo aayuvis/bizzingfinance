@@ -829,3 +829,11 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
 .sayit{display:inline-grid;place-items:center;width:30px;height:30px;margin-left:6px;vertical-align:middle;border-radius:50%;font-size:14px;background:var(--surface);box-shadow:0 0 0 1px var(--line)}
 .fb .sayit{float:right;margin:-4px -4px 0 6px}
 .btn.sayq{flex:0 0 auto;padding:6px 10px}
+/* try it (D1) */
+.tryit{background:linear-gradient(160deg,var(--action-tint),var(--surface) 70%)}
+.tvars{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tvar{display:grid;gap:4px}
+.tvar b{min-width:46px;text-align:center;font-family:var(--display);font-size:20px}
+.tout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.tout > div{display:grid;background:var(--surface);border-radius:var(--r-md);padding:8px 10px;box-shadow:0 0 0 1px var(--line)}
+.tout b{font-family:var(--display);font-size:22px}
