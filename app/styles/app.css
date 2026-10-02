@@ -821,3 +821,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
 .sessbar .dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
 .sessbar .dots i.on{background:var(--action)}
 .sessbar b{font-size:14px}
+/* the family medallion (FAMILY-STANDARD §12): an earned badge is a gold disc */
+.badge.got .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;color:#4A2E00;
+  background:linear-gradient(160deg,#FFD24D,#E0922E);box-shadow:0 0 0 3px #fff,0 3px 10px rgb(200 121 27 / .35)}
+.badge:not(.got) .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line)}

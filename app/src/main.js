@@ -33,6 +33,7 @@ import { R } from './runtime.js';
 import { nextStep } from './next.js';
 import { demoState } from './demo.js';
 import * as SESSION from './session.js';
+import * as family from './family.js';
 import * as drill from './drill.js';
 import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
@@ -527,6 +528,7 @@ on('travel', (i) => {
   if (!chk.ok) { toast(chk.why); sfx.bad(); return; }
   sim.travel(c, +i);
   const w = WORLDS[+i];
+  family.milestone(c.name, 'world', w.name);
   sfx.level(); confetti(35);
   R.overlay = { kind: 'world', world: w };
   R.s.ui.nav = 'home'; render();
@@ -656,7 +658,7 @@ on('answer', (i) => {
      a second-go answer is learning, not evidence of having known (drill.js) */
   const t = drill.tally(st, drillCount(card));
   st.done = t.done; st.right = t.right;
-  if (p.right) sfx.good(); else sfx.bad();
+  if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); } else sfx.bad();
   render();
 });
 on('nextQ', () => {
@@ -694,6 +696,11 @@ on('cardDone', (id) => {
   if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, sim.cardXP(first, right));
   const finished = ch && ch.cards.every((k) => c.learn.done[k.id]) && sim.badge(c, 'chapter-' + ch.id);
+  /* the family (O3): a lesson finished is a stop; a chapter finished is a
+     mastery milestone; a skill shown again after a gap is one too */
+  if (first) { family.coins(c.name, 'stop'); family.milestone(c.name, 'stop', card.title); }
+  if (finished) { family.coins(c.name, 'mastery'); family.milestone(c.name, 'mastery', 'Chapter: ' + ch.title); }
+  if (bt && bt.shape === 'retrieve' && bt.cardId === id && mastery.stateOf(c, bt.obj) === 'retained') family.milestone(c.name, 'mastery', objective(bt.obj).short);
   c.learn.openCard = null; c.learn.drill = null;
   /* J1: finishing a chapter is a moment, and it names what was done — the
      four lessons, what it opens — never how anyone else did. */
@@ -729,6 +736,7 @@ on('gateGo', () => {
 });
 on('lock', () => { R.s.parent.gate = false; R.s.ui.nav = 'home'; toast('Locked'); render(); });
 function levelUp(res) {
+  if (rankObj(res.level).name !== rankObj(res.from).name) family.milestone(C().name, 'band', rankObj(res.level).name);
   sfx.level(); confetti(50);
   R.overlay = { kind: 'level', level: res.level, from: res.from };
   render();
@@ -1214,6 +1222,10 @@ applyDevice(); applyRate();
 /* ?demo: a sample household, labelled, never saved (demo.js, store.js). */
 R.demo = /[?&]demo\b/.test(location.search);
 R.s = R.demo ? demoState() : sim.load();
+family.setDemo(R.demo);
+/* active minutes for the Hive (O3): the drop-in counts only a visible tab
+   that was touched in the last two minutes, and never in the sample */
+family.startActivity(() => (R.s && R.s.kids.length ? C().name : null));
 if (R.s && R.s.kids.length) {
   setSound(R.s.settings.sound);
   setTester(!!R.s.settings.tester);

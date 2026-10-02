@@ -38,6 +38,7 @@ import * as biz from './business.js';
 import { R } from './runtime.js';
 import { nextStep, progress } from './next.js';
 import * as RC from './reportcard.js';
+import * as family from './family.js';
 import { Store } from './store.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
@@ -727,6 +728,23 @@ export function viewMoney() {
   return `<div class="stack">${strip}${body}</div>`;
 }
 
+/* Bizzing coins (option (a), FAMILY-STANDARD §1): the family wallet is shown
+   as income from the family's apps, read-only, and kept apart from the town's
+   money — the town's money is the curriculum, the coins are the family's
+   reward for learning, and nothing converts one into the other. */
+const APP_NAMES = { bee: 'Bizzing Bee', maths: 'Bizzing Maths', geography: 'Bizzing Geography', india: 'Bizzing India', finance: 'Bizzing Finance' };
+function familyCoinsCard(c) {
+  if (R.demo) return '';
+  const f = family.familyCoins(c.name);
+  return `<section class="card fcoins" aria-labelledby="fc-h">
+    <div class="row"><div class="grow"><div class="eyebrow">Your Bizzing coins</div>
+      <h2 id="fc-h" style="font-size:22px;margin-top:2px">🪙 ${f.balance} <span class="small muted" style="font-family:var(--ui);font-weight:600">in the family wallet</span></h2></div></div>
+    ${f.week.length ? `<div class="rows" style="margin-top:6px">${f.week.map(([a, n]) => `<div class="qrow"><span class="grow small"><b>${esc(APP_NAMES[a] || a)}</b></span><span class="small tabnum">+${n} this week</span></div>`).join('')}</div>`
+      : '<p class="small muted" style="margin-top:6px">Coins arrive for learning in any Bizzing app — a right answer, a lesson, a chapter. None yet this week.</p>'}
+    <p class="small muted" style="margin-top:8px">Coins are not the town's money: they never turn into ${esc(CURRENCIES[c.currency].name.toLowerCase())} here, and the town's money never turns into coins.</p>
+  </section>`;
+}
+
 function viewWallet() {
   const c = K();
   const jobs = sim.jobsToday(c);
@@ -735,6 +753,7 @@ function viewWallet() {
       line: c.band === 'sprout'
         ? 'This can never go below zero — debt comes later, when it is taught.'
         : 'Every coin in and out, with its date.' })}
+    ${familyCoinsCard(c)}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
       <p class="small muted" style="margin:3px 0 10px">One of each a day. You're selling your time.</p>

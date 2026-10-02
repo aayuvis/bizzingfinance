@@ -143,6 +143,34 @@ not aspirational. The short version:
 - **A keepsake is kept, never given.** The first receipt is counted from the ledger
   (`sim.buyFromShop`); nothing on the Collection shelf arrives for showing up.
 
+## The family layer (FAMILY-STANDARD, Oct 2026 audit)
+
+The [Bizzing family standard](https://github.com/aayuvis/Bizzing_Schedule/blob/claude/amazing-knuth-4aemgz/docs/family/FAMILY-STANDARD.md)
+is binding where it is not stricter here. What it changed in this repo:
+
+- **One next step.** `src/next.js` `nextStep()` is the only function that decides what Continue
+  means. Home's Continue, Learn's Up next and the rail all ask it. Never compute a "next thing"
+  anywhere else (`test/family.mjs`).
+- **One filled button on Home** — Continue. Everything else on Home is ghost (`test/browser.mjs`).
+- **No streaks.** `goodDays` is a fortnight of days something was learned, shown as *good days this
+  week*. Never a run, never "days in a row", never a loss message.
+- **XP is for learning**: `sim.cardXP` (right answers) and `sim.letterXP` (sound choices only).
+  Games pay wages, never XP. Tester tools that rewrite the child live only in `testerTools()`.
+- **One interest rate.** The Bank pays the town's annual rate (`sim.bankRateAnnual`) a fifty-second
+  at a time. No view may state a deposit rate of its own (`test/trust.mjs`).
+- **Art lives in files.** Generators may embed data: URIs; `tools/externalise-art.mjs` (run by
+  `prebuild`) lifts them into `src/art/`. Initial JS ≤ 400 KB gzip, no picture in any built script.
+- **The family drop-ins** in `src/family/` are copied unchanged from Bizzing_Schedule's
+  `integration/` and are the one exception to the Store seam: they own `bizzing.activity` and
+  `bizzing.wallet`. Everything reaches them through `src/family.js`, which never writes in `?demo`.
+- **Bizzing coins (owner's decision, option a):** Finance pays family coins only through `earn()` for
+  the standard events (answer 1, lesson 5, test 10, chapter 20) and shows them on the Wallet as
+  income from the family's apps. They never convert to or from the town's money — rule 4 stands.
+- **Setup asks a first name, a face and an age band**, nothing else. `?demo` is a sample household
+  the Store refuses to save.
+- **`deploy.sh` runs `test/browser.mjs`** on the built app (desktop, phone, phone-dark, demo) and
+  refuses to publish if it fails. Prove every new check by breaking it once.
+
 ## Architecture (planned)
 
 Vanilla ES modules + Vite + PWA · Supabase (Auth/Postgres/RLS) · Stripe (+ Razorpay/UPI for

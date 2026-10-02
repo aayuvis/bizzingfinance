@@ -192,6 +192,21 @@ async function run(label, vp, isMobile, scheme) {
     await opts.nth(right).click(); await page.waitForTimeout(150);
     const settled = await page.evaluate(() => !!document.querySelector('.fb.yes') && !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'));
     ok(`${label}: the second go settles it and offers Next`, settled);
+
+    /* O3 · finish the card (the app's own answer key, window.BZF.key), then
+       the family feeds must hold a Finance milestone and only standard coins */
+    for (let guard = 0; guard < 6; guard++) {
+      if (await page.locator('[data-act="cardDone"]').count()) { await page.click('[data-act="cardDone"]'); break; }
+      if (await page.locator('[data-act="nextQ"]').count()) { await page.click('[data-act="nextQ"]'); await page.waitForTimeout(120); }
+      const k = await page.evaluate(() => { const c = window.BZF.R.s.kids[window.BZF.R.s.active]; return window.BZF.key(c.learn.openCard, (c.learn.drill && c.learn.drill.qi) || 0); });
+      await page.locator('.opt').nth(k).click(); await page.waitForTimeout(120);
+    }
+    await page.waitForTimeout(300);
+    const fam = await page.evaluate(() => ({ a: JSON.parse(localStorage.getItem('bizzing.activity') || '{"s":[]}').s, w: JSON.parse(localStorage.getItem('bizzing.wallet') || '{"kids":{}}') }));
+    ok(`${label}: finishing a lesson writes a Finance milestone to the activity feed`, fam.a.some((x) => x.a === 'finance' && x.ev === 'stop' && x.who === 'Asha'), JSON.stringify(fam.a.slice(-1)));
+    const led = Object.values(fam.w.kids).flatMap((k) => k.ledger);
+    ok(`${label}: coins arrive only from the standard learning events`, led.length > 0 && led.every((x) => ['answer', 'stop', 'contest', 'mastery'].includes(x.why)), led.map((x) => x.why).join(','));
+    await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   } else ok(`${label}: the first card asks a question`, false);
 
   ok(`${label}: no errors and no third-party requests`, errors.length === 0, errors.slice(0, 3).join(' | '));

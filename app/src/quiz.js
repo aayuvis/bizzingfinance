@@ -8,6 +8,7 @@
    rail. Questions are drawn across the chapter's cards, spread by the day
    so the same six do not come up twice running, and every option order is
    permuted from the card id like every other drill in the app. */
+import * as family from './family.js';
 import { CHAPTERS, shuffledDrill, drillCount } from './content.js';
 import { dayIndex } from './fmt.js';
 import * as sim from './sim.js';
@@ -55,6 +56,9 @@ export function finish(c, o) {
     c.learn.checkpoints[o.ch] = Math.max(c.learn.checkpoints[o.ch] || 0, pct);
     if (pass) { sim.badge(c, 'checkpoint'); sim.addXP(c, 15); }
   }
+  /* settled exactly once (above), so the family coins for a passed test-out or
+     checkpoint are paid exactly once too */
+  if (pass) family.coins(c.name, 'contest');
   sim.stamp(c);
   return { pass, pct };
 }
