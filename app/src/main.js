@@ -573,8 +573,19 @@ on('settings', () => { R.overlay = { kind: 'settings' }; sfx.click(); render(); 
 on('rate', (v) => { R.rate = v === 'slow' ? 'slow' : null; Store.saveDevice('rate', R.rate); applyRate(); render(); });
 function applyRate() { const r = R.rate === 'slow' ? 0.82 : 1; setRate(r); setSayRate(r); }
 /* read it to me: the device's own voice, since these have no recorded clip */
+/* K1 · read aloud with the device's voice: any speech bubble, any question
+   with its options, any explanation. Nothing here is a recorded file. */
+on('sayEl', (_, ev) => {
+  const b = ev && ev.target && ev.target.closest('.bub, .fb, .t3card, .shero');
+  const t = b ? b.innerText.replace(/🔊/g, '').trim() : '';
+  if (!speak(t)) toast('This device has no reading voice');
+});
 on('say', (key) => {
   const c = C(); let text = '';
+  if (key.startsWith('q:')) {
+    const [id, qi] = key.slice(2).split('#'), card = cardById(id);
+    if (card) { const d = shuffledDrill(card, +qi || 0); text = `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
+  }
   if (key === 'word') { const w = daily.wordOfDay(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
   else if (key === 'ask') text = daily.askOfWeek();
   else if (key.startsWith('card:')) { const k = ALL_CARDS.find((x) => x.id === key.slice(5)); if (k) text = `${k.title}. ${String(k.teach).replace(/<[^>]+>/g, '')} For instance: ${k.eg}`; }

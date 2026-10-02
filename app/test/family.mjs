@@ -5,6 +5,7 @@
    Run: node test/family.mjs */
 import * as sim from '../src/sim.js';
 import { nextStep, path } from '../src/next.js';
+import { ALL_CARDS } from '../src/content.js';
 import { migrate } from '../src/store.js';
 import { dayIndex } from '../src/fmt.js';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -22,7 +23,7 @@ console.log('\nFamily · one next step, no streaks\n' + '─'.repeat(56));
   const c = sim.kid(mk());
   const a = nextStep(c), b = nextStep(c);
   ok(a.title === b.title && a.act === b.act, 'nextStep is deterministic for the same child', a.title);
-  ok(path(c).length === 32, 'the path is every stop in walking order', String(path(c).length));
+  ok(path(c).length === ALL_CARDS.length, 'the path is every stop in walking order', String(path(c).length));
   const home = (strip(src('views.js')).match(/function continueCard\(c\) \{[\s\S]*?\n\}/) || [''])[0];
   const learn = (strip(src('atlas.js')).match(/function upNext\(c\) \{[\s\S]*?\n\}/) || [''])[0];
   ok(/nextStep\(c\)/.test(home) && /nextStep\(c\)/.test(learn), "Home's Continue and Learn's Up next both ask nextStep()");

@@ -272,4 +272,53 @@ export const EXTRA_QS = {
       opts: ['It is what breaking even starts at', 'Rent is paid daily in town', 'Sevens are easy to recall', 'The landlord quotes it so'], a: 0,
       why: 'Before the first sale, the day is already seven down. Knowing your seven is knowing your floor.' },
   ],
+  /* stretch stops (C3) */
+  c7e: [
+    { q: 'Why is a small yearly fee worth checking before you choose where money grows?', opts: ['It is taken once and forgotten', 'It quietly takes growth every year', 'It is always paid back later', 'Fees only matter for big amounts'], a: 1,
+      why: 'Small and every year is exactly the shape that adds up.' },
+    { q: 'Two baskets grow at the same speed. Which ends up bigger?', opts: ['The one with the fee', 'The one without the fee', 'They end the same', 'Whichever started second'], a: 1,
+      why: 'Same growth, less taken out — the one without the fee stays ahead, and the gap widens.' },
+  ],
+  c7f: [
+    { q: 'Money grows 12 in every 100 each year. About how long to double?', opts: ['About 6 years', 'About 12 years', 'About 24 years', 'About 60 years'], a: 0,
+      why: '72 ÷ 12 = 6. Faster growth halves the wait.' },
+    { q: 'What is the doubling trick good for?', opts: ['A quick rough guess', 'An exact promise', 'Picking which company to buy', 'Knowing next week\'s price'], a: 0,
+      why: 'It is a rule of thumb — quick and rough, never a promise about any real investment.' },
+  ],
+  c7g: [
+    { q: 'Why is it so hard to jump out of the Exchange and back in at the right moments?', opts: ['You have to guess right twice', 'Selling is not allowed', 'Prices never change', 'The bank stops you'], a: 0,
+      why: 'Leaving early and returning late both cost you — and nobody knows the turning points in advance.' },
+    { q: 'Which player usually does best over many seasons in the Market Cup?', opts: ['The one who sells every red day', 'The calm one who spreads money out and waits', 'The one who buys whatever rose most', 'The one who copies Bo'], a: 1,
+      why: 'Spread out, sit still, give it time. Boring is the winning move.' },
+  ],
+  c7h: [
+    { q: 'Why might money in a tin buy less in ten years?', opts: ['Prices usually creep up', 'Coins get lighter', 'Tins leak', 'Shops lose count'], a: 0,
+      why: 'The money keeps its number; the prices around it move.' },
+    { q: 'For money to really grow, what must it beat?', opts: ['The rise in prices', 'Your friend\'s savings', 'Last week\'s weather', 'The number on the note'], a: 0,
+      why: 'Growth that is slower than rising prices is shrinking in disguise.' },
+  ],
+  c8e: [
+    { q: 'What does break-even mean for a stall?', opts: ['Sales have covered the fixed costs', 'The stall is closing', 'Every item is sold out', 'Prices are cut in half'], a: 0,
+      why: 'Break-even is the line. Below it you are paying to open; above it you are earning.' },
+    { q: 'Rent is 200. Each sale leaves 10. How many sales to break even?', opts: ['10', '20', '200', '2'], a: 1,
+      why: '200 ÷ 10 = 20. Cover the rent first; profit starts after.' },
+  ],
+  c8f: [
+    { q: 'Why does a regular customer matter so much to a small stall?', opts: ['They return without new effort', 'They pay double', 'They never complain', 'They bring their own stock'], a: 0,
+      why: 'A returning customer is a sale you did not have to win again.' },
+    { q: 'A seller tricks a customer into an overpriced buy. What usually happens next?', opts: ['The customer does not come back', 'The customer tells everyone it was great', 'Nothing at all', 'The seller gets more regulars'], a: 0,
+      why: 'One sale won, one customer lost — usually for good.' },
+  ],
+  c8g: [
+    { q: 'Why is a full cupboard of unsold stock a worry?', opts: ['The money is stuck until it sells', 'Cupboards are expensive', 'It means business is booming', 'Stock always gets more valuable'], a: 0,
+      why: 'Money on a shelf cannot pay a bill. Some of it may go stale before it sells.' },
+    { q: 'What is the smart way to buy stock?', opts: ['Buy what you know sells, a bit at a time', 'Buy as much as you can afford', 'Buy whatever is cheapest that day', 'Buy only what you like'], a: 0,
+      why: 'Buy what moves, and watch what sits. That keeps money flowing.' },
+  ],
+  c8h: [
+    { q: 'Why does a shop keep some profit back instead of spending it all?', opts: ['To pay for next week\'s stock and quiet weeks', 'Because profit is not real money', 'The landlord takes it later', 'To make the shop look poor'], a: 0,
+      why: 'Profit kept in the shop is next week\'s stock and the cushion for a quiet week.' },
+    { q: 'How is splitting profit like the four jars?', opts: ['Both split money the moment it arrives', 'Both are only for grown-ups', 'Neither needs a plan', 'Both spend everything at once'], a: 0,
+      why: 'Decide the split first, then live inside it — for a wage or for a shop.' },
+  ],
 };

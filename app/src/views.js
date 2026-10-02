@@ -665,7 +665,8 @@ function viewCard(card) {
       const last = qi === total - 1;
       return `<div class="card stack">
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : 'One question'}</div>
-      <h3 style="font-size:18px">${esc(dq.q)}</h3>
+      <div class="row" style="align-items:flex-start;gap:8px"><h3 class="grow" style="font-size:18px">${esc(dq.q)}</h3>
+        <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card.id}#${qi}" aria-label="Read the question and the answers to me">🔊</button></div>
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
           let k = '';
@@ -676,7 +677,7 @@ function viewCard(card) {
         }).join('')}
       </div>
       ${hold ? `<div class="fb hold" role="status"><b>Not this time — and this is the useful bit:</b> ${esc(dq.why)}
-          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div></div>` : ''}
+          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">🔊</button></div>` : ''}
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
           <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${p.first === false || !p.right ? '' : esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
@@ -1837,7 +1838,7 @@ function todayCard(c) {
    in it FROM THE DATA (never a typed number), states the promises, and
    offers one button. */
 function landing() {
-  const counts = [[ALL_CARDS.length, 'lessons, each narrated'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'worlds to walk'], [Object.keys(BADGES).length, 'badges for decisions']];
+  const counts = [[ALL_CARDS.length, 'lessons, every one read aloud'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'worlds to walk'], [Object.keys(BADGES).length, 'badges for decisions']];
   return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
     <div style="text-align:center">${mark(64)}
       <div class="eyebrow" style="margin-top:12px">Bizzing Finance</div>

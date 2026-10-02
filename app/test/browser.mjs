@@ -183,6 +183,12 @@ async function run(label, vp, isMobile, scheme) {
   /* D3 · a wrong answer holds and says why; the second go settles it. The
      first card is "Needs and wants", whose first answer is the umbrella. */
   if (await page.locator('.opt').count()) {
+    /* K1 · the question and its answers read aloud in the device's own voice */
+    await page.evaluate(() => { window.__said = []; Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speak: (u) => window.__said.push(u.text), cancel: () => {}, getVoices: () => [] } }); Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, writable: true, value: function (t) { this.text = t; } }); });
+    await page.click('.sayq'); await page.waitForTimeout(100);
+    const said = await page.evaluate(() => window.__said[0] || '');
+    const q = (await page.textContent('.card h3')).trim();
+    ok(`${label}: the question and its answers can be read aloud`, said.startsWith(q) && /A: .+ B: .+/.test(said), said.slice(0, 60));
     const opts = page.locator('.opt');
     const texts = await opts.allTextContents();
     const right = texts.findIndex((t) => /umbrella/i.test(t)), wrong = right === 0 ? 1 : 0;

@@ -101,7 +101,9 @@ export function portrait(who) {
 /* A line of dialogue. Everything the app teaches is said by somebody. */
 export function say(who, text) {
   const c = CAST[who] || CAST.pip;
-  return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}</div></div>`;
+  /* every line a character says can be read aloud (K1), in the device's own
+     voice — no recorded clip per line, by the owner's decision */
+  return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}<button class="sayit" data-act="sayEl" aria-label="Read it to me">🔊</button></div></div>`;
 }
 
 /* ── the icon set ──────────────────────────────────────────────────────

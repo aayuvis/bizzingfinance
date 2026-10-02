@@ -102,7 +102,7 @@ function stopRow(c, s) {
   return `<button class="stop ${kind}" data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}" style="--ja:${s.w.tint}">
     ${medallion(c, s, kind)}
     <span class="stbody">
-      <span class="sttitle">${esc(s.card.title)}</span>
+      <span class="sttitle">${esc(s.card.title)}${s.card.stretch ? ' <span class="pill gold" title="Goes further than the stops before it">stretch</span>' : ''}</span>
       <span class="sttag">${esc(s.ch.title)}${who ? ' · ' + esc((face(who) && '') || '') + esc(who === 'nana' ? 'Nana Bizz' : who === 'mags' ? 'Mags' : who === 'bo' ? 'Bo' : who === 'bea' ? 'Bea' : who) : ''}</span>
       ${blurb ? `<span class="stblurb">${esc(blurb)}</span>` : ''}
       ${s.cur ? `<span class="stgo">Continue →</span>` : ''}

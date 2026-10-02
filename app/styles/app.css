@@ -825,3 +825,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
 .badge.got .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;color:#4A2E00;
   background:linear-gradient(160deg,#FFD24D,#E0922E);box-shadow:0 0 0 3px #fff,0 3px 10px rgb(200 121 27 / .35)}
 .badge:not(.got) .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line)}
+/* read it to me (K1): a small speaker on every bubble and question */
+.sayit{display:inline-grid;place-items:center;width:30px;height:30px;margin-left:6px;vertical-align:middle;border-radius:50%;font-size:14px;background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+.fb .sayit{float:right;margin:-4px -4px 0 6px}
+.btn.sayq{flex:0 0 auto;padding:6px 10px}
