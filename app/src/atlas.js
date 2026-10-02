@@ -19,6 +19,7 @@ import { OBJECTIVES } from './objectives.js';
 import { PASS as QPASS, N as QN } from './quiz.js';
 import * as co from './companion.js';
 import { companionFigure } from './companionview.js';
+import { nextStep } from './next.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 const PLATE = { market: 'world-market', harbour: 'world-harbour', clock: 'world-clock', exchange: 'world-exchange', works: 'world-works' };
@@ -32,7 +33,11 @@ export function stops(c) {
     const lockedCh = chapterLocked(c, ch);
     ch.cards.forEach((card) => out.push({ card, ch, wi, w, done: !!c.learn.done[card.id], lockedCh }));
   }));
-  const fr = out.findIndex((s) => !s.done);
+  /* The stop that says Continue is the app's one next step (next.js), so the
+     rail can never disagree with Up next or with Home. */
+  const ns = nextStep(c);
+  const at = ns && ns.card ? out.findIndex((s) => s.card.id === ns.card.id && !s.done) : -1;
+  const fr = at >= 0 ? at : out.findIndex((s) => !s.done);
   const perWorld = {};
   out.forEach((s, i) => { s.i = i; s.n = (perWorld[s.wi] = (perWorld[s.wi] || 0) + 1); s.cur = i === fr; s.locked = s.lockedCh || !worldOpen(c, s.wi); });
   return { list: out, frontier: fr < 0 ? out.length : fr };
@@ -165,20 +170,16 @@ export function actSection(c, wi, r, opts = {}) {
 }
 
 /* ── up next: the one thing Learn is for, before the map ─────────────── */
-function upNext(c, cur) {
-  if (!cur) return `<div class="card upnext"><div class="eyebrow">Every stop cleared</div>
-    <h2 style="margin-top:3px">You have walked the whole atlas</h2>
-    <p class="small muted" style="margin-top:4px">Revise keeps it fresh.</p></div>`;
-  if (cur.locked) return '';
-  const who = cur.card.who || 'pip';
-  const blurb = String(cur.card.teach || '').replace(/<[^>]+>/g, '').split(/(?<=[.!?])\s/)[0];
-  return `<button class="card upnext" data-act="card" data-arg="${cur.card.id}" style="--ja:${cur.w.tint}">
+function upNext(c) {
+  const n = nextStep(c);
+  const who = (n.card && n.card.who) || 'pip';
+  return `<button class="card upnext" data-act="${n.act}" ${n.arg ? `data-arg="${n.arg}"` : ''} style="--ja:${(n.world || WORLDS[0]).tint}">
     <span class="unfig">${face(who, 64)}</span>
     <span class="grow" style="min-width:0">
-      <span class="eyebrow">Up next · ${esc(cur.w.name)}</span>
-      <b class="untitle">${esc(cur.card.title)}</b>
-      ${blurb ? `<span class="small muted unblurb">${esc(blurb)}</span>` : ''}
-      <span class="btn sm" style="margin-top:10px">Continue →</span>
+      <span class="eyebrow">Up next · ${esc((n.world || WORLDS[0]).name)}</span>
+      <b class="untitle">${esc(n.title)}</b>
+      <span class="small muted unblurb">${esc(n.sub)}</span>
+      <span class="btn sm" style="margin-top:10px">${esc(n.button)} →</span>
     </span>
   </button>`;
 }
@@ -197,7 +198,7 @@ export function viewAtlas(c) {
       </div>
     </div>
     ${levelBar(c)}
-    ${upNext(c, cur)}
+    ${upNext(c)}
     ${board(c)}
     ${(() => { const here = cur ? cur.wi : WORLDS.length - 1;
       return WORLDS.map((w, wi) => actSection(c, wi, r, { compact: wi !== here })).join(''); })()}

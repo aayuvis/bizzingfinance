@@ -70,7 +70,7 @@ export function newChild(name, band, cur) {
     learn: { xp: 0, level: 1, done: {}, openCard: null, drill: null, testedOut: {}, checkpoints: {} },
     market: newMarket((now ^ 0x9e3779b9) >>> 0),
     biz: null,
-    streak: { days: [dayIndex(now)], last: dayIndex(now) },
+    goodDays: [], lastDay: dayIndex(now),
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [], fuses: [] },
     companion: null,
     keepsakes: [], overnight: null, deeds: [], puzzle: null, maths: null, answers: [],
@@ -453,7 +453,8 @@ export function questBonus(c) {
   const all = questList(c);
   if (c.quests.bonus || !all.every((q) => q.claimed)) return 0;
   c.quests.bonus = true;
-  const a = earn(c, price(12), 'All three quests', 'quest');
+  /* the mended flower boxes make finishing the day's three worth a little more */
+  const a = earn(c, price(12 + (hasPerk(c, 'flowers') ? 3 : 0)), 'All three quests', 'quest');
   badge(c, 'three-of-three');
   stamp(c);
   return a;
@@ -805,6 +806,7 @@ export function rulesChosen(c) {
 }
 
 export function addXP(c, n) {
+  if (n > 0) markGoodDay(c);
   const before = c.learn.level;
   c.learn.xp += n;
   c.learn.level = levelFor(c.learn.xp);
@@ -820,14 +822,26 @@ export function badge(c, id) {
   c.badges.push(id); return true;
 }
 
-/* ── streak & postbox ────────────────────────────────────────────────── */
+/* ── good days & postbox ─────────────────────────────────────────────────
+   There is no streak (FAMILY-STANDARD §8, J2). A streak is a count that a day
+   off destroys, which is pressure in a costume. What is kept instead is the
+   days in the last fortnight on which something was learned, and what is
+   shown is how many of the last seven — a number that a missed day lowers by
+   at most one and that never announces a loss. */
+export function markGoodDay(c, t = Date.now()) {
+  const d = dayIndex(t);
+  c.goodDays = (c.goodDays || []).filter((x) => x > d - 14);
+  if (!c.goodDays.includes(d)) c.goodDays.push(d);
+}
+export function goodDaysThisWeek(c, t = Date.now()) {
+  const d = dayIndex(t);
+  return (c.goodDays || []).filter((x) => x > d - 7 && x <= d).length;
+}
 export function touchDay(c) {
   const d = dayIndex(Date.now());
-  if (c.streak.last === d) return false;
-  const nights = Math.max(1, d - c.streak.last);
-  if (c.streak.last === d - 1) c.streak.days.push(d);
-  else c.streak.days = [d];
-  c.streak.last = d;
+  if (c.lastDay === d) return false;
+  const nights = Math.max(1, d - c.lastDay);
+  c.lastDay = d;
   if (c.postbox.day !== d) { c.postbox.day = d; c.postbox.idx += 1; c.postbox.answered = false; }
   rollQuests(c);   /* so a job taken before Home is opened can't tick yesterday's three */
   /* the morning after: what is waiting, measured on the day it flips. The

@@ -4,6 +4,7 @@
    hidden — a child should see the whole road on their first afternoon. */
 
 import { esc } from './ui.js';
+import { goodDaysThisWeek } from './sim.js';
 import { WORLDS, FIXES, isOpen as chapterOpen, needFor, tester } from './content.js';
 import { art } from './art-gen.js';
 
@@ -215,7 +216,7 @@ export function townSVG(c) {
   const g = s.money.goals.find((x) => !x.done);
   const prog = g ? Math.min(1, g.saved / g.target) : 0;
   const up = s.market.lastMove >= 0;
-  const streak = s.streak.days.length;
+  const good = goodDaysThisWeek(s);   /* lanterns: good days this week, never a run */
   const hour = new Date().getHours();
 
   const world = WORLDS[c.world || 0] || WORLDS[0];
@@ -229,7 +230,7 @@ export function townSVG(c) {
 
   const plate = art('world-' + world.id);
   const lanterns = Array.from({ length: 7 }, (_, i) =>
-    lantern(70 + i * ((W - 140) / 6), i < Math.min(7, streak))).join('');
+    lantern(70 + i * ((W - 140) / 6), i < Math.min(7, good))).join('');
 
   const build = (p, idx) => {
     p = { ...p, x: xOf(idx) };

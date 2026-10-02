@@ -2,7 +2,7 @@
   "name": "bizzington",
   "version": "0.2.0",
   "private": true,
-  "description": "Bizzing Finance \u2014 the town where kids 8+ learn how money works",
+  "description": "Bizzing Finance — the town where kids 8+ learn how money works",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,12 @@
     "single": "node build.mjs",
     "serve": "python3 -m http.server 8080",
     "deploy": "./deploy.sh",
-    "test": "node test/economy.mjs && node test/business.mjs && node test/market40.mjs && node test/companion.mjs && node test/keepsake.mjs && node test/tester.mjs && node test/daily.mjs && node test/sources.mjs && node test/backup.mjs && node test/puzzle.mjs && node test/trust.mjs"
+    "test": "node test/economy.mjs && node test/business.mjs && node test/market40.mjs && node test/companion.mjs && node test/keepsake.mjs && node test/tester.mjs && node test/daily.mjs && node test/sources.mjs && node test/backup.mjs && node test/puzzle.mjs && node test/trust.mjs && node test/family.mjs",
+    "check": "node test/browser.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "playwright": "^1.56.1"
   }
 }

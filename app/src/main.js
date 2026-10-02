@@ -30,6 +30,8 @@ import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, A
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
+import { nextStep } from './next.js';
+import { AVATARS } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet, VERSION } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
@@ -43,6 +45,25 @@ let draft = { step: 0 };
    games could only start from the tab they lived in; the moment a job could
    be started from Home it quit itself before the first frame. */
 let selfHash = null;
+
+/* The family (FAMILY-STANDARD §3, §4, §13): the Hive is one tap away, a
+   child sent here by the Hive gets a way back to their day, and #/continue
+   opens the one next step directly. */
+const HIVE = 'https://aayuvis.github.io/Bizzing_Schedule/';
+R.fromHive = /[?&]from=hive\b/.test(location.search);
+function goContinue() {
+  const n = nextStep(C());
+  R.s.ui.nav = n.act === 'shelf' ? 'learn' : R.s.ui.nav;
+  writeHash();
+  fire(n.act, n.arg || undefined);
+}
+/* A child's badge: their avatar when they have one, their initial until then. */
+function kidBadge(k, size) {
+  const a = k.avatar && AVATARS[k.avatar];
+  return `<span class="kbadge" style="width:${size}px;height:${size}px">${a
+    ? `<img src="${a.src}" alt="" width="${size}" height="${size}">`
+    : `<b style="font-size:${Math.round(size * 0.48)}px">${esc((k.name || '?').trim().charAt(0).toUpperCase())}</b>`}</span>`;
+}
 
 const TABS = [
   { k: 'home', n: 'Home', g: '🏘️' }, { k: 'learn', n: 'Learn', g: '📗' },
@@ -65,6 +86,7 @@ function writeHash() {
 function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
+  if (m[0] === 'continue') { R.continueNow = true; return false; }
   const known = TABS.map((t) => t.k).concat(['parents', 'worlds', 'report', 'market40']);
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = m[0];
@@ -101,13 +123,15 @@ function render() {
   root.innerHTML = `
     <header class="topbar">
       <div class="topbar-in">
-        <button class="brand" data-act="nav" data-arg="home">${mark(26)}<span><em>Bizzing</em> Finance</span></button>
+        <a class="iconbtn hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="Back to the Bizzing Hive">⬡</a>
+        <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Finance — home">${mark(26)}<span><em>Bizzing</em> Finance</span></button>
+        ${R.fromHive ? `<a class="chip hiveback" href="${HIVE}">← back to my day</a>` : ''}
         <button class="chip money" data-act="nav" data-arg="money"
-          title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
-        <span class="chip streak" title="Days in a row">${ico('streak', '', 15)} ${c.streak.days.length}</span>
+          aria-label="Your wallet: ${money(c.money.wallet)}" title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
         ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on — everything is open">TESTER</button>' : ''}
-        <button class="iconbtn" data-act="settings" aria-label="Settings">${ico('gear', '', 19)}</button>
-        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-up's page">${ico('family', '', 19)}</button>
+        <button class="iconbtn" data-act="settings" aria-label="Look, sound and settings">${ico('gear', '', 19)}</button>
+        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-ups (PIN)">${ico('lock', '🔒', 19)}</button>
+        <button class="kidbtn" data-act="kids" aria-label="${esc(c.name)} — switch child" aria-haspopup="dialog">${kidBadge(c, 30)}<span class="caret" aria-hidden="true">▾</span></button>
       </div>
       <nav class="nav" aria-label="Sections">
         ${tabs.map((t) => `<button class="navbtn" data-act="nav" data-arg="${t.k}"
@@ -360,6 +384,14 @@ function overlay() {
       </div>`);
   }
 
+  if (o.kind === 'kids') {
+    return box(`<div class="eyebrow" style="margin-bottom:6px">Who is playing?</div>
+      <div class="rows" style="margin:0 -22px -10px">
+        ${R.s.kids.map((k, i) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="switchKid" data-arg="${i}"
+          ${i === R.s.active ? 'aria-current="true"' : ''}>${kidBadge(k, 36)}<b style="font-size:15px" class="grow">${esc(k.name)}</b>${i === R.s.active ? '<span class="pill gold">playing</span>' : ''}</button>`).join('')}
+        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="parents"><span class="iw">${ico('lock', '🔒', 20)}</span><b style="font-size:15px">Add a child (grown-ups)</b></button>
+      </div>`);
+  }
   if (o.kind === 'more') {
     const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
     return box(`<div class="eyebrow" style="margin-bottom:6px">Everything else</div>
@@ -409,6 +441,7 @@ on('closeOv', () => {
   R.overlay = null; render();
 });
 on('more', () => { R.overlay = { kind: 'more' }; render(); });
+on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
   if (R.game) quitGame();
@@ -584,6 +617,12 @@ on('cardDone', (id) => {
     ledger.answer(c, { shape: bt.shape, objective: objective(bt.obj), card }, right);
     bt.answered = true;
     if (bt.shape === 'retrieve') sim.questTick(c, 'lesson', 1);
+  } else if (first) {
+    /* Read from the map rather than from Continue: it is still the immediate
+       check on that objective, so the record hears about it — otherwise the
+       ledger keeps offering a lesson the child has finished. */
+    const ob = OBJECTIVES.find((o) => o.teach === id && !mastery.lastSeen(c, o.id));
+    if (ob) { ledger.seen(c, ob.id); ledger.answer(c, { shape: 'teach', objective: ob, card }, right); }
   }
 
   /* Chapter progress only exists for chapter cards. */
@@ -603,6 +642,9 @@ on('beat', () => {
   if (!bt) { toast('Nothing due today'); return; }
   if (bt.shape === 'teach') ledger.seen(c, bt.objective.id);
   c.learn.beat = { shape: bt.shape, obj: bt.objective.id, cardId: bt.card.id, answered: false };
+  /* The card lives on Learn. Without this, Continue on Home set the card and
+     re-drew Home — a button that did nothing a child could see. */
+  R.s.ui.nav = 'learn'; R.shelf = '';
   c.learn.openCard = bt.card.id;
   c.learn.drill = null;
   sfx.click(); render(); window.scrollTo(0, 0);
@@ -1085,6 +1127,7 @@ window.addEventListener('hashchange', () => {
   if (selfHash !== null && location.hash === selfHash) { selfHash = null; return; }
   selfHash = null;
   if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
+  else if (R.continueNow) { R.continueNow = false; R.overlay = null; if (R.game) quitGame(); R.s.ui.nav = 'home'; goContinue(); }
 });
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
@@ -1099,6 +1142,7 @@ if (R.s && R.s.kids.length) {
   readHash();
 }
 render();
+if (R.continueNow && R.s && R.s.kids.length) { R.continueNow = false; R.s.ui.nav = 'home'; goContinue(); }
 
 /* Offline-first is a hard rule, so the shell caches itself when served over
    http. Skipped in the single-file build, which has nothing to fetch. */

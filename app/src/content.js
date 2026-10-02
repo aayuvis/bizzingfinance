@@ -734,7 +734,7 @@ export const FIXES = [
   { id: 'boxes', world: 'market', em: '🌼', name: 'The flower boxes', units: 60,
     broken: 'Empty, cracked, full of last year’s soil.',
     fixed: 'Planted up. It is only flowers. It changes the whole street.',
-    perk: 'streak', gives: 'Your streak pays a little more every day.' },
+    perk: 'flowers', gives: 'Finishing the day\'s three pays a little more.' },
   { id: 'awnings', world: 'market', em: '⛱️', name: 'The stall awnings', units: 80,
     broken: 'Torn down in a storm and never replaced. Rain stops trade.',
     fixed: 'Striped canvas the length of the Row.',

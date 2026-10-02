@@ -46,13 +46,13 @@ ok(r.receipt.shifts === 0 && r.receipt.covered === false, 'a receipt with no shi
 /* the morning after */
 const today = dayIndex(Date.now());
 ok(sim.touchDay(c) === false && c.overnight === null, 'same day: nothing flips, no card');
-c.streak.last = today - 3;
+c.lastDay = today - 3;
 ok(sim.touchDay(c) === true && c.overnight && c.overnight.nights === 3 && c.overnight.seen === false, 'three nights away: the card is set, unseen', JSON.stringify(c.overnight));
 const snap = JSON.stringify(c.overnight);
 ok(sim.touchDay(c) === false && JSON.stringify(c.overnight) === snap, 'the same day again does not re-arm it');
 c.overnight.seen = true;
 ok(sim.touchDay(c) === false && c.overnight.seen === true, 'dismissed stays dismissed');
-ok(c.streak.days.length === 1, 'a gap resets the streak quietly — and nothing charges for it', 'days ' + c.streak.days.length);
+ok(c.streak === undefined && sim.goodDaysThisWeek(c) <= 7, 'there is no streak to reset — a gap costs nothing', 'good days ' + sim.goodDaysThisWeek(c));
 
 console.log('────────────────────────────────────────────────────────────');
 console.log(`${pass}/${pass + fail} passed`);

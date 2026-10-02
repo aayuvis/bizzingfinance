@@ -26,7 +26,7 @@ import { SCHEMA } from './store.js';
    device — the default is that it may not. */
 export const SYNC_KEYS = [
   'id', 'band', 'currency', 'created',
-  'money', 'learn', 'market', 'biz', 'venture', 'streak', 'postbox',
+  'money', 'learn', 'market', 'biz', 'venture', 'goodDays', 'lastDay', 'postbox',
   'companion', 'keepsakes', 'deeds', 'shop', 'jobs', 'home', 'world',
   'fix', 'quests', 'mastery', 'decisions', 'badges', 'history', 'family',
   'puzzle', 'maths', 'overnight',

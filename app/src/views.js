@@ -36,6 +36,7 @@ import { CLASSES } from './assetclasses.js';
 import { CAL } from './world.js';
 import * as biz from './business.js';
 import { R } from './runtime.js';
+import { nextStep, progress } from './next.js';
 
 const K = () => sim.kid(R.s);
 
@@ -238,12 +239,26 @@ function greeting(c) {
           <span class="small muted">${esc(p.name)} · ${co.STAGES[p.stage]} ${esc(co.KINDS[p.kind].name).toLowerCase()} · ${p.paydays} pay ${p.paydays === 1 ? 'day' : 'days'} with you${p.everMissed ? ` · went hungry ${p.everMissed}×` : ''}</span>
           <div class="care ${p.mood}"><i style="width:${p.care}%"></i></div>
           <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
-            <button class="btn sm ${can ? '' : 'ghost'}" data-act="play">${can ? 'Play' : 'Played today'}</button>
+            <button class="btn ghost sm" data-act="play">${can ? 'Play' : 'Played today'}</button>
             <button class="btn ghost sm" data-act="wardrobe">Wardrobe${p.wardrobe.length ? ' · ' + p.wardrobe.length : ''}</button>
           </div></div>`
-        : `<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
-            <button class="btn ghost sm" data-act="shelter">${ico('family', '🐾', 16)} Meet the five who need homes</button></div>`}
+        : ''}
     </div>
+    ${dayStrip(c)}
+  </div>`;
+}
+
+/* Beside the greeting: the day's ring (today's three, never a run of days)
+   and the money word of the day. Both are small; neither is a button. */
+function dayStrip(c) {
+  const q = sim.questList(c), n = q.length || 1, d = q.filter((x) => x.claimed).length;
+  const R0 = 19, C = 2 * Math.PI * R0, w = daily.wordOfDay();
+  return `<div class="daystrip">
+    <div class="dring" role="img" aria-label="Today's three: ${d} of ${q.length} done">
+      <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><circle cx="24" cy="24" r="${R0}" fill="none" stroke="var(--line)" stroke-width="5"/>
+        <circle cx="24" cy="24" r="${R0}" fill="none" stroke="var(--action)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(C * d / n).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 24 24)"/></svg>
+      <b>${d}/${q.length}</b></div>
+    <div class="dword"><span class="eyebrow">Word of the day</span><b>${esc(w.term)}</b><span class="small muted">${esc(w.meaning)}</span></div>
   </div>`;
 }
 
@@ -263,84 +278,36 @@ function fold(id, title, sub, icon, body) {
 
 export function viewHome() {
   const c = K();
-  const due = sim.payDue(c, R.s);
-  const d = sim.daysToPay(c);
-  const g = c.money.goals.find((x) => !x.done);
-  const sprout = c.band === 'sprout';
-  const today = nextThing(c);
-
-  /* the money is a line of type on the ground, not a grid of boxes */
-  const strip = sprout
-    ? `<div class="moneyline">
-        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
-        <div><div class="k">Saved up</div><div class="v">${money(c.money.jars.save + c.money.jars.grow)}</div></div></div>`
-    : `<div class="moneyline">
-        <div class="lead"><div class="k">Wallet</div><div class="v">${money(c.money.wallet)}</div></div>
-        <div><div class="k">Jars</div><div class="v">${money(sim.jarTotal(c))}</div></div>
-        <div><div class="k">Invested</div><div class="v">${money(c.money.bank.balance + sim.holdingsValue(c))}</div></div>
-        <div><div class="k">Net worth</div><div class="v" style="color:var(--action)">${money(sim.netWorth(c))}</div></div></div>`;
-
-  const ind = sim.independence(c);
-  const cost = sim.weeklyCost(c);
-  const passive = sim.passiveWeekly(c);
-  const home = sim.homeOf(c);
-
   const world = WORLDS[c.world || 0];
   const quests = sim.questList(c);
-  const allDone = quests.length && quests.every((q) => q.claimed);
 
-  return `<div class="stack">
+  /* The family home (FAMILY-STANDARD §2): the street, a greeting with the
+     day's ring and the word of the day, ONE Continue, today's three, the ways
+     in — and everything else folded under "More today". Before this, Home was
+     nine equal-weight cards and four buttons all claiming to be next. */
+  return `<div class="stack home">
+    <h1 class="sr">Home — ${esc(c.name)} in ${esc(world.name)}</h1>
     <div class="town hero">
       <div class="town-scroll">${townSVG(c)}</div>
       <div class="town-head">
         <span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span>
         <button class="btn ghost sm" data-act="nav" data-arg="worlds">Travel</button>
       </div>
-      <div class="town-cap"><span>${ico('streak', '🔥', 14)} ${c.streak.days.length}</span><span>Lv ${c.learn.level} · ${rankFor(c.learn.level)}</span></div>
     </div>
 
     ${greeting(c)}
 
-    ${strip}
+    ${continueCard(c)}
 
-    ${lessonBeat(c)}
+    ${todaysThree(c, quests)}
 
-    <div class="card">
-      <div class="row"><div class="grow"><div class="ct">Today's three</div>
-        <p class="cs">Pay goes straight into your wallet.</p></div>
-        <span class="pill ${allDone ? 'grow' : ''}">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
-      <div class="rows" style="margin-top:6px">
-        ${quests.map((q) => `<div class="qrow${q.claimed ? ' done' : ''}">
-          <span class="iw" style="${q.claimed ? 'opacity:.5' : ''}">${ico('quest', q.em, 20)}</span>
-          <span class="grow" style="min-width:0">
-            <b style="font-size:14px;${q.claimed ? 'opacity:.6' : ''}">${esc(q.t)}</b>
-            <div class="small muted">${q.claimed ? 'Claimed.' : esc(q.sub)}</div>
-            ${q.claimed ? '' : `<div class="bar" style="height:5px;margin-top:5px"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
-          </span>
-          ${q.claimed ? '<span class="pill grow">✓</span>'
-            : q.done ? `<button class="btn ghost sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>`
-            : `<span class="pill">${q.at}/${q.n}</span>`}
-        </div>`).join('')}
-      </div>
-      ${allDone && !c.quests.bonus ? `<button class="btn ghost wide" style="margin-top:11px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
-      ${c.quests.bonus ? `<p class="small muted" style="margin-top:9px">All ${nWord(quests.length)} done. Fresh ones tomorrow.</p>` : ''}
-    </div>
+    ${waysIn(c)}
 
-    ${closingTime(c, quests)}
-
-    ${journeys(c)}
-
-    <div class="sect"><b>A little more for today</b><i></i></div>
-
-    ${(() => { const p = puz.puzzle(), st = puz.stateOf(c, p.day);
-      return fold('till', "Today's till — what did one cost?",
-        st.done ? 'Solved. A fresh receipt tomorrow.' : 'A puzzle. Everyone in the house gets the same one.', 'receipt', tillCard(c)); })()}
-
-    ${fold('today', 'Do one · carry one · ask at home',
-      daily.deedDoneToday(c) ? "Today's deed is done." : 'Something to do in the real world, a money word, and a question for supper.', 'quest', todayCard(c))}
-
-    <div class="sect"><b>The town</b><i></i></div>
-
+    ${fold('more', 'More today', 'Your three journeys, the till puzzle, a real-world deed and the town repairs.', 'more', `<div class="stack">
+      ${closingTime(c, quests)}
+      ${journeys(c)}
+      ${tillCard(c)}
+      ${todayCard(c)}
     ${(() => {
       const fx = sim.townFixes(c).filter((f) => !f.locked);
       const tp = sim.townProgress(c);
@@ -372,9 +339,65 @@ export function viewHome() {
         </div>
       </div>`);
     })()}
-
-    ${co.has(c) ? say('pip', hometalk(c)) : ''}
+    </div>`)}
   </div>`;
+}
+
+/* ONE Continue (FAMILY-STANDARD §2.3, B2). The step comes from next.js, the
+   same function Learn asks, and this is the only filled button on Home —
+   test/home.mjs counts them. Progress sits beside it (B3): where you are on
+   the path and in this world, and the rank. */
+function continueCard(c) {
+  const n = nextStep(c), pr = progress(c);
+  const plate = ART['world-' + (n.world || WORLDS[0]).id];
+  const rank = rankObj(c.learn.level);
+  const pct = Math.round(pr.done / pr.total * 100);
+  return `<section class="continue" style="${plate ? `--plate:url(${plate.src || plate})` : ''}" aria-labelledby="cont-h">
+    <span class="cveil"></span>
+    <div class="cbody">
+      <span class="eyebrow">${n.kind === 'revise' ? 'Keep it yours' : 'Next on your journey'} · ${esc((n.world || WORLDS[0]).name)}</span>
+      <h2 id="cont-h">${esc(n.title)}</h2>
+      <p class="csub">${esc(n.sub)}</p>
+      <div class="cprog" aria-label="Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}">
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <span>Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total} · ${ico(rank.em, rank.em, 13)} ${esc(rank.name)} L${c.learn.level}</span>
+      </div>
+      <button class="btn wide cgo" data-act="${n.act}" ${n.arg ? `data-arg="${n.arg}"` : ''}>${esc(n.button)} →</button>
+    </div>
+  </section>`;
+}
+
+/* Today's three, as small cards. Nothing is lost for skipping one, and
+   nothing here is a filled button — Continue is the only one. */
+function todaysThree(c, quests) {
+  const allDone = quests.length && quests.every((q) => q.claimed);
+  return `<section aria-labelledby="t3-h">
+    <div class="sect"><b id="t3-h">Today's three</b><i></i><span class="small muted tabnum">${quests.filter((q) => q.claimed).length}/${quests.length}</span></div>
+    <div class="t3">
+      ${quests.map((q) => `<div class="t3card${q.claimed ? ' done' : ''}">
+        <span class="iw">${ico(q.claimed ? 'check' : 'quest', q.em, 20)}</span>
+        <b>${esc(q.t)}</b>
+        <span class="small muted">${q.claimed ? 'Done.' : esc(q.sub)}</span>
+        ${q.claimed ? '' : q.done ? `<button class="btn ghost sm" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>`
+          : `<div class="bar" style="height:5px;margin-top:auto"><i style="width:${Math.min(100, q.at / q.n * 100)}%"></i></div>`}
+      </div>`).join('')}
+    </div>
+    ${allDone && !c.quests.bonus ? `<button class="btn ghost wide" style="margin-top:10px" data-act="questBonus">All ${nWord(quests.length)} — take ${money(price(12))} more</button>` : ''}
+  </section>`;
+}
+
+/* Ways in: at most six tiles to the app's main areas. */
+function waysIn(c) {
+  const tiles = [
+    ['learn', 'nav', 'learn', 'The Money Atlas', `${progress(c).done} of ${progress(c).total} stops`],
+    ['wallet', 'nav', 'money', 'Money', `${money(c.money.wallet)} in your wallet`],
+    ['arcade', 'nav', 'arcade', 'Arcade', 'Games that pay wages'],
+    ['cart', 'nav', 'store', 'Store', 'Things that earn their keep'],
+    ['medal', 'nav', 'collection', 'Collection', `${c.badges.length} badges`],
+    ['town', 'nav', 'worlds', 'Five places', 'Travel the town'],
+  ];
+  return `<nav class="ways" aria-label="Ways in">${tiles.map(([ic, act, arg, t, sub]) =>
+    `<button class="way" data-act="${act}" data-arg="${arg}"><span class="iw">${ico(ic, '', 22)}</span><b>${t}</b><span class="small muted">${sub}</span></button>`).join('')}</nav>`;
 }
 
 /* Closing time. The one card in the app that is about stopping, and it only
@@ -1232,7 +1255,7 @@ export function viewProgress() {
     <div class="sparkwrap">${sparkline(vals.length > 1 ? vals : [0, sim.netWorth(c)], 300, 54, 'var(--action)')}
       <p class="small muted">What you're worth, after every decision since you opened your stall.</p></div>
     <div class="moneyline stats">
-      <div><div class="k">Streak</div><div class="v">${ico('streak', '🔥', 18)} ${c.streak.days.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">days</span></div></div>
+      <div><div class="k">Good days</div><div class="v">${ico('sun', '☀️', 18)} ${sim.goodDaysThisWeek(c)} <span class="small muted" style="font-family:var(--ui);font-weight:600">this week</span></div></div>
       <div><div class="k">Rank</div><div class="v">${ico(rank.em, rank.em, 16)} ${rank.name} <span class="small muted" style="font-family:var(--ui);font-weight:600">L${c.learn.level}</span></div></div>
       <div><div class="k">Letters</div><div class="v">${c.postbox.log.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">${scamsAll ? scams + '/' + scamsAll + ' scams spotted' : ''}</span></div></div>
     </div>

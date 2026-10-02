@@ -6,7 +6,7 @@
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 9;
+export const SCHEMA = 10;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -39,7 +39,7 @@ export const Store = {
 
 /* Versioned from the first commit so future changes are safe rather than
    brave. Each step is one small function and never reaches backwards. */
-function migrate(blob) {
+export function migrate(blob) {
   if (!blob.v) blob.v = 1;
   while (blob.v < SCHEMA) {
     if (blob.v === 1) blob = v1_to_v2(blob);
@@ -50,6 +50,7 @@ function migrate(blob) {
     else if (blob.v === 6) blob = v6_to_v7(blob);
     else if (blob.v === 7) blob = v7_to_v8(blob);
     else if (blob.v === 8) blob = v8_to_v9(blob);
+    else if (blob.v === 9) blob = v9_to_v10(blob);
     else break;
   }
   return blob;
@@ -158,6 +159,21 @@ function v8_to_v9(old) {
     if (!k.answers) k.answers = [];
   });
   old.v = 9;
+  return old;
+}
+
+/* v10: no streaks (FAMILY-STANDARD §8). The run of consecutive days becomes
+   the days something was learned, kept for a fortnight; the date the child
+   was last here moves to its own field. A child's existing run carries over
+   as good days, so nobody's week empties on upgrade. */
+function v9_to_v10(old) {
+  old.kids.forEach((k) => {
+    const s = k.streak || {};
+    if (!k.goodDays) k.goodDays = (s.days || []).slice(-14);
+    if (k.lastDay === undefined) k.lastDay = s.last != null ? s.last : null;
+    delete k.streak;
+  });
+  old.v = 10;
   return old;
 }
 
