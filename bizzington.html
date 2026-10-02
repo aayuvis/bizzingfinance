@@ -1015,6 +1015,10 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
 .sessbar .dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
 .sessbar .dots i.on{background:var(--action)}
 .sessbar b{font-size:14px}
+/* the family medallion (FAMILY-STANDARD §12): an earned badge is a gold disc */
+.badge.got .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;color:#4A2E00;
+  background:linear-gradient(160deg,#FFD24D,#E0922E);box-shadow:0 0 0 3px #fff,0 3px 10px rgb(200 121 27 / .35)}
+.badge:not(.got) .bic{width:46px;height:46px;margin:0 auto;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line)}
 
 </style>
 </head>
@@ -2923,7 +2927,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     return blob;
   }
   function v1_to_v2(old) {
-    const kid2 = {
+    const kid3 = {
       id: "k1",
       name: old.child && old.child.name || "Friend",
       band: old.child && old.child.band || "builder",
@@ -2941,7 +2945,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     return {
       v: 2,
       parent: { created: Date.now(), gate: false },
-      kids: [kid2],
+      kids: [kid3],
       active: 0,
       settings: old.settings || { sound: true },
       clock: { lastSeen: Date.now() }
@@ -7095,6 +7099,152 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     return (c.deeds || []).length;
   }
 
+  // src/family/bizzing-activity.js
+  var KEY2 = "bizzing.activity";
+  var IDLE = 2 * 60 * 1e3;
+  var TICK = 15 * 1e3;
+  var GAP = 5 * 60 * 1e3;
+  var KEEP_DAYS = 120;
+  var MAX = 4e3;
+  var pad = (n) => String(n).padStart(2, "0");
+  var ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  function load2() {
+    try {
+      const o = JSON.parse(localStorage.getItem(KEY2) || "null");
+      return o && Array.isArray(o.s) ? o : { v: 1, s: [] };
+    } catch {
+      return { v: 1, s: [] };
+    }
+  }
+  function store(o) {
+    const cutoff = ymd(new Date(Date.now() - KEEP_DAYS * 864e5));
+    o.s = o.s.filter((x) => x.d >= cutoff).slice(-MAX);
+    try {
+      localStorage.setItem(KEY2, JSON.stringify(o));
+    } catch {
+    }
+  }
+  function trackActivity(app, getName = () => null) {
+    if (typeof window === "undefined" || !/^(bee|maths|geography|india|finance)$/.test(app)) return () => {
+    };
+    let lastInput = Date.now(), activeMs = 0, lastTick = Date.now(), session = null, lastActive = 0;
+    const poke = () => {
+      lastInput = Date.now();
+    };
+    const EVENTS = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"];
+    EVENTS.forEach((e) => addEventListener(e, poke, { passive: true, capture: true }));
+    const tick = () => {
+      const now2 = Date.now(), dt = now2 - lastTick;
+      lastTick = now2;
+      if (document.visibilityState !== "visible" || now2 - lastInput > IDLE || dt > TICK * 3) return;
+      activeMs += dt;
+      if (activeMs < 6e4) return;
+      activeMs -= 6e4;
+      const o = load2(), d = /* @__PURE__ */ new Date(), who = (getName() || "").trim() || void 0;
+      if (!session || now2 - lastActive > GAP || session.d !== ymd(d) || session.who !== who) {
+        session = { a: app, d: ymd(d), t: d.getHours() * 60 + d.getMinutes(), m: 0, ...who ? { who } : {} };
+        o.s.push(session);
+      } else {
+        const i = o.s.findIndex((x) => x.a === session.a && x.d === session.d && x.t === session.t && x.who === session.who);
+        if (i >= 0) session = o.s[i];
+        else o.s.push(session);
+      }
+      session.m += 1;
+      lastActive = now2;
+      store(o);
+    };
+    const timer = setInterval(tick, TICK);
+    return () => {
+      clearInterval(timer);
+      EVENTS.forEach((e) => removeEventListener(e, poke, { capture: true }));
+    };
+  }
+  function trackMilestone(app, who, ev, label2) {
+    if (typeof window === "undefined" || !/^(bee|maths|geography|india|finance)$/.test(app)) return;
+    if (!/^(band|world|stop|mastery)$/.test(ev)) return;
+    const d = /* @__PURE__ */ new Date(), o = load2();
+    o.s.push({ a: app, d: ymd(d), t: d.getHours() * 60 + d.getMinutes(), m: 0, ev, label: String(label2).slice(0, 80), ...who ? { who: who.trim() } : {} });
+    store(o);
+  }
+
+  // src/family/bizzing-wallet.js
+  var KEY3 = "bizzing.wallet";
+  var APPS = /^(bee|maths|geography|india|finance)$/;
+  var EARN = { answer: 1, stop: 5, contest: 10, mastery: 20 };
+  var DAILY_CAP = 100;
+  var MAX2 = 2e3;
+  var day = (t) => {
+    const d = new Date(t);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  };
+  var kidKey = (who) => String(who || "").trim().toLowerCase();
+  function load3() {
+    try {
+      const o = JSON.parse(localStorage.getItem(KEY3) || "null");
+      if (o && o.v === 1 && o.kids) return o;
+    } catch {
+    }
+    return { v: 1, kids: {} };
+  }
+  function save2(o) {
+    try {
+      localStorage.setItem(KEY3, JSON.stringify(o));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function kid2(o, who) {
+    const k = kidKey(who);
+    return k ? o.kids[k] || (o.kids[k] = { coins: 0, ledger: [] }) : null;
+  }
+  function balance(who) {
+    const k = load3().kids[kidKey(who)];
+    return k ? k.coins : 0;
+  }
+  function earn2(app, who, event, now2 = Date.now()) {
+    if (!APPS.test(app) || !(event in EARN)) return 0;
+    const o = load3(), k = kid2(o, who);
+    if (!k) return 0;
+    const today2 = k.ledger.filter((x) => x.a === app && x.n > 0 && day(x.t) === day(now2)).reduce((a, x) => a + x.n, 0);
+    const n = Math.min(EARN[event], Math.max(0, DAILY_CAP - today2));
+    if (!n) return 0;
+    k.coins += n;
+    k.ledger.push({ a: app, t: now2, n, why: event });
+    if (k.ledger.length > MAX2) k.ledger.splice(0, k.ledger.length - MAX2);
+    save2(o);
+    return n;
+  }
+  function ledger(who) {
+    const k = load3().kids[kidKey(who)];
+    return k ? k.ledger.slice() : [];
+  }
+
+  // src/family.js
+  var APP = "finance";
+  var demo = false;
+  function setDemo(v) {
+    demo = !!v;
+  }
+  function startActivity(getName) {
+    return demo ? () => {
+    } : trackActivity(APP, getName);
+  }
+  function milestone(who, ev, label2) {
+    if (!demo && who) trackMilestone(APP, who, ev, label2);
+  }
+  function coins(who, event) {
+    return demo || !who ? 0 : earn2(APP, who, event);
+  }
+  function familyCoins(who, now2 = Date.now()) {
+    if (!who) return { balance: 0, week: [] };
+    const since2 = now2 - 7 * 864e5, by = {};
+    ledger(who).filter((x) => x.t >= since2 && x.n > 0).forEach((x) => {
+      by[x.a] = (by[x.a] || 0) + x.n;
+    });
+    return { balance: balance(who), week: Object.entries(by).sort((a, b) => b[1] - a[1]) };
+  }
+
   // src/quiz.js
   var N = 6;
   var PASS = 5;
@@ -7153,6 +7303,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
         addXP(c, 15);
       }
     }
+    if (pass) coins(c.name, "contest");
     stamp(c);
     return { pass, pct };
   }
@@ -7244,8 +7395,8 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     ["six eggs", "grain"],
     ["a woven basket", "basket"]
   ];
-  function puzzle(day) {
-    const d = day == null ? dayNo() : day;
+  function puzzle(day2) {
+    const d = day2 == null ? dayNo() : day2;
     const r = rng2(d + 1);
     const n = 3 + Math.floor(r() * 2);
     const pick3 = [];
@@ -7265,13 +7416,13 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
       kind: lines[hidden].qty > 1 ? "divide" : "subtract"
     };
   }
-  function stateOf(c, day) {
-    const d = day == null ? dayNo() : day;
+  function stateOf(c, day2) {
+    const d = day2 == null ? dayNo() : day2;
     const rec = c.puzzle && c.puzzle.day === d ? c.puzzle : null;
     return rec || { day: d, tries: [], done: false, won: false, paid: false };
   }
-  function guess(c, n, day) {
-    const p = puzzle(day), st = stateOf(c, p.day);
+  function guess(c, n, day2) {
+    const p = puzzle(day2), st = stateOf(c, p.day);
     if (st.done) return { already: true };
     const v = Math.round(Number(n));
     if (!Number.isFinite(v) || v <= 0) return { bad: true };
@@ -7292,8 +7443,8 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     stamp(c);
     return { won, done: st.done, left: TRIES - st.tries.length, paid, near: !won && Math.abs(v - p.answer) <= 2 };
   }
-  function share(c, day) {
-    const p = puzzle(day), st = stateOf(c, p.day);
+  function share(c, day2) {
+    const p = puzzle(day2), st = stateOf(c, p.day);
     if (!st.done) return "";
     const marks = st.tries.map((t) => t === p.answer ? "\u{1F7E9}" : t > p.answer ? "\u{1F53D}" : "\u{1F53C}").join("");
     return `Bizzington Till #${p.day}  ${st.won ? st.tries.length : "X"}/${TRIES}
@@ -9906,19 +10057,19 @@ ${marks}`;
   function story(c, d, money2) {
     if (!d) return null;
     const alt = d.alternatives[0];
-    const day = new Date(d.t).toLocaleDateString(void 0, { weekday: "long" });
+    const day2 = new Date(d.t).toLocaleDateString(void 0, { weekday: "long" });
     const gap = alt && alt.cost ? money2(Math.abs(alt.cost)) : null;
     let text;
     if (d.surface === "loans") {
-      text = d.chose === "wait" ? `On ${day} she was offered a loan. She worked out that borrowing would cost ${gap} on top, and decided to save up for it instead.` : `On ${day} she took a loan, having first been shown that it would cost ${gap} more than waiting. She knew the price before she agreed to it.`;
+      text = d.chose === "wait" ? `On ${day2} she was offered a loan. She worked out that borrowing would cost ${gap} on top, and decided to save up for it instead.` : `On ${day2} she took a loan, having first been shown that it would cost ${gap} more than waiting. She knew the price before she agreed to it.`;
     } else if (d.chose === "wait") {
-      text = `On ${day} she had ${alt.label.toLowerCase()} in front of her at ${gap}, and put it back to think about for a day.`;
+      text = `On ${day2} she had ${alt.label.toLowerCase()} in front of her at ${gap}, and put it back to think about for a day.`;
     } else if (alt) {
-      text = `On ${day} she spent ${gap} on ${d.label.toLowerCase()} \u2014 which was also the money going towards ${alt.label.toLowerCase()}.`;
+      text = `On ${day2} she spent ${gap} on ${d.label.toLowerCase()} \u2014 which was also the money going towards ${alt.label.toLowerCase()}.`;
     } else {
-      text = `On ${day} she bought ${d.label.toLowerCase()}.`;
+      text = `On ${day2} she bought ${d.label.toLowerCase()}.`;
     }
-    return { when: day, text, reversed: d.reversed };
+    return { when: day2, text, reversed: d.reversed };
   }
   function conversation(c, moved) {
     const pick3 = moved.find((m) => m.to === "retained" || m.to === "transferred") || moved[moved.length - 1];
@@ -14677,8 +14828,8 @@ ${marks}`;
   var HELD = ["retained", "transferred"];
   function minutesThisWeek(feed, name, now2 = Date.now()) {
     const from = new Date(now2 - WEEK2);
-    const pad = (n) => String(n).padStart(2, "0");
-    const since2 = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`;
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const since2 = `${from.getFullYear()}-${pad2(from.getMonth() + 1)}-${pad2(from.getDate())}`;
     const who = String(name || "").trim().toLowerCase();
     return (feed && feed.s || []).filter((x) => x.a === "finance" && x.d >= since2 && String(x.who || "").trim().toLowerCase() === who).reduce((t, x) => t + (x.m || 0), 0);
   }
@@ -15265,6 +15416,17 @@ ${marks}`;
     const body = sub === "place" ? viewPlace() : sub === "jars" ? viewJars() : sub === "goals" ? viewGoals() : sub === "bank" ? viewBank() : sub === "portfolio" ? viewExchange() : sub === "business" ? viewBusiness() : viewWallet();
     return `<div class="stack">${strip}${body}</div>`;
   }
+  var APP_NAMES = { bee: "Bizzing Bee", maths: "Bizzing Maths", geography: "Bizzing Geography", india: "Bizzing India", finance: "Bizzing Finance" };
+  function familyCoinsCard(c) {
+    if (R.demo) return "";
+    const f = familyCoins(c.name);
+    return `<section class="card fcoins" aria-labelledby="fc-h">
+    <div class="row"><div class="grow"><div class="eyebrow">Your Bizzing coins</div>
+      <h2 id="fc-h" style="font-size:22px;margin-top:2px">\u{1FA99} ${f.balance} <span class="small muted" style="font-family:var(--ui);font-weight:600">in the family wallet</span></h2></div></div>
+    ${f.week.length ? `<div class="rows" style="margin-top:6px">${f.week.map(([a, n]) => `<div class="qrow"><span class="grow small"><b>${esc(APP_NAMES[a] || a)}</b></span><span class="small tabnum">+${n} this week</span></div>`).join("")}</div>` : '<p class="small muted" style="margin-top:6px">Coins arrive for learning in any Bizzing app \u2014 a right answer, a lesson, a chapter. None yet this week.</p>'}
+    <p class="small muted" style="margin-top:8px">Coins are not the town's money: they never turn into ${esc(CURRENCIES[c.currency].name.toLowerCase())} here, and the town's money never turns into coins.</p>
+  </section>`;
+  }
   function viewWallet() {
     const c = K5();
     const jobs = jobsToday(c);
@@ -15278,6 +15440,7 @@ ${marks}`;
       art: "stall",
       line: c.band === "sprout" ? "This can never go below zero \u2014 debt comes later, when it is taught." : "Every coin in and out, with its date."
     })}
+    ${familyCoinsCard(c)}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
       <p class="small muted" style="margin:3px 0 10px">One of each a day. You're selling your time.</p>
@@ -16958,6 +17121,7 @@ ${marks}`;
     }
     travel(c, +i);
     const w = WORLDS[+i];
+    milestone(c.name, "world", w.name);
     sfx.level();
     confetti(35);
     R.overlay = { kind: "world", world: w };
@@ -17216,8 +17380,10 @@ ${marks}`;
     const t = tally(st, drillCount(card2));
     st.done = t.done;
     st.right = t.right;
-    if (p.right) sfx.good();
-    else sfx.bad();
+    if (p.right) {
+      sfx.good();
+      if (p.first) coins(c.name, "answer");
+    } else sfx.bad();
     render();
   });
   on("nextQ", () => {
@@ -17249,6 +17415,15 @@ ${marks}`;
     if (first && ch) questTick(c, "lesson", 1);
     const res = addXP(c, cardXP(first, right));
     const finished = ch && ch.cards.every((k) => c.learn.done[k.id]) && badge(c, "chapter-" + ch.id);
+    if (first) {
+      coins(c.name, "stop");
+      milestone(c.name, "stop", card2.title);
+    }
+    if (finished) {
+      coins(c.name, "mastery");
+      milestone(c.name, "mastery", "Chapter: " + ch.title);
+    }
+    if (bt && bt.shape === "retrieve" && bt.cardId === id && stateOf2(c, bt.obj) === "retained") milestone(c.name, "mastery", objective(bt.obj).short);
     c.learn.openCard = null;
     c.learn.drill = null;
     if (finished) {
@@ -17315,6 +17490,7 @@ ${marks}`;
     render();
   });
   function levelUp(res) {
+    if (rankObj(res.level).name !== rankObj(res.from).name) milestone(C3().name, "band", rankObj(res.level).name);
     sfx.level();
     confetti(50);
     R.overlay = { kind: "level", level: res.level, from: res.from };
@@ -17765,9 +17941,9 @@ So it costs ${money(offer.cost)}.`);
       sfx.bad();
       return;
     }
-    const day = bizTrade(c);
-    R.overlay = { kind: "biz", day };
-    if (day.profit >= 0) sfx.coin();
+    const day2 = bizTrade(c);
+    R.overlay = { kind: "biz", day: day2 };
+    if (day2.profit >= 0) sfx.coin();
     else sfx.bad();
     render();
   });
@@ -18035,6 +18211,8 @@ So it costs ${money(offer.cost)}.`);
   applyRate();
   R.demo = /[?&]demo\b/.test(location.search);
   R.s = R.demo ? demoState() : load();
+  setDemo(R.demo);
+  startActivity(() => R.s && R.s.kids.length ? C3().name : null);
   if (R.s && R.s.kids.length) {
     setSound(R.s.settings.sound);
     setTester(!!R.s.settings.tester);
