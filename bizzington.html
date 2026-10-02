@@ -20,6 +20,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="src/family/bizzing-avatars.css">
+<link rel="stylesheet" href="src/family/bizzing-shell.css">
 <style>
 /* fonts.css — the three faces, served from this origin.
 
@@ -11747,13 +11748,6 @@ ${marks}`;
 
   // src/shell.js
   var HIVE = "https://aayuvis.github.io/Bizzing_Schedule/";
-  var TABS = [
-    { k: "home", n: "Home", i: "home" },
-    { k: "town", n: "Town", i: "town" },
-    { k: "learn", n: "Learn", i: "learn" },
-    { k: "money", n: "Money", i: "wallet" },
-    { k: "play", n: "Play", i: "arcade" }
-  ];
   var TAB_OF = { arcade: "play", market40: "play", worlds: "town", store: "town", words: "learn", mistakes: "learn" };
   var tabOf = (nav) => TAB_OF[nav] || nav;
   var DRAWER = [
@@ -11778,33 +11772,6 @@ ${marks}`;
     return `<span class="kbadge${f ? " fr-" + f : ""}" style="width:${size2}px;height:${size2}px"><img src="${avatarSrc(k.avatar)}" alt="" width="${size2}" height="${size2}"></span>`;
   }
   var coinSvg = (s = 20) => `<svg class="bzcoin" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="#F0B429" stroke="#3A2A5C" stroke-width="1.6"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#B57E10" stroke-width="1.2"/><path d="M12 8.2 13.2 10.8 16 11.2 14 13.1 14.5 15.9 12 14.6 9.5 15.9 10 13.1 8 11.2 10.8 10.8z" fill="#FFF3C4"/></svg>`;
-  function topbar(c) {
-    const playing = !!R.game;
-    const coins2 = balance(c.name);
-    return `<header class="topbar">
-    <div class="topbar-in">
-      ${playing ? "" : `<a class="iconbtn hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="Back to the Bizzing Hive">${ico("hive", "", 22)}</a>`}
-      <button class="iconbtn" data-act="drawer" aria-label="Menu" aria-haspopup="dialog">${ico("menu", "", 22)}</button>
-      <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Finance \u2014 home"><img class="brand-head" src="./mascot/pip-head.webp" alt="" width="28" height="28"><span class="wm"><b class="bz">Bizzing</b> <b class="app">Finance</b></span></button>
-      ${R.fromHive ? `<a class="chip hiveback" href="${HIVE}">${ico("back", "", 16)} back to my day</a>` : ""}
-      <span class="tb-gap"></span>
-      <button class="searchpill desk" data-act="search" aria-label="Search the town">${ico("search", "", 18)}<span>Search lessons, words, games\u2026</span></button>
-      <button class="coinchip" data-act="walletSheet" aria-label="${coins2} Bizzing coins \u2014 your coin history">${coinSvg(20)}<b class="tabnum">${coins2}</b></button>
-      ${R.s.settings.tester ? '<button class="chip tester desk" data-act="nav" data-arg="parents" title="Tester mode is on \u2014 everything is open">TESTER</button>' : ""}
-      <button class="iconbtn desk" data-act="mode" data-long="settings:look" aria-label="${R.dark ? "Switch to light" : "Switch to dark"} (hold for worlds)">${ico(R.dark ? "sun" : "moon", "", 21)}</button>
-      <button class="iconbtn desk" data-act="nav" data-arg="parents" aria-label="Grown-ups (PIN)">${ico("lock", "", 21)}</button>
-      <button class="kidbtn" data-act="kids" aria-label="${esc(c.name)} \u2014 switch child" aria-haspopup="dialog">${kidBadge(c, 34)}<svg class="caret" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-    </div>
-    <nav class="tabs" aria-label="Main">
-      ${TABS.map((t) => `<button class="tab" role="tab" data-act="nav" data-arg="${t.k}" aria-selected="${tabOf(R.s.ui.nav) === t.k}" aria-current="${tabOf(R.s.ui.nav) === t.k ? "page" : "false"}">${ico(t.i, "", 24)}<span>${t.n}</span></button>`).join("")}
-    </nav>
-  </header>`;
-  }
-  function tabbar() {
-    return `<nav class="tabbar" aria-label="Main">
-    ${TABS.map((t) => `<button role="tab" data-act="nav" data-arg="${t.k}" aria-selected="${tabOf(R.s.ui.nav) === t.k}" aria-current="${tabOf(R.s.ui.nav) === t.k ? "page" : "false"}"><span class="gl">${ico(t.i, "", 24)}</span><span>${t.n}</span></button>`).join("")}
-  </nav>`;
-  }
   function drawer(c) {
     const st = state();
     const muted = !R.s.settings.sound && !st.music;
@@ -16385,6 +16352,198 @@ ${marks}`;
     };
   }
 
+  // src/family/bizzing-shell.js
+  var HIVE2 = "https://aayuvis.github.io/Bizzing_Schedule/";
+  var TAB_INK = ["#6C4FE0", "#6C4FE0", "#E0457B", "#16956B", "#3D7DF0"];
+  var esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  var P4 = {
+    hive: '<path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4Z"/><path d="M12 8.2 15.3 10v4L12 15.8 8.7 14v-4Z"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/>',
+    coin: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    sound: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4Z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/>',
+    home: '<path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5.5h4V20"/>',
+    map: '<path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5Z"/><path d="M9 4v13.5M15 6.5V20"/>',
+    pen: '<path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5Z"/><path d="M13.5 7l3 3"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v17H6.5A2.5 2.5 0 0 0 4 22.5Z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v17h5.5a2.5 2.5 0 0 1 2.5 2.5Z"/>',
+    play: '<rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r="1"/><circle cx="17.5" cy="13.5" r="1"/>',
+    flag: '<path d="M5 21V4M5 4.5h11l-2 4 2 4H5"/>',
+    compass: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5Z"/>',
+    puzzle: '<path d="M9 4h3.5a2 2 0 1 1 3 2.2V9h3a2 2 0 1 1 0 3.5H18.5V18a2 2 0 0 1-2 2H13a2 2 0 1 0-3.5 0H6a2 2 0 0 1-2-2v-4.5a2 2 0 1 0 0-3.5V6a2 2 0 0 1 2-2Z"/>',
+    town: '<path d="M3 20h18M5 20V10l4-3 4 3v10M13 20V7l3-3 3 3v13"/><path d="M8 13h2M8 16h2M15.5 10h1M15.5 13h1"/>',
+    coins: '<ellipse cx="9" cy="7" rx="5.5" ry="2.5"/><path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5S14.5 12.4 14.5 11V7"/><ellipse cx="15" cy="14" rx="5.5" ry="2.5"/><path d="M9.5 14v3.5c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V14"/>',
+    learn: '<path d="M2.5 9 12 4.5 21.5 9 12 13.5Z"/><path d="M6.5 11v5c1.5 1.5 3.5 2.3 5.5 2.3s4-.8 5.5-2.3v-5"/>',
+    lamp: '<path d="M9 21h6M10 17.5h4M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3Z"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+    bag: '<path d="M5 8h14l-1 12.5H6Z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/>',
+    star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/>',
+    medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 3.5 10.5 9.8M15.5 3.5 13.5 9.8M8 3.5h8"/><path d="m12 12.5.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3Z"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.7 4.4V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3Z"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.5 2.2-2.5 3.8"/><path d="M12 17h.01"/>',
+    shield: '<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5 7.5-9.5V6Z"/>',
+    back: '<path d="M14.5 6 8.5 12l6 6"/>',
+    next: '<path d="M9.5 6l6 6-6 6"/>',
+    quote: '<path d="M10 7H6.5A1.5 1.5 0 0 0 5 8.5V12h5v5H5M19 7h-3.5A1.5 1.5 0 0 0 14 8.5V12h5v5h-5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    path: '<path d="M4 19c3 0 3-4 6-4s3 4 6 4M8 9c3 0 3-4 6-4s3 4 6 4"/><circle cx="4" cy="19" r="1.4"/><circle cx="20" cy="9" r="1.4"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/>'
+  };
+  var icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P4[n] || P4.star}</svg>`;
+  var ICONS2 = Object.keys(P4);
+  var FAMILY_TOP = [
+    ["me", "user", "My page", "your level, your week and your medals"],
+    ["shop", "bag", "Shop", "avatars, worlds and extras"],
+    ["collection", "star", "Collection", "your avatars"],
+    ["medals", "medal", "Medals", "what you have done, and what is next"]
+  ];
+  var FAMILY_END = [
+    ["settings", "settings", "Settings", "me, sound, look and comfort"],
+    ["grownups", "lock", "Grown-ups", "report card, plan and backup \u2014 needs the PIN"],
+    ["help", "help", "Help", "how coins, worlds and mastery work"],
+    ["privacy", "shield", "Privacy", "what stays on this device"]
+  ];
+  function drawerHTML(o) {
+    const d = o.drawer || {}, routes = d.routes || {}, subs = d.subs || {};
+    const item = ([id, ic, label2, sub]) => `<a href="${esc2(routes[id] || "#/" + id)}" data-bz-dr="${id}">${icon(ic)}<b>${esc2(label2)}</b><small>${esc2(subs[id] || sub)}</small></a>`;
+    const appItems = (d.app || []).slice(0, 4).map((x) => `<a href="${esc2(x.href)}" data-bz-dr="app">${icon(x.icon)}<b>${esc2(x.label)}</b><small>${esc2(x.sub || "")}</small></a>`).join("");
+    return `<div class="bz-scrim" data-bz="scrim" data-bz-act="close" hidden></div>
+<aside class="bz-dr" data-bz="drawer" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+  <div class="bz-dr-who">${o.kid?.avatar ? `<img src="${esc2(o.kid.avatar)}" alt="">` : ""}<div><strong>${esc2(o.kid?.name || "")}</strong><small>${esc2(d.sub || "")}${o.coins != null ? ` \xB7 ${o.coins} coins` : ""}</small></div>
+    <button class="bz-ib" data-bz-act="sound" aria-label="Sound on or off">${icon("sound")}</button><button class="bz-ib" data-bz-act="close" aria-label="Close menu">${icon("close")}</button></div>
+  ${FAMILY_TOP.map(item).join("")}
+  ${appItems ? `<hr><h6>Bizzing ${esc2(o.name)}</h6>${appItems}` : ""}
+  <hr>${FAMILY_END.map(item).join("")}
+  <a href="${HIVE2}" data-bz-dr="hive">${icon("hive")}<b>Back to the Hive</b><small>your day across every Bizzing app</small></a>
+</aside>`;
+  }
+  function shell3(o) {
+    const tabs = (o.tabs || []).slice(0, 5);
+    if (tabs.length < 4) throw new Error("bizzing-shell: an app has 4 or 5 tabs (FAMILY-STANDARD \xA74)");
+    if (tabs[0].id !== "home") throw new Error("bizzing-shell: Home is always the first tab");
+    const cur3 = (t) => t.id === o.active ? ' aria-current="page"' : "";
+    const inRun = !!o.inRun;
+    return `<header class="bz-hdr" data-bz="header">
+  <div class="bz-bar" data-bz="bar">
+    <a class="bz-ib" data-bz="hive" href="${HIVE2}" aria-label="Back to the Bizzing Hive"${inRun ? ' style="visibility:hidden"' : ""}>${icon("hive")}</a>
+    <button class="bz-ib" data-bz="menu" data-bz-act="menu" aria-label="Menu" aria-expanded="false">${icon("menu")}</button>
+    <a class="bz-brand" data-bz="brand" href="${esc2(tabs[0].href)}" aria-label="Bizzing ${esc2(o.name)} \u2014 home">${o.mascot ? `<img src="${esc2(o.mascot)}" alt="">` : ""}<span class="bz-word"><i>Bizzing</i> <b>${esc2(o.name)}</b></span></a>
+    <form class="bz-search" data-bz="search" role="search" data-bz-act="search"><label>${icon("search")}<input type="search" name="q" placeholder="${esc2(o.search || "Search")}" aria-label="${esc2(o.search || "Search")}" value="${esc2(o.query || "")}"></label></form>
+    <button class="bz-coins" data-bz="coins" data-bz-act="coins" aria-label="${o.coins ?? 0} Bizzing coins \u2014 your coin history">${icon("coin")}<span>${o.coins ?? 0}</span></button>
+    <button class="bz-ib" data-bz="theme" data-bz-act="theme" aria-label="${o.dark ? "Light" : "Dark"} mode">${icon(o.dark ? "sun" : "moon")}</button>
+    <button class="bz-ib" data-bz="lock" data-bz-act="lock" aria-label="Grown-ups (needs the PIN)">${icon("lock")}</button>
+    <button class="bz-kid" data-bz="kid" data-bz-act="kid" aria-label="${esc2(o.kid?.name || "Child")} \u2014 switch child">${o.kid?.avatar ? `<img src="${esc2(o.kid.avatar)}" alt="">` : ""}<span aria-hidden="true">\u25BE</span></button>
+  </div>
+  <nav class="bz-tabs" data-bz="tabs" aria-label="Main">${tabs.map((t, i) => `<a class="bz-tab" data-bz="tab" href="${esc2(t.href)}"${cur3(t)} style="--tab-ink:${esc2(t.color || TAB_INK[i])}">${icon(t.icon)}<span>${esc2(t.label)}</span></a>`).join("")}</nav>
+</header>
+<main class="bz-content" data-bz="content" id="main">${o.content || ""}</main>
+<nav class="bz-tabbar" data-bz="tabbar" aria-label="Main">${tabs.map((t) => `<a href="${esc2(t.href)}"${cur3(t)}>${icon(t.icon)}<span>${esc2(t.label)}</span></a>`).join("")}</nav>
+${drawerHTML(o)}`;
+  }
+  function home(h) {
+    const prog = (p) => p ? `<div class="bz-prog"><i><b style="width:${Math.max(0, Math.min(100, p.pct || 0))}%"></b></i>${p.label ? `<small>${esc2(p.label)}</small>` : ""}</div>` : "";
+    const journey = (j, primary) => j ? `<article class="bz-journey ${primary ? "bz-next" : "bz-second"}" data-bz="${primary ? "next" : "second"}">
+    <div class="bz-plate" style="background-image:url('${esc2(j.plate)}')"><span class="bz-badge">${icon(j.icon || "path")}</span></div>
+    <div class="bz-chiprow">${j.chip ? `<span>${esc2(j.chip)}</span>` : ""}</div>
+    <div class="bz-jbody"><small>${esc2(j.kicker)}</small><h3>${esc2(j.title)}</h3><p>${esc2(j.sub || "")}</p>
+      <div class="bz-jrow"><a class="bz-btn${primary ? "" : " out"}" data-bz="${primary ? "continue" : "secondary"}" href="${esc2(j.href)}">${icon(primary ? "next" : j.ctaIcon || "pen")}${esc2(j.cta || (primary ? "Continue" : "Open"))}</a>${prog(j.progress)}</div></div></article>` : "";
+    const g = h.greet || {}, r = h.ring || {}, w = h.hour || {};
+    return `<div class="bz-home" data-bz="home">
+  <div class="bz-r1" data-bz="r1">
+    <section class="bz-card bz-greet" data-bz="greet">${g.mascot ? `<img src="${esc2(g.mascot)}" alt="">` : ""}<div><small>${esc2(g.hello || "Hello,")}</small><strong>${esc2(g.name || "")}</strong><div class="bz-bubble">${esc2(g.line || "")}</div></div></section>
+    <section class="bz-card bz-ringcard" data-bz="ring"><div>${r.html || ""}</div>${r.foot ? `<a class="bz-ringfoot" href="${esc2(r.foot.href || "#/me")}"><span><small>${esc2(r.foot.kicker || "Your level")}</small><b>${esc2(r.foot.title || "")}</b></span><span style="margin-left:auto">${icon("next")}</span></a>` : ""}</section>
+    <a class="bz-card bz-hour" data-bz="hour" href="${esc2(w.href || "#")}"><span class="bz-badge">${icon(w.icon || "clock")}</span><span><span class="bz-kicker">${esc2(w.kicker || "")}</span><h3>${esc2(w.title || "")}</h3><p>${esc2(w.sub || "")}</p></span></a>
+  </div>
+  <div class="bz-r2" data-bz="r2">${journey(h.next, true)}${journey(h.second, false)}</div>
+  <div class="bz-r3" data-bz="r3">
+    ${h.tip ? `<a class="bz-card bz-small bz-tip" data-bz="tip" href="${esc2(h.tip.href || "#")}"><span><span class="bz-kicker">${esc2(h.tip.kicker || "Tip")}</span><p>${esc2(h.tip.text)}</p></span><span class="bz-badge" style="margin-left:auto;border-radius:50%">${icon("next")}</span></a>` : ""}
+    ${h.quote ? `<a class="bz-card bz-small bz-quote" data-bz="quote" href="${esc2(h.quote.href || "#")}"><span class="bz-badge">${icon("quote")}</span><span><span class="bz-kicker">${esc2(h.quote.kicker || "Quote of the hour")}</span><blockquote>\u201C${esc2(h.quote.text)}\u201D</blockquote>${h.quote.who ? `<small>\u2014 ${esc2(h.quote.who)}</small>` : ""}</span></a>` : ""}
+  </div>
+  ${h.foot ? `<div class="bz-foot">${h.foot}</div>` : ""}
+</div>`;
+  }
+  var bound = null;
+  function bindShell(on2 = {}) {
+    if (bound) {
+      bound.on = on2;
+      return;
+    }
+    bound = { on: on2, last: null };
+    const $ = (s) => document.querySelector(s);
+    const open2 = () => {
+      const d = $('[data-bz="drawer"]'), s = $('[data-bz="scrim"]');
+      if (!d) return;
+      bound.last = document.activeElement;
+      d.hidden = false;
+      s.hidden = false;
+      $('[data-bz="menu"]')?.setAttribute("aria-expanded", "true");
+      d.querySelector("a,button")?.focus();
+    };
+    const close = () => {
+      const d = $('[data-bz="drawer"]'), s = $('[data-bz="scrim"]');
+      if (!d || d.hidden) return;
+      d.hidden = true;
+      s.hidden = true;
+      $('[data-bz="menu"]')?.setAttribute("aria-expanded", "false");
+      (bound.last && document.contains(bound.last) ? bound.last : $('[data-bz="menu"]'))?.focus();
+    };
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-bz-act],[data-bz-dr]");
+      if (!t) return;
+      if (t.dataset.bzDr) {
+        close();
+        return;
+      }
+      const a = t.dataset.bzAct;
+      if (a === "search") return;
+      if (a === "menu") {
+        e.preventDefault();
+        open2();
+        return;
+      }
+      if (a === "close") {
+        e.preventDefault();
+        close();
+        return;
+      }
+      const f = bound.on["on" + a[0].toUpperCase() + a.slice(1)];
+      if (f) {
+        e.preventDefault();
+        f(e);
+      }
+    });
+    document.addEventListener("submit", (e) => {
+      const f = e.target.closest('[data-bz="search"]');
+      if (!f) return;
+      e.preventDefault();
+      bound.on.onSearch?.(f.q.value.trim());
+    });
+    document.addEventListener("keydown", (e) => {
+      const d = $('[data-bz="drawer"]');
+      if (!d || d.hidden) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+        return;
+      }
+      if (e.key === "Tab") {
+        const f = [...d.querySelectorAll("a,button")];
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) {
+          e.preventDefault();
+          f.at(-1).focus();
+        } else if (!e.shiftKey && i === f.length - 1) {
+          e.preventDefault();
+          f[0].focus();
+        }
+      }
+    });
+    window.addEventListener("hashchange", close);
+  }
+
   // src/items.js
   var ITEMS = {
     c1b: {
@@ -16585,11 +16744,11 @@ ${marks}`;
   var K6 = () => kid2(R.s);
   function viewOnboard(draft2) {
     const step3 = draft2.step || 0;
-    const shell3 = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
+    const shell4 = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
     const first = R.s ? R.s.kids.length === 0 : true;
     if (step3 === 0 && first && !draft2.go) return landing();
     if (step3 === 0) {
-      return shell3(`
+      return shell4(`
       <div style="text-align:center">
         <div style="margin:0 auto 6px;width:112px">${pipPose("wave", 112, "Pip waves hello")}</div>
         ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ""}
@@ -16611,7 +16770,7 @@ ${marks}`;
       </div>`);
     }
     if (step3 === 1) {
-      return shell3(`
+      return shell4(`
       ${say2("pip", `Good to meet you, <b>${esc(draft2.name)}</b>. How old are you? It changes what the street shows \u2014 no debt and no market before they are taught.`)}
       <p class="small muted" style="text-align:center">Tap one and you're in. Money is counted in ${esc(CURRENCIES[guessCurrency()].name.toLowerCase())} \u2014 a grown-up can change that in settings.</p>
       <div class="card stack">
@@ -16621,9 +16780,9 @@ ${marks}`;
     }
     return "";
   }
-  function beat2(act, arg, icon, title, sub2, right, hot) {
+  function beat2(act, arg, icon2, title, sub2, right, hot) {
     return `<button class="jbeat${hot ? " hot2" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>
-    <span class="iw">${ico(icon, icon, 20)}</span>
+    <span class="iw">${ico(icon2, icon2, 20)}</span>
     <span class="grow" style="min-width:0;text-align:left">
       <b>${title}</b><span class="small muted" style="display:block">${sub2}</span></span>
     ${right || ""}
@@ -16830,39 +16989,75 @@ ${marks}`;
       else FOLDS.delete(d.dataset.fold);
     }
   }, true);
-  function fold(id, title, sub, icon, body) {
+  function fold(id, title, sub, icon2, body) {
     return `<details class="fold" data-fold="${id}"${FOLDS.has(id) ? " open" : ""}>
-    <summary><span class="iw">${ico(icon, "", 20)}</span><span class="grow" style="min-width:0">${esc(title)}<div class="fsub">${sub}</div></span></summary>
+    <summary><span class="iw">${ico(icon2, "", 20)}</span><span class="grow" style="min-width:0">${esc(title)}<div class="fsub">${sub}</div></span></summary>
     ${body}</details>`;
   }
+  var CAST_LINES = [
+    ["Nana Bizz", "Split it the moment it lands. What sits in one pile gets spent as one pile."],
+    ["Pip", "Wages from in here land in the same wallet as everything else. There is no second, magic money."],
+    ["Mags", "Some of this earns its keep and some of it is just lovely \u2014 and I have written which is which."],
+    ["Bea", "Down on the week. Sell? No. I only say that so you notice the feeling."],
+    ["Bo", "Up on the week! I said it would be. I say that every week."]
+  ];
   function viewHome() {
     const c = K6();
-    const world = WORLDS[c.world || 0];
-    const quests = questList(c);
-    return `<div class="stack home">
-    <h1 class="sr">Home \u2014 ${esc(c.name)} in ${esc(world.name)}</h1>
-    <div class="town hero${R.dark ? " night" : ""}">
-      <div class="town-scroll">${townSVG(c)}</div>
-      <div class="town-head">
-        <span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span>
-        <button class="btn ghost sm" data-act="nav" data-arg="town">Travel</button>
-      </div>
-    </div>
-
-    ${greeting(c)}
-
-    ${continueCard(c)}
-
+    const n = nextStep(c), pr = progress(c), rank = rankObj(c.learn.level);
+    const quests = questList(c), qd = quests.filter((q) => q.claimed).length;
+    const h = (/* @__PURE__ */ new Date()).getHours();
+    const hello = h < 12 ? "Good morning," : h < 17 ? "Good afternoon," : "Good evening,";
+    const line2 = String(hometalk(c)).replace(/<[^>]+>/g, "");
+    const w = wordOfDay(), tip = tipOfDay(c);
+    const R0 = 44, C0 = 2 * Math.PI * R0, frac = quests.length ? qd / quests.length : 0;
+    const ring2 = `<div class="fring"><svg width="110" height="110" viewBox="0 0 110 110" role="img" aria-label="Today's three: ${qd} of ${quests.length} done">
+      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-line)" stroke-width="14"/>
+      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(C0 * frac).toFixed(1)} ${C0.toFixed(1)}" transform="rotate(-90 55 55)"/>
+      <text x="55" y="61" text-anchor="middle" font-family="Sono, monospace" font-weight="700" font-size="20" fill="currentColor">${qd}/${quests.length}</text></svg>
+    <div><b class="fring-h">Today's three</b>${quests.map((q, i) => `<p class="fring-q${q.claimed ? " done" : ""}"><i style="--d:${["#E0457B", "#16956B", "#3D7DF0", "#E8962C"][i % 4]}"></i><span>${esc(q.t)}</span><b>${q.claimed ? "1/1" : "0/1"}</b></p>`).join("")}</div></div>`;
+    const world = n.world || WORLDS[0], here = WORLDS[c.world || 0];
+    const jobs = jobsToday(c), jdone = jobs.filter((j) => j.done).length;
+    const cast = CAST_LINES[(/* @__PURE__ */ new Date()).getHours() % CAST_LINES.length];
+    const body = home({
+      greet: { mascot: "./mascot/pip-wave.webp", hello, name: c.name, line: line2 },
+      ring: { html: ring2, foot: { kicker: "Your level", title: `${rank.name} \xB7 level ${c.learn.level}`, href: "#/me" } },
+      hour: { kicker: "Money word of the hour", title: w.term, sub: w.meaning, href: "#/words", icon: "book" },
+      next: {
+        plate: plateFor(world.id, R.dark),
+        chip: `Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}`,
+        kicker: n.kind === "revise" ? "Keep it yours" : "Next on your journey",
+        title: n.title,
+        sub: n.sub,
+        href: "#/continue",
+        cta: n.button || "Continue",
+        progress: { pct: Math.round(pr.worldDone / Math.max(1, pr.worldTotal) * 100), label: `${pr.world.name} \xB7 ${pr.worldDone} of ${pr.worldTotal} stops` }
+      },
+      second: {
+        plate: plateFor(here.id, R.dark),
+        chip: `${jdone} of ${jobs.length} shifts`,
+        kicker: "Your street",
+        title: here.name,
+        sub: "Jobs, the postbox, the jars and today\u2019s three",
+        href: "#/town",
+        cta: "Open",
+        ctaIcon: "town",
+        progress: { pct: Math.round(frac * 100) }
+      },
+      tip: tip ? { kicker: "Tip from a card you read", text: tip.text, href: "#/learn" } : { kicker: "Tip", text: "Split money the moment it lands \u2014 a pile gets spent as a pile.", href: "#/learn" },
+      quote: { kicker: "Overheard in Bizzington", text: cast[1], who: cast[0], href: "#/medals" },
+      foot: '<a href="#/privacy">Privacy</a> \xB7 Bizzing Finance \u2014 no real money, ever'
+    });
+    return `<h1 class="sr">Home \u2014 ${esc(c.name)}</h1>${body}`;
+  }
+  function townDay() {
+    const c = K6(), quests = questList(c);
+    return `${greeting(c)}
     ${todaysThree(c, quests)}
-
-    ${waysIn(c)}
-
     ${fold("more", "More today", "The till puzzle, a real-world deed and the end of the day.", "more", `<div class="stack">
       ${closingTime(c, quests)}
       ${tillCard(c)}
       ${todayCard(c)}
-    </div>`)}
-  </div>`;
+    </div>`)}`;
   }
   function townParts() {
     const c = K6();
@@ -16896,27 +17091,9 @@ ${marks}`;
       <div class="town-head"><span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span></div></div>`,
       worlds: posters,
       journeys: journeys(c),
-      repairs
+      repairs,
+      today: townDay()
     };
-  }
-  function continueCard(c) {
-    const n = nextStep(c), pr = progress(c);
-    const plate = plateFor((n.world || WORLDS[0]).id, R.dark);
-    const rank = rankObj(c.learn.level);
-    const pct = Math.round(pr.done / pr.total * 100);
-    return `<section class="continue${R.dark ? " night" : ""}" style="--plate:url(${plate})" aria-labelledby="cont-h">
-    <span class="cveil"></span>
-    <div class="cbody">
-      <span class="eyebrow">${n.kind === "revise" ? "Keep it yours" : "Next on your journey"} \xB7 ${esc((n.world || WORLDS[0]).name)}</span>
-      <h2 id="cont-h">${esc(n.title)}</h2>
-      <p class="csub">${esc(n.sub)}</p>
-      <div class="cprog" aria-label="Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}, and ${pr.worldDone} of ${pr.worldTotal} in ${esc(pr.world.name)}">
-        <div class="bar"><i style="width:${pct}%"></i></div>
-        <span>Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total} \xB7 ${esc(pr.world.name)} ${pr.worldDone}/${pr.worldTotal} \xB7 ${esc(rank.name)} L${c.learn.level}</span>
-      </div>
-      <button class="btn wide cgo" data-act="${n.act}" ${n.arg ? `data-arg="${n.arg}"` : ""}>${esc(n.button)} \u2192</button>
-    </div>
-  </section>`;
   }
   function todaysThree(c, quests) {
     const allDone = quests.length && quests.every((q) => q.claimed);
@@ -16933,17 +17110,6 @@ ${marks}`;
     ${allDone ? "" : `<button class="btn ghost wide" style="margin-top:10px" data-act="sessionStart">${ico("run", "\u25B6", 16)} Do today's three in one go \u2014 about seven minutes</button>`}
     ${allDone && !c.quests.bonus ? `<button class="btn ghost wide" style="margin-top:10px" data-act="questBonus">All ${nWord(quests.length)} \u2014 take ${money(price(12))} more</button>` : ""}
   </section>`;
-  }
-  function waysIn(c) {
-    const tiles = [
-      ["learn", "nav", "learn", "The Money Atlas", `${progress(c).done} of ${progress(c).total} stops`],
-      ["wallet", "nav", "money", "Money", `${money(c.money.wallet)} in your wallet`],
-      ["arcade", "nav", "arcade", "Arcade", "Games that pay wages"],
-      ["cart", "nav", "store", "Store", "Things that earn their keep"],
-      ["medal", "nav", "collection", "Collection", `${c.badges.length} badges`],
-      ["town", "nav", "worlds", "Five places", "Travel the town"]
-    ];
-    return `<nav class="ways" aria-label="Ways in">${tiles.map(([ic, act, arg, t, sub]) => `<button class="way" data-act="${act}" data-arg="${arg}"><span class="iw">${ico(ic, "", 22)}</span><b>${t}</b><span class="small muted">${sub}</span></button>`).join("")}</nav>`;
   }
   function closingTime(c, quests) {
     if (!quests.length || !quests.every((q) => q.claimed)) return "";
@@ -18509,6 +18675,7 @@ ${marks}`;
     return `<div class="stack townpage">
     ${hero({ eyebrow: "The money map", title: "Bizzington", who: "pip", line: "Five places, walked in order. You move on by learning, not by earning." })}
     ${parts2.street}
+    ${parts2.today}
     <div class="sect"><b>Travel</b><i></i></div>
     ${parts2.worlds}
     ${parts2.journeys}
@@ -18802,6 +18969,10 @@ ${marks}`;
       R.continueNow = true;
       return false;
     }
+    if (["settings", "help", "privacy"].includes(m[0])) {
+      R.sheetNow = m[0];
+      return false;
+    }
     const known = ["home", "town", "learn", "money", "play", "arcade", "store", "progress", "me", "collection", "medals", "shop", "words", "mistakes", "parents", "worlds", "report", "market40"];
     if (known.indexOf(m[0]) < 0) return false;
     R.s.ui.nav = ALIAS[m[0]] || m[0];
@@ -18829,12 +19000,39 @@ ${marks}`;
     const nav = s.ui.nav;
     const body = nav === "town" ? viewTown(townParts()) : nav === "learn" ? viewLearn() : nav === "money" ? viewMoney() : nav === "play" ? viewArcade() : nav === "store" ? viewStore() : nav === "me" ? `${profileCard(c)}${viewProgress()}` : nav === "shop" ? viewShop() : nav === "collection" ? viewCollection2() : nav === "medals" ? viewCollection() : nav === "words" ? viewGlossaryPage() : nav === "mistakes" ? viewMistakes() : nav === "parents" ? R.gate ? viewParents() : viewGate() : nav === "report" ? R.gate ? viewReport() : viewGate() : nav === "market40" ? viewMarketGame() : viewHome();
     dressWorld(c);
-    root.innerHTML = `
-    ${topbar(c)}
-    ${R.session && nav !== "parents" ? sessionBar() : ""}
-    ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> \u2014 Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ""}
-    <main class="content">${clockSuspect(s) ? clockWarning() : ""}${body}</main>
-    ${tabbar()}
+    const tabOf2 = tabOf(nav);
+    root.innerHTML = shell3({
+      app: "finance",
+      name: "Finance",
+      mascot: "./mascot/pip-wave.webp",
+      coins: balance(c.name),
+      dark: !!R.dark,
+      kid: { name: c.name, avatar: avatarSrc(c.avatar) },
+      search: "Search lessons, words, games\u2026",
+      query: R.sq || "",
+      inRun: !!R.game,
+      tabs: [
+        { id: "home", label: "Home", icon: "home", href: "#/home" },
+        { id: "town", label: "Town", icon: "town", href: "#/town" },
+        { id: "learn", label: "Learn", icon: "learn", href: "#/learn" },
+        { id: "money", label: "Money", icon: "coins", href: "#/money" },
+        { id: "play", label: "Play", icon: "play", href: "#/play" }
+      ],
+      active: tabOf2,
+      drawer: {
+        sub: `${rankObj(c.learn.level).name} \xB7 level ${c.learn.level}`,
+        routes: { me: "#/me", shop: "#/shop", collection: "#/collection", medals: "#/medals", settings: "#/settings", grownups: "#/parents", help: "#/help", privacy: "#/privacy" },
+        app: [
+          { icon: "bag", label: "Mags' General Store", sub: "spend your town money", href: "#/store" },
+          { icon: "book", label: "Money Words", sub: "every word, in plain English", href: "#/words" },
+          { icon: "path", label: "Ones to try again", sub: "questions that tripped you, back after a gap", href: "#/mistakes" },
+          { icon: "compass", label: "The Market Game", sub: "forty companies that do not exist", href: "#/market40" }
+        ]
+      },
+      content: `${R.session && nav !== "parents" ? sessionBar() : ""}
+      ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> \u2014 Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ""}
+      ${clockSuspect(s) ? clockWarning() : ""}${body}`
+    }) + `
     ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready \xB7 Reload</button>' : ""}
     ${R.overlay ? overlay() : ""}`;
     if (R.game && R.game.mount) R.game.mount();
@@ -18879,6 +19077,17 @@ ${marks}`;
     render();
   });
   R.render = render;
+  bindShell({
+    onTheme: () => fire("mode"),
+    onLock: () => fire("nav", "parents"),
+    onKid: () => fire("kids"),
+    onCoins: () => fire("walletSheet"),
+    onSearch: (q) => {
+      R.sq = q;
+      fire("search");
+    },
+    onSound: () => fire("muteAll")
+  });
   function clockWarning() {
     return `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint);margin-bottom:14px">
     <div class="eyebrow" style="color:var(--treasure-deep)">The town clock</div>
@@ -20730,6 +20939,7 @@ So it costs ${money(offer.cost)}.`);
     if (R.game && R.game.keyup && !R.overlay) R.game.keyup(e);
   });
   document.addEventListener("keydown", (e) => {
+    if (e.defaultPrevented) return;
     if (R.game && R.game.key && !R.overlay) {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "].includes(e.key) && document.activeElement && document.activeElement.tagName !== "INPUT") e.preventDefault();
       R.game.key(e);
@@ -20781,6 +20991,10 @@ So it costs ${money(offer.cost)}.`);
       if (R.game) quitGame();
       R.s.ui.nav = "home";
       goContinue();
+    } else if (R.sheetNow) {
+      const k = R.sheetNow;
+      R.sheetNow = null;
+      fire(k);
     }
   });
   R.mode = Store.loadDevice("mode", null);
