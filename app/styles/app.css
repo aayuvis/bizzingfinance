@@ -122,7 +122,11 @@ input{font:inherit; color:inherit}
 @keyframes pop{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:none}}
 .conf{position:fixed;inset:0;z-index:130;pointer-events:none;overflow:hidden}
 .conf i{position:absolute;top:-8%;width:9px;height:14px;border-radius:2px;animation:fall linear forwards}
-@keyframes fall{to{transform:translateY(118vh) rotate(680deg)}}
+/* A celebration never sits over the thing to do next (FIX N12): the confetti
+   bursts in the top band of the screen and is gone before it reaches the
+   lower half, where Continue and every overlay's button live. */
+.conf{bottom:auto;height:46vh}
+@keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}70%{opacity:1}100%{transform:translateY(44vh) rotate(540deg);opacity:0}}
 .toast{
   position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:110;
   background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:var(--r-pill);
@@ -859,3 +863,13 @@ html[data-flash="no"] .stage,html[data-flash="no"] .opt.no,html[data-flash="no"]
 @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 @media (prefers-reduced-motion:reduce){ html[data-flash] .stage,html[data-flash] .opt,html[data-flash] .fb{animation:none !important} }
 :root[data-motion="reduced"] .stage,:root[data-motion="reduced"] .opt,:root[data-motion="reduced"] .fb{animation:none !important}
+
+/* ── night: no daylight plate on a dark page (FAMILY-STANDARD §7, FIX O4) ──
+   A painting with a designed night variant swaps to it (worlds.js); anything
+   still painted for day is toned down and warmed, never left full-bright. */
+html[data-bz-dark] .town svg image,
+html[data-bz-dark] .cover .cv-art,
+html[data-bz-dark] .door img{filter:brightness(.72) saturate(.85) sepia(.08)}
+html[data-bz-dark] .continue:not(.night)::before,
+html[data-bz-dark] .gintro::before{content:"";position:absolute;inset:0;background:rgb(8 14 30 / .34);pointer-events:none}
+html[data-bz-dark] .town.night svg image{filter:none}

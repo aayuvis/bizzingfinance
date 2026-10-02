@@ -20,7 +20,6 @@ const DAY = 864e5;
 export function demoState(now = Date.now()) {
   const s = sim.newState();
   s.demo = true;
-  s.parent.pin = '1234';
   const start = now - 21 * DAY;
   const c = sim.newChild('Riya', 'builder', 'INR');
   c.avatar = 'melody';

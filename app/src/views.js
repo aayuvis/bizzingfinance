@@ -23,7 +23,7 @@ import { companionCard, companionFigure } from './companionview.js';
 import { overnightCard, receiptSlip } from './keepsakes.js';
 import * as co from './companion.js';
 import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
-  WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount,
+  WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount, hintFor,
   chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
@@ -41,6 +41,7 @@ import * as RC from './reportcard.js';
 import * as family from './family.js';
 import * as TRY from './tryit.js';
 import { Store } from './store.js';
+import { pinSet } from './pin.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
 
@@ -678,10 +679,10 @@ function viewCard(card) {
             <span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`;
         }).join('')}
       </div>
-      ${hold ? `<div class="fb hold" role="status"><b>Not this time — and this is the useful bit:</b> ${esc(dq.why)}
-          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">🔊</button></div>` : ''}
+      ${hold ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, qi))}
+          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">${ico('sound', '', 16)}</button></div>` : ''}
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
-          <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${p.first === false || !p.right ? '' : esc(dq.why)}</div>` : ''}
+          <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
       ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
     </div>`; })()}
@@ -1144,9 +1145,10 @@ function viewBusiness() {
     ${hero({ eyebrow: `Week ${v.traded}`, title: esc(v.name), art: 'shop' })}
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">What your share is worth</div>
-        <div class="big" style="font-size:28px">${money(val.yours)}</div>
+        ${val.equityValue > 0 ? `<div class="big" style="font-size:28px">${money(val.yours)}</div>
         <p class="small muted">what your share is worth${v.outsideEquity > 0
-          ? ' — you own ' + Math.round((1 - v.outsideEquity) * 100) + '%' : ''}</p></div>
+          ? ' — you own ' + Math.round((1 - v.outsideEquity) * 100) + '%' : ''}</p>` : `<div class="big" style="font-size:22px">Not priced yet</div>
+        <p class="small muted">A shop is priced on the profit it makes. Trade a few weeks at a profit and it will have a price. Until then, what is on the books is ${money(bs.equity)} — the money in it, not what someone would pay.</p>`}</div>
         ${ico('shop','🏪',34)}</div>
     </div>
 
@@ -1228,7 +1230,7 @@ function viewBusiness() {
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn ghost sm grow" data-act="vBorrow" data-arg="500">Borrow ${money(500)} at ${cst.loanRate.toFixed(1)}%</button>
         <button class="btn ghost sm grow" data-act="vRaise" data-arg="0.1"
-          ${val.equityValue <= 0 || v.outsideEquity >= 0.6 ? 'disabled' : ''}>Sell 10% for ${money(val.equityValue * 0.1)}</button>
+          ${val.equityValue <= 0 || v.outsideEquity >= 0.6 ? 'disabled' : ''}>${val.equityValue > 0 ? `Sell 10% for ${money(val.equityValue * 0.1)}` : 'Sell 10% · needs a profit first'}</button>
       </div>
       ${v.debt > 0 ? `<p class="small" style="margin-top:9px">You owe ${money(v.debt)}, costing
         ${money(v.debt * (cst.loanRate / 100) / 52)} a week.
@@ -1359,7 +1361,7 @@ export function viewProgress() {
    the thing that actually matters — the sim's own clock and ladder stop being
    one tap from any child's thumb, so the economy is no longer decorative. */
 export function viewGate() {
-  const s = R.s, set = !!(s.parent && s.parent.pin);
+  const s = R.s, set = pinSet(s.parent);
   const wrong = R.gateWrong;
   return `<div class="stack">
     <div class="card">
@@ -1385,7 +1387,7 @@ export function viewGate() {
 /* The weekly report (docs/05 Part C). Learning, never usage. */
 export function viewReport() {
   const c = K();
-  const r = report.weekly(c, { money });
+  const r = report.weekly(c, { money, activity: ((Store.readFamily('bizzing.activity') || {}).s) || [] });
   const row = (em, label, body) => `<div class="qrow" style="align-items:flex-start">
     <span class="iw">${ico(em, em, 19)}</span><span class="grow" style="min-width:0">
     <b style="font-size:14px">${label}</b><div class="small muted">${body}</div></span></div>`;
@@ -1408,11 +1410,11 @@ export function viewReport() {
     ${r.story ? `<div class="card" style="border-color:var(--gold);background:var(--gold-tint)">
       <div class="eyebrow">One decision</div>
       <p style="margin-top:7px;font-size:15.5px;line-height:1.5">${esc(r.story.text)}</p>
-      ${r.story.reversed ? '<p class="small muted" style="margin-top:6px">She changed her mind within a minute or two — worth knowing, and not a bad sign. The pause is the skill.</p>' : ''}
+      ${r.story.reversed ? `<p class="small muted" style="margin-top:6px">${esc(r.child)} changed their mind within a minute or two — worth knowing, and not a bad sign. The pause is the skill.</p>` : ''}
     </div>` : ''}
 
     <div class="card">
-      <div class="eyebrow">What she found hard</div>
+      <div class="eyebrow">What ${esc(r.child)} found hard</div>
       ${r.hard.length
         ? `<div class="stack" style="gap:8px;margin-top:10px">${r.hard.map((h) => row('•', esc(h.name), esc(h.why))).join('')}</div>`
         : '<p class="small muted" style="margin-top:7px">Nothing slipped this week.</p>'}
@@ -1422,7 +1424,7 @@ export function viewReport() {
       <div class="eyebrow">Ask at the table this week</div>
       <p style="margin-top:7px;font-size:16px;font-weight:700;line-height:1.45">${esc(r.conversation.ask)}</p>
       <div class="sep" style="margin:12px 0"></div>
-      <div class="eyebrow">What she should be able to do</div>
+      <div class="eyebrow">What ${esc(r.child)} should be able to do</div>
       <p class="small" style="margin-top:5px">${esc(r.conversation.answer)}</p>
       ${r.conversation.why ? `<div class="eyebrow" style="margin-top:11px">Why that is the answer</div>
         <p class="small muted" style="margin-top:5px">${esc(r.conversation.why)}</p>` : ''}
@@ -1450,8 +1452,8 @@ export function viewReport() {
             <i style="width:${st.retained / st.all * 100}%;position:absolute;left:0;top:0"></i>
           </div></div>`).join('')}
       </div>
-      <p class="small muted" style="margin-top:11px">The pale bar is what she has met. The solid bar
-        is what she still had a week later. Only the second one is learning.</p>
+      <p class="small muted" style="margin-top:11px">The pale bar is what ${esc(r.child)} has met. The solid bar
+        is what was still there a week later. Only the second one is learning.</p>
     </div>
 
     <div class="card">
@@ -1745,7 +1747,7 @@ export function settingsSheet(R) {
       ${row('Sound', 'Clicks, coins and the bell.', seg('sound', [['on', 'On'], ['off', 'Off']], s.settings.sound ? 'on' : 'off'))}
       ${row('Narration speed', 'Nana in the lessons, and "Read it to me".', seg('rate', [['slow', 'Slower'], ['normal', 'Normal']], R.rate === 'slow' ? 'slow' : 'normal'))}
     </div>
-    ${s.parent.pin && !s.parent.gate ? `<div class="sect"><b>Grown-ups only</b><i></i></div>
+    ${pinSet(s.parent) && !R.gate ? `<div class="sect"><b>Grown-ups only</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
       ${row('Money, children and tester mode', 'Behind the PIN. Unlock on the grown-up\'s page and come back.', '<button class="btn ghost sm" data-act="nav" data-arg="parents">Unlock</button>')}
     </div>` : `<div class="sect"><b>Money</b><i></i></div>
@@ -1921,7 +1923,7 @@ export function placementCard(c) {
   return `<div class="card stack">
     <div class="eyebrow">The maths check</div>
     <p class="small muted">${m
-      ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(placement.RUNGS[c.maths.reached - 1] || {}).can ? esc(placement.RUNGS[c.maths.reached - 1].can.toLowerCase()) : 'the first rung'}</b>. The town uses that to decide what it may put on screen — a screen that needs arithmetic she has not met waits, or shows the same truth another way.`
+      ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(placement.RUNGS[c.maths.reached - 1] || {}).can ? esc(placement.RUNGS[c.maths.reached - 1].can.toLowerCase()) : 'the first rung'}</b>. The town uses that to decide what it may put on screen — a screen that needs arithmetic not met yet waits, or shows the same truth another way.`
       : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
     <div class="row" style="gap:8px"><span class="grow"></span>
       <button class="btn ${m ? 'ghost' : ''} sm" data-act="placement">${m ? 'Sit it again' : 'Start the check'}</button></div>

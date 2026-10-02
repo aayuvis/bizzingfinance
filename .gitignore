@@ -16,3 +16,6 @@ tools/art/nana-*.png
 tools/art/bld-*.png
 tools/art/sprites.pkl
 tools/art/*.log
+
+# family art: raw generations, looked at before processing
+tools/art/raw/

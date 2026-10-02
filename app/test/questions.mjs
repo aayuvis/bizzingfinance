@@ -13,7 +13,7 @@
    contradicts its own arithmetic is the cheapest trust to lose.
 
    Run: node test/questions.mjs */
-import { ALL_CARDS, LETTERS, GLOSSARY, drillCount, drillAt, shuffledDrill } from '../src/content.js';
+import { ALL_CARDS, LETTERS, GLOSSARY, drillCount, drillAt, shuffledDrill, hintFor, leaks } from '../src/content.js';
 import { OBJECTIVES, NEW_CARD_LIST, assessCard, validate } from '../src/objectives.js';
 
 let pass = 0, fail = 0;
@@ -82,6 +82,17 @@ for (const [id, raw] of texts) {
 }
 ok(checked >= 5, 'the lint finds the sums it should check', checked + ' sums');
 ok(!wrong.length, 'every stated sum is true', wrong.slice(0, 3).join(' | '));
+
+/* E5/E6/E11 · the hint shown after a wrong first pick never names the answer
+   — the explanation (why) waits for the second go. Every question in the bank. */
+{
+  const leaky = [];
+  for (const { card, qi, d } of bank) { const h = hintFor(card, qi); if (!h || leaks(h, d)) leaky.push(`${card.id}#${qi}: ${h}`); }
+  ok(!leaky.length, 'every hint is non-revealing (no telling word of the right answer)', leaky.slice(0, 2).join(' | '));
+  /* the checker itself catches a hint that names the answer */
+  const probe = bank.find((b) => b.card.id === 'c1b').d;
+  ok(leaks('Think about the umbrella.', probe) && !leaks('A need is something you would be in trouble without.', probe), 'leaks() catches a hint naming the answer, and passes one that does not');
+}
 
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

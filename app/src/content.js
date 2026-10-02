@@ -398,6 +398,42 @@ export function shuffledDrill(card, qi = 0) {
   return { order: idx, opts: idx.map((i) => d.opts[i]), answer: idx.indexOf(d.a), q: d.q, why: d.why };
 }
 
+/* E5/E6 · a hint for the exact item, held to one rule: it may point back at
+   the lesson, but it must not name the right answer before the second go.
+   Candidates are the card's own teaching sentences and its example, nearest
+   the lesson first; the first one that shares no telling word with the right
+   option (a word of four letters or more that the wrong options and the
+   question do not also use) is the hint. If every sentence would give it
+   away, the hint is the plain nudge back to the lesson. test/questions.mjs
+   runs every question in the bank through leaks(). */
+const STOP = new Set('that this with from your what when they them their there then than have will would could should about which into only just more most some been were does done doing because before after every other these those thing things money'.split(' '));
+const words = (x) => (String(x || '').replace(/<[^>]+>/g, '').toLowerCase().match(/[a-z\u00c0-\u024f']{4,}/g) || []).map((w) => w.replace(/'s$/, '')).filter((w) => !STOP.has(w));
+const stemOf = (w) => w.replace(/(ing|ed|es|s)$/, '');
+export function tellingWords(d) {
+  const shared = new Set([...words(d.q), ...d.opts.filter((_, i) => i !== d.a).flatMap(words)].map(stemOf));
+  return [...new Set(words(d.opts[d.a]).map(stemOf))].filter((w) => !shared.has(w));
+}
+export function leaks(text, d) {
+  const tell = tellingWords(d);
+  const t = new Set(words(text).map(stemOf));
+  if (tell.some((w) => t.has(w))) return true;
+  const ans = String(d.opts[d.a]).replace(/<[^>]+>/g, '').trim().toLowerCase();
+  return ans.length >= 3 && String(text).replace(/<[^>]+>/g, '').toLowerCase().includes(ans);
+}
+export function hintFor(card, qi = 0) {
+  const d = drillAt(card, qi);
+  if (d.hint && !leaks(d.hint, d)) return d.hint;
+  const plain = (x) => String(x || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const sentences = [...plain(card.teach).split(/(?<=[.!?])\s+/), plain(card.eg)].filter((x) => x.length > 12);
+  const who = (CAST_NAMES[card.who] || 'the lesson');
+  const say = (x) => `Look back at what ${who} said: “${x}”`;
+  const pickS = sentences.find((x) => !leaks(say(x), d));
+  if (pickS) return say(pickS);
+  return [`Read ${who}'s lesson above once more, then try a different answer.`, 'Read the lesson above once more, then pick again.']
+    .find((x) => !leaks(x, d)) || 'Have another go.';
+}
+const CAST_NAMES = { nana: 'Nana Bizz', pip: 'Pip', mags: 'Mags', bo: 'Bo', bea: 'Bea' };
+
 /* ── the worlds ──────────────────────────────────────────────────────────
    The game is a journey between places, not one street. Each world carries
    its own chapters, its own work, its own games and exactly one new money

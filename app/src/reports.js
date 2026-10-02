@@ -98,7 +98,7 @@ export function shareholderLetter(sim, id, y) {
   const open = good ? pick(OPEN_GOOD) : bad ? pick(OPEN_BAD) : pick(OPEN_MIXED);
 
   const body = [];
-  body.push(revUp >= 0
+  body.push(!p ? `In our first year, revenue was ${inr(r.revenue)}.` : revUp >= 0
     ? `Revenue grew ${pc(revUp)} to ${inr(r.revenue)}.`
     : `Revenue fell ${pc(-revUp)} to ${inr(r.revenue)}, which is not where we wanted to be.`);
 

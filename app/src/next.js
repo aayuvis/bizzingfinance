@@ -43,7 +43,16 @@ export function nextStep(c, now) {
   const stale = bt && bt.shape === 'teach' && c.learn.done[bt.card.id];
   const p = path(c);
   const where = (card) => p.find((s) => s.card.id === card.id);
-  if (bt && !answered && !stale) {
+  const open = p.find((s) => !s.done && !s.locked);
+  /* New material walks the road in order: a teaching beat further along the
+     path waits while an earlier stop is still unwalked, so a new child starts
+     at stop 1 ("Money is an agreement"), not at the first stop that happens to
+     carry an objective (FIX A8). A due retrieval is never held back. */
+  const ahead = bt && bt.shape === 'teach' && open && (() => {
+    const bi = p.findIndex((s) => s.card.id === bt.card.id);
+    return bi > p.indexOf(open);
+  })();
+  if (bt && !answered && !stale && !ahead) {
     const s = where(bt.card);
     return { kind: bt.shape === 'retrieve' ? 'revise' : 'learn', act: 'beat', arg: '',
       card: bt.card, objective: bt.objective, world: s ? s.w : WORLDS[0],
@@ -51,7 +60,6 @@ export function nextStep(c, now) {
       sub: bt.shape === 'retrieve' ? 'Still know this? One question, a different one.' : bt.objective.short,
       button: bt.shape === 'retrieve' ? 'One question' : 'Continue' };
   }
-  const open = p.find((s) => !s.done && !s.locked);
   if (open) return { kind: 'learn', act: 'card', arg: open.card.id, card: open.card, world: open.w,
     title: open.card.title, sub: open.ch.title, button: 'Continue' };
   const shut = p.find((s) => !s.done);

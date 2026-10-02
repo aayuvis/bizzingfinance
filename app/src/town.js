@@ -46,10 +46,13 @@ function deed(x, em, who) {
   </g>`;
 }
 function label(x, w, text, on) {
-  /* var(--ink) flips with the theme exactly as the ground under it does; a
-     hard-coded ink is readable on the tan ground and invisible on the dark. */
-  return `<text x="${x + w / 2}" y="${G + 22}" text-anchor="middle" font-size="12.5" font-weight="800"
-    fill="var(--ink)" opacity="${on ? '.85' : '.5'}">${esc(text)}</text>`;
+  /* A sign on a card-coloured chip, standing clear ABOVE the road. A bare
+     label with a halo read as struck through in the dark, where the road ran
+     under its baseline (FIX N12); a chip keeps AA on any plate, day or night. */
+  const tw = Math.max(54, String(text).length * 7.4 + 18), cx = x + w / 2;
+  return `<g class="tlabel" opacity="${on ? '1' : '.72'}">
+    <rect x="${(cx - tw / 2).toFixed(1)}" y="${G + 3}" width="${tw.toFixed(1)}" height="20" rx="10" fill="var(--surface)" opacity=".94"/>
+    <text x="${cx}" y="${G + 17}" text-anchor="middle" font-size="12.5" font-weight="800" fill="var(--ink)">${esc(text)}</text></g>`;
 }
 
 /* ── the painted street ─────────────────────────────────────────────────
@@ -300,7 +303,7 @@ export function townSVG(c) {
     ${mine.length ? `<rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="var(--ground)"/>
     <rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || 'you')}</text>` : ''}
-    <rect x="0" y="${G + 28}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
+    <rect x="0" y="${G + 30}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
     ${here.map(build).join('')}
     ${deeds}
     ${companionOnStreet(c, here, xOf)}
@@ -315,11 +318,12 @@ export function townSVG(c) {
       <circle cx="12" cy="20" r="2.2" fill="#25201C"/><circle cx="20" cy="20" r="2.2" fill="#25201C"/>
       <path d="M16 25c-1.2 0-2-.8-2-1.5s.8-1.2 2-1.2 2 .5 2 1.2-.8 1.5-2 1.5z" fill="#2A2320"/>
     </g></g>` : ''}
-    <g class="hot" data-act="postbox" role="button" tabindex="0" aria-label="Open the postbox">
+    <g class="hot" data-act="postbox" role="button" tabindex="0" aria-label="Open the postbox" transform="translate(${Math.max(0, startX - 122).toFixed(1)},0)">
       <g style="${s.postbox.answered ? 'filter:saturate(.5);opacity:.8' : ''}">${spr('postbox', 52, 322, 58)}</g>
       ${s.postbox.answered ? '' : `<g class="ping"><circle cx="85" cy="216" r="11" fill="#F0B429"/>
         <text x="85" y="221" text-anchor="middle" font-size="14" font-weight="800" fill="#5A3D00">1</text></g>`}
-      <text x="52" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" opacity=".7">Postbox</text>
+      <g class="tlabel"><rect x="24" y="${H - 24}" width="62" height="20" rx="10" fill="var(--surface)" opacity=".94"/>
+      <text x="55" y="${H - 10}" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)">Postbox</text></g>
     </g>
   </svg>`;
 }

@@ -206,7 +206,7 @@ export function moveHome(c, tier) {
 }
 
 export function newState() {
-  return { v: 3, parent: { created: Date.now(), gate: false, pin: null }, kids: [], active: 0,
+  return { v: 3, parent: { created: Date.now(), pin: null }, kids: [], active: 0,
     ui: { nav: 'home', sub: 'wallet' },
     settings: { sound: true }, clock: { lastSeen: Date.now() } };
 }

@@ -26,7 +26,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Says where each amount in their wallet came from, and which of it was traded for their own time.',
     needs_maths: ['M1'], needs: [], surface: 'place', teach: 'c1c',
     short: 'Where the money came from',
-    parent_line: 'Ask her which of the money she has now she worked for. The ones she has to think about are the interesting ones.',
+    parent_line: 'Ask which of the money they have now they worked for. The ones they have to think about are the interesting ones.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'Money arrives in your wallet three ways this week. Which one did your time buy?', opts: ['A birthday gift', 'An hour stacking crates', 'Interest from the bank', 'Money found on the path'], a: 1,
@@ -42,7 +42,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Works out what an hour of a job is worth to them, and says it as a rate rather than as a total.',
     needs_maths: ['M4'], needs: ['EARN-1'], surface: 'place', teach: 'c2a',
     short: 'What an hour is worth',
-    parent_line: 'Ask what an hour of her time is worth at each of her jobs. Not the total — the rate. The comparison is the whole skill.',
+    parent_line: 'Ask what an hour of their time is worth at each of their jobs. Not the total — the rate. The comparison is the whole skill.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'A job pays ₹90 and takes two hours. What is the rate?', opts: ['₹90 an hour', '₹45 an hour', '₹180 an hour', 'You cannot say'], a: 1,
@@ -74,7 +74,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Given two pieces of work, picks by what an hour is worth rather than by the size of the payment.',
     needs_maths: ['M6'], needs: ['EARN-2'], surface: 'place', teach: 'c2b',
     short: 'Choosing work by the rate',
-    parent_line: 'Give her two made-up jobs where the bigger total is the worse rate. Watching her catch it is the assessment.',
+    parent_line: 'Give them two made-up jobs where the bigger total is the worse rate. Watching them catch it is the assessment.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'Sweeping pays ₹30 for half an hour. Delivering pays ₹100 for two hours. Which is the better use of an hour?', opts: ['Delivering', 'Sweeping — ₹60 an hour against ₹50', 'Neither, they are equal', 'Delivering, because ₹100 is more'], a: 1,
@@ -90,7 +90,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Names more than one place their money comes from, and says which one would hurt most to lose.',
     needs_maths: ['M2'], needs: ['EARN-3'], surface: 'place', teach: 'c2d',
     short: 'More than one tap',
-    parent_line: 'Ask what she would do if her best-paying job stopped tomorrow. Not to worry her — to notice whether there is a second answer.',
+    parent_line: 'Ask what they would do if their best-paying job stopped tomorrow. Not to worry them — to notice whether there is a second answer.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'All of somebody\'s money comes from one job. What is the risk?', opts: ['They will get bored', 'If that one stops, everything stops at once', 'They will earn too much', 'There is no risk'], a: 1,
@@ -106,7 +106,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Gets better at a job on purpose and can say what changed about what their time is worth.',
     needs_maths: ['M6'], needs: ['EARN-4'], surface: 'arcade', teach: 'c2b',
     short: 'Being worth asking twice',
-    parent_line: 'Ask what she is better at now than a month ago, and what that is worth. The answer being "nothing yet" is a fine answer honestly given.',
+    parent_line: 'Ask what they are better at now than a month ago, and what that is worth. The answer being "nothing yet" is a fine answer honestly given.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'Two people do the same job. One is asked back every week. What is that person selling?', opts: ['Lower prices', 'Being worth asking twice', 'More hours', 'Better luck'], a: 1,
@@ -122,7 +122,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Keeps the money a business took separate from the money they paid themselves, and says which is which.',
     needs_maths: ['M8'], needs: ['EARN-3'], surface: 'wallet', teach: 'c8c',
     short: 'The till is not your pocket',
-    parent_line: 'If she runs the stall, ask what the shop made this week and what she took home. If those are the same number, that is the conversation.',
+    parent_line: 'If they run the stall, ask what the shop made this week and what they took home. If those are the same number, that is the conversation.',
     transfer: ['business'], sources: [],
     assess: [
       { q: 'Your stall took ₹900 this week. How much of that is yours?', opts: ['₹900', 'Whatever is left after what it cost to run', 'Half', 'None of it'], a: 1,
@@ -138,7 +138,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Turns irregular earnings into a weekly number they can plan on, and says why they used the low one.',
     needs_maths: ['M9'], needs: ['EARN-5', 'EARN-4'], surface: 'place', teach: 'c3a',
     short: 'A number you can plan on',
-    parent_line: 'Ask what she earns in a typical week when the work is not the same every week. Whether she reaches for the average or the worst week tells you a lot.',
+    parent_line: 'Ask what they earn in a typical week when the work is not the same every week. Whether they reach for the average or the worst week tells you a lot.',
     transfer: ['jars'], sources: [],
     assess: [
       { q: 'Four weeks paid ₹200, ₹380, ₹150 and ₹270. What is a week worth on average?', opts: ['₹380', '₹250', '₹150', '₹1,000'], a: 1,
@@ -156,7 +156,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Says what is left after the week\'s costs before spending any of it, and names that number as the part they choose about.',
     needs_maths: ['M5'], needs: [], surface: 'wallet', teach: 'c3a',
     short: 'What is left over',
-    parent_line: 'Ask what is left after the week has paid for itself. That number, not the wallet, is the one she is actually choosing with.',
+    parent_line: 'Ask what is left after the week has paid for itself. That number, not the wallet, is the one they are actually choosing with.',
     transfer: ['jars'], sources: [],
     assess: [
       { q: '₹400 comes in and ₹260 goes out on things that arrive anyway. What is the choosing number?', opts: ['₹400', '₹140', '₹260', '₹660'], a: 1,
@@ -172,7 +172,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Splits money into named jars the moment it lands, using a rule they set earlier rather than deciding on the day.',
     needs_maths: ['M7'], needs: ['KEEP-1'], surface: 'wallet', teach: 'c3b',
     short: 'Split it the moment it lands',
-    parent_line: 'Ask what her rule is and when she set it. A rule made on pay day, with the money in front of her, is not really a rule.',
+    parent_line: 'Ask what their rule is and when they set it. A rule made on pay day, with the money right there, is not really a rule.',
     transfer: ['jars', 'goals'], sources: [],
     assess: [
       { q: 'Why split money as soon as it arrives?', opts: ['It looks tidy', 'Because one pile gets spent as one pile', 'Jars are safer', 'To make it last longer by magic'], a: 1,
@@ -188,7 +188,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Names one cost that arrives whatever they do and one that follows what they do, from their own week.',
     needs_maths: ['M4'], needs: ['KEEP-1'], surface: 'place', teach: 'c3a',
     short: 'The ones that arrive anyway',
-    parent_line: 'Ask which of her costs she could change this week and which she could not. The list is short and clarifying.',
+    parent_line: 'Ask which of their costs they could change this week and which they could not. The list is short and clarifying.',
     transfer: ['jars'], sources: [],
     assess: [
       { q: 'Which of these arrives whether you do anything or not?', opts: ['A snack', 'Rent', 'A trip to the market', 'A birthday present'], a: 1,
@@ -204,7 +204,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Turns something they want into a number of weeks at their own saving rate, and says the date rather than a wish.',
     needs_maths: ['M8'], needs: ['KEEP-2'], surface: 'wallet', teach: 'c3d',
     short: 'Turning a wish into a date',
-    parent_line: 'Ask how many weeks away the thing she wants is. A number, not "soon" — dividing is what turns wanting into planning.',
+    parent_line: 'Ask how many weeks away the thing they want is. A number, not "soon" — dividing is what turns wanting into planning.',
     transfer: ['goals'], sources: [],
     assess: [
       { q: 'A ₹900 thing, saving ₹75 a week. How many weeks?', opts: ['9', '12', '15', '6'], a: 1,
@@ -220,7 +220,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Leaves a funded goal alone when something else is tempting, and says what they did instead of raiding it.',
     needs_maths: ['M2'], needs: ['KEEP-4'], surface: 'store', teach: 'x-ch11',
     short: 'Leaving the goal alone',
-    parent_line: 'When she wants something and the goal money is right there, ask what else could pay for it. The answer is often "nothing, so not this week" — and that is the win.',
+    parent_line: 'When they want something and the goal money is right there, ask what else could pay for it. The answer is often "nothing, so not this week" — and that is the win.',
     transfer: ['goals'], sources: [],
     assess: [
       { q: 'You raid a goal for something else. What did it cost?', opts: ['Nothing, it is your money', 'The weeks you have to do again', 'The price of the thing', 'Your Save jar'], a: 1,
@@ -236,7 +236,7 @@ export const MORE_OBJECTIVES = [
     objective: 'When money coming in falls, cuts the variable costs first and can say why that order matters.',
     needs_maths: ['M6'], needs: ['KEEP-3'], surface: 'place', teach: 'c3a',
     short: 'Which line moves first',
-    parent_line: 'Give her a week where the money is short and ask what she would change. Watch whether she reaches for the moveable things first.',
+    parent_line: 'Give them a week where the money is short and ask what they would change. Watch whether they reach for the moveable things first.',
     transfer: ['jars'], sources: [],
     assess: [
       { q: 'Income drops by ₹100. What is the first place to look?', opts: ['Rent', 'The things that follow what you do', 'Borrowing', 'The Save jar'], a: 1,
@@ -252,7 +252,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Uses their own record to answer a question about a past week, rather than guessing from memory.',
     needs_maths: ['M5'], needs: ['KEEP-1'], surface: 'jars', teach: 'c3a',
     short: 'Checking, not remembering',
-    parent_line: 'Ask what she spent most on last week. If she guesses, ask her to look — the gap between the guess and the record is the lesson.',
+    parent_line: 'Ask what they spent most on last week. If they guess, ask them to look — the gap between the guess and the record is the lesson.',
     transfer: ['wallet'], sources: [],
     assess: [
       { q: 'You think you spent about ₹200 on snacks last week. How do you find out?', opts: ['Think harder', 'Add up the actual lines', 'Ask a friend', 'Assume you were right'], a: 1,
@@ -286,7 +286,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Says what a bank does with money left with it, and why it pays for the privilege of holding it.',
     needs_maths: ['M3'], needs: [], surface: 'jars', teach: 'c5a',
     short: 'What a bank is for',
-    parent_line: 'Ask where she thinks the money in a bank actually is. "In a big safe" is the usual answer and the interesting one.',
+    parent_line: 'Ask where they think the money in a bank actually is. "In a big safe" is the usual answer and the interesting one.',
     transfer: ['bank'], sources: [],
     assess: [
       { q: 'Your money is in a bank. Where is it?', opts: ['In a drawer with your name on it', 'Lent out to somebody else', 'In a safe under the building', 'Nowhere — it is only a number'], a: 1,
@@ -318,7 +318,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Explains why the second period earns more than the first without anything new being added.',
     needs_maths: ['M11'], needs: ['GROW-2'], surface: 'jars', teach: 'c7a',
     short: 'Why the second time is bigger',
-    parent_line: 'Ask why the interest is bigger the second time when she put nothing in. Getting to "because the interest is earning too" is the moment.',
+    parent_line: 'Ask why the interest is bigger the second time when nothing was put in. Getting to "because the interest is earning too" is the moment.',
     transfer: ['bank'], sources: [],
     assess: [
       { q: '₹1,000 earns ₹100. Next period, the same rate earns more. Why?', opts: ['The rate went up', 'It is now working on ₹1,100', 'The bank was generous', 'It did not'], a: 1,
@@ -350,7 +350,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Spreads money across more than one holding and can say what that protects them from.',
     needs_maths: ['M8'], needs: ['GROW-4'], surface: 'bank', teach: 'c7c',
     short: 'Never just one',
-    parent_line: 'Ask what happens if the one thing she picked has a bad year. "Then I lose" is correct, and it is the reason for the next question.',
+    parent_line: 'Ask what happens if the one thing they picked has a bad year. "Then I lose" is correct, and it is the reason for the next question.',
     transfer: ['portfolio'], sources: [],
     assess: [
       { q: 'All of somebody\'s money is in one company. What is the danger?', opts: ['They will get bored', 'One thing going wrong takes everything with it', 'They will earn less', 'There is none'], a: 1,
@@ -366,7 +366,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Does nothing on a day everything falls, and can say afterwards that doing nothing was the decision.',
     needs_maths: ['M6'], needs: ['GROW-5'], surface: 'bank', teach: 'c7d',
     short: 'Doing nothing on purpose',
-    parent_line: 'Ask what she did on the red day. If the answer is "nothing", ask whether that was a decision or an accident — the difference is the skill.',
+    parent_line: 'Ask what they did on the red day. If the answer is "nothing", ask whether that was a decision or an accident — the difference is the skill.',
     transfer: ['portfolio'], sources: [],
     assess: [
       { q: 'Everything drops and everyone says sell. Selling turns what into what?', opts: ['A loss into a gain', 'A number on a screen into a real loss', 'Nothing', 'A risk into safety'], a: 1,
@@ -382,7 +382,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Says what years do to a small regular amount, and that starting earlier beats adding more later.',
     needs_maths: ['M12'], needs: ['GROW-3'], surface: 'bank', teach: 'c7d',
     short: 'Time is the ingredient',
-    parent_line: 'Ask which she would rather have: ₹50 a week starting now, or ₹100 a week starting in ten years. Nobody guesses this right first time.',
+    parent_line: 'Ask which they would rather have: ₹50 a week starting now, or ₹100 a week starting in ten years. Nobody guesses this right first time.',
     transfer: ['goals'], sources: [],
     assess: [
       { q: 'Two people save the same amount each week. One starts ten years earlier. What did the early one buy?', opts: ['Nothing', 'Ten years of growing on itself', 'A better rate', 'Less risk'], a: 1,
@@ -398,7 +398,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Separates money they can leave alone for years from money they need soon, and puts each somewhere different.',
     needs_maths: ['M8'], needs: ['GROW-4', 'KEEP-8'], surface: 'bank', teach: 'c7b',
     short: 'Money you can leave alone',
-    parent_line: 'Ask which of her money she will not touch for a year. That question, not the return, is what decides where it should sit.',
+    parent_line: 'Ask which of their money they will not touch for a year. That question, not the return, is what decides where it should sit.',
     transfer: ['portfolio', 'jars'], sources: [],
     assess: [
       { q: 'Money you might need next month — where does it belong?', opts: ['Somewhere it might fall', 'Somewhere safe and reachable', 'In a long investment', 'Spread across shares'], a: 1,
@@ -432,7 +432,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Reads the total they will hand over before agreeing, rather than the size of the weekly payment.',
     needs_maths: ['M9'], needs: ['OWE-1'], surface: 'store', teach: 'c6b',
     short: 'The number that matters',
-    parent_line: 'When an advert says "only ₹X a week", ask her what it comes to. Multiplying is the entire defence.',
+    parent_line: 'When an advert says "only ₹X a week", ask what it comes to. Multiplying is the entire defence.',
     transfer: ['loans'], sources: [],
     assess: [
       { q: '"Only ₹40 a week for 24 weeks." What are you agreeing to?', opts: ['₹40', '₹960', '₹240', 'It does not say'], a: 1,
@@ -448,7 +448,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Names a good reason and a bad reason to borrow from their own situation, not from a general rule.',
     needs_maths: ['M4'], needs: ['OWE-1'], surface: 'bank', teach: 'c6c',
     short: 'Good reasons and bad ones',
-    parent_line: 'Ask her for one thing worth borrowing for and one that is not. Her own examples are worth more than any list.',
+    parent_line: 'Ask for one thing worth borrowing for and one that is not. Their own examples are worth more than any list.',
     transfer: ['loans'], sources: [],
     assess: [
       { q: 'Which is the better reason to borrow?', opts: ['Something that will earn more than the loan costs', 'Something you want today', 'Something on offer', 'Something everybody has'], a: 0,
@@ -464,7 +464,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Makes a repayment when something else wants the money, and names what they gave up to make it.',
     needs_maths: ['M5'], needs: ['OWE-2'], surface: 'bank', teach: 'c6d',
     short: 'Paying it when you would rather not',
-    parent_line: 'When a repayment is due and something else is tempting, ask what the repayment cost her this week. Naming it out loud is the point.',
+    parent_line: 'When a repayment is due and something else is tempting, ask what the repayment cost them this week. Naming it out loud is the point.',
     transfer: ['loans'], sources: [],
     assess: [
       { q: 'A repayment is due and you want something else. What is the honest way to see it?', opts: ['The repayment is unfair', 'The thing you want costs the repayment plus its own price', 'The money is not really yours', 'Skip it this once'], a: 1,
@@ -480,7 +480,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Says how what they can borrow next time changes, in both directions, according to what they did this time.',
     needs_maths: ['M4'], needs: ['OWE-4'], surface: 'loans', teach: 'c6d',
     short: 'Trust is a memory',
-    parent_line: 'Ask what the bank remembers about her. That a record works in both directions is easy to miss and worth saying.',
+    parent_line: 'Ask what the bank remembers about them. That a record works in both directions is easy to miss and worth saying.',
     transfer: ['bank'], sources: [],
     assess: [
       { q: 'Somebody repaid everything on time for a year. What changed?', opts: ['Nothing', 'They can borrow more, and usually for less', 'They owe more', 'The rate went up'], a: 1,
@@ -496,7 +496,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Puts the cost of waiting and the cost of borrowing in the same units before choosing between them.',
     needs_maths: ['M9'], needs: ['OWE-2', 'KEEP-4'], surface: 'goals', teach: 'x-ch8',
     short: 'Waiting against borrowing',
-    parent_line: 'Ask what three weeks of having something is worth to her, in rupees. There is no right answer and that is what makes it a real question.',
+    parent_line: 'Ask what three weeks of having something is worth to them, in their own money. There is no right answer and that is what makes it a real question.',
     transfer: ['store', 'loans'], sources: [],
     assess: [
       { q: '₹800 now with ₹80 of interest, or ₹800 in three weeks. What are you actually choosing?', opts: ['Between good and bad', 'Whether three weeks of having it is worth ₹80 to you', 'The cheaper option', 'Whether to save'], a: 1,
@@ -514,7 +514,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Names the things that are never given out, and does not give them out when asked convincingly.',
     needs_maths: ['M1'], needs: [], surface: 'place', teach: 'c5b',
     short: 'The three secrets',
-    parent_line: 'Ask what she would never tell anyone, however official they sounded. Then ask what she would do if somebody official asked.',
+    parent_line: 'Ask what they would never tell anyone, however official the asker sounded. Then ask what they would do if somebody official asked.',
     transfer: ['letter'], sources: [],
     assess: [
       { q: 'Somebody from "the bank" phones and asks for your PIN to check something. What do you do?', opts: ['Give it — they are from the bank', 'Give nothing and hang up', 'Give half of it', 'Ask them to prove it, then give it'], a: 1,
@@ -578,7 +578,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Turns a small repeating charge into its yearly number before agreeing to it.',
     needs_maths: ['M9'], needs: ['GUARD-4'], surface: 'place', teach: 'c4c',
     short: 'The small monthly one',
-    parent_line: 'Take one subscription in the house and work out the year with her. The number is usually a surprise to everybody at the table.',
+    parent_line: 'Take one subscription in the house and work out the year together. The number is usually a surprise to everybody at the table.',
     transfer: ['store'], sources: [],
     assess: [
       { q: '₹99 a month. What is the number to say out loud?', opts: ['₹99', '₹1,188 a year', '₹1,000', 'It depends'], a: 1,
@@ -594,7 +594,7 @@ export const MORE_OBJECTIVES = [
     objective: 'Tells a grown-up when something about money feels wrong, and says why telling is the strong move.',
     needs_maths: ['M1'], needs: ['GUARD-1'], surface: 'place', teach: 'c5d',
     short: 'Telling someone is the answer',
-    parent_line: 'Say plainly that if she is ever caught by one of these, you want to be told and nobody will be cross. Say it before it happens.',
+    parent_line: 'Say plainly that if they are ever caught by one of these, you want to be told and nobody will be cross. Say it before it happens.',
     transfer: ['letter'], sources: [],
     assess: [
       { q: 'Somebody has tricked you out of money. What is the first move?', opts: ['Fix it quietly', 'Tell a grown-up straight away', 'Pretend it did not happen', 'Try to get it back yourself'], a: 1,

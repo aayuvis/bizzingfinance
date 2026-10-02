@@ -222,8 +222,8 @@ function companySheet(g, co, s) {
       <div class="small" style="margin-top:5px"><b>Who pays</b> — ${esc(co.who)}</div>
       <div class="small" style="margin-top:5px"><b>What could hurt it</b> — ${esc(co.risk)}</div>
       <div class="small muted" style="margin-top:8px">Model: ${esc(co.model)}</div>
-      ${sparkline(hist, 300, 44, 'var(--action)')}
-      <p class="small muted">Its price over the last ${hist.length - 1} years.</p>
+      ${hist.length > 1 ? sparkline(hist, 300, 44, 'var(--action)') : ''}
+      <p class="small muted">${hist.length > 2 ? `Its price over the last ${hist.length - 1} years.` : hist.length === 2 ? 'Its price over the last year.' : 'Its first year: no price history yet.'}</p>
     </div>
 
     <div class="card">

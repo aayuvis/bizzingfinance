@@ -4,7 +4,7 @@
    USAGE. "Ahana played 40 minutes, 5-day streak" tells a parent what they
    could see from the sofa. This is what is worth money:
 
-     "Ahana can now work out which of two sizes is better value. She chose
+     "Ahana can now work out which of two sizes is better value. They chose
       correctly seven times out of eight this week — including twice when the
       bigger box was the worse deal, which is the one that catches most
       adults."
@@ -20,7 +20,9 @@
 import { OBJECTIVES, objective, STRANDS } from './objectives.js';
 import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
-import { DAY } from './fmt.js';
+import { DAY, dayIndex } from './fmt.js';
+
+const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 const WEEK = 7 * DAY;
 const nameOf = (id) => (objective(id) || {}).short || id;
@@ -28,21 +30,22 @@ const nameOf = (id) => (objective(id) || {}).short || id;
 /* Places, as a parent would say them — "out in the loans" is a database
    column, not a sentence anyone would read aloud. */
 const PLACE = {
-  store: 'the shop', loans: 'the bank', goals: 'the Build Yard', wallet: 'her wallet',
-  jars: 'the Jar Shed', exchange: 'the Exchange', place: 'home', business: 'the shop she runs',
+  store: 'the shop', loans: 'the bank', goals: 'the Build Yard', wallet: 'their wallet',
+  jars: 'the Jar Shed', exchange: 'the Exchange', place: 'home', business: 'the shop they run',
 };
 const placeOf = (s) => PLACE[s] || s;
 
 /* Item 1. What changed, in one sentence. If nothing changed it says so —
    a report that manufactures a highlight every week stops being read. */
-function headline(c, moved, dec, weeks) {
+function headline(c, moved, dec, weeks, wasIn) {
   const gained = moved.filter((m) => m.to === 'retained' || m.to === 'transferred');
   const tr = moved.filter((m) => m.to === 'transferred');
-  if (tr.length) return `${c.name} used something she was taught somewhere else entirely — ${nameOf(tr[0].id).toLowerCase()}, over at ${placeOf(tr[0].surface)}, without being asked.`;
-  if (gained.length > 1) return `${c.name} held on to ${gained.length} things this week that she met a while ago — the gap is the point, not the answer.`;
+  if (tr.length) return `${c.name} used something taught somewhere else entirely — ${nameOf(tr[0].id).toLowerCase()}, over at ${placeOf(tr[0].surface)}, without being asked.`;
+  if (gained.length > 1) return `${c.name} held on to ${gained.length} things this week that were first met a while ago — the gap is the point, not the answer.`;
   if (gained.length === 1) return `${c.name} still had ${nameOf(gained[0].id).toLowerCase()} ${gained[0].gap || 7} days after meeting it.`;
   if (dec.length) return `${c.name} made ${dec.length} ${dec.length === 1 ? 'decision worth' : 'decisions worth'} looking at this week, though nothing new stuck yet.`;
-  if (!weeks) return `${c.name} has not been in this week. Nothing is lost — the town waits, and so does everything she had learned.`;
+  if (!weeks && !wasIn) return `${c.name} has not been in this week. Nothing is lost — the town waits, and so does everything ${c.name} had learned.`;
+  if (!weeks) return `${c.name} was in this week. Nothing new stuck yet, and nothing slipped either — that comes after a gap.`;
   return `A quiet week. Nothing new stuck, and nothing slipped either.`;
 }
 
@@ -55,14 +58,14 @@ function story(c, d, money) {
   let text;
   if (d.surface === 'loans') {
     text = d.chose === 'wait'
-      ? `On ${day} she was offered a loan. She worked out that borrowing would cost ${gap} on top, and decided to save up for it instead.`
-      : `On ${day} she took a loan, having first been shown that it would cost ${gap} more than waiting. She knew the price before she agreed to it.`;
+      ? `On ${day} ${c.name} was offered a loan, worked out that borrowing would cost ${gap} on top, and decided to save up for it instead.`
+      : `On ${day} ${c.name} took a loan, having first been shown that it would cost ${gap} more than waiting — the price was known before saying yes.`;
   } else if (d.chose === 'wait') {
-    text = `On ${day} she had ${alt.label.toLowerCase()} in front of her at ${gap}, and put it back to think about for a day.`;
+    text = `On ${day} ${c.name} had ${alt.label.toLowerCase()} in hand at ${gap}, and put it back to think about for a day.`;
   } else if (alt) {
-    text = `On ${day} she spent ${gap} on ${d.label.toLowerCase()} — which was also the money going towards ${alt.label.toLowerCase()}.`;
+    text = `On ${day} ${c.name} spent ${gap} on ${d.label.toLowerCase()} — which was also the money going towards ${alt.label.toLowerCase()}.`;
   } else {
-    text = `On ${day} she bought ${d.label.toLowerCase()}.`;
+    text = `On ${day} ${c.name} bought ${d.label.toLowerCase()}.`;
   }
   return { when: day, text, reversed: d.reversed };
 }
@@ -88,13 +91,13 @@ function conversation(c, moved) {
    then not opened again. Every line here is free, takes minutes, and needs no
    purchase and no screen. */
 const REAL = {
-  store: 'Hand her the shopping list and a budget for one aisle. Whatever is left over is hers to decide about.',
-  wallet: 'Let her pay at the till this week and count the change back into your hand before you leave.',
-  place: 'Show her one bill that arrives every month. Not to worry her — just so she has seen that the house has a weekly shape.',
-  jars: 'Give her the money for something in three parts across a week rather than all at once, and let her manage the gap.',
+  store: 'Hand over the shopping list and a budget for one aisle. Whatever is left over is theirs to decide about.',
+  wallet: 'Let them pay at the till this week and count the change back into your hand before you leave.',
+  place: 'Show them one bill that arrives every month. Not to worry them — just so they have seen that the house has a weekly shape.',
+  jars: 'Give them the money for something in three parts across a week rather than all at once, and let them manage the gap.',
   goals: 'Put a jar on a shelf with a picture of the thing on it. Physical beats an app for this one, every time.',
-  exchange: 'Next time two shops sell the same thing, let her be the one who says which is cheaper — and let her check the size.',
-  business: 'Let her sell something real to someone real. A stall, a batch of something, one Saturday. Count the cost first.',
+  exchange: 'Next time two shops sell the same thing, let them be the one who says which is cheaper — and let them check the size.',
+  business: 'Let them sell something real to someone real. A stall, a batch of something, one Saturday. Count the cost first.',
 };
 
 export function weekly(c, opts) {
@@ -106,6 +109,13 @@ export function weekly(c, opts) {
   const moved = mastery.movedSince(c, from);
   const dec = decisions.since(c, from);
   const weeks = dec.length + moved.length;
+  /* "has not been in" is a fact about being in, not about learning: a child who
+     played all week and learned nothing new yet WAS in. Measured from the days
+     the child opened the town and the family activity feed, never assumed. */
+  const d0 = dayIndex(from), d1 = dayIndex(now);
+  const wasIn = (c.lastDay != null && c.lastDay >= d0 && c.lastDay <= d1)
+    || (c.goodDays || []).some((x) => x >= d0 && x <= d1)
+    || (o.activity || []).some((x) => x.a === 'finance' && (x.who || '').toLowerCase() === String(c.name).toLowerCase() && x.d >= ymd(from) && x.d <= ymd(now));
 
   const up = moved.filter((m) => m.to === 'retained' || m.to === 'transferred');
   const down = moved.filter((m) => m.to === 'lapsed');
@@ -128,7 +138,8 @@ export function weekly(c, opts) {
     child: c.name,
     from, to: now,
     quiet: !weeks,
-    headline: headline(c, moved, dec, weeks),
+    wasIn,
+    headline: headline(c, moved, dec, weeks, wasIn),
     moved: up.map((m) => ({ id: m.id, name: nameOf(m.id), to: m.to,
       detail: m.to === 'transferred' ? `used it at ${placeOf(m.surface)}, unprompted` : `still had it after ${m.gap} days` })),
     story: story(c, decisions.headline(c, from), money),

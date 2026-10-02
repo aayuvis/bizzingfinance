@@ -214,10 +214,12 @@ async function run(label, vp, isMobile, scheme) {
     ok(`${label}: the question and its answers can be read aloud`, said.startsWith(q) && /A: .+ B: .+/.test(said), said.slice(0, 60));
     const opts = page.locator('.opt');
     const texts = await opts.allTextContents();
-    const right = texts.findIndex((t) => /umbrella/i.test(t)), wrong = right === 0 ? 1 : 0;
+    const right = await page.evaluate(() => { const c = window.BZF.R.s.kids[window.BZF.R.s.active]; return window.BZF.key(c.learn.openCard, (c.learn.drill && c.learn.drill.qi) || 0); });
+    const wrong = right === 0 ? 1 : 0;
     await opts.nth(wrong).click(); await page.waitForTimeout(150);
-    const held = await page.evaluate(() => ({ hold: !!document.querySelector('.fb.hold'), next: !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'), revealed: !!document.querySelector('.opt.ok') }));
-    ok(`${label}: a wrong answer holds, says why, and does not reveal or advance`, held.hold && !held.next && !held.revealed, JSON.stringify(held));
+    const rightText = texts[right].replace(/^[A-D]/, '').trim().toLowerCase();
+    const held = await page.evaluate((rt) => { const fb = document.querySelector('.fb.hold'); return { hold: !!fb, next: !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'), revealed: !!document.querySelector('.opt.ok'), named: !!fb && fb.textContent.toLowerCase().includes(rt) }; }, rightText);
+    ok(`${label}: a wrong answer holds with a hint, and does not name, reveal or advance`, held.hold && !held.next && !held.revealed && !held.named, JSON.stringify(held));
     await opts.nth(right).click(); await page.waitForTimeout(150);
     const settled = await page.evaluate(() => !!document.querySelector('.fb.yes') && !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'));
     ok(`${label}: the second go settles it and offers Next`, settled);
@@ -237,6 +239,45 @@ async function run(label, vp, isMobile, scheme) {
     ok(`${label}: coins arrive only from the standard learning events`, led.length > 0 && led.every((x) => ['answer', 'stop', 'contest', 'mastery'].includes(x.why)), led.map((x) => x.why).join(','));
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   } else ok(`${label}: the first card asks a question`, false);
+
+  /* FIX §1 · Change Rush plays on after catches with other coins falling: the
+     loop that froze for good (arcade.js splice) runs eight seconds by keys */
+  await page.goto(URL0 + '#/arcade'); await page.waitForSelector('.cover[data-arg="cr"]');
+  await page.click('.cover[data-arg="cr"]'); await page.waitForTimeout(200);
+  await page.click('[data-act="gbegin"]'); await page.waitForTimeout(300);
+  const t0cr = await page.evaluate(() => window.BZF.R.game && window.BZF.R.game.st.t);
+  for (let i = 0; i < 40; i++) { await page.keyboard.press(i % 3 ? 'ArrowRight' : 'ArrowLeft'); await page.waitForTimeout(200); }
+  const crRun = await page.evaluate(() => { const g = window.BZF.R.game; return g ? { t: Math.round(g.st.t), done: g.st.done, caught: g.st.exact + (3 - g.st.lives) } : null; });
+  ok(`${label}: Change Rush keeps running through catches (8 s by keys)`, crRun && (crRun.done || crRun.t > t0cr + 6000) && !errors.some((e) => /reading 'y'/.test(e)), JSON.stringify(crRun));
+  if (!isMobile) {
+    /* touch: a tap on a lane button moves the purse */
+    await page.click('[data-act="crLane"][data-arg="3"]').catch(() => {});
+    ok(`${label}: Change Rush lanes answer a tap`, await page.evaluate(() => !window.BZF.R.game || window.BZF.R.game.st.done || window.BZF.R.game.st.lane === 3));
+  }
+  await page.evaluate(() => window.BZF.fire('gquit'));
+
+  /* N12 · the street's signs stand on chips above the road — no line through them */
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.town svg');
+  const signs = await page.evaluate(() => {
+    const road = [...document.querySelectorAll('.town svg rect')].find((r) => r.getAttribute('fill') === 'var(--road)');
+    const ry = road ? +road.getAttribute('y') : 1e9;
+    const labs = [...document.querySelectorAll('.town .tlabel')];
+    return { n: labs.length, chipless: labs.filter((g) => !g.querySelector('rect')).length,
+      crossed: labs.filter((g) => { const b = g.getBBox(); return b.y < ry + 6 && b.y + b.height > ry; }).length };
+  });
+  ok(`${label}: every street sign sits on a chip, clear of the road`, signs.n > 0 && !signs.chipless && !signs.crossed, JSON.stringify(signs));
+  /* N12 · confetti never lands on Continue */
+  const conf = await page.evaluate(async () => {
+    window.BZF.confetti(70);
+    const b = document.querySelector('.continue .cgo').getBoundingClientRect();
+    let hits = 0;
+    for (let k = 0; k < 14; k++) {
+      await new Promise((r) => setTimeout(r, 250));
+      document.querySelectorAll('.conf i').forEach((i) => { const r = i.getBoundingClientRect(); const o = +getComputedStyle(i).opacity; if (o > 0.05 && r.bottom > b.top && r.top < b.bottom && r.right > b.left && r.left < b.right) hits++; });
+    }
+    return hits;
+  });
+  ok(`${label}: confetti never lands on the Continue button`, conf === 0, conf + ' overlaps');
 
   ok(`${label}: no errors and no third-party requests`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

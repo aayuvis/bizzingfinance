@@ -3,10 +3,12 @@
    Two buckets, deliberately: `profile` is the household and syncs to the
    cloud; `device` is this browser's business (sound, theme) and never does. */
 
+import { hashPin } from './pin.js';
+
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 10;
+export const SCHEMA = 11;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -57,6 +59,7 @@ export function migrate(blob) {
     else if (blob.v === 7) blob = v7_to_v8(blob);
     else if (blob.v === 8) blob = v8_to_v9(blob);
     else if (blob.v === 9) blob = v9_to_v10(blob);
+    else if (blob.v === 10) blob = v10_to_v11(blob);
     else break;
   }
   return blob;
@@ -180,6 +183,19 @@ function v9_to_v10(old) {
     delete k.streak;
   });
   old.v = 10;
+  return old;
+}
+
+/* v11: the grown-ups' PIN is kept as a salted hash, never as the digits, and
+   "unlocked" is no longer part of the household — it lives in memory, so a
+   reload asks again (FAMILY-STANDARD §15). An existing four-digit PIN is hashed
+   in place, so nobody's grown-up is locked out by the upgrade. */
+function v10_to_v11(old) {
+  const p = old.parent || (old.parent = {});
+  if (typeof p.pin === 'string' && /^\d{4}$/.test(p.pin)) p.pin = hashPin(p.pin);
+  else if (typeof p.pin === 'string') p.pin = null;
+  delete p.gate;
+  old.v = 11;
   return old;
 }
 

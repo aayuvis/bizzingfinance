@@ -79,7 +79,7 @@ export const OBJECTIVES = [
     objective: 'Sorts a thing they want into need or want, and can say which one it is for them rather than in general.',
     needs_maths: ['M1'], needs: [], surface: 'place', teach: 'c1b',
     short: 'Telling a need from a want',
-    parent_line: 'Ask her which three things in the trolley are needs. The argument you get is the lesson — there is no single right answer and she should notice that.',
+    parent_line: 'Ask which three things in the trolley are needs. The argument you get is the lesson — there is no single right answer, and that is worth noticing together.',
     transfer: [], sources: [],
     assess: [
       { q: 'Someone says "I need those shoes." What are they most likely to mean?', opts: ['They cannot leave the house without them', 'They want them a lot', 'Their old shoes are broken', 'Shoes are always a need'], a: 1,
@@ -95,7 +95,7 @@ export const OBJECTIVES = [
     objective: 'When they buy one of two things they could afford, names the other one as the thing they gave up.',
     needs_maths: ['M2'], needs: ['CHOOSE-1'], surface: 'wallet', teach: 'c3c',
     short: 'Naming what you gave up',
-    parent_line: 'Next time she picks one thing, ask what she is NOT getting now. Not as a telling-off — just so the second thing gets said out loud.',
+    parent_line: 'Next time your child picks one thing, ask what they are NOT getting now. Not as a telling-off — just so the second thing gets said out loud.',
     transfer: ['store', 'goals'], sources: [],
     assess: [
       { q: 'You had ₹200 and spent it on a kite. What did the kite actually cost you?', opts: ['₹200', '₹200 and the puzzle you were also looking at', 'Nothing, you had the money', 'It depends on the kite'], a: 1,
@@ -111,7 +111,7 @@ export const OBJECTIVES = [
     objective: 'Explains that the same object can be worth different amounts to two people, and that price is only what someone is asking.',
     needs_maths: ['M1'], needs: ['CHOOSE-1'], surface: 'store', teach: 'c1d',
     short: 'Price is not value',
-    parent_line: 'Ask what something in the house would be worth to someone who did not already own one. Then ask what it is worth to her.',
+    parent_line: 'Ask what something in the house would be worth to someone who did not already own one. Then ask what it is worth to them.',
     transfer: [], sources: [],
     assess: [
       { q: 'Two people look at the same second-hand bike at ₹1,200. Why might one buy and one walk away?', opts: ['One of them is wrong', 'It is worth more than ₹1,200 to one of them and less to the other', 'One of them has more money', 'The seller changed the price'], a: 1,
@@ -127,7 +127,7 @@ export const OBJECTIVES = [
     objective: 'Given two sizes of the same thing at different prices, works out which is cheaper per unit and can say why the bigger box is not always better value.',
     needs_maths: ['M5', 'M8'], needs: ['CHOOSE-3'], surface: 'store', teach: 'x-ch4',
     short: 'Working out better value per unit',
-    parent_line: 'Ask her which is better value at the shop this week — and let her be wrong once, because that is where it sticks.',
+    parent_line: 'Ask which is better value at the shop this week — and let them be wrong once, because that is where it sticks.',
     transfer: [], sources: [],
     assess: [
       { q: 'Four pens for ₹48, or seven pens for ₹77. Which is cheaper per pen?', opts: ['The pack of four', 'The pack of seven', 'They cost the same per pen', 'You need to know the brand'], a: 1,
@@ -143,7 +143,7 @@ export const OBJECTIVES = [
     objective: 'Recognises manufactured urgency in an offer and can say what waiting would actually cost them.',
     needs_maths: ['M2'], needs: ['CHOOSE-3'], surface: 'store', teach: 'c4a',
     short: 'Spotting manufactured hurry',
-    parent_line: 'Point at a countdown timer on a website together and ask what it is for. She will get there before you finish the question.',
+    parent_line: 'Point at a countdown timer on a website together and ask what it is for. They will get there before you finish the question.',
     transfer: [], sources: [],
     assess: [
       { q: 'A banner says "3 left at this price!" What is that sentence for?', opts: ['To be helpful about stock', 'To stop you going away and thinking', 'To warn you honestly', 'To show the shop is busy'], a: 1,
@@ -159,7 +159,7 @@ export const OBJECTIVES = [
     objective: 'Names what is actually being paid with when something is offered free — money later, attention, or information.',
     needs_maths: ['M1'], needs: ['CHOOSE-5'], surface: 'store', teach: 'c4b',
     short: 'Working out what "free" costs',
-    parent_line: 'Ask how a free game makes money. Let her work it out — it takes about a minute and she will never quite un-see it.',
+    parent_line: 'Ask how a free game makes money. Let them work it out — it takes about a minute and they will never quite un-see it.',
     transfer: [], sources: [],
     assess: [
       { q: 'A free game makes money. From what?', opts: ['It does not, it is a gift', 'From ads, from things sold inside it, or from information about you', 'From the app shop', 'From people who play the most'], a: 1,
@@ -191,7 +191,7 @@ export const OBJECTIVES = [
     objective: 'Compares buying now against saving up by writing both columns — the extra paid now, and the time given up by waiting — and can defend either answer.',
     needs_maths: ['M6'], needs: ['CHOOSE-2', 'CHOOSE-7'], surface: 'goals', teach: 'x-ch8',
     short: 'Weighing waiting against buying now',
-    parent_line: 'When she next wants something she cannot afford yet, ask how many weeks it would take. The number does more work than any answer you could give.',
+    parent_line: 'When your child next wants something they cannot afford yet, ask how many weeks it would take. The number does more work than any answer you could give.',
     transfer: ['loans'], sources: [],
     assess: [
       { q: 'You save ₹120 a week and the thing is ₹500. How many weeks?', opts: ['Four', 'Five, with ₹100 spare', 'Four, with ₹20 short', 'Six'], a: 1,
@@ -207,7 +207,7 @@ export const OBJECTIVES = [
     objective: 'Names one thing a shop or a screen did on purpose to make buying easier, after they have been in it.',
     needs_maths: ['M1'], needs: ['CHOOSE-5'], surface: 'store', teach: 'c4d',
     short: 'Spotting the shop’s design',
-    parent_line: 'On the way out of a shop, ask what was at eye level and what was by the till. She will start doing it unprompted.',
+    parent_line: 'On the way out of a shop, ask what was at eye level and what was by the till. They will start doing it unprompted.',
     transfer: [], sources: [],
     assess: [
       { q: 'Sweets by the till are there because:', opts: ['They are small', 'You are queuing with nothing to do and your guard is down', 'They sell fast', 'They need to be kept cool'], a: 1,
@@ -223,7 +223,7 @@ export const OBJECTIVES = [
     objective: 'Converts two differently-shaped offers to the same units before choosing, and shows the working.',
     needs_maths: ['M8', 'M13'], needs: ['CHOOSE-4', 'CHOOSE-7'], surface: 'exchange', teach: 'x-ch10',
     short: 'Comparing two unlike offers',
-    parent_line: 'Two phone plans, two shop offers, anything. Ask her to get them into the same shape before either of you has an opinion.',
+    parent_line: 'Two phone plans, two shop offers, anything. Ask your child to get them into the same shape before either of you has an opinion.',
     transfer: [], sources: [],
     assess: [
       { q: 'A flat ₹20 a week, or 5% of sales. You sell ₹300 a week. Which is cheaper?', opts: ['The flat fee, at ₹20', 'The 5%, at ₹15', 'The same', 'It cannot be worked out'], a: 1,
@@ -239,7 +239,7 @@ export const OBJECTIVES = [
     objective: 'Sets a spending rule in advance and keeps it through a pay day, rather than deciding again in the moment.',
     needs_maths: ['M10'], needs: ['CHOOSE-8'], surface: 'jars', teach: 'x-ch11',
     short: 'Deciding once, in advance',
-    parent_line: 'Ask what her rule is. If she can say it without looking, it is a rule. If she has to think, it is a wish.',
+    parent_line: 'Ask what their rule is. If they can say it without looking, it is a rule. If they have to think, it is a wish.',
     transfer: [], sources: [],
     assess: [
       { q: 'Why set the jar rule before pay day rather than after?', opts: ['It is faster', 'Because you are calmer before the money is in your hand', 'Because the app makes you', 'It saves more'], a: 1,
@@ -255,7 +255,7 @@ export const OBJECTIVES = [
     objective: 'Looks back at their own past purchases, sorts them into still-glad and not, and names the pattern.',
     needs_maths: ['M2'], needs: ['CHOOSE-11', 'CHOOSE-9'], surface: 'wallet', teach: 'x-ch12',
     short: 'Reading your own spending back',
-    parent_line: 'Ask which of last month’s things she is still glad about. Do not comment on the answer — just ask it again next month.',
+    parent_line: 'Ask which of last month’s things they are still glad about. Do not comment on the answer — just ask it again next month.',
     transfer: [], sources: [],
     assess: [
       { q: 'What is the most useful moment to judge a purchase?', opts: ['In the shop', 'A week later', 'The moment you pay', 'When a friend sees it'], a: 1,

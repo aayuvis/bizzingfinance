@@ -21,6 +21,7 @@ import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLD
   rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester, GLOSSARY } from './content.js';
 import * as sim from './sim.js';
 import { Store } from './store.js';
+import { hashPin, checkPin, pinSet } from './pin.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
@@ -113,8 +114,8 @@ function render() {
     s.ui.nav === 'arcade' ? viewArcade() :
     s.ui.nav === 'store' ? viewStore() :
     s.ui.nav === 'progress' ? viewProgress() :
-    s.ui.nav === 'parents' ? (s.parent.gate ? viewParents() : viewGate()) :
-    s.ui.nav === 'report' ? (s.parent.gate ? viewReport() : viewGate()) :
+    s.ui.nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
+    s.ui.nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
     s.ui.nav === 'worlds' ? viewWorlds() :
     s.ui.nav === 'market40' ? viewMarketGame() :
     s.ui.nav === 'collection' ? viewCollection() : viewHome();
@@ -564,7 +565,16 @@ function applyDevice() {
   if (R.mode) h.setAttribute('data-mode', R.mode); else h.removeAttribute('data-mode');
   if (R.text === 'large') h.setAttribute('data-text', 'large'); else h.removeAttribute('data-text');
   if (R.motion === 'reduced') h.setAttribute('data-motion', 'reduced'); else h.removeAttribute('data-motion');
+  /* FAMILY-STANDARD §8: the family avatar glow and every night plate read this */
+  R.dark = isDark();
+  if (R.dark) h.setAttribute('data-bz-dark', ''); else h.removeAttribute('data-bz-dark');
 }
+function isDark() {
+  if (R.mode === 'dark') return true;
+  if (R.mode === 'light') return false;
+  return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches;
+}
+if (typeof matchMedia !== 'undefined') matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyDevice(); if (R.s) render(); });
 on('mode', (m) => {
   R.mode = m === 'system' ? null : m || (R.mode === 'dark' ? 'light' : 'dark');
   Store.saveDevice('mode', R.mode); applyDevice(); render();
@@ -727,7 +737,8 @@ on('beat', () => {
   const c = C();
   const bt = ledger.beat(c, ALL_CARDS, { mathsMet: ledger.mathsMet(c) });
   if (!bt) { toast('Nothing due today'); return; }
-  if (bt.shape === 'teach') ledger.seen(c, bt.objective.id);
+  /* Opening is not reading: nothing is marked until the card is answered, so a
+     lesson closed half-way is still the next step (FIX B10). */
   c.learn.beat = { shape: bt.shape, obj: bt.objective.id, cardId: bt.card.id, answered: false };
   /* The card lives on Learn. Without this, Continue on Home set the card and
      re-drew Home — a button that did nothing a child could see. */
@@ -744,11 +755,12 @@ on('gateGo', () => {
   const el = document.querySelector('[data-field="pin"]');
   const v = (el && el.value || '').trim();
   if (!/^\d{4}$/.test(v)) { R.gateWrong = true; toast('Four digits'); render(); return; }
-  if (!s.parent.pin) { s.parent.pin = v; s.parent.gate = true; R.gateWrong = false; sim.save(s); toast('PIN set'); render(); return; }
-  if (v === s.parent.pin) { s.parent.gate = true; R.gateWrong = false; render(); }
+  /* stored as a salted hash; "unlocked" is memory only, so a reload asks again */
+  if (!pinSet(s.parent)) { s.parent.pin = hashPin(v); R.gate = true; R.gateWrong = false; sim.save(s); toast('PIN set'); render(); return; }
+  if (checkPin(v, s.parent.pin)) { R.gate = true; R.gateWrong = false; render(); }
   else { R.gateWrong = true; sfx.bad(); render(); }
 });
-on('lock', () => { R.s.parent.gate = false; R.s.ui.nav = 'home'; toast('Locked'); render(); });
+on('lock', () => { R.gate = false; R.s.ui.nav = 'home'; toast('Locked'); render(); });
 function levelUp(res) {
   if (rankObj(res.level).name !== rankObj(res.from).name) family.milestone(C().name, 'band', rankObj(res.level).name);
   sfx.level(); confetti(50);
@@ -1275,7 +1287,7 @@ on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
-  cardById, allCards: ALL_CARDS, fire, key: (id, qi) => shuffledDrill(ALL_CARDS.find((c) => c.id === id), qi || 0).answer };
+  cardById, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 
 /* ── six questions, one chapter (quiz.js) ─────────────────────────────── */
@@ -1408,8 +1420,8 @@ function placementView(o) {
     const r = placement.finish(c, o) || { ceiling: placement.ceilingOf(o) };
     const can = placement.RUNGS[o.reached - 1] || null;
     return `<div class="eyebrow">The maths check</div><h2 style="margin:4px 0 8px">Done — thank you</h2>
-      <p class="small">${esc(c.name)} got as far as <b>${can ? esc(can.can.toLowerCase()) : 'the first rung'}</b>. The town will not put a screen in front of her that needs more than that; it will wait, or show the same truth another way.</p>
-      <p class="small muted" style="margin-top:8px">This is a ceiling, not a mark. It is not shown to her, it is not in any report, and it can be sat again whenever it stops fitting.</p>
+      <p class="small">${esc(c.name)} got as far as <b>${can ? esc(can.can.toLowerCase()) : 'the first rung'}</b>. The town will not put a screen in front of ${esc(c.name)} that needs more than that; it will wait, or show the same truth another way.</p>
+      <p class="small muted" style="margin-top:8px">This is a ceiling, not a mark. It is not shown to the child, it is not in any report, and it can be sat again whenever it stops fitting.</p>
       <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">Back</button></div>`;
   }
   const q = placement.current(o), p = o.pick;

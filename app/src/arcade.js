@@ -119,12 +119,12 @@ export function introView(id) {
     <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start →</button>
     <button class="btn ghost wide" data-act="gback">Back to the arcade</button></div>`;
 }
-export function startGame(id) {
+export function startGame(id, seed) {
   current = id;
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
     mc: marketCup, mn: mainStreet }[id];
-  if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = f(); sfx.click(); }
+  if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = seed != null ? f(seed) : f(); sfx.click(); }
 }
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
 
@@ -559,8 +559,9 @@ function marketCup() {
                   ${row.sc.ret >= 0 ? '+' : ''}${row.sc.ret} return · ${row.sc.div} spread · ${row.sc.steady} nerve</span></span>
                 <span class="p" style="font-size:17px">${row.sc.total}</span></div>`).join('')}
             </div>
-            <p class="small muted">Ranked on cup score. On money alone <b>${esc(st.byReturn)}</b> finished top —
-              which is exactly why money alone is not the scoreboard.</p>
+            <p class="small muted">${st.byReturn === st.table[0].who
+              ? `Ranked on cup score. <b>${esc(st.byReturn)}</b> also finished top on money alone this time — but it is the spread and the nerve that the cup counts.`
+              : `Ranked on cup score. On money alone <b>${esc(st.byReturn)}</b> finished top — which is exactly why money alone is not the scoreboard.`}</p>
             <div class="card" style="box-shadow:none">
               <div class="eyebrow">Your cup score — and this is the part that matters</div>
               <div class="grid3" style="margin-top:8px">
@@ -874,22 +875,26 @@ function stallRush() {
    A real game loop, not a quiz with a hat on. Coins fall, you catch the
    ones that make the amount exactly — and catching one too many is the
    whole point: overpaying is a mistake you can feel. */
-function changeRush() {
+function changeRush(seed = (Date.now() % 100000) | 0) {
   const cur = CURRENCIES[currency()];
   const COINS = cur.coins.slice(0, 5);
-  const LANES = 4, W = 360, H = 300;
-  const st = { target: 0, got: 0, lives: 3, round: 1, score: 0, lane: 1,
-    drops: [], t: 0, spawn: 0, done: false, flash: 0, msg: '' };
+  const LANES = 4, W = 360, H = 300, LEN = 60000;
+  const st = { target: 0, got: 0, lives: 3, round: 1, score: 0, lane: 1, exact: 0,
+    drops: [], t: 0, spawn: 0, done: false, flash: 0, msg: '', pops: [] };
   let raf = 0, last = 0, ctx = null, cv = null;
+  /* seeded, so a round can be replayed and tested; the score is the arithmetic,
+     never the luck of the draw (a coin that can finish the job is always coming) */
+  const r = rng(seed);
 
   const newTarget = () => {
-    const n = 2 + Math.floor(Math.random() * 3);
+    const n = 2 + Math.floor(r() * 3);
     let t = 0;
-    for (let i = 0; i < n; i++) t += COINS[Math.floor(Math.random() * COINS.length)];
+    for (let i = 0; i < n; i++) t += COINS[Math.floor(r() * COINS.length)];
     st.target = t; st.got = 0; st.drops = []; st.spawn = 0;
   };
   newTarget();
 
+  const stop = () => { if (raf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(raf); raf = 0; };
   const end = () => {
     if (st.done) return;
     st.done = true;
@@ -898,44 +903,66 @@ function changeRush() {
     if (st.round > 4) sim.badge(K(), 'exact-change');
     R.render();
   };
-  const catchCoin = (v) => {
+  const el = (id) => (typeof document !== 'undefined' ? document.getElementById(id) : null);
+  const hudSync = () => {
+    const n = el('crNeed'); if (n) n.textContent = money(st.target);
+    const g = el('crGot'); if (g) g.textContent = money(st.got);
+    const l = el('crLives'); if (l) l.textContent = String(Math.max(0, st.lives));
+    const b = el('crBar'); if (b) { b.style.width = Math.min(100, st.got / st.target * 100) + '%'; b.style.background = st.got > st.target ? 'var(--spend)' : 'var(--action)'; }
+    const m = el('crMsg'); if (m) m.textContent = st.msg ? st.msg + ' · ' : '';
+  };
+  const catchCoin = (v, x, y) => {
+    if (st.done) return;
     st.got += v;
+    st.pops.push({ x, y, v, t: 0 });
     if (st.got === st.target) {
-      st.score += 4 + st.round; st.round++; st.flash = 1; st.msg = 'Exact!';
+      st.score += 4 + st.round; st.round++; st.exact++; st.flash = 1; st.msg = 'Exact!';
       sfx.coin(); newTarget();
     } else if (st.got > st.target) {
       st.lives--; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
       sfx.bad(); newTarget();
       if (st.lives <= 0) end();
     } else { sfx.click(); }
+    hudSync();
   };
 
-  const step = (ts) => {
+  /* One frame of the game. The catch test runs over a SNAPSHOT of the falling
+     coins: a catch can finish the round, and finishing the round empties the
+     field. Splicing the old array while a fresh one was being read is what
+     froze the game for good after a catch with other coins on screen. */
+  const advance = (dt) => {
     if (st.done) return;
-    const dt = Math.min(50, ts - (last || ts)); last = ts;
     st.t += dt;
     st.spawn -= dt;
     if (st.spawn <= 0) {
       st.spawn = 620 - Math.min(320, st.round * 40);
       const need = st.target - st.got;
-      /* always keep a coin on screen that can finish the job, or the game is
-         luck rather than arithmetic */
       const usable = COINS.filter((v) => v <= need);
-      const v = (usable.length && Math.random() < 0.55)
-        ? usable[Math.floor(Math.random() * usable.length)]
-        : COINS[Math.floor(Math.random() * COINS.length)];
-      st.drops.push({ lane: Math.floor(Math.random() * LANES), y: -20, v });
+      const v = (usable.length && r() < 0.55)
+        ? usable[Math.floor(r() * usable.length)]
+        : COINS[Math.floor(r() * COINS.length)];
+      st.drops.push({ lane: Math.floor(r() * LANES), y: -20, v });
     }
     const speed = 0.075 + st.round * 0.012;
-    st.drops.forEach((d) => { d.y += speed * dt; });
-    for (let i = st.drops.length - 1; i >= 0; i--) {
-      const d = st.drops[i];
-      if (d.y > H - 44 && d.y < H - 18 && d.lane === st.lane) { catchCoin(d.v); st.drops.splice(i, 1); }
-      else if (d.y > H + 24) st.drops.splice(i, 1);
+    const caught = [], keep = [];
+    for (const d of st.drops) {
+      d.y += speed * dt;
+      if (d.y > H - 44 && d.y < H - 18 && d.lane === st.lane) caught.push(d);
+      else if (d.y <= H + 24) keep.push(d);
     }
+    st.drops = keep;
+    for (const d of caught) { if (st.done) break; catchCoin(d.v, d.lane * (W / LANES) + W / LANES / 2, d.y); }
+    st.pops = st.pops.filter((p) => (p.t += dt) < 700);
     if (st.flash) st.flash *= 0.93;
+    if (st.t >= LEN) { end(); return; }
+    const tm = el('crTime'); if (tm) tm.textContent = Math.max(0, Math.ceil((LEN - st.t) / 1000));
+  };
+  const step = (ts) => {
+    if (st.done) return;
+    const dt = Math.min(50, ts - (last || ts)); last = ts;
+    advance(dt);
     draw();
-    raf = requestAnimationFrame(step);
+    if (!st.done) raf = requestAnimationFrame(step);
   };
 
   const draw = () => {
@@ -943,29 +970,37 @@ function changeRush() {
     const cs = getComputedStyle(document.documentElement);
     const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = tok('--tint', '#EDF2F2'); ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = tok('--line', '#DCE5E4'); ctx.lineWidth = 1;
+    /* the market lane behind the falling coins: a warm wash over the painting */
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, 'rgba(255,248,232,.55)'); sky.addColorStop(1, 'rgba(240,180,41,.2)');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(58,42,92,.14)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
     for (let i = 1; i < LANES; i++) {
       ctx.beginPath(); ctx.moveTo(i * (W / LANES), 0); ctx.lineTo(i * (W / LANES), H); ctx.stroke();
     }
-    st.drops.forEach((d) => {
-      const x = d.lane * (W / LANES) + W / LANES / 2;
-      ctx.beginPath(); ctx.arc(x, d.y, 15, 0, Math.PI * 2);
-      ctx.fillStyle = tok('--treasure', '#F0B429'); ctx.fill();
-      ctx.fillStyle = '#5A3D00'; ctx.font = '700 13px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(d.v), x, d.y + 1);
-    });
+    ctx.setLineDash([]);
+    st.drops.forEach((d) => coin(ctx, d.lane * (W / LANES) + W / LANES / 2, d.y, 16, d.v));
+    /* the purse: a woven basket that squashes on a catch */
     const bx = st.lane * (W / LANES) + W / LANES / 2;
-    ctx.fillStyle = st.flash > 0.1 ? tok('--grow', '#178A4C') : st.flash < -0.1 ? tok('--spend', '#C4453C') : tok('--action', '#0E6B78');
-    ctx.beginPath();
-    ctx.moveTo(bx - 34, H - 34); ctx.lineTo(bx + 34, H - 34);
-    ctx.lineTo(bx + 26, H - 6); ctx.lineTo(bx - 26, H - 6); ctx.closePath(); ctx.fill();
+    const sq = Math.abs(st.flash) > 0.1 ? 1 + Math.abs(st.flash) * 0.12 : 1;
+    ctx.save(); ctx.translate(bx, H - 20); ctx.scale(sq, 1 / sq);
+    ctx.fillStyle = st.flash > 0.1 ? tok('--grow', '#178A4C') : st.flash < -0.1 ? tok('--spend', '#C4453C') : '#B9783A';
+    ctx.strokeStyle = '#3A2A5C'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-34, -14); ctx.lineTo(34, -14); ctx.lineTo(26, 14); ctx.lineTo(-26, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(58,42,92,.35)'; ctx.lineWidth = 1.5;
+    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(k * 12, -14); ctx.lineTo(k * 9.5, 14); ctx.stroke(); }
+    ctx.restore();
+    /* number pops: what you just caught rises off the purse */
+    st.pops.forEach((p) => {
+      const k = p.t / 700;
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = '#3A2A5C'; ctx.font = '800 18px Sono, system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+' + p.v, p.x, H - 50 - k * 40); ctx.globalAlpha = 1;
+    });
   };
-
-  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
 
   return {
     id: 'cr',
+    st, advance,
     mount() {
       cv = document.getElementById('crCanvas');
       if (!cv) return;
@@ -975,8 +1010,8 @@ function changeRush() {
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!st.done) { last = 0; stop(); raf = requestAnimationFrame(step); }
       cv.onpointerdown = (e) => {
-        const r = cv.getBoundingClientRect();
-        st.lane = clamp(Math.floor(((e.clientX - r.left) / r.width) * LANES), 0, LANES - 1);
+        const b = cv.getBoundingClientRect();
+        st.lane = clamp(Math.floor(((e.clientX - b.left) / b.width) * LANES), 0, LANES - 1);
       };
     },
     stop,
@@ -988,20 +1023,31 @@ function changeRush() {
     act(n, arg) { if (n === 'crLane') st.lane = clamp(+arg, 0, LANES - 1); },
     view() {
       if (st.done) return `<div class="stack">${hud(['Done'])}
-        ${endCard(st.round > 4 ? '🏅' : '🪙', st.round - 1 + ' exact', 'Score ' + st.score + '.', st.won,
+        ${endCard(st.round > 4 ? '🏅' : '🪙', st.exact + ' exact', 'Score ' + st.score + '.', st.won,
           'Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.', 'mags')}</div>`;
       return `<div class="stack">
-        ${hud([`Need ${money(st.target)}`, `Got ${money(st.got)}`, '❤️'.repeat(Math.max(0, st.lives))])}
+        ${hud([`Need <b id="crNeed">${money(st.target)}</b>`, `Got <b id="crGot">${money(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
         <div class="stage" style="min-height:0;padding:12px">
-          <div class="bar"><i style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? 'var(--spend)' : 'var(--action)'}"></i></div>
-          <canvas id="crCanvas" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
+          <div class="bar"><i id="crBar" style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? 'var(--spend)' : 'var(--action)'}"></i></div>
+          <canvas id="crCanvas" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
           <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
-            ${[0, 1, 2, 3].map((i) => `<button class="btn ${st.lane === i ? '' : 'ghost'}" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}
+            ${[0, 1, 2, 3].map((i) => `<button class="btn ghost" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}
           </div>
-          <p class="hint">${st.msg ? esc(st.msg) + ' · ' : ''}Arrow keys, or tap a lane. Stop at exactly the amount.</p>
+          <p class="hint"><span id="crMsg">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, or tap a lane. Stop at exactly the amount.</p>
         </div></div>`;
     },
   };
+}
+
+/* A painted coin: a gold disc with a rim, a shine and its value in Sono. */
+function coin(ctx, x, y, r, v) {
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+  g.addColorStop(0, '#FFE9A3'); g.addColorStop(0.55, '#F0B429'); g.addColorStop(1, '#C98A12');
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#3A2A5C'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r - 4, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(122,79,0,.45)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = '#4A3000'; ctx.font = '800 13px Sono, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(v), x, y + 1);
 }
 
 /* ══ MARKET STORM ═════════════════════════════════════════════════════
