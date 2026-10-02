@@ -17,7 +17,7 @@ console.log('\nHive · activity, milestones and coins\n' + '─'.repeat(56));
 /* the four drop-ins are the family's, unedited (copied from Bizzing_Schedule
    integration/, FAMILY-STANDARD v2) */
 const sha = (f) => createHash('sha256').update(readFileSync(new URL('../src/family/' + f, import.meta.url))).digest('hex').slice(0, 16);
-const FAMILY = { 'bizzing-activity.js': 'ca4bbece761514f1', 'bizzing-wallet.js': '0aca54d3de3c4816', 'bizzing-avatars.js': '8d522580801c76b1', 'bizzing-avatars.css': 'cd3f4c325dced245', 'bizzing-shell.js': '8c0d184c4b6747cb', 'bizzing-shell.css': 'c7ddad90f5200007' };
+const FAMILY = { 'bizzing-activity.js': 'ca4bbece761514f1', 'bizzing-wallet.js': '0aca54d3de3c4816', 'bizzing-avatars.js': '8d522580801c76b1', 'bizzing-avatars.css': 'cd3f4c325dced245', 'bizzing-shell.js': '1777aa28eaa18abb', 'bizzing-shell.css': 'e91c3100dc15a4e1' };
 const drift = Object.entries(FAMILY).filter(([f, h]) => sha(f) !== h).map(([f]) => f);
 ok(!drift.length, 'the six drop-ins are byte-for-byte the family copies — update by copying, never editing', drift.join(' '));
 
