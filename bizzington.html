@@ -2550,6 +2550,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   // src/sim.js
   var sim_exports = {};
   __export(sim_exports, {
+    DEFAULT_RULES: () => DEFAULT_RULES,
     JOB_CEIL: () => JOB_CEIL,
     JOB_FLOOR: () => JOB_FLOOR,
     MARKET_STEPS: () => MARKET_STEPS,
@@ -2560,7 +2561,10 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     addXP: () => addXP,
     badge: () => badge,
     bankIn: () => bankIn,
+    bankInterestWeekly: () => bankInterestWeekly,
     bankOut: () => bankOut,
+    bankProjection: () => bankProjection,
+    bankRateAnnual: () => bankRateAnnual,
     bizBuy: () => bizBuy,
     bizCashOut: () => bizCashOut,
     bizPrice: () => bizPrice,
@@ -2570,6 +2574,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     buyFromShop: () => buyFromShop,
     canMove: () => canMove,
     canTravel: () => canTravel,
+    cardXP: () => cardXP,
     changeCurrency: () => changeCurrency,
     checkIndependence: () => checkIndependence,
     claimQuest: () => claimQuest,
@@ -2626,6 +2631,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     removeBill: () => removeBill,
     repayLoan: () => repayLoan,
     rollQuests: () => rollQuests,
+    rulesChosen: () => rulesChosen,
     runPayDay: () => runPayDay,
     save: () => save,
     sellAsset: () => sellAsset,
@@ -5414,6 +5420,15 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   function marketWorld(c) {
     return worldAt(c.market.seed, c.market.step, MARKET_WEEKS);
   }
+  function bankRateAnnual(c) {
+    return marketWorld(c).rate;
+  }
+  function bankInterestWeekly(c) {
+    return c.money.bank.balance * bankRateAnnual(c) / 100 / WEEKS_PER_YEAR;
+  }
+  function bankProjection(c, years) {
+    return c.money.bank.balance * Math.pow(1 + bankRateAnnual(c) / 100 / WEEKS_PER_YEAR, years * WEEKS_PER_YEAR);
+  }
   function marketWhy(c) {
     return explain(marketWorld(c));
   }
@@ -5442,7 +5457,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
         wallet: price(12),
         extraBills: [],
         jars: { spend: 0, save: 0, grow: 0, give: 0 },
-        rules: { spend: 40, save: 30, grow: 20, give: 10 },
+        rules: { ...DEFAULT_RULES },
         goals: [],
         txns: [{ id: "t0", t: now2, kind: "in", amt: price(12), label: "Starting float from Nana", cat: "gift" }],
         wage: price(20),
@@ -5528,7 +5543,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     return c.family.allowance != null ? c.family.allowance : wageFor(c);
   }
   function passiveWeekly(c) {
-    const bank2 = c.money.bank.balance * c.money.bank.rate;
+    const bank2 = bankInterestWeekly(c);
     const invested = holdingsValue(c) * 75e-4;
     const shop = c.biz && c.biz.log.length ? c.biz.log.slice(0, 4).reduce((t, l) => t + l.profit, 0) / Math.min(4, c.biz.log.length) * 3 : 0;
     return Math.max(0, Math.round(bank2 + invested + shop));
@@ -5875,9 +5890,12 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
       out.cat = found;
     }
     if (c.money.bank.opened && c.money.bank.balance > 0) {
-      const i = Math.round(c.money.bank.balance * c.money.bank.rate);
+      const b = c.money.bank;
+      b.accrued = (b.accrued || 0) + bankInterestWeekly(c);
+      const i = Math.floor(b.accrued);
       if (i > 0) {
-        c.money.bank.balance += i;
+        b.accrued -= i;
+        b.balance += i;
         txn(c, "in", i, "Bank interest", "interest");
         out.interest = i;
       }
@@ -6211,6 +6229,14 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     txn(c, "in", take, "Drawn from Bizz & Co", "business");
     stamp(c);
     return take;
+  }
+  function cardXP(first, right) {
+    return right ? first ? 22 : 2 : 0;
+  }
+  var DEFAULT_RULES = Object.freeze({ spend: 40, save: 30, grow: 20, give: 10 });
+  function rulesChosen(c) {
+    const r = c.money.rules;
+    return Object.keys(DEFAULT_RULES).some((k) => r[k] !== DEFAULT_RULES[k]);
   }
   function addXP(c, n) {
     const before = c.learn.level;
@@ -6940,9 +6966,16 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     bank: {
       kind: "own",
       what: "What the Bank pays",
-      value: () => "set by the town each week",
+      value: () => "the town's bank rate, a year \u2014 paid a fifty-second each pay day",
       where: "world.js \xB7 the rate the town sets from its own inflation and growth",
       says: "Bizzington's bank moves its rate in response to Bizzington's own inflation, in Bizzington's own model. It is a working economy, not a copy of one."
+    },
+    loan: {
+      kind: "own",
+      what: "What a Bank loan costs",
+      value: () => "about 1% of the loan for each week you borrow, a little less as trust grows",
+      where: "sim.js \xB7 loanOffer",
+      says: "Short loans cost more than savings earn, in Bizzington as in most places \u2014 the bank keeps the difference. The total is always shown before you agree."
     },
     inflation: {
       kind: "own",
@@ -15032,11 +15065,16 @@ ${marks}`;
     }).join("")}
   </div>`;
   }
+  function testerTools() {
+    if (!R.s.settings.tester) return "";
+    return `<button class="btn ghost wide" data-act="grantXP">\uFF0B Add 200 XP (tester)</button>`;
+  }
   function viewBank() {
     const c = K5(), b = c.money.bank;
     const L = b.loan;
     const offer = loanOffer(c, 40, 8);
-    const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(Math.max(b.balance, price(50)) * Math.pow(1 + b.rate, y * 52)) }));
+    const ra = bankRateAnnual(c), wk2 = bankInterestWeekly(c);
+    const proj = [1, 2, 5, 10].map((y) => ({ y, v: Math.round(bankProjection(c, y)) }));
     return `<div class="stack">
     ${hero({
       eyebrow: "Clocktower Square",
@@ -15050,8 +15088,8 @@ ${marks}`;
     })}
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Every pay day</div>
-        <div class="big" style="font-size:24px">${(b.rate * 100).toFixed(0)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">of what is in the vault</span></div></div></div>
-      <p class="small muted" style="margin-top:8px">Next pay day this adds <b>${money(Math.round(b.balance * b.rate))}</b> \u2014 that is ${money(b.balance)} \xD7 ${(b.rate * 100).toFixed(0)}%, shown rather than hidden.</p>
+        <div class="big" style="font-size:24px">${ra.toFixed(2)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">a year \u2014 the town's rate</span></div></div></div>
+      <p class="small muted" style="margin-top:8px">Each pay day the bank pays a fifty-second of that: ${money(b.balance)} \xD7 ${ra.toFixed(2)}% \xF7 52 = <b>${wk2.toFixed(2)}</b>. Bits smaller than a coin wait in the vault until they make a whole one.</p>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-act="bankIn" ${c.money.jars.save <= 0 ? "disabled" : ""}>Deposit ${money(Math.min(price(10), Math.max(0, c.money.jars.save)))} from Save</button>
         <button class="btn ghost sm" data-act="bankOut" ${b.balance <= 0 ? "disabled" : ""}>Take some out</button>
@@ -15091,12 +15129,12 @@ ${marks}`;
 
     <div class="card">
       <div class="eyebrow">The snowball, on this balance</div>
-      <div class="grid3" style="margin-top:8px">
+      ${b.balance > 0 ? `<div class="grid3" style="margin-top:8px">
         ${proj.map((p) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:10px 12px">
           <div class="small muted">${p.y} year${p.y > 1 ? "s" : ""}</div>
           <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p.v)}</div></div>`).join("")}
       </div>
-      <p class="small muted" style="margin-top:9px">The town's own made-up rate, not a real bank's \u2014 and not a forecast.</p>
+      <p class="small muted" style="margin-top:9px">Your ${money(b.balance)}, left alone at today's ${ra.toFixed(2)}% a year. The town's own rate \u2014 it moves, and this is not a forecast.</p>` : `<p class="small muted" style="margin-top:6px">The vault is empty, and nothing grows on nothing. Put some of your Save jar in and this shows what it becomes.</p>`}
     </div>
   </div>`;
   }
@@ -15648,7 +15686,7 @@ ${marks}`;
       <div class="eyebrow">Prototype tools</div>
       <p class="small muted">Pay day is a real week away, and the clock is client-side in this build. The shipping build takes it from the server so it cannot be advanced by winding the device forward.</p>
       <button class="btn ghost wide" data-act="skipWeek">\u23E9 Jump to the next pay day</button>
-      <button class="btn ghost wide" data-act="grantXP">\uFF0B Add 200 XP (to see further up the street)</button>
+      ${testerTools()}
       <button class="btn ghost wide" style="color:var(--spend)" data-act="wipe">Start this household over</button>
     </div>
   </div>`;
@@ -15667,7 +15705,7 @@ ${marks}`;
     const jobs = txns.filter((t) => t.cat === "job");
     if (jobs.length) decisions.push({ em: "\u{1F9FA}", t: `Took ${jobs.length} job${jobs.length > 1 ? "s" : ""} on Market Row rather than waiting for pay day.` });
     if (c.money.jars.grow > 0) decisions.push({ em: "\u{1F331}", t: `Has ${money(c.money.jars.grow)} in the Grow jar \u2014 money deliberately set aside for far away.` });
-    if (c.money.rules.save + c.money.rules.grow >= 50) decisions.push({ em: "\u{1F4CA}", t: `Set the pay-day rule to keep ${c.money.rules.save + c.money.rules.grow}% back. Their choice, not a default.` });
+    if (rulesChosen(c) && c.money.rules.save + c.money.rules.grow >= 50) decisions.push({ em: "\u{1F4CA}", t: `Set the pay-day rule to keep ${c.money.rules.save + c.money.rules.grow}% back. Their choice, not a default.` });
     if (c.money.bank.loan) decisions.push({ em: "\u{1F91D}", t: `Is repaying a loan and can see the total cost of it on screen.` });
     if (!decisions.length) decisions.push({ em: "\u{1F324}\uFE0F", t: "Nothing yet \u2014 a pay day or two will fill this in." });
     const prompts = [];
@@ -16662,13 +16700,13 @@ ${marks}`;
     const ch = card.ch ? CHAPTERS.find((x) => x.id === card.ch) : null;
     c.learn.done[id] = true;
     if (first && ch) questTick(c, "lesson", 1);
-    const res = addXP(c, first ? right ? 22 : 12 : 2);
+    const res = addXP(c, cardXP(first, right));
     if (ch && ch.cards.every((k) => c.learn.done[k.id])) badge(c, "chapter-" + ch.id);
     c.learn.openCard = null;
     c.learn.drill = null;
     if (res.leveled) levelUp(res);
     else {
-      toast("+" + res.gained + " XP");
+      toast(res.gained ? "+" + res.gained + " XP" : "No XP for that one \u2014 the why is the useful part");
       render();
     }
   });
@@ -16810,6 +16848,7 @@ ${marks}`;
     fire("nav", "home");
   });
   on("grantXP", () => {
+    if (!R.s.settings.tester) return;
     const res = addXP(C3(), 200);
     if (res.leveled) levelUp(res);
     else {
