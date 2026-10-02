@@ -29,6 +29,7 @@ export default defineConfig({
      path, or a folder someone opens through a local server. */
   base: './',
   plugins: [copySW()],
-  build: { outDir: 'build', emptyOutDir: true, target: 'es2020' },
+  /* art is never inlined into JS, however small (FAMILY-STANDARD §11) */
+  build: { outDir: 'build', emptyOutDir: true, target: 'es2020', assetsInlineLimit: 0 },
   server: { port: 8080, open: false },
 });

@@ -19,6 +19,19 @@ const res = await build({
      rest teach in captions on the measured clock. Without this the "single"
      file would carry five megabytes of narration. */
   plugins: [{
+    /* art lives in src/art as files (tools/externalise-art.mjs); a single file
+       has no second request to make, so each one is folded back in here */
+    name: 'inline-art',
+    setup(b) {
+      b.onLoad({ filter: /(-gen|lessons-poses)\.js$/ }, (args) => {
+        const src = readFileSync(args.path, 'utf8').replace(/new URL\('\.\/art\/([\w.-]+)', import\.meta\.url\)\.href/g, (_, f) => {
+          const ext = f.split('.').pop(), mime = ext === 'jpg' ? 'jpeg' : ext;
+          return JSON.stringify(`data:image/${mime};base64,${readFileSync(join(dirname(args.path), 'art', f)).toString('base64')}`);
+        });
+        return { contents: src, loader: 'js' };
+      });
+    },
+  }, {
     name: 'lite-lessons',
     setup(b) {
       b.onResolve({ filter: /lessonindex-list\.js$/ }, (args) => ({

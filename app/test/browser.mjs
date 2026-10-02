@@ -16,6 +16,18 @@ const URL0 = `http://localhost:${srv.address().port}${BASE}`;
 let fail = 0, pass = 0;
 const ok = (name, cond, extra = '') => { if (cond) pass++; else fail++; console.log(`${cond ? '  ok  ' : '  FAIL'} ${name}${extra ? '   ' + extra : ''}`); };
 
+/* N2 · the weight budget, measured on the build itself (FAMILY-STANDARD §11) */
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { gzipSync } = await import('node:zlib');
+  const html = readFileSync(ROOT + '/index.html', 'utf8');
+  const entry = [...html.matchAll(/<script[^>]+src="\.?\/?([^"]+\.js)"/g)].map((m) => m[1]);
+  const gz = entry.reduce((t, f) => t + gzipSync(readFileSync(ROOT + '/' + f)).length, 0);
+  ok(`build: initial JavaScript is ≤ 400 KB gzipped`, entry.length > 0 && gz <= 400 * 1024, `${Math.round(gz / 1024)} KB gz in ${entry.join(', ')}`);
+  const inlined = readdirSync(ROOT + '/assets').filter((f) => f.endsWith('.js') && /data:image\//.test(readFileSync(ROOT + '/assets/' + f, 'utf8')));
+  ok(`build: no picture is inlined into JavaScript`, inlined.length === 0, inlined.join(', '));
+}
+
 const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const browser = await chromium.launch({ executablePath: exe });
 
@@ -107,6 +119,12 @@ async function run(label, vp, isMobile, scheme) {
   /* B3 · progress beside it */
   ok(`${label}: Home shows where the child is beside Continue`, /Stop \d+ of \d+/.test(await page.textContent('.continue .cprog')));
   await a11y('Home'); await noOverflow('Home');
+  /* N2 · what the first screen cost, uncompressed (the test server does not
+     gzip, so this overstates what a phone downloads) */
+  const firstBytes = await page.evaluate(() => performance.getEntriesByType('resource').concat(performance.getEntriesByType('navigation')).reduce((t, e) => t + (e.encodedBodySize || 0), 0));
+  ok(`${label}: the first screen is ≤ 1.5 MB`, firstBytes <= 1.5 * 1024 * 1024, `${(firstBytes / 1024 / 1024).toFixed(2)} MB uncompressed`);
+  const broken = async () => page.evaluate(() => [...document.images].filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.src.slice(-40)));
+  ok(`${label}: every picture on Home loads`, !(await broken()).length, (await broken()).join(' '));
   /* J2 · no streaks anywhere a child reads */
   const streaky = await page.evaluate(() => /day streak|days in a row|\bstreak\b/i.test(document.body.innerText.replace(/no streak/ig, '')));
   ok(`${label}: no streak copy on Home`, !streaky);
@@ -119,6 +137,16 @@ async function run(label, vp, isMobile, scheme) {
   const learnNext = (await page.textContent('.upnext .untitle')).trim();
   ok(`${label}: Home and Learn name the same next step`, homeNext === learnNext, `${homeNext} / ${learnNext}`);
   await a11y('Learn'); await noOverflow('Learn');
+  await page.waitForTimeout(300);
+  ok(`${label}: every picture on Learn loads`, !(await broken()).length, (await broken()).join(' '));
+  await goto('#/arcade');
+  const coversOk = await page.evaluate(async () => {
+    const urls = [...document.querySelectorAll('.cover')].map((el) => (getComputedStyle(el).getPropertyValue('--cover').match(/url\(["']?([^"')]+)/) || [])[1]).filter(Boolean);
+    const res = await Promise.all(urls.map((u) => fetch(u).then((r) => r.ok).catch(() => false)));
+    return { n: urls.length, bad: res.filter((x) => !x).length };
+  });
+  ok(`${label}: every Arcade cover is a file that loads`, coversOk.n > 5 && coversOk.bad === 0, JSON.stringify(coversOk));
+  await goto('#/learn');
   await shot('2-learn');
 
   /* B6 · back stays in the app */
