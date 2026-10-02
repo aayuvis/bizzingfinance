@@ -983,6 +983,12 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   .home > .continue{grid-column:2;grid-row:1 / span 2;min-height:0}
   .home > h1.sr{position:absolute}
 }
+/* answer feedback (drill.js): a held wrong answer is amber, not red — it is
+   a second chance, not a verdict */
+.fb{border-radius:var(--r-md);padding:12px 14px;font-size:14px}
+.fb.yes{background:var(--grow-tint)}
+.fb.no{background:var(--spend-tint)}
+.fb.hold{background:var(--treasure-tint)}
 
 </style>
 </head>
@@ -2696,6 +2702,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     jobsToday: () => jobsToday,
     jumpLevel: () => jumpLevel,
     kid: () => kid,
+    letterXP: () => letterXP,
     load: () => load,
     loanOffer: () => loanOffer,
     markGoodDay: () => markGoodDay,
@@ -6339,6 +6346,9 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   function cardXP(first, right) {
     return right ? first ? 22 : 2 : 0;
   }
+  function letterXP(choice) {
+    return choice && (choice.safe || choice.badge) ? choice.xp || 0 : 0;
+  }
   var DEFAULT_RULES = Object.freeze({ spend: 40, save: 30, grow: 20, give: 10 });
   function rulesChosen(c) {
     const r = c.money.rules;
@@ -6885,7 +6895,7 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
   }
   function shelterView(o) {
     const kinds = Object.keys(KINDS);
-    const pick2 = o.pick;
+    const pick3 = o.pick;
     return `
     <div class="eyebrow">The shelter behind the Jar Shed</div>
     <h2 style="margin:4px 0 6px">Five who need homes</h2>
@@ -6893,14 +6903,14 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     <div class="shelter">
       ${kinds.map((k) => {
       const sp = CO[`${k}-baby-happy`] || CO[`${k}-baby-okay`];
-      return `<button class="shelf${pick2 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
+      return `<button class="shelf${pick3 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
           ${sp ? `<img src="${sp.src}" alt="" style="width:76px;height:${Math.round(76 * sp.h / sp.w)}px">` : `<div style="height:76px;display:grid;place-items:center">${ico(KIND_ICON[k] || "quest", "\u{1F43E}", 34)}</div>`}
           <b>${esc(KINDS[k].name)}</b></button>`;
     }).join("")}
     </div>
-    ${pick2 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick2].line)}</p>
+    ${pick3 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick3].line)}</p>
       <label class="small muted" style="display:block;margin-top:12px">What will you call them?</label>
-      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick2].name)}" value="${esc(o.name || "")}">
+      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick3].name)}" value="${esc(o.name || "")}">
       <button class="btn wide" style="margin-top:12px" data-act="adopt">Take ${esc(o.name || "them")} home \xB7 ${money(price(C.adopt))}</button>` : ""}
     <button class="btn ghost wide" style="margin-top:10px" data-act="closeOv">Not today</button>`;
   }
@@ -7159,10 +7169,10 @@ details.fold details.fold > summary,.card details.fold > summary{box-shadow:0 0 
     const d = day == null ? dayNo() : day;
     const r = rng2(d + 1);
     const n = 3 + Math.floor(r() * 2);
-    const pick2 = [];
+    const pick3 = [];
     const pool = GOODS.slice();
-    for (let i = 0; i < n; i++) pick2.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
-    const lines = pick2.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
+    for (let i = 0; i < n; i++) pick3.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+    const lines = pick3.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
     const multi = r() < 0.5;
     const hidden = Math.floor(r() * lines.length);
     if (multi) lines[hidden].qty = 2 + Math.floor(r() * 3);
@@ -9832,8 +9842,8 @@ ${marks}`;
     return { when: day, text, reversed: d.reversed };
   }
   function conversation(c, moved) {
-    const pick2 = moved.find((m) => m.to === "retained" || m.to === "transferred") || moved[moved.length - 1];
-    const o = pick2 ? objective(pick2.id) : null;
+    const pick3 = moved.find((m) => m.to === "retained" || m.to === "transferred") || moved[moved.length - 1];
+    const o = pick3 ? objective(pick3.id) : null;
     if (!o) return null;
     return {
       objective: o.id,
@@ -10205,8 +10215,8 @@ ${marks}`;
           R.render();
           return;
         }
-        const pick2 = card.choices ? card.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card;
-        const res = pick2.run(g, p);
+        const pick3 = card.choices ? card.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card;
+        const res = pick3.run(g, p);
         p.cash += res.cash || 0;
         note2(`${p.name} \u2014 ${card.t}. ${res.note}`);
         settle(p);
@@ -10641,7 +10651,7 @@ ${marks}`;
   function twoChoice(cfg) {
     const items = shuffle(cfg.items.slice(), cfg.seed);
     const st = { i: 0, right: 0, note: null, done: false };
-    const pick2 = (side) => {
+    const pick3 = (side) => {
       if (st.done) return;
       const it = items[st.i];
       const ok = it.a === side || it.a === "both";
@@ -10649,7 +10659,9 @@ ${marks}`;
         st.right++;
         sfx.good();
       } else sfx.bad();
-      st.note = { ok, text: it.note || (ok ? "Yes." : cfg.wrongNote(it)) };
+      const sideLabel = (k) => (cfg.left.side === k ? cfg.left : cfg.right).label;
+      const named = it.a === "both" ? "It can be both \u2014 that is the interesting kind." : `${sideLabel(it.a)}.`;
+      st.note = { ok, text: ok ? it.note ? `${named} ${it.note}` : named : it.note ? `${cfg.wrongNote(it)} ${it.note}` : cfg.wrongNote(it) };
       st.i++;
       if (st.i >= items.length) {
         st.done = true;
@@ -10667,12 +10679,12 @@ ${marks}`;
           }
           return;
         }
-        if (e.key === "ArrowLeft") pick2(cfg.left.side);
-        else if (e.key === "ArrowRight") pick2(cfg.right.side);
+        if (e.key === "ArrowLeft") pick3(cfg.left.side);
+        else if (e.key === "ArrowRight") pick3(cfg.right.side);
       },
       act(n) {
-        if (n === cfg.left.act) pick2(cfg.left.side);
-        else if (n === cfg.right.act) pick2(cfg.right.side);
+        if (n === cfg.left.act) pick3(cfg.left.side);
+        else if (n === cfg.right.act) pick3(cfg.right.side);
       },
       view() {
         if (st.done) return `<div class="stack">${hud(["Done"])}
@@ -13710,10 +13722,10 @@ ${marks}`;
     const revUp = p ? r.revenue / p.revenue - 1 : 0;
     const netUp = p ? r.net / Math.max(1, Math.abs(p.net)) - 1 : 0;
     const marginDown = p ? r.margin < p.margin : false;
-    const pick2 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
+    const pick3 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
     const good = netUp > 0.08 && revUp > 0.04;
     const bad = netUp < -0.1 || r.net < 0;
-    const open = good ? pick2(OPEN_GOOD) : bad ? pick2(OPEN_BAD) : pick2(OPEN_MIXED);
+    const open = good ? pick3(OPEN_GOOD) : bad ? pick3(OPEN_BAD) : pick3(OPEN_MIXED);
     const body = [];
     body.push(revUp >= 0 ? `Revenue grew ${pc(revUp)} to ${inr(r.revenue)}.` : `Revenue fell ${pc(-revUp)} to ${inr(r.revenue)}, which is not where we wanted to be.`);
     if (marginDown) {
@@ -13826,10 +13838,10 @@ ${marks}`;
   function study(g, id) {
     if (!g.studied.includes(id)) g.studied.push(id);
   }
-  function assess(g, id, pick2) {
+  function assess(g, id, pick3) {
     const c = byId2[id], a = assessOptions(c);
-    const right = pick2 === a.answer;
-    g.assessed[id] = { pick: pick2, right, answer: a.answer };
+    const right = pick3 === a.answer;
+    g.assessed[id] = { pick: pick3, right, answer: a.answer };
     g.score.asked++;
     if (right) g.score.right++;
     return { right, answer: a.answer, why: a.why, label: a.options.find((o) => o.id === a.answer).t };
@@ -14186,6 +14198,27 @@ ${marks}`;
       sub: "Revising keeps it yours.",
       button: "Revise"
     };
+  }
+
+  // src/drill.js
+  function settled(p) {
+    return !!p && (p.right || p.tries !== 1);
+  }
+  function holding(p) {
+    return !!p && !p.right && p.tries === 1;
+  }
+  function pick2(st, qi, i, answer4) {
+    const cur2 = st.picks[qi];
+    if (settled(cur2)) return cur2;
+    if (cur2 && cur2.wrong === i) return cur2;
+    const right = i === answer4;
+    st.picks[qi] = cur2 ? { ...cur2, pick: i, right, tries: 2 } : { pick: i, right, first: right, tries: 1, wrong: right ? null : i };
+    return st.picks[qi];
+  }
+  function tally(st, total) {
+    const ps = st.picks.slice(0, total);
+    const done = ps.length === total && ps.every(settled);
+    return { done, right: done && ps.every((p) => p.first !== false && p.right) };
   }
 
   // src/avatars.js
@@ -14955,6 +14988,7 @@ ${marks}`;
       const qi = live2 ? Math.min(live2.qi, total - 1) : 0;
       const dq = shuffledDrill(card, qi);
       const p = live2 && live2.picks[qi];
+      const hold = holding(p), done = settled(p);
       const last = qi === total - 1;
       return `<div class="card stack">
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : "One question"}</div>
@@ -14962,15 +14996,18 @@ ${marks}`;
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
         let k = "";
-        if (p) k = i === dq.answer ? " ok" : i === p.pick ? " no" : "";
-        return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${p ? "disabled" : ""}>
+        if (done) k = i === dq.answer ? " ok" : i === p.pick || i === p.wrong ? " no" : "";
+        else if (hold && i === p.wrong) k = " no";
+        return `<button class="opt${k}" data-act="answer" data-arg="${i}" ${done || hold && i === p.wrong ? "disabled" : ""}>
             <span class="k">${"ABCD"[i]}</span>${esc(o)}</button>`;
       }).join("")}
       </div>
-      ${p ? `<div style="background:${p.right ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:12px 14px;font-size:14px">
-          <b>${p.right ? "That\u2019s it." : "Not quite \u2014 and this is the useful bit:"}</b> ${esc(dq.why)}</div>` : ""}
-      ${p && !last ? `<button class="btn wide" data-act="nextQ">Next question \u2192</button>` : ""}
-      ${p && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town \u2192</button>` : ""}
+      ${hold ? `<div class="fb hold" role="status"><b>Not this time \u2014 and this is the useful bit:</b> ${esc(dq.why)}
+          <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div></div>` : ""}
+      ${done ? `<div class="fb ${p.right ? "yes" : "no"}" role="status">
+          <b>${p.right ? p.first === false ? "Got it on the second go." : "That\u2019s it." : "That one is " + esc(dq.opts[dq.answer]) + "."}</b> ${p.first === false || !p.right ? "" : esc(dq.why)}</div>` : ""}
+      ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question \u2192</button>` : ""}
+      ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town \u2192</button>` : ""}
     </div>`;
     })()}
   </div>`;
@@ -16296,7 +16333,7 @@ ${marks}`;
       ${o.result ? `<div style="margin-top:12px;background:${o.result.good ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>
            <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
              ${o.result.money ? `<span class="pill gold">${o.result.money > 0 ? "+" : "\u2212"}${money(Math.abs(o.result.money))}</span>` : ""}
-             <span class="pill grow">+${o.result.xp} XP</span>
+             ${o.result.xp ? `<span class="pill grow">+${o.result.xp} XP</span>` : ""}
              ${o.result.badge ? `<span class="pill gold">${BADGES[o.result.badge].em} ${esc(BADGES[o.result.badge].name)}</span>` : ""}</div>
            ${o.result.lasting ? `<p class="small" style="margin-top:9px;color:var(--muted)">${esc(o.result.lasting)}</p>` : ""}
            <button class="btn wide" style="margin-top:14px" data-act="closeOv">Back to the street</button>` : `<div class="stack" style="gap:8px;margin-top:14px">
@@ -16863,20 +16900,18 @@ ${marks}`;
     if (!card) return;
     let st = c.learn.drill;
     if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
-    if (st.picks[st.qi]) return;
-    const pick2 = +i;
-    const right = pick2 === shuffledDrill(card, st.qi).answer;
-    st.picks[st.qi] = { pick: pick2, right };
-    const total = drillCount(card);
-    st.done = st.picks.filter(Boolean).length === total;
-    st.right = st.done && st.picks.every((p) => p && p.right);
-    if (right) sfx.good();
+    if (settled(st.picks[st.qi])) return;
+    const p = pick2(st, st.qi, +i, shuffledDrill(card, st.qi).answer);
+    const t = tally(st, drillCount(card));
+    st.done = t.done;
+    st.right = t.right;
+    if (p.right) sfx.good();
     else sfx.bad();
     render();
   });
   on("nextQ", () => {
     const c = C3(), st = c.learn.drill;
-    if (!st || !st.picks || !st.picks[st.qi]) return;
+    if (!st || !st.picks || !settled(st.picks[st.qi])) return;
     st.qi += 1;
     sfx.click();
     render();
@@ -17013,7 +17048,7 @@ ${marks}`;
       label: L.title,
       alternatives: L.choices.filter((x) => x !== ch).map((x) => x.label)
     });
-    const res = addXP(c, ch.xp || 0);
+    const res = addXP(c, letterXP(ch));
     if (ch.badge) badge(c, ch.badge);
     c.postbox.answered = true;
     c.postbox.log.push({ id: L.id, scam: !!L.scam, safe: !!ch.safe, t: Date.now() });
@@ -17025,7 +17060,7 @@ ${marks}`;
       transfer(c, "GUARD-6", "letter", "answered a scam letter safely instead of quietly");
     }
     stamp(c);
-    R.overlay.result = { note: ch.note, money: delta, xp: ch.xp || 0, badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
+    R.overlay.result = { note: ch.note, money: delta, xp: letterXP(ch), badge: ch.badge, lasting, good: !(L.scam && !ch.safe) };
     if (delta > 0) sfx.coin();
     else if (L.scam && !ch.safe) sfx.bad();
     else sfx.good();
@@ -17259,8 +17294,8 @@ So it costs ${money(offer.cost)}.`);
     window.scrollTo(0, 0);
   });
   on("mgAssess", (arg) => {
-    const [id, pick2] = arg.split(":");
-    const r = assess(G2(), id, pick2);
+    const [id, pick3] = arg.split(":");
+    const r = assess(G2(), id, pick3);
     if (r.right) sfx.good();
     else sfx.bad();
     render();
