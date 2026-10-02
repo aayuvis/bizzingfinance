@@ -2,6 +2,8 @@
    Rendering is `state -> render()` returning a string; clicks dispatch by
    [data-act]. Inherited from Bizzing Bee because the team is fluent in it. */
 
+import * as audio from './audio.js';
+
 export function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,25 +35,9 @@ export function bindRoot(root) {
   });
 }
 
-/* ---- sound: tiny WebAudio blips, no assets ------------------------------ */
-let AC = null, soundOn = true;
-export function setSound(v) { soundOn = !!v; }
-function ac() {
-  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = false; } }
-  if (AC && AC.state === 'suspended') AC.resume();
-  return AC;
-}
-function tone(freq, dur, type, vol, delay) {
-  const c = ac(); if (!c || !soundOn) return;
-  const t = c.currentTime + (delay || 0);
-  const o = c.createOscillator(), g = c.createGain();
-  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol == null ? 0.14 : vol, t + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(c.destination);
-  o.start(t); o.stop(t + dur + 0.02);
-}
+/* ---- sound: composed in code (audio.js), soft and short ------------------ */
+let soundOn = true;
+export function setSound(v) { soundOn = !!v; audio.set({ sfx: soundOn }); }
 /* Motion on every answer (FAMILY-STANDARD §10, F3): a right or wrong sound
    also marks the page for ~half a second, and CSS pops or shakes whatever
    game stage or answer is on screen. The mark lives on <html>, so it
@@ -63,12 +49,14 @@ function flash(kind) {
   clearTimeout(flashT); flashT = setTimeout(() => { delete r.dataset.flash; }, 520);
 }
 export const sfx = {
-  click() { tone(520, 0.07, 'triangle', 0.06); },
-  coin() { tone(880, 0.09, 'triangle', 0.11); tone(1320, 0.13, 'triangle', 0.09, 0.06); },
-  good() { flash('ok'); tone(660, 0.1, 'sine', 0.12); tone(990, 0.16, 'sine', 0.1, 0.08); },
-  bad() { flash('no'); tone(220, 0.16, 'sawtooth', 0.07); tone(170, 0.2, 'sawtooth', 0.06, 0.08); },
-  level() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.24, 'triangle', 0.11, i * 0.09)); },
-  bell() { [784, 1175].forEach((f, i) => tone(f, 0.8, 'sine', 0.1, i * 0.14)); },
+  click() { audio.fx.click(); },
+  coin() { audio.fx.coin(); },
+  good() { flash('ok'); audio.fx.right(); },
+  bad() { flash('no'); audio.fx.wrong(); },
+  level() { audio.fx.finish(); },
+  medal() { audio.fx.medal(); },
+  unlock() { audio.fx.unlock(); },
+  bell() { audio.fx.bell(); },
 };
 
 /* ---- transient chrome --------------------------------------------------- */
@@ -83,7 +71,7 @@ export function toast(msg) {
 }
 const CONF = ['#F0B429', '#0E6B78', '#178A4C', '#C4453C', '#8A5BD6', '#2E7FA8'];
 export function confetti(n) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced') return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced' || document.documentElement.hasAttribute('data-calm')) return;
   const wrap = document.createElement('div');
   wrap.className = 'conf'; wrap.setAttribute('aria-hidden', 'true');
   let html = '';
@@ -153,6 +141,7 @@ export function say(text) {
     const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
     const v = pickVoice(); if (v) u.voice = v;
     u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
+    audio.speaking(true); u.onend = u.onerror = () => audio.speaking(false);
     speechSynthesis.speak(u);
     return true;
   } catch (e) { return false; }

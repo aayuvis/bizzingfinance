@@ -61,7 +61,7 @@ function pin(c, w, wi, x, y, st) {
   const open = worldOpen(c, wi);
   const av = state === 'cur' ? (co.has(c) ? companionFigure(c, 30) : face('pip', 30)) : '';
   return `<button class="apin ${state}${open ? '' : ' shut'}" data-act="shelf" data-arg="act:${wi}" style="left:${x}%;top:${y}%;--ja:${w.tint}" title="${esc(w.name)}">
-    <span class="adot">${av || `<b>${state === 'done' ? '★' : ROMAN[wi]}</b>`}</span>
+    <span class="adot">${av || `<b>${state === 'done' ? ico('star', '', 15) : ROMAN[wi]}</b>`}</span>
     <span class="achip"><b>${esc(w.name)}</b><i>${st.total ? `${st.done}/${st.total} stops` : 'ahead'}</i></span>
   </button>`;
 }
@@ -91,7 +91,7 @@ export function board(c) {
 
 /* ── one world's rail of stops ────────────────────────────────────────── */
 function medallion(c, s, kind) {
-  if (kind === 'passed') return `<span class="med passed">✓</span>`;
+  if (kind === 'passed') return `<span class="med passed">${ico('check', '', 16)}</span>`;
   if (kind === 'cur') return `<span class="med cur" style="--ja:${s.w.tint}">${co.has(c) ? companionFigure(c, 30, { bob: true }) : face('pip', 30)}</span>`;
   return `<span class="med ${kind}">${s.locked ? ico('lock', '🔒', 13) : s.n}</span>`;
 }
@@ -107,7 +107,7 @@ function stopRow(c, s) {
       ${blurb ? `<span class="stblurb">${esc(blurb)}</span>` : ''}
       ${s.cur ? `<span class="stgo">Continue →</span>` : ''}
     </span>
-    ${s.done ? `<span class="small" style="color:var(--grow);font-weight:800">${'★'.repeat(Math.max(1, Math.min(3, (c.learn.done[s.card.id] && c.learn.done[s.card.id].right) || 1)))}</span>` : ''}
+    ${s.done ? `<span class="small" style="color:var(--grow);font-weight:800">${ico('star', '', 14).repeat(Math.max(1, Math.min(3, (c.learn.done[s.card.id] && c.learn.done[s.card.id].right) || 1)))}</span>` : ''}
   </button>`;
 }
 function ring(done, total, size, col) {
@@ -230,7 +230,7 @@ function walk(c, w, ns, wi) {
         return `<button class="wstop ${kind}" style="left:${gap * (i + 1)}%;top:${y}%;--ja:${w.tint}"
           data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}"
           aria-label="Stop ${s.n}: ${esc(s.card.title)}">
-          <span class="wdot">${s.done ? '✓' : s.cur ? (co.has(c) ? companionFigure(c, 34, { bob: true }) : face('pip', 34)) : s.locked ? ico('lock', '🔒', 12) : s.n}</span>
+          <span class="wdot">${s.done ? ico('check', '', 16) : s.cur ? (co.has(c) ? companionFigure(c, 34, { bob: true }) : face('pip', 34)) : s.locked ? ico('lock', '🔒', 12) : s.n}</span>
           ${s.cur ? `<span class="wcard">
             <span class="eyebrow">Stop ${s.n} of ${n}</span>
             <b>${esc(s.card.title)}</b>
@@ -264,7 +264,7 @@ function checkpointRow(c, ch, w) {
   const pct = (c.learn.checkpoints || {})[ch.id];
   const passed = pct != null && pct >= Math.round(QPASS / QN * 100);
   return `<button class="stop ${passed ? 'passed' : 'open'} chk" data-act="checkpoint" data-arg="${ch.id}" style="--ja:${w.tint}">
-    <span class="med ${passed ? 'passed' : ''}">${passed ? '✓' : '◆'}</span>
+    <span class="med ${passed ? 'passed' : ''}">${passed ? ico('check', '', 16) : '◆'}</span>
     <span class="stbody"><span class="sttitle">Checkpoint · ${esc(ch.title)}</span>
       <span class="sttag">Mixed questions, nothing new${pct != null ? ` · best ${pct}%` : ''}</span></span>
     ${pct != null ? `<span class="small" style="color:${passed ? 'var(--grow)' : 'var(--muted)'};font-weight:800">${pct}%</span>` : ''}

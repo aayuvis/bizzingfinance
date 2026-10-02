@@ -77,6 +77,11 @@ export function newChild(name, band, cur, avatar) {
     companion: null,
     keepsakes: [], overnight: null, deeds: [], puzzle: null, maths: null, answers: [],
     shop: { owned: [], cooling: {} },
+    /* the family layer (FAMILY-STANDARD §1, §7, §8): faces and worlds bought with
+       Bizzing coins, the chosen world and cosmetics. Never town money. */
+    fam: { owned: [], worlds: [], extras: [], frame: null, board: null, look: 'market' },
+    mistakes: [],
+    wages: {},
     jobs: {},
     home: { tier: 0, since: now, mortgage: null },
     world: 0,
@@ -314,12 +319,28 @@ export function doJob(c, id, quality) {
   c.jobs[id] = d;
   const row = jobsToday(c).find((x) => x.id === id);
   const base = row ? row.amt : price(j.units);
+  /* K2: no work, no wage — a shift with nothing done pays nothing (the floor is
+     for a shift done badly, not for one not done) */
+  if (quality !== undefined && !(quality > 0)) { questTick(c, 'job', 1); return 0; }
   const q = quality === undefined ? 1 : Math.max(JOB_FLOOR, Math.min(JOB_CEIL, quality));
   const a = earn(c, Math.max(1, Math.round(base * q)), j.name + ' for ' + j.who, 'job');
   questTick(c, 'job', 1);
   stamp(c);
   return a;
 }
+/* K2/K10 · game wages are for practising, not for farming: each game pays for its
+   first GAME_PAYS plays of a day, then plays on for practice. Reset by the day,
+   never a run, and the end card says so plainly. */
+export const GAME_PAYS = 3;
+export function gameWage(c, label, amt, t = Date.now()) {
+  const d = dayIndex(t);
+  if (!c.wages || c.wages.day !== d) c.wages = { day: d, by: {} };
+  const n = c.wages.by[label] || 0;
+  if (n >= GAME_PAYS || !(amt > 0)) return { paid: 0, capped: n >= GAME_PAYS };
+  c.wages.by[label] = n + 1;
+  return { paid: earn(c, amt, label, 'wage'), capped: false, left: GAME_PAYS - n - 1 };
+}
+
 /* Your own best at a job, so the thing you are competing with is yourself
    last week and not another child. */
 export function jobBest(c, id) { return (c.jobs && c.jobs.best && c.jobs.best[id]) || 0; }

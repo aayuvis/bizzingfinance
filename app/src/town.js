@@ -7,6 +7,8 @@ import { esc } from './ui.js';
 import { goodDaysThisWeek } from './sim.js';
 import { WORLDS, FIXES, isOpen as chapterOpen, needFor, tester } from './content.js';
 import { art } from './art-gen.js';
+import { plateFor } from './looks.js';
+import { R } from './runtime.js';
 
 export const PLACES = [
   { key: 'place',    x: 20,  sub: 'place',     name: 'Your place',       lv: 1,  blurb: 'where you live, and what it costs you every single week' },
@@ -19,6 +21,8 @@ export const PLACES = [
 ];
 
 const H = 348, G = 250;
+/* street lanterns bought in the Shop (familyviews.js EXTRAS) glow their colour */
+const LANTERN_GLOW = { 'lanterns-rose': '#F07FA0', 'lanterns-sea': '#5FD0C0', 'lanterns-violet': '#A98BF0' };
 const DEED_H = 84;   /* the verge the deeds stand on, added only when there are any */
 
 function plaque(x, w) {
@@ -196,11 +200,11 @@ function shopN(x, on) {
   return spr('shop', cx, G, w) + sign;
 }
 
-function lantern(x, lit) {
+function lantern(x, lit, glow) {
   const w = 24, h = w * BLD.lantern.h / BLD.lantern.w;
-  return `<g${lit ? '' : ' style="filter:grayscale(.9);opacity:.4"'}>
+  return `<g${lit ? ' class="lantern lit"' : ' class="lantern" style="filter:grayscale(.9);opacity:.4"'}>
     <path d="M${x} 6 v6" stroke="#5E5142" stroke-width="2.6" stroke-linecap="round"/>
-    ${lit ? `<circle cx="${x}" cy="${12 + h / 2}" r="${(h * 0.62).toFixed(1)}" fill="#F0B429" opacity=".16"/>` : ''}
+    ${lit ? `<circle cx="${x}" cy="${12 + h / 2}" r="${(h * 0.62).toFixed(1)}" fill="${glow || '#F0B429'}" opacity="${glow ? '.42' : '.16'}"/>` : ''}
     <image href="${BLD.lantern.src}" x="${x - w / 2}" y="12" width="${w}" height="${h.toFixed(1)}"/>
   </g>`;
 }
@@ -231,9 +235,10 @@ export function townSVG(c) {
   const startX = Math.max(PAD, (W - here.length * SPAN) / 2);
   const xOf = (i) => startX + i * SPAN;
 
-  const plate = art('world-' + world.id);
+  /* the place's own painting, and its NIGHT painting on a dark page (looks.js) */
+  const plate = plateFor(world.id, !!R.dark);
   const lanterns = Array.from({ length: 7 }, (_, i) =>
-    lantern(70 + i * ((W - 140) / 6), i < Math.min(7, good))).join('');
+    lantern(70 + i * ((W - 140) / 6), i < Math.min(7, good), LANTERN_GLOW[(c.fam || {}).lanterns])).join('');
 
   const build = (p, idx) => {
     p = { ...p, x: xOf(idx) };

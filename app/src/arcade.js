@@ -71,7 +71,7 @@ export function viewArcade() {
      the bottom with the level that opens it. */
   const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level 13' });
   return `<div class="stack">
-    ${hero({ eyebrow: 'Practise it', title: 'The Arcade', who: 'pip',
+    ${hero({ eyebrow: 'The Arcade · practise it', title: 'Play', who: 'pip',
       line: 'Game wages go into your one wallet. There\'s no second, magic money.' })}
     ${m40open ? m40 : ''}
     <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
@@ -134,9 +134,12 @@ export function hud(bits) {
 }
 export function payout(n, label) {
   const amt = price(n);
-  if (amt > 0) { sim.earn(K(), amt, label, 'wage'); sim.stamp(K()); sfx.coin(); }
-  return amt;
+  const r = sim.gameWage(K(), label, amt);
+  lastCapped = r.capped;
+  if (r.paid > 0) { sim.stamp(K()); sfx.coin(); }
+  return r.paid;
 }
+let lastCapped = false;
 export function endCard(em, title, sub, wage, line, who) {
   return `<div class="stage" style="justify-content:center;text-align:center">
     <div style="font-size:44px">${em}</div>
@@ -144,7 +147,7 @@ export function endCard(em, title, sub, wage, line, who) {
     <p class="muted">${sub}</p>
     ${line ? say(who || 'pip', line) : ''}
     ${current && PRACTISED[current] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current])}</p>` : ''}
-    <p class="small muted">Earned ${money(wage)}, straight into your wallet.</p>
+    <p class="small muted">${lastCapped ? `Played for practice: ${esc(current ? (GAMES.find((g) => g.id === current) || {}).name || 'this game' : 'this game')} pays for its first ${sim.GAME_PAYS} games a day. Tomorrow it pays again.` : `Earned ${money(wage)}, straight into your wallet.`}</p>
     <button class="btn wide" data-act="gquit">Back to the arcade</button></div>`;
 }
 function shuffle(arr, seed) {
@@ -186,7 +189,7 @@ function twoChoice(cfg) {
         ${endCard(st.right >= items.length - 1 ? '🏅' : '👍', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
       const it = items[st.i];
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${items.length}`, `✓ ${st.right}`])}
+        ${hud([`${st.i + 1} / ${items.length}`, `right ${st.right}`])}
         <div class="stage">
           ${cfg.card(it)}
           ${st.note ? `<div style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
@@ -352,7 +355,7 @@ function quizGame(cfg) {
         ${endCard(st.right >= qs.length - 1 ? '🏅' : '👍', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
       const q = qs[st.i];
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${qs.length}`, `✓ ${st.right}`])}
+        ${hud([`${st.i + 1} / ${qs.length}`, `right ${st.right}`])}
         <div class="stage">
           <div class="gcard"><span class="em">${cfg.em}</span>
             <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>

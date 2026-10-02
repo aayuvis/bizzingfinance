@@ -1,13 +1,24 @@
-/* avatars.js — the family avatar set (FAMILY-STANDARD §5, §12, A4).
+/* avatars.js — a child's face (FAMILY-STANDARD §8, A4).
 
-   The same 21 the Bee drew and Schedule and Maths use, as files in
-   public/avatars so a child's face is the same in every Bizzing app. An
-   avatar is the one picture of a child the app ever holds, and it is not a
+   The face is one of Finance's 96 (catalogue.js), through the family engine. A child
+   who chose a face from the first set of 21 keeps seeing it until they choose again:
+   those files stay in public/avatars as LEGACY, outside the catalogue, so nobody's
+   face changes under them on an upgrade. Setup offers the 24 Commons, free to all.
+   An avatar is the one picture of a child the app ever holds, and it is not a
    picture of the child. */
-export const AVATAR_IDS = ['bizzy', 'melody', 'rocket', 'koi', 'panda', 'redpanda', 'snowfox', 'pengu', 'ottie',
+import { BY_ID, COMMONS } from './catalogue.js';
+
+export const LEGACY_IDS = ['bizzy', 'melody', 'rocket', 'koi', 'panda', 'redpanda', 'snowfox', 'pengu', 'ottie',
   'capy', 'neko', 'froggy', 'robo', 'astro', 'comet', 'pixel', 'samurai', 'scopey', 'beaker', 'goldlegend', 'aryabhatta'];
-export const AVATARS = Object.fromEntries(AVATAR_IDS.map((id) => [id, { id, src: `./avatars/${id}.png` }]));
-export const DEFAULT_AVATAR = 'bizzy';
+export const AVATAR_IDS = COMMONS.map((a) => a.id);
+export const DEFAULT_AVATAR = 'froggy';
+export function avatarSrc(id) {
+  if (BY_ID[id]) return BY_ID[id].thumb;
+  if (LEGACY_IDS.includes(id)) return `./avatars/${id}.png`;
+  return BY_ID[DEFAULT_AVATAR].art;
+}
+export const AVATARS = new Proxy({}, { get: (_, id) => (BY_ID[id] || LEGACY_IDS.includes(id) ? { id, src: avatarSrc(id), name: BY_ID[id] ? BY_ID[id].name : id } : undefined), has: (_, id) => !!(BY_ID[id] || LEGACY_IDS.includes(id)) });
+export const avatarName = (id) => (BY_ID[id] ? BY_ID[id].name : String(id || ''));
 
 /* Currency is a setting, never a question in setup: the device already knows
    where it is. Changeable any time in settings, and the town converts. */

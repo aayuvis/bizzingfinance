@@ -93,8 +93,8 @@ of four dispositions:
 | Painted covers on the arcade | screenshots | game art | **Have** |
 | Keyboard and touch on every game | ✓ | ✓ | **Have** |
 | Badges | ~80 | mala | **Have** — 47, each for a decision; plus the deeds shelf (**Built**) |
-| Avatar / trading cards | 217, packs | pitara | **Own way** — the cast as cards with lore (**Built**); no packs |
-| Coins, packs, gacha | ✓ | sikke, pitara | **Refused** — no second currency, no randomised reward for money (§6.3, §6.4) |
+| Avatar / trading cards | 217, packs | pitara | **Built (family engine, owner's decision 2 Oct 2026)** — 96 avatars in 12 packs of 8 through `bizzing-avatars.js`, every card stating its path; the cast keep their own cards with lore |
+| Coins, packs, gacha | ✓ | sikke, pitara | **Partly overridden by the owner (2 Oct 2026):** Finance adopts the family avatar engine — 96 faces, four tiers, fixed prices — priced in **family Bizzing coins**, which are earned only for learning across the family. Still refused: blind packs, gacha, anything random, and any path from the town's money to a face. See CLAUDE.md, *The family layer*. |
 | Streak rewards, freezes | ✓ | — | **Refused** — streak pressure |
 | Worlds to buy | ✓ | ✓ | **Own way** — five worlds, walked in order by learning |
 | Celebrations | ✓ | toast only | **Have** |

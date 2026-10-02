@@ -19,9 +19,10 @@ console.log('\nSetup, demo, the grown-ups\' card, the session\n' + '─'.repeat(
 
 /* A4 · a first name, an age band and an avatar — nothing else about the child */
 {
-  const c = sim.newChild('Ahana', 'builder', 'INR', 'koi');
-  ok(c.avatar === 'koi' && AVATARS[c.avatar], 'a child is made with their chosen avatar from the family set');
-  ok(sim.newChild('A', 'builder', 'INR').avatar === 'bizzy', 'a child who skips the picker gets the family default');
+  const c = sim.newChild('Ahana', 'builder', 'INR', 'mango');
+  ok(c.avatar === 'mango' && AVATARS[c.avatar], 'a child is made with their chosen avatar from the 96 (a Common)');
+  ok(sim.newChild('A', 'builder', 'INR').avatar === 'froggy', 'a child who skips the picker gets a free Common');
+  ok(AVATARS.koi && AVATARS.koi.src.endsWith('koi.png'), 'a face chosen from the first set still shows until the child picks again');
   const personal = Object.keys(c).filter((k) => /birth|dob|surname|lastname|email|photo|school|locat|address|phone|^age$/i.test(k));
   ok(personal.length === 0, 'the child record holds no other personal field', personal.join(','));
   const v = strip(readFileSync(new URL('../src/views.js', import.meta.url), 'utf8'));

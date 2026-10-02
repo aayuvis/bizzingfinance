@@ -101,11 +101,11 @@ async function run(label, vp, isMobile, scheme) {
   /* A4 · setup is a first name, a face and an age band: three answers */
   await page.click('[data-act="obStart"]');
   await page.fill('#nm', 'Asha');
-  await page.click('[data-act="obAvatar"][data-arg="koi"]');
+  await page.click('[data-act="obAvatar"][data-arg="mango"]');
   await page.click('[data-act="obNext"]');
   const bands = page.locator('[data-act="obBand"]'); await bands.last().click();
   await page.waitForSelector('.continue');
-  ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('.kidbtn img[src*="koi"]').count() === 1);
+  ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('.kidbtn img[src*="mango"]').count() === 1);
   await page.waitForTimeout(3600);                 /* let the welcome confetti finish */
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   await shot('1-home');
@@ -180,7 +180,7 @@ async function run(label, vp, isMobile, scheme) {
 
   /* M3 · the grown-ups area needs the PIN */
   await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
-  await page.click('.topbar [data-act="nav"][data-arg="parents"]');
+  await page.evaluate(() => window.BZF.fire('nav', 'parents'));
   await page.waitForTimeout(300);
   ok(`${label}: the grown-ups area asks for the PIN`, await page.locator('[data-field="pin"]').count() === 1);
 
@@ -279,8 +279,138 @@ async function run(label, vp, isMobile, scheme) {
   });
   ok(`${label}: confetti never lands on the Continue button`, conf === 0, conf + ' overlaps');
 
+  await familyChecks(page, label, vp, isMobile, scheme, errors, shot);
+
   ok(`${label}: no errors and no third-party requests`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
+}
+
+/* ══ FAMILY-STANDARD §22 — the checks every Bizzing app keeps ══════════════
+   Each was watched failing first (see the commit that added it). */
+const EMOJI = /\p{Extended_Pictographic}/u;
+async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
+  const go = async (h) => { await page.evaluate((x) => { location.hash = x; }, h); await page.waitForTimeout(500); };
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+
+  /* §4 tabs: five, Home first, the map second, no More */
+  const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '.tabbar [role=tab]' : '.tabs [role=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
+  ok(`${label}: five tabs — Home · Town · Learn · Money · Play — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play', tabs.join(','));
+  /* §3 the top bar, in the family's order, 56px */
+  const bar = await page.evaluate(() => { const b = document.querySelector('.topbar-in'); const r = b.getBoundingClientRect(); return { h: Math.round(r.height), order: [...b.children].filter((x) => x.offsetParent).map((x) => x.className.split(' ')[0] + (x.dataset.act ? ':' + x.dataset.act : '')) }; });
+  const want = isMobile ? ['iconbtn', 'iconbtn:drawer', 'brand:nav', 'tb-gap', 'coinchip:walletSheet', 'kidbtn:kids'] : ['iconbtn', 'iconbtn:drawer', 'brand:nav', 'tb-gap', 'searchpill:search', 'coinchip:walletSheet', 'iconbtn:mode', 'iconbtn:nav', 'kidbtn:kids'];
+  ok(`${label}: the top bar is the family's, in its order, 56px`, JSON.stringify(bar.order.filter((x) => !/chip/.test(x) || /coinchip/.test(x))) === JSON.stringify(want) && bar.h >= 54 && bar.h <= 60, JSON.stringify(bar));
+  /* §3 ☰ opens and closes by keyboard, and hands focus back */
+  await page.focus('[data-act="drawer"]'); await page.keyboard.press('Enter'); await page.waitForTimeout(250);
+  const opened = await page.evaluate(() => { const d = document.querySelector('.drawer'); return d ? { n: [...d.querySelectorAll('.dr-item')].map((x) => x.textContent.trim().split('\n')[0].trim()), focus: d.contains(document.activeElement) } : null; });
+  ok(`${label}: ☰ opens by keyboard with focus inside`, opened && opened.focus, JSON.stringify(opened && opened.focus));
+  ok(`${label}: ☰ lists the family's order`, opened && /^My page,Shop,Collection,Medals,/.test(opened.n.join(',')) && /Settings,Grown-ups,Help,Privacy,Back to the Hive$/.test(opened.n.join(',')), opened && opened.n.join(','));
+  await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+  ok(`${label}: focus stays inside the open ☰`, await page.evaluate(() => !!document.querySelector('.drawer') && document.querySelector('.drawer').contains(document.activeElement)));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  ok(`${label}: Esc closes ☰ and returns focus to it`, await page.evaluate(() => !document.querySelector('.drawer') && document.activeElement && document.activeElement.dataset.act === 'drawer'));
+  /* §5 Settings: Me · Sound & music · Look · Comfort · Grown-ups */
+  await page.evaluate(() => window.BZF.fire('settings')); await page.waitForTimeout(250);
+  const secs = await page.evaluate(() => [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()));
+  ok(`${label}: Settings sections in the family order`, secs.join('|') === 'Me|Sound & music|Look|Comfort|Grown-ups', secs.join('|'));
+  ok(`${label}: Settings has effects, music and one volume slider`, await page.evaluate(() => !!document.querySelector('[data-act="sound"][role=switch]') && !!document.querySelector('[data-act="musicOn"][role=switch]') && document.querySelectorAll('input[type=range][data-field="vol"]').length === 1));
+  await shot('5-settings');
+  await page.evaluate(() => window.BZF.fire('closeOv'));
+  /* §11 mute in one tap from ☰ */
+  await page.evaluate(() => window.BZF.fire('drawer')); await page.waitForTimeout(150);
+  await page.click('.drawer [data-act="muteAll"]'); await page.waitForTimeout(150);
+  const muted = await page.evaluate(() => ({ sfx: window.BZF.R.s.settings.sound, music: window.BZF.audio.state().music }));
+  ok(`${label}: one tap in ☰ mutes effects and music`, muted.sfx === false && muted.music === false, JSON.stringify(muted));
+  await page.evaluate(() => window.BZF.fire('muteAll')); await page.evaluate(() => window.BZF.fire('closeOv'));
+
+  /* §9 zero emoji in controls; §16 no [object Object] or {placeholder} — on every main screen */
+  const ROUTES = ['#/home', '#/town', '#/learn', '#/money', '#/play', '#/shop', '#/collection', '#/medals', '#/me', '#/mistakes', '#/words'];
+  const emo = [], junk = [], over = [];
+  for (const r of ROUTES) {
+    await go(r);
+    const e = await page.evaluate((src) => { const re = new RegExp(src, 'u'); return [...document.querySelectorAll('button, [role=tab], nav, h1, h2, h3, .chip')].filter((x) => x.offsetParent && re.test(x.textContent.replace(/[0-9#*]/g, ''))).map((x) => x.textContent.trim().slice(0, 18)); }, EMOJI.source);
+    if (e.length) emo.push(r + ': ' + e.slice(0, 3).join(' / '));
+    const j = await page.evaluate(() => (document.body.innerText.match(/\[object Object\]|\{[a-z_]+\}|\bundefined\b|\bNaN\b/g) || []));
+    if (j.length) junk.push(r + ': ' + j.join(','));
+    const w = await page.evaluate((W) => document.scrollingElement.scrollWidth > W + 1 ? document.scrollingElement.scrollWidth : 0, vp.width);
+    if (w) over.push(r + ' ' + w);
+  }
+  ok(`${label}: zero emoji in buttons, tabs, nav, headings and chips`, !emo.length, emo.slice(0, 3).join(' | '));
+  ok(`${label}: no [object Object], {placeholder}, undefined or NaN on any screen`, !junk.length, junk.slice(0, 3).join(' | '));
+  ok(`${label}: no screen runs wider than the device`, !over.length, over.join(' | '));
+
+  /* P3 · 44px targets on the chrome and Home */
+  await go('#/home');
+  const small = await page.evaluate(() => [...document.querySelectorAll('.topbar button, .topbar a, .tabbar button, .tabs button, .continue button, .t3card button, .wchip')].filter((b) => b.offsetParent).filter((b) => { const r = b.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).map((b) => (b.getAttribute('aria-label') || b.textContent).trim().slice(0, 16) + ' ' + Math.round(b.getBoundingClientRect().width) + 'x' + Math.round(b.getBoundingClientRect().height)));
+  ok(`${label}: every chrome and Home target is at least 44px`, !small.length, small.slice(0, 4).join(' | '));
+
+  /* §8 the 96, through the engine */
+  ok(`${label}: validate(avatars) returns []`, (await page.evaluate(() => window.BZF.validateAvatars())).length === 0);
+  await go('#/collection');
+  const coll = await page.evaluate(() => ({ cards: document.querySelectorAll('.pack .bz-av').length, packs: document.querySelectorAll('.pack').length, says: [...document.querySelectorAll('.pack .bz-av .avsay')].every((x) => x.textContent.trim().length > 3) }));
+  ok(`${label}: the Collection shows all 96 by pack, each with its path`, coll.cards === 96 && coll.packs === 12 && coll.says, JSON.stringify(coll));
+
+  /* C4 · search finds a lesson, a word and a game */
+  await page.evaluate(() => window.BZF.fire('search')); await page.waitForTimeout(150);
+  const found = [];
+  for (const [q, want2] of [['needs', 'Needs and wants'], ['interest', 'Interest'], ['change rush', 'Change Rush'], ['harbour', 'The Old Harbour']]) {
+    await page.fill('#srch', q); await page.waitForTimeout(200);
+    const t = await page.evaluate(() => [...document.querySelectorAll('.sres b')].map((b) => b.textContent));
+    found.push(t.includes(want2) ? 1 : `${q}→${t.slice(0, 2).join('/')}`);
+  }
+  ok(`${label}: search finds a lesson, a word, a game and a place`, found.every((x) => x === 1), found.join(' '));
+  await page.evaluate(() => window.BZF.fire('closeOv'));
+
+  /* §7 six worlds: painted, alive, a designed night, AA on every plate */
+  await page.evaluate(() => { window.BZF.R.s.settings.plan = 'family'; });
+  const worldRes = [];
+  for (const w of await page.evaluate(() => window.BZF.looks.map((x) => x.id))) {
+    await page.evaluate((id) => window.BZF.fire('look', id), w); await page.waitForTimeout(250);
+    await go('#/home'); await page.waitForTimeout(250);
+    const st = await page.evaluate(() => ({ ...window.BZF.ambient.state(), plate: (document.querySelector('.fz-plate') || {}).style && document.querySelector('.fz-plate').style.backgroundImage }));
+    const night = /-night\.webp/.test(st.plate || ''), dark = scheme === 'dark';
+    const cr = await page.evaluate(CONTRAST);
+    worldRes.push({ w, layers: st.layers, world: st.world, plateOk: dark ? night : !night, aa: cr.length });
+    if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${label}-world-${w}.png` });
+  }
+  ok(`${label}: six worlds, each with three layers of life`, worldRes.length === 6 && worldRes.every((x) => x.layers >= 3), JSON.stringify(worldRes.map((x) => x.w + ':' + x.layers)));
+  ok(`${label}: every world wears its ${scheme === 'dark' ? 'night' : 'day'} painting`, worldRes.every((x) => x.plateOk), JSON.stringify(worldRes.filter((x) => !x.plateOk)));
+  ok(`${label}: text meets AA in every world (${scheme})`, worldRes.every((x) => x.aa === 0), JSON.stringify(worldRes.filter((x) => x.aa)));
+  await page.evaluate(() => window.BZF.fire('look', 'market'));
+  /* §7 the ambient life pauses when the page is hidden */
+  if (!process.env.REDUCED) {
+    const paused = await page.evaluate(async () => {
+      const before = window.BZF.ambient.state().running;
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r) => setTimeout(r, 80));
+      const during = window.BZF.ambient.state().running, flag = document.documentElement.hasAttribute('data-hidden');
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r) => setTimeout(r, 80));
+      return { before, during, flag, after: window.BZF.ambient.state().running };
+    });
+    ok(`${label}: the world's life runs, pauses when the page is hidden, and resumes`, paused.before && !paused.during && paused.flag && paused.after, JSON.stringify(paused));
+  }
+  /* §11 music: a loop for Home, another for the games, after a gesture */
+  await go('#/home'); await page.mouse.click(5, vp.height - 5).catch(() => {}); await page.waitForTimeout(250);
+  const mHome = await page.evaluate(() => window.BZF.audio.state().want);
+  await go('#/play'); await page.waitForTimeout(200);
+  const mPlay = await page.evaluate(() => window.BZF.audio.state().want);
+  ok(`${label}: music asks for the Home loop on Home and the games loop in Play`, mHome === 'home' && mPlay === 'games', `${mHome} / ${mPlay}`);
+
+  /* F3 · a wrong first answer went into "Ones to try again" */
+  ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
+  /* B10 · reload mid-journey: Continue points at the exact stop */
+  await go('#/home');
+  const before = (await page.textContent('.continue h2')).trim();
+  await page.click('.continue .cgo'); await page.waitForTimeout(250);
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  const after = (await page.textContent('.continue h2')).trim();
+  ok(`${label}: a lesson opened and left, then a reload — Continue points at the same stop`, before === after, `${before} / ${after}`);
+  /* Q1 · the PIN is asked again after a reload */
+  await go('#/parents');
+  ok(`${label}: the grown-ups area asks for the PIN again after a reload`, await page.locator('[data-field="pin"]').count() === 1);
+  await go('#/home');
 }
 
 /* A5 · ?demo: a labelled sample with weeks of progress that saves nothing */

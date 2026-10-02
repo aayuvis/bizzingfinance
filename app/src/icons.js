@@ -50,6 +50,25 @@ export const ICONS = {
     '<path d="M8 8h8a5 5 0 0 1 5 5v1.5a3 3 0 0 1-5.4 1.8l-.6-.8H9l-.6.8A3 3 0 0 1 3 14.5V13a5 5 0 0 1 5-5z"/><path d="M7.4 11v2.4M6.2 12.2h2.4"/>',
     '<circle cx="16" cy="11.7" r="1"/><circle cx="18" cy="13.7" r="1"/>'),
   more: I('action', '', '', '<circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/>'),
+  /* ── the family chrome (FAMILY-STANDARD §3, §9) ─────────────────────── */
+  menu: I('action', '', '<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  search: I('action', '<circle cx="10.5" cy="10.5" r="6"/>', '<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5.2 5.2"/>'),
+  hive: I('treasure', '<path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4z"/>', '<path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4z"/>'),
+  sound: I('action', '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>', '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/>'),
+  soundOff: I('spend', '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>', '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>'),
+  music: I('give', '<circle cx="7" cy="17.5" r="2.6"/><circle cx="17" cy="15.5" r="2.6"/>', '<circle cx="7" cy="17.5" r="2.6"/><circle cx="17" cy="15.5" r="2.6"/><path d="M9.6 17.5V6.2l10-2v11.3"/>'),
+  back: I('action', '', '<path d="M14.5 5.5 8 12l6.5 6.5"/>'),
+  forward: I('action', '', '<path d="M9.5 5.5 16 12l-6.5 6.5"/>'),
+  user: I('give', '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0z"/>', '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>'),
+  sparkle: I('treasure', '<path d="M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z"/>', '<path d="M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z"/>'),
+  star: I('treasure', '<path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>', '<path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
+  help: I('save', '<circle cx="12" cy="12" r="8.6"/>', '<circle cx="12" cy="12" r="8.6"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6"/><path d="M12 16.8v.1"/>'),
+  plus: I('grow', '', '<path d="M12 5v14M5 12h14"/>'),
+  palette: I('give', '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.6-1.8-.3-1.2.6-2.2 1.8-2.2h1.7a3.4 3.4 0 0 0 3.4-3.4C20.5 7.6 16.7 3.5 12 3.5z"/>', '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.6-1.8-.3-1.2.6-2.2 1.8-2.2h1.7a3.4 3.4 0 0 0 3.4-3.4C20.5 7.6 16.7 3.5 12 3.5z"/>', '<circle cx="8" cy="11" r="1.3"/><circle cx="11" cy="7.5" r="1.3"/><circle cx="15.5" cy="8.3" r="1.3"/>'),
+  frame: I('treasure', '<rect x="4" y="4" width="16" height="16" rx="4"/>', '<rect x="4" y="4" width="16" height="16" rx="4"/><rect x="8" y="8" width="8" height="8" rx="2"/>'),
+  play: I('grow', '<path d="M8 5.5v13l10-6.5z"/>', '<path d="M8 5.5v13l10-6.5z"/>'),
+  heart: I('spend', '<path d="M12 19.5s-7.5-4.4-7.5-9.6A4.2 4.2 0 0 1 12 7.4a4.2 4.2 0 0 1 7.5 2.5c0 5.2-7.5 9.6-7.5 9.6z"/>', '<path d="M12 19.5s-7.5-4.4-7.5-9.6A4.2 4.2 0 0 1 12 7.4a4.2 4.2 0 0 1 7.5 2.5c0 5.2-7.5 9.6-7.5 9.6z"/>'),
+  calm: I('save', '<path d="M4 15c2.5-2 5.5-2 8 0s5.5 2 8 0"/>', '<path d="M4 10c2.5-2 5.5-2 8 0s5.5 2 8 0M4 15c2.5-2 5.5-2 8 0s5.5 2 8 0"/>'),
 
   streak: I('spend',
     '<path d="M12 3.2c3.4 3 5 5.5 5 8a5 5 0 0 1-10 0c0-1.3.5-2.6 1.6-4 .3 1.2.9 2 1.8 2.3.1-2.3.6-4.4 1.6-6.3z"/>',
@@ -213,6 +232,7 @@ export const ICONS = {
    half-drawn catalogue reads worse than an honest emoji one. This map is only
    for the icons that carry the app's structure. */
 export const EMOJI_MAP = {
+  '🔊': 'sound', '🔇': 'soundOff', '🎵': 'music', '🎶': 'music', '⭐': 'star', '🌟': 'star', '✨': 'sparkle', '❤': 'heart', '🏅': 'medal', '🏆': 'trophy', '🔍': 'search', '🔎': 'search', '⬡': 'hive', '➕': 'plus', '❓': 'help', '🎨': 'palette', '▶': 'play', '✓': 'check', '✔': 'check', '✕': 'close', '✖': 'close',
   '🏠': 'home', '🏡': 'house', '🏘': 'town', '🗺': 'town', '📗': 'learn', '📘': 'lesson',
   '📖': 'lesson', '📚': 'lesson', '🪙': 'coin', '💵': 'wallet', '🫙': 'jars', '🏛': 'bank',
   '📈': 'chartUp', '📉': 'chartDown', '💹': 'chartUp', '📊': 'chartUp', '🏪': 'shop',

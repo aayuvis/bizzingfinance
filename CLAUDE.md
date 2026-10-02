@@ -166,6 +166,23 @@ is binding where it is not stricter here. What it changed in this repo:
 - **Bizzing coins (owner's decision, option a):** Finance pays family coins only through `earn()` for
   the standard events (answer 1, lesson 5, test 10, chapter 20) and shows them on the Wallet as
   income from the family's apps. They never convert to or from the town's money — rule 4 stands.
+- **The family avatar engine (owner's decision, 2 Oct 2026, overriding docs/11's refusal of
+  rarity):** Finance has 96 avatars in 12 packs of 8 (`src/catalogue.js`) through the family's
+  `bizzing-avatars.js` — Common free, Rare 120, Epic 250, Legendary 500 plus a named learning
+  milestone — and six worlds (`src/looks.js`), worlds 3–6 opening with the family plan or 240
+  coins. **They are bought only with family Bizzing coins** (`buy()`, `buyWorld()`, Shop extras
+  through `spend()`). **The town's money is the curriculum and never buys a face, a world or an
+  extra**; nothing in `catalogue.js`, `looks.js` or the Shop reads or writes `c.money`.
+  `validate(CATALOGUE)` returns `[]` in `test/avatars.mjs`. **Nothing random, ever**: no blind
+  packs, no chance, no duplicates, no trading — and the money rules above all still hold.
+- **The family chrome** lives in `src/shell.js`: Bee's top bar, five tabs (Home · Town · Learn ·
+  Money · Play), the ☰ drawer in the family order, Settings in the five sections, the coin chip's
+  history sheet, search over the whole town (`src/search.js`). Pip the squirrel is the one mascot
+  (six poses in `public/mascot/`); Nana Bizz, Mags, Bo and Bea stay as the town's cast.
+- **Music and effects are composed in code** (`src/audio.js`, `music/CREDITS.md`) — no audio files.
+  Off in Calm mode, ducked under speech, paused when hidden, quiet in lessons by default.
+- **The PIN is a salted hash** (`src/pin.js`) and "unlocked" lives in memory only (`R.gate`), so a
+  reload asks again. Reports name the child or say "they" — never "she" or "he".
 - **Setup asks a first name, a face and an age band**, nothing else. `?demo` is a sample household
   the Store refuses to save.
 - **`deploy.sh` runs `test/browser.mjs`** on the built app (desktop, phone, phone-dark, demo) and
@@ -181,7 +198,7 @@ shared with Bizzing Bee via its `ds-src` package. Keep Bizzing Bee's `state → 
 
 ## Branch
 
-Development happens on `claude/bizzing-finance-webapp-s6tivd` unless told otherwise.
+Development happens on `claude/amazing-knuth-4aemgz` (the family standard v2 work) unless told otherwise.
 
 ## Commit trailer
 

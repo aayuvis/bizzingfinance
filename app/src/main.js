@@ -39,8 +39,19 @@ import * as TRY from './tryit.js';
 import * as drill from './drill.js';
 import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
-  viewParents, viewCollection, viewWorlds, viewGate, viewReport, settingsSheet, aboutSheet, VERSION } from './views.js';
+  viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
+import * as shell from './shell.js';
+import { viewShop, viewCollection as viewFaces, viewMistakes, viewTown, profileCard, EXTRA_BY } from './familyviews.js';
+import { LOOKS, lookById, applyLook, isOpen as lookOpen } from './looks.js';
+import * as ambient from './ambient.js';
+import * as audio from './audio.js';
+import { CATALOGUE, BY_ID, ctxFor, stateOf, validate as validateAvatars } from './catalogue.js';
+import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
+import { spend as spendCoins, balance as coinBalance } from './family/bizzing-wallet.js';
+import * as mistakes from './mistakes.js';
+import * as items from './items.js';
+import { search as searchTown } from './search.js';
 
 const root = document.getElementById('app');
 let draft = { step: 0 };
@@ -63,22 +74,10 @@ function goContinue() {
   writeHash();
   fire(n.act, n.arg || undefined);
 }
-/* A child's badge: their avatar when they have one, their initial until then. */
-function kidBadge(k, size) {
-  const a = k.avatar && AVATARS[k.avatar];
-  return `<span class="kbadge" style="width:${size}px;height:${size}px">${a
-    ? `<img src="${a.src}" alt="" width="${size}" height="${size}">`
-    : `<b style="font-size:${Math.round(size * 0.48)}px">${esc((k.name || '?').trim().charAt(0).toUpperCase())}</b>`}</span>`;
-}
+const kidBadge = shell.kidBadge;
 
-const TABS = [
-  { k: 'home', n: 'Home', g: '🏘️' }, { k: 'learn', n: 'Learn', g: '📗' },
-  { k: 'money', n: 'Money', g: '🪙' }, { k: 'arcade', n: 'Arcade', g: '🎮' },
-  { k: 'store', n: 'Store', g: '🛒' }, { k: 'progress', n: 'Progress', g: '📈' },
-  { k: 'collection', n: 'Collection', g: '🏅' },
-];
-const EXTRA = [{ k: 'worlds', n: 'Worlds', g: '🗺️' }, { k: 'parents', n: "Grown-up's page", g: '👪' }];
-const SPROUT = ['home', 'learn', 'money', 'arcade'];
+/* old names, still accepted in a link or a bookmark */
+const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me' };
 
 /* ══ routing ══════════════════════════════════════════════════════════
    The back button is not a nice-to-have on a phone; it is how people leave
@@ -93,69 +92,65 @@ function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
   if (m[0] === 'continue') { R.continueNow = true; return false; }
-  const known = TABS.map((t) => t.k).concat(['parents', 'worlds', 'report', 'market40']);
+  const known = ['home', 'town', 'learn', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40'];
   if (known.indexOf(m[0]) < 0) return false;
-  R.s.ui.nav = m[0];
+  R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
   return true;
 }
 
 /* ══ shell ════════════════════════════════════════════════════════════ */
+/* The world the child wears (looks.js): the accent, the painted frieze with its
+   ambient life, and the music. Home has its own loop, the games theirs; a lesson is
+   quiet by default (M4). */
+function dressWorld(c) {
+  const w = lookById((c && c.fam && c.fam.look) || 'market');
+  applyLook(w, !!R.dark);
+  ambient.setWorld(w, !!R.dark);
+  const nav = c ? R.s.ui.nav : 'home';
+  const inLesson = !!(c && nav === 'learn' && c.learn.openCard);
+  audio.set({ lesson: inLesson && !R.lessonMusic });
+  audio.music(!c ? 'home' : (nav === 'play' || R.game) ? 'games' : nav === 'home' ? 'home' : w.music);
+}
+
 function render() {
   const s = R.s;
-  if (!s || !s.kids.length || R.adding) { root.innerHTML = `<div class="content">${viewOnboard(draft)}</div>`; return; }
+  if (!s || !s.kids.length || R.adding) { root.innerHTML = `<div class="content">${viewOnboard(draft)}</div>`; dressWorld(null); return; }
   const c = sim.kid(s);
-  const sprout = c.band === 'sprout';
-  const tabs = sprout ? TABS.filter((t) => SPROUT.includes(t.k)) : TABS;
+  if (ALIAS[s.ui.nav]) s.ui.nav = ALIAS[s.ui.nav];
+  const nav = s.ui.nav;
 
   const body =
-    s.ui.nav === 'learn' ? viewLearn() :
-    s.ui.nav === 'money' ? viewMoney() :
-    s.ui.nav === 'arcade' ? viewArcade() :
-    s.ui.nav === 'store' ? viewStore() :
-    s.ui.nav === 'progress' ? viewProgress() :
-    s.ui.nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
-    s.ui.nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
-    s.ui.nav === 'worlds' ? viewWorlds() :
-    s.ui.nav === 'market40' ? viewMarketGame() :
-    s.ui.nav === 'collection' ? viewCollection() : viewHome();
+    nav === 'town' ? viewTown(townParts()) :
+    nav === 'learn' ? viewLearn() :
+    nav === 'money' ? viewMoney() :
+    nav === 'play' ? viewArcade() :
+    nav === 'store' ? viewStore() :
+    nav === 'me' ? `${profileCard(c)}${viewProgress()}` :
+    nav === 'shop' ? viewShop() :
+    nav === 'collection' ? viewFaces() :
+    nav === 'medals' ? viewMedals() :
+    nav === 'words' ? viewGlossaryPage() :
+    nav === 'mistakes' ? viewMistakes() :
+    nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
+    nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
+    nav === 'market40' ? viewMarketGame() : viewHome();
 
-  /* The tab bar is the one row on every screen, so its icons are named here
-     rather than inherited from whatever glyph the tab data happens to carry. */
-  const TAB_ICON = { home: 'home', learn: 'learn', money: 'wallet', arcade: 'arcade',
-                     more: 'more', town: 'town', worlds: 'town', collection: 'quest' };
-  const bar = sprout ? tabs : TABS.slice(0, 4).concat([{ k: 'more', n: 'More', g: '⋯' }]);
-
+  dressWorld(c);
   root.innerHTML = `
-    <header class="topbar">
-      <div class="topbar-in">
-        <a class="iconbtn hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="Back to the Bizzing Hive">⬡</a>
-        <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Finance — home">${mark(26)}<span><em>Bizzing</em> Finance</span></button>
-        ${R.fromHive ? `<a class="chip hiveback" href="${HIVE}">← back to my day</a>` : ''}
-        <button class="chip money" data-act="nav" data-arg="money"
-          aria-label="Your wallet: ${money(c.money.wallet)}" title="Your money — this opens the town's ledger, not the shop">${money(c.money.wallet)}</button>
-        ${s.settings.tester ? '<button class="chip tester" data-act="nav" data-arg="parents" title="Tester mode is on — everything is open">TESTER</button>' : ''}
-        <button class="iconbtn" data-act="settings" aria-label="Look, sound and settings">${ico('gear', '', 19)}</button>
-        <button class="iconbtn" data-act="nav" data-arg="parents" aria-label="Grown-ups (PIN)">${ico('lock', '🔒', 19)}</button>
-        <button class="kidbtn" data-act="kids" aria-label="${esc(c.name)} — switch child" aria-haspopup="dialog">${kidBadge(c, 30)}<span class="caret" aria-hidden="true">▾</span></button>
-      </div>
-      <nav class="nav" aria-label="Sections">
-        ${tabs.map((t) => `<button class="navbtn" data-act="nav" data-arg="${t.k}"
-          aria-current="${s.ui.nav === t.k ? 'page' : 'false'}">${t.n}</button>`).join('')}
-      </nav>
-    </header>
-    ${R.session && R.s.ui.nav !== 'parents' ? sessionBar() : ''}
+    ${shell.topbar(c)}
+    ${R.session && nav !== 'parents' ? sessionBar() : ''}
     ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
     <main class="content">${sim.clockSuspect(s) ? clockWarning() : ''}${body}</main>
-    <nav class="tabbar" aria-label="Primary">
-      ${bar.map((t) => `<button data-act="${t.k === 'more' ? 'more' : 'nav'}" data-arg="${t.k}"
-        aria-current="${s.ui.nav === t.k ? 'page' : 'false'}"><span class="gl">${ico(TAB_ICON[t.k] || t.g, t.g, 24)}</span><span>${t.n}</span></button>`).join('')}
-    </nav>
+    ${shell.tabbar()}
     ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready · Reload</button>' : ''}
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  /* a freshly opened dialog takes focus on its first control */
+  if (R.overlay && R.focusedOv !== R.overlay) { R.focusedOv = R.overlay; const f = root.querySelector('.drawer .dr-item, .drawer button, .ovbox input, .ovbox button'); if (f && !/search/.test(R.overlay.kind)) f.focus({ preventScroll: true }); }
+  if (!R.overlay) R.focusedOv = null;
   mountLesson();   /* narrated lessons re-attach the same way the games do */
   /* the walk scrolls itself to where she is standing, once, after paint */
   document.querySelectorAll('.walk-scroll[data-cur]').forEach((el) => {
@@ -189,7 +184,8 @@ function clockWarning() {
 /* ══ overlays ═════════════════════════════════════════════════════════ */
 function overlay() {
   const o = R.overlay, c = sim.kid(R.s);
-  const box = (inner, wide) => `<div class="ov" data-act="closeOv"><div class="ovbox${wide ? ' wide' : ''}" data-act="noop" role="dialog" aria-modal="true">${inner}</div></div>`;
+  /* C5 · every overlay has a visible way out, not only Escape or the backdrop */
+  const box = (inner, wide) => `<div class="ov${wide === 'sheet' ? ' ov-sheet' : ''}" data-act="closeOv"><div class="ovbox${wide ? ' wide' : ''}${wide === 'sheet' ? ' sheet' : ''}" data-act="noop" role="dialog" aria-modal="true" aria-label="${esc(o.kind)}">${/sheet-h/.test(inner) ? '' : `<button class="ovx" data-act="closeOv" aria-label="Close">${ico('close', '', 18)}</button>`}${inner}</div></div>`;
 
   if (o.kind === 'letter') {
     const L = o.letter;
@@ -215,7 +211,22 @@ function overlay() {
            </div>`}`);
   }
 
-  if (o.kind === 'settings') return box(settingsSheet(R), true);
+  if (o.kind === 'drawer') return shell.drawer(c);
+  if (o.kind === 'settings') return box(shell.settingsSheet(c, o.focus), 'sheet');
+  if (o.kind === 'walletSheet') return box(shell.walletSheet(c), true);
+  if (o.kind === 'search') return box(shell.searchSheet(R.sq || '', searchTown(R.sq || '')), true);
+  if (o.kind === 'privacy') return box(shell.privacySheet(), true);
+  if (o.kind === 'help') return box(shell.helpSheet(), true);
+  if (o.kind === 'avInfo') {
+    const a = BY_ID[o.id], st = stateOf(a, ctxFor(R.s, c));
+    return box(`<div class="sheet-h"><span class="eyebrow">${esc(a.name)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
+      <div style="text-align:center"><span class="bz-av big" data-tier="${a.tier}" data-state="${st.state}" style="display:inline-grid;width:180px"><img src="${a.art}" alt="" width="140" height="140"><figcaption>${esc(a.name)} <b>${st.label}</b></figcaption></span>
+      <p style="margin-top:12px;font-weight:700">${esc(st.say)}</p>
+      ${st.state === 'world' ? `<p class="small muted">${esc(LOOKS[Math.ceil(a.pack / 2) - 1].name)} opens with the family plan, or for 240 coins in the Shop.</p>` : ''}
+      ${st.state === 'milestone' ? '<p class="small muted">It is earned by learning — then it can be bought.</p>' : ''}
+      ${st.state === 'buy' && st.short ? `<p class="small muted">Coins come from right answers and finished lessons in any Bizzing app.</p>` : ''}
+      <button class="btn wide" style="margin-top:12px" data-act="closeOv">OK</button></div>`);
+  }
   if (o.kind === 'quiz') return box(quizView(o), true);
   if (o.kind === 'cast') return box(castCard(o.who), true);
   if (o.kind === 'bug') return box(bugSheet(), true);
@@ -427,24 +438,7 @@ function overlay() {
       </div>`);
   }
 
-  if (o.kind === 'kids') {
-    return box(`<div class="eyebrow" style="margin-bottom:6px">Who is playing?</div>
-      <div class="rows" style="margin:0 -22px -10px">
-        ${R.s.kids.map((k, i) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="switchKid" data-arg="${i}"
-          ${i === R.s.active ? 'aria-current="true"' : ''}>${kidBadge(k, 36)}<b style="font-size:15px" class="grow">${esc(k.name)}</b>${i === R.s.active ? '<span class="pill gold">playing</span>' : ''}</button>`).join('')}
-        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="parents"><span class="iw">${ico('lock', '🔒', 20)}</span><b style="font-size:15px">Add a child (grown-ups)</b></button>
-      </div>`);
-  }
-  if (o.kind === 'more') {
-    const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
-    return box(`<div class="eyebrow" style="margin-bottom:6px">Everything else</div>
-      <div class="rows" style="margin:0 -22px -10px">
-        ${rest.map((t) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="${t.k}">
-          <span class="iw">${ico(t.g, t.g, 20)}</span><b style="font-size:15px">${t.n}</b></button>`).join('')}
-        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="settings"><span class="iw">${ico('gear', '⚙', 20)}</span><b style="font-size:15px">Settings</b></button>
-        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="about"><span class="iw">${ico('lesson', '📖', 20)}</span><b style="font-size:15px">About Bizzington</b></button>
-      </div>`);
-  }
+  if (o.kind === 'kids') return box(shell.kidsSheet(), true);
   return '';
 }
 
@@ -483,7 +477,85 @@ on('closeOv', () => {
   if (R.overlay && R.overlay.then === 'shelter') { R.overlay = { kind: 'shelter', pick: null, name: '' }; render(); return; }
   R.overlay = null; render();
 });
-on('more', () => { R.overlay = { kind: 'more' }; render(); });
+/* ── the family shell (shell.js) ───────────────────────────────────────── */
+on('drawer', () => { R.overlay = { kind: 'drawer' }; sfx.click(); render(); });
+on('walletSheet', () => { R.overlay = { kind: 'walletSheet' }; sfx.click(); render(); });
+on('search', () => { R.overlay = { kind: 'search' }; render(); setTimeout(() => { const el = document.getElementById('srch'); if (el) el.focus(); }, 30); });
+on('privacy', () => { R.overlay = { kind: 'privacy' }; render(); });
+on('help', () => { R.overlay = { kind: 'help' }; render(); });
+on('word', (t) => { R.overlay = null; R.query = t || ''; R.s.ui.nav = 'words'; render(); window.scrollTo(0, 0); });
+on('muteAll', () => {
+  const st = audio.state(), muted = !R.s.settings.sound && !st.music;
+  R.s.settings.sound = muted; setSound(muted); audio.set({ music: muted }); Store.saveDevice('music', muted);
+  toast(muted ? 'Sound on' : 'Sound off'); render();
+});
+on('musicOn', () => { const v = !audio.state().music; audio.set({ music: v }); Store.saveDevice('music', v); render(); });
+on('readAloud', () => { R.readAloud = R.readAloud === false; Store.saveDevice('readAloud', R.readAloud); render(); });
+on('motionSw', () => fire('motion', R.motion === 'reduced' ? 'full' : 'reduced'));
+on('calm', () => { R.calm = !R.calm; Store.saveDevice('calm', R.calm); applyDevice(); render(); });
+on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
+on('addKidGate', () => { R.overlay = null; if (R.gate) fire('addKid'); else { R.afterGate = 'addKid'; R.s.ui.nav = 'parents'; render(); } });
+/* worlds and faces: Bizzing coins only, through the family engine */
+const fam = () => { const c = C(); if (!c.fam) c.fam = { owned: [], worlds: [], extras: [], frame: null, board: null, look: 'market' }; return c.fam; };
+on('look', (id) => {
+  const w = lookById(id), c = C();
+  if (!lookOpen(w, ctxFor(R.s, c))) { toast(`${w.name} opens with the family plan, or 240 coins`); return; }
+  fam().look = w.id; sfx.unlock(); sim.save(R.s); toast(`Wearing ${w.name}`); render();
+});
+on('buyWorld', (n) => {
+  const c = C(), ctx = ctxFor(R.s, c);
+  if (!buyWorld(family.APP, c.name, +n, ctx)) { toast('Not enough coins yet'); sfx.bad(); return; }
+  fam().worlds.push(+n); fam().look = LOOKS[+n - 1].id; sim.save(R.s);
+  sfx.unlock(); confetti(40); toast(`${LOOKS[+n - 1].name} is yours`); render();
+});
+on('wear', (id) => { if (!BY_ID[id]) return; C().avatar = id; sim.save(R.s); sfx.click(); toast('Wearing ' + BY_ID[id].name); render(); });
+on('avInfo', (id) => { if (BY_ID[id]) { R.overlay = { kind: 'avInfo', id }; render(); } });
+on('buyAv', (id) => {
+  const c = C(), a = BY_ID[id]; if (!a) return;
+  if (!buyAvatar(family.APP, c.name, a, ctxFor(R.s, c))) { R.overlay = { kind: 'avInfo', id }; render(); return; }
+  fam().owned.push(id); c.avatar = id; sim.save(R.s);
+  sfx.unlock(); confetti(40); toast(`${a.name} is yours — and you are wearing it`); render();
+});
+on('shopTab', (t) => { R.shopTab = t; render(); });
+on('buyExtra', (id) => {
+  const c = C(), x = EXTRA_BY[id]; if (!x) return;
+  if (fam().extras.includes(id)) return;
+  if (!spendCoins(family.APP, c.name, x.price, 'extra:' + id)) { toast('Not enough coins yet'); sfx.bad(); return; }
+  fam().extras.push(id); fam()[x.kind] = id; sim.save(R.s); sfx.unlock(); toast(x.name + ' — yours'); render();
+});
+on('useExtra', (id) => { const x = EXTRA_BY[id]; if (!x || !fam().extras.includes(id)) return; fam()[x.kind] = fam()[x.kind] === id ? null : id; sim.save(R.s); sfx.click(); render(); });
+/* the mistakes deck */
+on('mkPick', (i) => {
+  const c = C(), m = mistakes.due(c).find((x) => R.mk && x.k === R.mk.k); if (!m) return;
+  const card = cardById(m.card), d = shuffledDrill(card, m.qi), cur = R.mk;
+  if (cur.pick === d.answer || cur.tries >= 2) return;
+  cur.pick = +i; cur.tries++;
+  const right = +i === d.answer;
+  if (right || cur.tries >= 2) {
+    const r = mistakes.answer(c, m.k, right && cur.tries === 1);
+    if (right && cur.tries === 1) { sfx.good(); family.coins(c.name, 'answer'); if (r && r.moved === 'cleared') { sfx.medal(); toast('That one is yours again'); } } else sfx.bad();
+    sim.save(R.s);
+  } else sfx.bad();
+  render();
+});
+on('mkNext', () => { R.mk = null; render(); });
+/* "Your turn" items (items.js): sort, order, amount */
+on('itSel', (i) => { const t = R.item || (R.item = {}); t.sel = +i; render(); });
+on('itBin', (b) => { const t = R.item || (R.item = {}); if (t.sel == null) return; (t.bins || (t.bins = {}))[t.sel] = +b; t.sel = null; sfx.click(); render(); });
+on('itStep', (i) => { const t = R.item || (R.item = {}); const seq = t.seq || (t.seq = []); if (!seq.includes(+i)) seq.push(+i); sfx.click(); render(); });
+on('itUndo', () => { const t = R.item || {}; if (t.seq) t.seq.pop(); render(); });
+on('itCheck', (id) => {
+  const it = items.ITEMS[id], t = R.item || (R.item = {}); if (!it || t.settled) return;
+  const attempt = it.kind === 'amount' ? (document.getElementById('itAmt') || {}).value
+    : it.kind === 'order' ? (t.seq || []) : it.things.map((_, i) => (t.bins || {})[i]);
+  const right = items.check(id, attempt);
+  t.tries = (t.tries || 0) + 1; t.right = right; t.last = attempt;
+  if (right) { sfx.good(); t.settled = true; if (t.tries === 1) family.coins(C().name, 'answer'); }
+  else if (t.tries >= 2) { sfx.bad(); t.settled = true; }
+  else sfx.bad();
+  render();
+});
+on('itReset', () => { const t = R.item || {}; R.item = { id: t.id }; render(); });
 /* ── today's session (E1, session.js) ─────────────────────────────────── */
 function sessionBar() {
   const c = C(), st = SESSION.status(c, sim), n = SESSION.next(c, sim);
@@ -507,12 +579,11 @@ on('sessionEnd', () => {
   R.overlay = { kind: 'sessionDone', sum }; R.s.ui.nav = 'home'; writeHash(); render();
 });
 
-on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
   R.gameIntro = null;
   if (R.game) quitGame();
-  R.s.ui.nav = k;
+  R.s.ui.nav = ALIAS[k] || k;
   if (R.s.kids.length) C().learn.openCard = null;
   sfx.click(); render(); window.scrollTo(0, 0);
 });
@@ -566,6 +637,9 @@ function applyDevice() {
   if (R.text === 'large') h.setAttribute('data-text', 'large'); else h.removeAttribute('data-text');
   if (R.motion === 'reduced') h.setAttribute('data-motion', 'reduced'); else h.removeAttribute('data-motion');
   /* FAMILY-STANDARD §8: the family avatar glow and every night plate read this */
+  if (R.text === 's') h.setAttribute('data-text', 's');
+  if (R.calm) h.setAttribute('data-calm', ''); else h.removeAttribute('data-calm');
+  audio.set({ calm: !!R.calm });
   R.dark = isDark();
   if (R.dark) h.setAttribute('data-bz-dark', ''); else h.removeAttribute('data-bz-dark');
 }
@@ -579,9 +653,22 @@ on('mode', (m) => {
   R.mode = m === 'system' ? null : m || (R.mode === 'dark' ? 'light' : 'dark');
   Store.saveDevice('mode', R.mode); applyDevice(); render();
 });
-on('text', (v) => { R.text = v === 'large' ? 'large' : null; Store.saveDevice('text', R.text); applyDevice(); render(); });
+on('text', (v) => { R.text = v === 'large' ? 'large' : v === 's' ? 's' : null; Store.saveDevice('text', R.text); applyDevice(); render(); });
 on('motion', (v) => { R.motion = v === 'reduced' ? 'reduced' : null; Store.saveDevice('motion', R.motion); applyDevice(); render(); });
-on('settings', () => { R.overlay = { kind: 'settings' }; sfx.click(); render(); });
+on('settings', (focus) => {
+  R.overlay = { kind: 'settings', focus }; sfx.click(); render();
+  if (focus === 'look') setTimeout(() => { const el = document.getElementById('st-look-sec'); if (el) el.scrollIntoView({ block: 'start' }); }, 30);
+});
+/* hold a control for its second action (the theme button opens the worlds) */
+let longT = null, longFired = false;
+document.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest && e.target.closest('[data-long]'); longFired = false;
+  if (!el) return;
+  clearTimeout(longT);
+  longT = setTimeout(() => { longFired = true; const [a, arg] = el.getAttribute('data-long').split(':'); fire(a, arg); }, 550);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => document.addEventListener(ev, () => clearTimeout(longT)));
+document.addEventListener('click', (e) => { if (longFired && e.target.closest && e.target.closest('[data-long]')) { e.stopPropagation(); e.preventDefault(); longFired = false; } }, true);
 on('rate', (v) => { R.rate = v === 'slow' ? 'slow' : null; Store.saveDevice('rate', R.rate); applyRate(); render(); });
 function applyRate() { const r = R.rate === 'slow' ? 0.82 : 1; setRate(r); setSayRate(r); }
 /* read it to me: the device's own voice, since these have no recorded clip */
@@ -653,7 +740,7 @@ on('betweenGo', (id) => { R.overlay = null; fire('card', id); });
 /* learn */
 on('card', (id) => {
   R.s.ui.nav = 'learn'; R.shelf = '';
-  C().learn.openCard = id; C().learn.drill = null;
+  C().learn.openCard = id; C().learn.drill = null; R.item = { id };
   sfx.click(); render(); window.scrollTo(0, 0);
 });
 /* Cards now come from three places: the chapters, the objectives file's own
@@ -682,7 +769,8 @@ on('answer', (i) => {
      a second-go answer is learning, not evidence of having known (drill.js) */
   const t = drill.tally(st, drillCount(card));
   st.done = t.done; st.right = t.right;
-  if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); } else sfx.bad();
+  if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); }
+  else { sfx.bad(); if (p.tries === 1) mistakes.record(c, card.id, st.qi); }   /* F3: a wrong FIRST answer goes in the deck */
   render();
 });
 on('nextQ', () => {
@@ -726,6 +814,7 @@ on('cardDone', (id) => {
   if (finished) { family.coins(c.name, 'mastery'); family.milestone(c.name, 'mastery', 'Chapter: ' + ch.title); }
   if (bt && bt.shape === 'retrieve' && bt.cardId === id && mastery.stateOf(c, bt.obj) === 'retained') family.milestone(c.name, 'mastery', objective(bt.obj).short);
   c.learn.openCard = null; c.learn.drill = null;
+  c.lastDone = { id, title: card.title, right, t: Date.now() };
   /* J1: finishing a chapter is a moment, and it names what was done — the
      four lessons, what it opens — never how anyone else did. */
   if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
@@ -757,7 +846,7 @@ on('gateGo', () => {
   if (!/^\d{4}$/.test(v)) { R.gateWrong = true; toast('Four digits'); render(); return; }
   /* stored as a salted hash; "unlocked" is memory only, so a reload asks again */
   if (!pinSet(s.parent)) { s.parent.pin = hashPin(v); R.gate = true; R.gateWrong = false; sim.save(s); toast('PIN set'); render(); return; }
-  if (checkPin(v, s.parent.pin)) { R.gate = true; R.gateWrong = false; render(); }
+  if (checkPin(v, s.parent.pin)) { R.gate = true; R.gateWrong = false; if (R.afterGate) { const a = R.afterGate; R.afterGate = null; fire(a); return; } render(); }
   else { R.gateWrong = true; sfx.bad(); render(); }
 });
 on('lock', () => { R.gate = false; R.s.ui.nav = 'home'; toast('Locked'); render(); });
@@ -1182,7 +1271,8 @@ on('gquit', () => {
   const c = C();
   const next = ALL_CARDS.find((x) => !c.learn.done[x.id]
     && C().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
-  if (next && Math.random() < 0.7) R.overlay = { kind: 'between', card: next };
+  /* offered once per card, never by chance — nothing in this app is random */
+  if (next && R.betweenFor !== next.id) { R.betweenFor = next.id; R.overlay = { kind: 'between', card: next }; }
   render();
 });
 GAME_ACTS.forEach((a) => { on(a, (arg) => { if (R.game && R.game.act) R.game.act(a, arg); }); });
@@ -1206,6 +1296,8 @@ document.body.addEventListener('change', (e) => {
 });
 function liveField(f, v) {
   if (f === 'query') { R.query = v; render(); requeue('query'); }
+  else if (f === 'sq') { R.sq = v; render(); requeue('sq'); }
+  else if (f === 'vol') { const n = Math.max(0, Math.min(100, +v)) / 100; audio.set({ volume: n }); Store.saveDevice('volume', n); }
   else if (f === 'cur') { sim.changeCurrency(C(), v); toast('Converted to ' + CURRENCIES[v].name); render(); }
   else if (f === 'payday') {
     sim.setPayWeekday(C(), +v);
@@ -1229,8 +1321,20 @@ document.addEventListener('keydown', (e) => {
     R.game.key(e);
     return;
   }
+  /* a dialog keeps focus inside it (FAMILY-STANDARD §3: the ☰ drawer traps focus) */
+  if (e.key === 'Tab' && R.overlay) {
+    const box = document.querySelector('.drawer, .ovbox');
+    if (box) {
+      const f = [...box.querySelectorAll('button:not([disabled]), a[href], input, select, [tabindex="0"]')].filter((x) => x.offsetParent !== null);
+      if (f.length) {
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && (i === -1 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
+      }
+    }
+  }
   if (e.key === 'Escape') {
-    if (R.overlay) { R.overlay = null; render(); }
+    if (R.overlay) { const k = R.overlay.kind; R.overlay = null; render(); if (k === 'drawer') { const b = document.querySelector('[data-act="drawer"]'); if (b) b.focus(); } }
     else if (C() && C().learn.openCard) fire('closeCard');
     else if (R.shelf) fire('shelf', '');
   }
@@ -1246,6 +1350,8 @@ window.addEventListener('hashchange', () => {
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
 R.mode = Store.loadDevice('mode', null); R.text = Store.loadDevice('text', null); R.motion = Store.loadDevice('motion', null); R.rate = Store.loadDevice('rate', null);
+R.calm = !!Store.loadDevice('calm', false); R.readAloud = Store.loadDevice('readAloud', true); R.version = VERSION;
+audio.set({ volume: Store.loadDevice('volume', 0.4), music: Store.loadDevice('music', true) });
 applyDevice(); applyRate();
 
 /* ?demo: a sample household, labelled, never saved (demo.js, store.js). */
@@ -1287,6 +1393,7 @@ on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
 window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+  ambient, audio, looks: LOOKS, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   cardById, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 

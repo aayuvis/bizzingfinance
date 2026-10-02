@@ -8,7 +8,7 @@ import { hashPin } from './pin.js';
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 11;
+export const SCHEMA = 12;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -60,6 +60,7 @@ export function migrate(blob) {
     else if (blob.v === 8) blob = v8_to_v9(blob);
     else if (blob.v === 9) blob = v9_to_v10(blob);
     else if (blob.v === 10) blob = v10_to_v11(blob);
+    else if (blob.v === 11) blob = v11_to_v12(blob);
     else break;
   }
   return blob;
@@ -196,6 +197,20 @@ function v10_to_v11(old) {
   else if (typeof p.pin === 'string') p.pin = null;
   delete p.gate;
   old.v = 11;
+  return old;
+}
+
+/* v12: the family layer on each child — faces and worlds owned (bought with
+   Bizzing coins, never town money), the chosen world, cosmetics; the mistakes
+   deck (wrong first answers, brought back after a gap); and the day's game wages,
+   so a game pays for the first few plays of a day and not for farming. */
+function v11_to_v12(old) {
+  old.kids.forEach((k) => {
+    if (!k.fam) k.fam = { owned: [], worlds: [], extras: [], frame: null, board: null, look: 'market' };
+    if (!k.mistakes) k.mistakes = [];
+    if (!k.wages) k.wages = {};
+  });
+  old.v = 12;
   return old;
 }
 

@@ -45,6 +45,21 @@ function loadLesson(id) {
 const clipURL = (key) => 'voice/lessons/' + key + '.mp3';
 import { ico } from './art.js';
 import { esc } from './ui.js';
+import { plateFor } from './looks.js';
+import { ALL_CARDS, WORLDS } from './content.js';
+import { R } from './runtime.js';
+import * as audio from './audio.js';
+
+/* E4 · the stage is painted: the lesson stands in the world its chapter belongs to
+   (looks.js), by day or by the night plate, never an empty sky with a small icon. */
+function stagePlate(lid) {
+  const card = ALL_CARDS.find((c) => c.id === lid);
+  const w = card && WORLDS.find((x) => x.chapters.includes(card.ch));
+  return plateFor((w || WORLDS[0]).id, !!R.dark);
+}
+const PLAY = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="currentColor"/></svg>`;
+const PAUSE = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="6.5" y="5.5" width="4" height="13" rx="1" fill="currentColor"/><rect x="13.5" y="5.5" width="4" height="13" rx="1" fill="currentColor"/></svg>`;
+const AGAIN = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 4.5V8h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 
 let RATE = 1;
 export function setRate(r) { RATE = r || 1; if (P && P.audio) { try { P.audio.playbackRate = RATE; } catch (e) {} } }
@@ -68,15 +83,15 @@ export function lessonBlock(id) {
   if (!LOADERS[id]) return '';
   const L = MEDIA[id];
   return `<div class="card lesson pad0" id="lessonstage" data-lesson="${id}">
-    <div class="lstage-holder"></div>
+    <div class="lstage-holder"><div class="lstage" style="--stage:url(${stagePlate(id)})"><img class="lpip" src="./mascot/pip-point.webp" alt="" width="120" height="120"></div></div>
     <div class="lfoot">
       <div class="row"><div class="grow"><div class="eyebrow">Nana Bizz explains</div>
         <b style="font-size:15px">${L ? esc(L.title) : '…'}</b></div>
         <span class="pill">${L ? Math.round(L.beats.reduce((t, b) => t + b.dur, 0)) + 's' : '…'}</span></div>
       <p class="lcap small"></p>
       <div class="row" style="gap:8px;margin-top:6px">
-        <button class="btn sm" data-l="toggle">▶ Watch</button>
-        <button class="btn ghost sm" data-l="restart" hidden>↻ Again</button>
+        <button class="btn sm" data-l="toggle">${PLAY} Watch</button>
+        <button class="btn ghost sm" data-l="restart" hidden>${AGAIN} Again</button>
         <span class="ldots grow" style="text-align:right"></span>
       </div>
     </div>
@@ -121,7 +136,7 @@ function stateAt(L, upto) {
 function itemHTML(k, place, swapping) {
   const x = { tray: 150, a: 118, b: 258 }[place] || 150;
   return `<div class="litem${swapping === k ? ' lswap' : ''}" data-k="${k}" style="--x:${x}px">
-    ${ico(ITEM_ICON[k] || k, '❔', 30)}</div>`;
+    ${ico(ITEM_ICON[k] || k, '', 34)}</div>`;
 }
 function drawStage(holder, st) {
   const pose = POSES['nana-' + st.pose] ? 'nana-' + st.pose : st.pose;
@@ -129,8 +144,9 @@ function drawStage(holder, st) {
   const colA = st.order.filter((k) => st.items[k] === 'a');
   const colB = st.order.filter((k) => st.items[k] === 'b');
   const tray = st.order.filter((k) => st.items[k] === 'tray');
+  const lid = holder.closest('#lessonstage') && holder.closest('#lessonstage').dataset.lesson;
   holder.innerHTML = `
-    <div class="lstage${st.weather ? ' w-' + st.weather : ''}">
+    <div class="lstage${st.weather ? ' w-' + st.weather : ''}" style="--stage:url(${stagePlate(lid)})">
       ${st.weather === 'rain' ? '<div class="lrain" aria-hidden="true">' + Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 7.3) % 100}%;animation-delay:${(i * 0.17) % 1.1}s"></i>`).join('') + '</div>' : ''}
       ${st.weather === 'sun' ? '<div class="lsun" aria-hidden="true"></div>' : ''}
       <img class="lnana lnana-${st.pose}" src="${pv.src}" alt="" style="height:78%">
@@ -155,7 +171,8 @@ function refresh() {
   root.querySelector('.ldots').innerHTML = L.beats.map((_, i) =>
     `<i class="ldot${i < P.i ? ' past' : i === P.i ? ' now' : ''}"></i>`).join('');
   const t = root.querySelector('[data-l="toggle"]');
-  t.textContent = P.done ? '▶ Watch again' : P.playing ? '❚❚ Pause' : '▶ Watch';
+  t.innerHTML = P.done ? `${PLAY} Watch again` : P.playing ? `${PAUSE} Pause` : `${PLAY} Watch`;
+  audio.speaking(!!P.playing);
   root.querySelector('[data-l="restart"]').hidden = !(P.playing || P.done || P.i > 0);
 }
 function playBeat() {

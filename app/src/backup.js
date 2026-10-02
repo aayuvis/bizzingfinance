@@ -30,6 +30,9 @@ export const SYNC_KEYS = [
   'companion', 'keepsakes', 'deeds', 'shop', 'jobs', 'home', 'world',
   'fix', 'quests', 'mastery', 'decisions', 'badges', 'history', 'family',
   'puzzle', 'maths', 'overnight',
+  /* v12, the family layer: faces and worlds owned, the mistakes deck, the day's
+     game wages, the last lesson finished (a title, nothing about the child) */
+  'fam', 'mistakes', 'wages', 'lastDone',
 ];
 /* Named so the omission is deliberate and greppable rather than an oversight. */
 export const NEVER_SYNCED = ['name', 'answers'];

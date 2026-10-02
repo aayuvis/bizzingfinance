@@ -44,7 +44,7 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   ok(fee.every((ch) => sim.letterXP(ch) === 0), 'falling for a scam pays no XP', fee.length + ' scam-fee choices');
   const arcade = strip(readFileSync(new URL('../src/arcade.js', import.meta.url), 'utf8'));
   const games = ['arcade.js', 'jobgames.js', 'board.js', 'marketgame.js', 'business.js'].map((f) => strip(readFileSync(new URL('../src/' + f, import.meta.url), 'utf8'))).join('\n');
-  ok(!/addXP\(/.test(games) && /function payout[\s\S]{0,200}sim\.earn\(/.test(arcade), 'games pay wages into the wallet and never move the rank');
+  ok(!/addXP\(/.test(games) && /function payout[\s\S]{0,200}sim\.gameWage\(/.test(arcade) && /export function gameWage[\s\S]{0,500}earn\(c, amt/.test(readFileSync(new URL("../src/sim.js", import.meta.url), "utf8")), 'games pay wages into the wallet and never move the rank');
   const main = strip(readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'));
   const sites = [...main.matchAll(/sim\.addXP\(([^;]*)\)/g)].map((m) => m[1]);
   ok(sites.every((a) => /cardXP|letterXP|ch\.xp|200/.test(a)) && !sites.some((a) => /ch\.xp \|\| 0/.test(a)), 'every XP award in main.js goes through a learning rule (or the tester-only grant)', sites.join(' · '));
