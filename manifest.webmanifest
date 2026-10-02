@@ -1,6 +1,6 @@
 {
-  "name": "Bizzing Finance",
-  "short_name": "Bizzing Finance",
+  "name": "Bizzing Finance — Bizzington",
+  "short_name": "Bizzington",
   "description": "A town where kids 8+ get a wallet, a budget, a bank and a portfolio that are entirely simulated and entirely theirs.",
   "start_url": "./index.html",
   "scope": "./",
