@@ -5,6 +5,7 @@
    Run: npm run build && npm run check   (deploy.sh runs both) */
 import { chromium } from 'playwright';
 import { serve, BASE } from './serve.mjs';
+import { checkShell } from './shell-check.mjs';
 import { fileURLToPath } from 'node:url';
 import { existsSync, mkdirSync } from 'node:fs';
 
@@ -33,11 +34,11 @@ const browser = await chromium.launch({ executablePath: exe });
 
 /* the one filled button: a .btn that is not ghost, visible, and not inside a
    closed fold */
-const PRIMARY = () => [...document.querySelectorAll('.btn:not(.ghost)')].filter((b) => {
+const PRIMARY = () => [...document.querySelectorAll('.btn:not(.ghost), .bz-btn:not(.out)')].filter((b) => {
   if (!b.offsetParent || b.disabled) return false;
   for (let p = b.parentElement; p; p = p.parentElement) if (p.tagName === 'DETAILS' && !p.open) return false;
   return true;
-}).map((b) => b.closest('.continue') ? 'continue' : (b.textContent || '').trim().slice(0, 30));
+}).map((b) => b.closest('.continue, [data-bz=next]') ? 'continue' : (b.textContent || '').trim().slice(0, 30));
 
 /* WCAG relative luminance contrast of every visible text node's colour against
    the nearest opaque background behind it. Text on a painting (the Continue
@@ -51,7 +52,7 @@ const CONTRAST = () => {
   const walker = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT);
   for (let n; (n = walker.nextNode());) {
     const el = n.parentElement; if (!n.textContent.trim() || !el.offsetParent) continue;
-    if (el.closest('.continue,.cover,.poster,.actban,.town,svg,details:not([open]) > :not(summary)')) continue;
+    if (el.closest('.continue,.cover,.poster,.actban,.town,svg,.bz-plate,.bz-chiprow,details:not([open]) > :not(summary)')) continue;
     const st = getComputedStyle(el); if (+st.opacity < 1) continue;
     const bg = bgOf(el); if (!bg) continue;
     const fg = rgb(st.color); const a = fg[3] == null ? 1 : fg[3];
@@ -104,8 +105,8 @@ async function run(label, vp, isMobile, scheme) {
   await page.click('[data-act="obAvatar"][data-arg="mango"]');
   await page.click('[data-act="obNext"]');
   const bands = page.locator('[data-act="obBand"]'); await bands.last().click();
-  await page.waitForSelector('.continue');
-  ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('.kidbtn img[src*="mango"]').count() === 1);
+  await page.waitForSelector('[data-bz=next]');
+  ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('[data-bz=kid] img[src*="mango"]').count() === 1);
   await page.waitForTimeout(3600);                 /* let the welcome confetti finish */
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   await shot('1-home');
@@ -114,10 +115,10 @@ async function run(label, vp, isMobile, scheme) {
   const prim = await page.evaluate(PRIMARY);
   ok(`${label}: Continue is the only filled button on Home`, prim.length === 1 && prim[0] === 'continue', JSON.stringify(prim));
   /* L4 · above the fold on a phone, clear of the tab bar */
-  const fold = await page.evaluate(() => { const b = document.querySelector('.continue .cgo').getBoundingClientRect(); const t = document.querySelector('.tabbar'); const top = t && getComputedStyle(t).display !== 'none' ? t.getBoundingClientRect().top : innerHeight; return { bottom: b.bottom, limit: top }; });
+  const fold = await page.evaluate(() => { const b = document.querySelector('[data-bz=continue]').getBoundingClientRect(); const t = document.querySelector('[data-bz=tabbar]'); const top = t && getComputedStyle(t).display !== 'none' ? t.getBoundingClientRect().top : innerHeight; return { bottom: b.bottom, limit: top }; });
   ok(`${label}: Continue sits above the fold`, fold.bottom <= fold.limit, `button ends ${Math.round(fold.bottom)} / ${Math.round(fold.limit)}`);
   /* B3 · progress beside it */
-  ok(`${label}: Home shows where the child is beside Continue`, /Stop \d+ of \d+/.test(await page.textContent('.continue .cprog')));
+  ok(`${label}: Home shows where the child is beside Continue`, /Stop \d+ of \d+/.test(await page.textContent('[data-bz=next]')));
   await a11y('Home'); await noOverflow('Home');
   /* N2 · what the first screen cost, uncompressed (the test server does not
      gzip, so this overstates what a phone downloads) */
@@ -132,7 +133,7 @@ async function run(label, vp, isMobile, scheme) {
   ok(`${label}: text on Home meets WCAG AA contrast (${scheme})`, contrastHome.length === 0, contrastHome.slice(0, 4).join(' | '));
 
   /* B2 · Home and Learn agree on the next step */
-  const homeNext = (await page.textContent('.continue h2')).trim();
+  const homeNext = (await page.textContent('[data-bz=next] h3')).trim();
   await goto('#/learn');
   const learnNext = (await page.textContent('.upnext .untitle')).trim();
   ok(`${label}: Home and Learn name the same next step`, homeNext === learnNext, `${homeNext} / ${learnNext}`);
@@ -172,14 +173,14 @@ async function run(label, vp, isMobile, scheme) {
   /* B6 · back stays in the app */
   /* navigate the way a child does — through the app — so the history under
      test is the app's own, not entries this test wrote */
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
   await page.evaluate(() => window.BZF.fire('nav', 'learn')); await page.waitForTimeout(250);
   await page.evaluate(() => window.BZF.fire('nav', 'money')); await page.waitForTimeout(250);
   for (let i = 0; i < 2; i++) { await page.goBack({ timeout: 4000 }).catch(() => {}); await page.waitForTimeout(300); }
   ok(`${label}: the back button stays inside the app`, page.url().startsWith(URL0) && /#\/home/.test(page.url()), page.url());
 
   /* M3 · the grown-ups area needs the PIN */
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
   await page.evaluate(() => window.BZF.fire('nav', 'parents'));
   await page.waitForTimeout(300);
   ok(`${label}: the grown-ups area asks for the PIN`, await page.locator('[data-field="pin"]').count() === 1);
@@ -192,7 +193,7 @@ async function run(label, vp, isMobile, scheme) {
   await page.click('[data-act="lock"]'); await page.waitForTimeout(200);
 
   /* E1 · today's session walks the three */
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.goto(URL0 + '#/town'); await page.waitForSelector('[data-act="sessionStart"]');
   await page.click('[data-act="sessionStart"]'); await page.waitForTimeout(400);
   ok(`${label}: starting today's session shows where you are in it`, /Today's session · \d of \d/.test(await page.textContent('.sessbar').catch(() => '')));
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
@@ -201,8 +202,8 @@ async function run(label, vp, isMobile, scheme) {
   /* A8 · a new child reaches a right answer and a celebration inside two minutes */
   {
     const t0 = Date.now();
-    await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
-    await page.click('.continue .cgo'); await page.waitForTimeout(300);
+    await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
+    await page.click('[data-bz=continue]'); await page.waitForTimeout(300);
     let celebrated = false, gotRight = false;
     for (let guard = 0; guard < 8 && !celebrated; guard++) {
       if (await page.locator('[data-act="cardDone"]').count()) { await page.click('[data-act="cardDone"]'); await page.waitForTimeout(300); celebrated = await page.evaluate(() => !!document.querySelector('.stopdone')); break; }
@@ -276,7 +277,7 @@ async function run(label, vp, isMobile, scheme) {
   await page.evaluate(() => window.BZF.fire('gquit'));
 
   /* N12 · the street's signs stand on chips above the road — no line through them */
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.town svg');
+  await page.goto(URL0 + '#/town'); await page.waitForSelector('.town svg');
   const signs = await page.evaluate(() => {
     const road = [...document.querySelectorAll('.town svg rect')].find((r) => r.getAttribute('fill') === 'var(--road)');
     const ry = road ? +road.getAttribute('y') : 1e9;
@@ -288,7 +289,7 @@ async function run(label, vp, isMobile, scheme) {
   /* N12 · confetti never lands on Continue */
   const conf = await page.evaluate(async () => {
     window.BZF.confetti(70);
-    const b = document.querySelector('.continue .cgo').getBoundingClientRect();
+    const b = (document.querySelector('[data-bz=continue]') || document.querySelector('.town')).getBoundingClientRect();
     let hits = 0;
     for (let k = 0; k < 14; k++) {
       await new Promise((r) => setTimeout(r, 250));
@@ -296,7 +297,18 @@ async function run(label, vp, isMobile, scheme) {
     }
     return hits;
   });
-  ok(`${label}: confetti never lands on the Continue button`, conf === 0, conf + ' overlaps');
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=continue]');
+  const conf2 = await page.evaluate(async () => {
+    window.BZF.confetti(70);
+    const b = document.querySelector('[data-bz=continue]').getBoundingClientRect();
+    let hits = 0;
+    for (let k = 0; k < 14; k++) {
+      await new Promise((r) => setTimeout(r, 250));
+      document.querySelectorAll('.conf i').forEach((i) => { const r = i.getBoundingClientRect(); const o = +getComputedStyle(i).opacity; if (o > 0.05 && r.bottom > b.top && r.top < b.bottom && r.right > b.left && r.left < b.right) hits++; });
+    }
+    return hits;
+  });
+  ok(`${label}: confetti never lands on the Continue button`, conf2 === 0, conf2 + ' overlaps');
 
   await familyChecks(page, label, vp, isMobile, scheme, errors, shot);
 
@@ -309,13 +321,13 @@ async function run(label, vp, isMobile, scheme) {
 const EMOJI = /\p{Extended_Pictographic}/u;
 async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   const go = async (h) => { await page.evaluate((x) => { location.hash = x; }, h); await page.waitForTimeout(500); };
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
 
   /* C5 · every main screen has one heading and a way back (the tabs, or ☰) */
   const dead = [];
   for (const r of ['#/town', '#/learn', '#/money', '#/play', '#/shop', '#/collection', '#/medals', '#/me', '#/mistakes', '#/words', '#/store', '#/market40']) {
     await go(r);
-    const v = await page.evaluate(() => ({ h1: document.querySelectorAll('main h1').length, back: !!document.querySelector('[data-act="drawer"]') && [...document.querySelectorAll('[role=tab][data-arg="home"]')].some((t) => t.offsetParent) }));
+    const v = await page.evaluate(() => ({ h1: document.querySelectorAll('main h1').length, back: !!document.querySelector('[data-bz=menu]') && [...document.querySelectorAll('[data-bz=tabs] a[href="#/home"], [data-bz=tabbar] a[href="#/home"]')].some((t) => t.offsetParent) }));
     if (v.h1 !== 1 || !v.back) dead.push(r + ' ' + JSON.stringify(v));
   }
   ok(`${label}: every screen has one heading and a way back`, !dead.length, dead.slice(0, 3).join(' | '));
@@ -326,22 +338,17 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: the switcher lists every child and a PIN-guarded “Add a child”`, kids.n === 1 && kids.add, JSON.stringify(kids));
   await page.evaluate(() => window.BZF.fire('closeOv'));
 
-  /* §4 tabs: five, Home first, the map second, no More */
-  const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '.tabbar [role=tab]' : '.tabs [role=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
+  /* §3 §4 §6 · Bee's chrome and home, measured (integration/shell-check.mjs): the top bar,
+     the tab row or bottom bar, the three home rows, and the ☰ by keyboard (Esc, focus).
+     Measured with a two-digit coin balance, as Bee's reference was: the search pill is
+     pushed against the coin chip, so its x moves with the balance's digit count. */
+  await page.evaluate(() => { const w = JSON.parse(localStorage.getItem('bizzing.wallet') || '{"v":1,"kids":{}}'); const k = w.kids.asha || (w.kids.asha = { coins: 0, ledger: [] }); k.coins = Math.max(10, Math.min(99, k.coins)); localStorage.setItem('bizzing.wallet', JSON.stringify(w)); window.BZF.R.render(); });
+  await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 }); await page.waitForTimeout(300);
+  const shellFails = await checkShell(page, { phone: isMobile });
+  ok(`${label}: checkShell — the chrome and Home match Bee's`, shellFails.length === 0, JSON.stringify(shellFails));
+  await page.setViewportSize(vp); await page.waitForTimeout(200);
+  const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '[data-bz=tabbar] a' : '[data-bz=tabs] [data-bz=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
   ok(`${label}: five tabs — Home · Town · Learn · Money · Play — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play', tabs.join(','));
-  /* §3 the top bar, in the family's order, 56px */
-  const bar = await page.evaluate(() => { const b = document.querySelector('.topbar-in'); const r = b.getBoundingClientRect(); return { h: Math.round(r.height), order: [...b.children].filter((x) => x.offsetParent).map((x) => x.className.split(' ')[0] + (x.dataset.act ? ':' + x.dataset.act : '')) }; });
-  const want = isMobile ? ['iconbtn', 'iconbtn:drawer', 'brand:nav', 'tb-gap', 'coinchip:walletSheet', 'kidbtn:kids'] : ['iconbtn', 'iconbtn:drawer', 'brand:nav', 'tb-gap', 'searchpill:search', 'coinchip:walletSheet', 'iconbtn:mode', 'iconbtn:nav', 'kidbtn:kids'];
-  ok(`${label}: the top bar is the family's, in its order, 56px`, JSON.stringify(bar.order.filter((x) => !/chip/.test(x) || /coinchip/.test(x))) === JSON.stringify(want) && bar.h >= 54 && bar.h <= 60, JSON.stringify(bar));
-  /* §3 ☰ opens and closes by keyboard, and hands focus back */
-  await page.focus('[data-act="drawer"]'); await page.keyboard.press('Enter'); await page.waitForTimeout(250);
-  const opened = await page.evaluate(() => { const d = document.querySelector('.drawer'); return d ? { n: [...d.querySelectorAll('.dr-item')].map((x) => x.textContent.trim().split('\n')[0].trim()), focus: d.contains(document.activeElement) } : null; });
-  ok(`${label}: ☰ opens by keyboard with focus inside`, opened && opened.focus, JSON.stringify(opened && opened.focus));
-  ok(`${label}: ☰ lists the family's order`, opened && /^My page,Shop,Collection,Medals,/.test(opened.n.join(',')) && /Settings,Grown-ups,Help,Privacy,Back to the Hive$/.test(opened.n.join(',')), opened && opened.n.join(','));
-  await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
-  ok(`${label}: focus stays inside the open ☰`, await page.evaluate(() => !!document.querySelector('.drawer') && document.querySelector('.drawer').contains(document.activeElement)));
-  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
-  ok(`${label}: Esc closes ☰ and returns focus to it`, await page.evaluate(() => !document.querySelector('.drawer') && document.activeElement && document.activeElement.dataset.act === 'drawer'));
   /* §5 Settings: Me · Sound & music · Look · Comfort · Grown-ups */
   await page.evaluate(() => window.BZF.fire('settings')); await page.waitForTimeout(250);
   const secs = await page.evaluate(() => [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()));
@@ -350,11 +357,11 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   await shot('5-settings');
   await page.evaluate(() => window.BZF.fire('closeOv'));
   /* §11 mute in one tap from ☰ */
-  await page.evaluate(() => window.BZF.fire('drawer')); await page.waitForTimeout(150);
-  await page.click('.drawer [data-act="muteAll"]'); await page.waitForTimeout(150);
+  await page.click('[data-bz=menu]'); await page.waitForTimeout(200);
+  await page.click('[data-bz=drawer] [data-bz-act="sound"]'); await page.waitForTimeout(150);
   const muted = await page.evaluate(() => ({ sfx: window.BZF.R.s.settings.sound, music: window.BZF.audio.state().music }));
   ok(`${label}: one tap in ☰ mutes effects and music`, muted.sfx === false && muted.music === false, JSON.stringify(muted));
-  await page.evaluate(() => window.BZF.fire('muteAll')); await page.evaluate(() => window.BZF.fire('closeOv'));
+  await page.evaluate(() => window.BZF.fire('muteAll')); await page.keyboard.press('Escape');
 
   /* §9 zero emoji in controls; §16 no [object Object] or {placeholder} — on every main screen */
   const ROUTES = ['#/home', '#/town', '#/learn', '#/money', '#/play', '#/shop', '#/collection', '#/medals', '#/me', '#/mistakes', '#/words'];
@@ -369,7 +376,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
     if (w) over.push(r + ' ' + w);
   }
   /* the same inside a lesson, and inside the sheets */
-  for (const [what, act, arg] of [['a lesson', 'card', 'c1b'], ['Settings', 'settings', ''], ['the ☰ drawer', 'drawer', ''], ['the coin sheet', 'walletSheet', ''], ['the child switcher', 'kids', '']]) {
+  for (const [what, act, arg] of [['a lesson', 'card', 'c1b'], ['Settings', 'settings', ''], ['the coin sheet', 'walletSheet', ''], ['the child switcher', 'kids', '']]) {
     await page.evaluate(([a, g]) => window.BZF.fire(a, g || undefined), [act, arg]); await page.waitForTimeout(300);
     const e = await page.evaluate((src) => { const re = new RegExp(src, 'u'); return [...document.querySelectorAll('button, [role=tab], nav, h1, h2, h3, .chip')].filter((x) => x.offsetParent && re.test(x.textContent.replace(/[0-9#*]/g, ''))).map((x) => x.textContent.trim().slice(0, 18)); }, EMOJI.source);
     if (e.length) emo.push(what + ': ' + e.slice(0, 3).join(' / '));
@@ -381,8 +388,8 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
 
   /* P3 · 44px targets on the chrome and Home */
   await go('#/home');
-  const small = await page.evaluate(() => [...document.querySelectorAll('.topbar button, .topbar a, .tabbar button, .tabs button, .continue button, .t3card button, .wchip')].filter((b) => b.offsetParent).filter((b) => { const r = b.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).map((b) => (b.getAttribute('aria-label') || b.textContent).trim().slice(0, 16) + ' ' + Math.round(b.getBoundingClientRect().width) + 'x' + Math.round(b.getBoundingClientRect().height)));
-  ok(`${label}: every chrome and Home target is at least 44px`, !small.length, small.slice(0, 4).join(' | '));
+  const small = await page.evaluate(() => [...document.querySelectorAll('[data-bz=tabbar] a, [data-bz=home] .bz-btn, .t3card button, .wchip')].filter((b) => b.offsetParent).filter((b) => { const r = b.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).map((b) => (b.getAttribute('aria-label') || b.textContent).trim().slice(0, 16) + ' ' + Math.round(b.getBoundingClientRect().width) + 'x' + Math.round(b.getBoundingClientRect().height)));
+  ok(`${label}: every Home and tab-bar target is at least 44px (the top bar is Bee's, measured)`, !small.length, small.slice(0, 4).join(' | '));
 
   /* §8 the 96, through the engine */
   ok(`${label}: validate(avatars) returns []`, (await page.evaluate(() => window.BZF.validateAvatars())).length === 0);
@@ -471,10 +478,10 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
 
   /* B10 · reload mid-journey: Continue points at the exact stop */
   await go('#/home');
-  const before = (await page.textContent('.continue h2')).trim();
-  await page.click('.continue .cgo'); await page.waitForTimeout(250);
-  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
-  const after = (await page.textContent('.continue h2')).trim();
+  const before = (await page.textContent('[data-bz=next] h3')).trim();
+  await page.click('[data-bz=continue]'); await page.waitForTimeout(250);
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
+  const after = (await page.textContent('[data-bz=next] h3')).trim();
   ok(`${label}: a lesson opened and left, then a reload — Continue points at the same stop`, before === after, `${before} / ${after}`);
   /* Q1 · the PIN is asked again after a reload */
   await go('#/parents');
@@ -487,18 +494,30 @@ async function demo() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(URL0 + '?demo'); await page.waitForSelector('.continue'); await page.waitForTimeout(600);
+  await page.goto(URL0 + '?demo'); await page.waitForSelector('[data-bz=next]'); await page.waitForTimeout(600);
   ok('demo: the sample is labelled as a sample', /Sample/.test(await page.textContent('.demobar').catch(() => '')));
-  ok('demo: it opens on weeks of progress', /Stop (\d+) of/.test(await page.textContent('.continue .cprog')) && +(await page.textContent('.continue .cprog')).match(/Stop (\d+)/)[1] > 5);
+  ok('demo: it opens on weeks of progress', /Stop (\d+) of/.test(await page.textContent('[data-bz=next]')) && +(await page.textContent('[data-bz=next]')).match(/Stop (\d+)/)[1] > 5);
   await page.evaluate(() => { location.hash = '#/money/jars'; }); await page.waitForTimeout(400);
   const stored = await page.evaluate(() => localStorage.getItem('bzf_profile'));
   ok('demo: nothing is saved — the real household is untouched', stored === null, stored ? stored.length + ' bytes written' : '');
   ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await ctx.close();
+  /* §3 §6 · the chrome and Home match Bee's on a dark desk too (the other three are in run()) */
+  const dctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark' });
+  await dctx.addInitScript(() => { try { if (!localStorage.getItem('bizzing.wallet')) localStorage.setItem('bizzing.wallet', JSON.stringify({ v: 1, kids: { mira: { coins: 40, ledger: [] } } })); } catch (e) {} });
+  const dp = await dctx.newPage();
+  await dp.goto(URL0); await dp.waitForSelector('[data-act="obStart"]'); await dp.waitForTimeout(400);
+  await dp.click('[data-act="obStart"]'); await dp.waitForSelector('#nm');
+  await dp.fill('#nm', 'Mira'); await dp.click('[data-act="obNext"]'); await dp.locator('[data-act="obBand"]').last().click();
+  await dp.waitForSelector('[data-bz=next]'); await dp.waitForTimeout(3800);
+  await dp.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); }); await dp.waitForTimeout(300);
+  const darkFails = await checkShell(dp, { phone: false });
+  ok('desktop-dark: checkShell — the chrome and Home match Bee\'s', darkFails.length === 0, JSON.stringify(darkFails));
+  await dctx.close();
   /* D10 · under reduced motion the world is one still frame: nothing runs */
   const rctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
   const rp = await rctx.newPage();
-  await rp.goto(URL0 + '?demo'); await rp.waitForSelector('.continue'); await rp.waitForTimeout(500);
+  await rp.goto(URL0 + '?demo'); await rp.waitForSelector('[data-bz=next]'); await rp.waitForTimeout(500);
   const still = await rp.evaluate(() => ({ running: window.BZF.ambient.state().running, layers: window.BZF.ambient.state().layers, anim: getComputedStyle(document.querySelector('.fz-idle')).animationName }));
   ok('reduced motion: the world stands still (three layers drawn, nothing running)', !still.running && still.layers >= 3 && still.anim === 'none', JSON.stringify(still));
   await rctx.close();

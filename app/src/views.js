@@ -43,6 +43,7 @@ import * as TRY from './tryit.js';
 import { Store } from './store.js';
 import { pinSet } from './pin.js';
 import { plateFor } from './looks.js';
+import { home as bzHome } from './family/bizzing-shell.js';
 const dayIndexOf = (t) => Math.floor((t - new Date(t).getTimezoneOffset() * 60000) / 864e5);
 import { pipPose, kidBadge, coinSvg } from './shell.js';
 import * as ITEMS from './items.js';
@@ -288,39 +289,60 @@ function fold(id, title, sub, icon, body) {
     ${body}</details>`;
 }
 
+/* ══ HOME — Bee's three rows (FAMILY-STANDARD §6, integration/bizzing-shell.js) ══
+   Row 1: Pip's greeting · today's ring (with "Your level") · the money word of the hour.
+   Row 2: next on your journey (the ONE filled Continue) · your street.
+   Row 3: a tip from a card already read · a line from the town's cast. The street,
+   today's three and the rest of the day live on the Town tab. */
+const CAST_LINES = [
+  ['Nana Bizz', 'Split it the moment it lands. What sits in one pile gets spent as one pile.'],
+  ['Pip', 'Wages from in here land in the same wallet as everything else. There is no second, magic money.'],
+  ['Mags', 'Some of this earns its keep and some of it is just lovely — and I have written which is which.'],
+  ['Bea', 'Down on the week. Sell? No. I only say that so you notice the feeling.'],
+  ['Bo', 'Up on the week! I said it would be. I say that every week.'],
+];
 export function viewHome() {
   const c = K();
-  const world = WORLDS[c.world || 0];
-  const quests = sim.questList(c);
+  const n = nextStep(c), pr = progress(c), rank = rankObj(c.learn.level);
+  const quests = sim.questList(c), qd = quests.filter((q) => q.claimed).length;
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
+  const line = String(hometalk(c)).replace(/<[^>]+>/g, '');
+  const w = daily.wordOfDay(), tip = daily.tipOfDay(c);
+  const R0 = 44, C0 = 2 * Math.PI * R0, frac = quests.length ? qd / quests.length : 0;
+  const ring = `<div class="fring"><svg width="110" height="110" viewBox="0 0 110 110" role="img" aria-label="Today's three: ${qd} of ${quests.length} done">
+      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-line)" stroke-width="14"/>
+      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(C0 * frac).toFixed(1)} ${C0.toFixed(1)}" transform="rotate(-90 55 55)"/>
+      <text x="55" y="61" text-anchor="middle" font-family="Sono, monospace" font-weight="700" font-size="20" fill="currentColor">${qd}/${quests.length}</text></svg>
+    <div><b class="fring-h">Today's three</b>${quests.map((q, i) => `<p class="fring-q${q.claimed ? ' done' : ''}"><i style="--d:${['#E0457B', '#16956B', '#3D7DF0', '#E8962C'][i % 4]}"></i><span>${esc(q.t)}</span><b>${q.claimed ? '1/1' : '0/1'}</b></p>`).join('')}</div></div>`;
+  const world = n.world || WORLDS[0], here = WORLDS[c.world || 0];
+  const jobs = sim.jobsToday(c), jdone = jobs.filter((j) => j.done).length;
+  const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
+  const body = bzHome({
+    greet: { mascot: './mascot/pip-wave.webp', hello, name: c.name, line },
+    ring: { html: ring, foot: { kicker: 'Your level', title: `${rank.name} · level ${c.learn.level}`, href: '#/me' } },
+    hour: { kicker: 'Money word of the hour', title: w.term, sub: w.meaning, href: '#/words', icon: 'book' },
+    next: { plate: plateFor(world.id, R.dark), chip: `Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}`, kicker: n.kind === 'revise' ? 'Keep it yours' : 'Next on your journey',
+      title: n.title, sub: n.sub, href: '#/continue', cta: n.button || 'Continue', progress: { pct: Math.round(pr.worldDone / Math.max(1, pr.worldTotal) * 100), label: `${pr.world.name} · ${pr.worldDone} of ${pr.worldTotal} stops` } },
+    second: { plate: plateFor(here.id, R.dark), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
+      progress: { pct: Math.round(frac * 100) } },
+    tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/learn' } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/learn' },
+    quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/medals' },
+    foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
+  });
+  return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}`;
+}
 
-  /* The family home (FAMILY-STANDARD §2): the street, a greeting with the
-     day's ring and the word of the day, ONE Continue, today's three, the ways
-     in — and everything else folded under "More today". Before this, Home was
-     nine equal-weight cards and four buttons all claiming to be next. */
-  return `<div class="stack home">
-    <h1 class="sr">Home — ${esc(c.name)} in ${esc(world.name)}</h1>
-    <div class="town hero${R.dark ? ' night' : ''}">
-      <div class="town-scroll">${townSVG(c)}</div>
-      <div class="town-head">
-        <span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span>
-        <button class="btn ghost sm" data-act="nav" data-arg="town">Travel</button>
-      </div>
-    </div>
-
-    ${greeting(c)}
-
-    ${continueCard(c)}
-
+/* What used to fill Home — the street's day — lives on the Town tab now. */
+export function townDay() {
+  const c = K(), quests = sim.questList(c);
+  return `${greeting(c)}
     ${todaysThree(c, quests)}
-
-    ${waysIn(c)}
-
     ${fold('more', 'More today', 'The till puzzle, a real-world deed and the end of the day.', 'more', `<div class="stack">
       ${closingTime(c, quests)}
       ${tillCard(c)}
       ${todayCard(c)}
-    </div>`)}
-  </div>`;
+    </div>`)}`;
 }
 
 /* Town (FAMILY-STANDARD §4): the money map — the street where you stand, the five
@@ -357,7 +379,7 @@ export function townParts() {
   return {
     street: `<div class="town hero${R.dark ? ' night' : ''}"><div class="town-scroll">${townSVG(c)}</div>
       <div class="town-head"><span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span></div></div>`,
-    worlds: posters, journeys: journeys(c), repairs,
+    worlds: posters, journeys: journeys(c), repairs, today: townDay(),
   };
 }
 

@@ -139,6 +139,7 @@ export function viewTown(parts) {
   return `<div class="stack townpage">
     ${hero({ eyebrow: 'The money map', title: 'Bizzington', who: 'pip', line: 'Five places, walked in order. You move on by learning, not by earning.' })}
     ${parts.street}
+    ${parts.today}
     <div class="sect"><b>Travel</b><i></i></div>
     ${parts.worlds}
     ${parts.journeys}

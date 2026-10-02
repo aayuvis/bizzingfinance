@@ -271,3 +271,27 @@ html[data-motion="reduced"] .numpop{animation:none;opacity:0}
 [hidden]{display:none!important}
 .crlane[aria-pressed="true"]{background:var(--action);color:var(--action-ink)}
 .srstall{display:block;width:150px;height:auto;margin:-4px auto 2px;filter:drop-shadow(0 6px 10px rgb(0 0 0 / .18))}
+
+/* ── the family shell (integration/bizzing-shell.css): colours only, through its tokens ── */
+html:root{ --bz-accent:var(--action); --bz-accent-ink:var(--action-ink); --bz-ink:var(--ink); --bz-muted:var(--muted);
+  --bz-line:var(--line); --bz-card:var(--surface); --bz-hdr:color-mix(in srgb,var(--paper) 82%,transparent);
+  --bz-tabbar:color-mix(in srgb,var(--surface) 94%,transparent); --bz-hour:color-mix(in srgb,var(--treasure) 22%,var(--surface)); }
+html[data-bz-dark]:root{ --bz-card-line:#4a3f2a; --bz-chip:rgba(255,255,255,.09); --bz-hdr:color-mix(in srgb,var(--paper) 82%,transparent); }
+.fring{display:flex;gap:16px;align-items:center}
+.fring svg{flex:0 0 110px;color:var(--bz-ink)}
+.fring-h{display:block;font:800 20px var(--bz-display);margin-bottom:4px}
+.fring > div{flex:1;min-width:0}
+.fring-q{margin:4px 0 0;font-size:13px;display:flex;gap:7px;align-items:center;color:var(--bz-ink)}
+.fring-q i{flex:0 0 8px;height:8px;border-radius:50%;background:var(--d)}
+.fring-q span{flex:1;min-width:0}
+.fring-q b{font:700 13px var(--mono)}
+.fring-q.done span{text-decoration:line-through;text-decoration-color:var(--grow)}
+.bz-content .demobar{margin:-6px 0 14px;border-radius:14px}
+
+/* #app was a flex column for the old chrome; under the family shell it is a plain
+   block, so a wide street inside a screen scrolls in its own box instead of
+   widening the page */
+#app{display:block}
+/* AA (FAMILY-STANDARD §10): the shell's kicker gold is 3.7:1 on a white card; the
+   app's treasure-deep keeps the same hue at 5.9:1 (light) — colour only, no geometry */
+html:not([data-bz-dark]) .bz-kicker{color:var(--treasure-deep)}

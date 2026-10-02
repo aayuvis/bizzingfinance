@@ -42,6 +42,8 @@ import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 import * as shell from './shell.js';
+import { shell as bzShell, bindShell } from './family/bizzing-shell.js';
+import { avatarSrc } from './avatars.js';
 import { viewShop, viewCollection as viewFaces, viewMistakes, viewTown, profileCard, EXTRA_BY } from './familyviews.js';
 import { LOOKS, lookById, applyLook, isOpen as lookOpen } from './looks.js';
 import * as ambient from './ambient.js';
@@ -93,6 +95,8 @@ function readHash() {
   const m = (location.hash || '').replace(/^#\/?/, '').split('/');
   if (!m[0]) return false;
   if (m[0] === 'continue') { R.continueNow = true; return false; }
+  /* the ☰ drawer's Settings, Help and Privacy are sheets over the current screen */
+  if (['settings', 'help', 'privacy'].includes(m[0])) { R.sheetNow = m[0]; return false; }
   const known = ['home', 'town', 'learn', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
@@ -138,12 +142,28 @@ function render() {
     nav === 'market40' ? viewMarketGame() : viewHome();
 
   dressWorld(c);
-  root.innerHTML = `
-    ${shell.topbar(c)}
-    ${R.session && nav !== 'parents' ? sessionBar() : ''}
-    ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
-    <main class="content">${sim.clockSuspect(s) ? clockWarning() : ''}${body}</main>
-    ${shell.tabbar()}
+  /* The family chrome is Bee's, measured (integration/bizzing-shell.js): one top bar,
+     one tab row, one phone tab bar and one ☰ drawer, identical in every Bizzing app.
+     Finance brings its words, Pip, the child's face, its five tabs and its routes. */
+  const tabOf = shell.tabOf(nav);
+  root.innerHTML = bzShell({
+    app: 'finance', name: 'Finance', mascot: './mascot/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
+    kid: { name: c.name, avatar: avatarSrc(c.avatar) }, search: 'Search lessons, words, games…', query: R.sq || '',
+    inRun: !!R.game,
+    tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
+      { id: 'learn', label: 'Learn', icon: 'learn', href: '#/learn' }, { id: 'money', label: 'Money', icon: 'coins', href: '#/money' },
+      { id: 'play', label: 'Play', icon: 'play', href: '#/play' }],
+    active: tabOf,
+    drawer: { sub: `${rankObj(c.learn.level).name} · level ${c.learn.level}`,
+      routes: { me: '#/me', shop: '#/shop', collection: '#/collection', medals: '#/medals', settings: '#/settings', grownups: '#/parents', help: '#/help', privacy: '#/privacy' },
+      app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
+        { icon: 'book', label: 'Money Words', sub: 'every word, in plain English', href: '#/words' },
+        { icon: 'path', label: 'Ones to try again', sub: 'questions that tripped you, back after a gap', href: '#/mistakes' },
+        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
+    content: `${R.session && nav !== 'parents' ? sessionBar() : ''}
+      ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
+      ${sim.clockSuspect(s) ? clockWarning() : ''}${body}`,
+  }) + `
     ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready · Reload</button>' : ''}
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own
@@ -187,6 +207,14 @@ render = function () {
 };
 on('retry', () => { R.overlay = null; render(); });
 R.render = render;
+bindShell({
+  onTheme: () => fire('mode'),
+  onLock: () => fire('nav', 'parents'),
+  onKid: () => fire('kids'),
+  onCoins: () => fire('walletSheet'),
+  onSearch: (q) => { R.sq = q; fire('search'); },
+  onSound: () => fire('muteAll'),
+});
 
 function clockWarning() {
   return `<div class="card" style="border-color:var(--treasure);background:var(--treasure-tint);margin-bottom:14px">
@@ -1385,6 +1413,7 @@ document.addEventListener('keyup', (e) => {
   if (R.game && R.game.keyup && !R.overlay) R.game.keyup(e);
 });
 document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;          /* the family ☰ drawer handled it (Esc, Tab) */
   if (R.game && R.game.key && !R.overlay) {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)
       && document.activeElement && document.activeElement.tagName !== 'INPUT') e.preventDefault();
@@ -1416,6 +1445,7 @@ window.addEventListener('hashchange', () => {
   selfHash = null;
   if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
   else if (R.continueNow) { R.continueNow = false; R.overlay = null; if (R.game) quitGame(); R.s.ui.nav = 'home'; goContinue(); }
+  else if (R.sheetNow) { const k = R.sheetNow; R.sheetNow = null; fire(k); }
 });
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
