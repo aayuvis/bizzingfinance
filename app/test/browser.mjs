@@ -507,7 +507,7 @@ async function demo() {
 }
 
 /* a run that throws is a failed check with a name, never a bare crash */
-const safely = async (label, f) => { try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
+const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
 await safely('phone', () => run('phone', { width: 390, height: 844 }, true, 'light'));
 await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, true, 'dark'));

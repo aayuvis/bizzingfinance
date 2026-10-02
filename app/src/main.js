@@ -172,6 +172,20 @@ function render() {
   writeHash();
   sim.save(s);
 }
+/* §16 · an error state is Pip's "oops", plain words and a way back — never a stack
+   trace or a blank page */
+const renderSafe = render;
+render = function () {
+  try { renderSafe(); }
+  catch (e) {
+    console.warn(e);
+    root.innerHTML = `<main class="content"><div class="card empty" role="alert" style="max-width:520px;margin:8vh auto">
+      ${shell.pipPose('oops', 120, 'Pip, oops')}<h1 style="font-size:24px">Oops — that screen tripped over</h1>
+      <p>Nothing you have done is lost. Try again, or go back to Home.</p>
+      <div class="row" style="gap:8px;justify-content:center"><button class="btn" data-act="retry">Try again</button><button class="btn ghost" data-act="nav" data-arg="home">Home</button></div></div></main>`;
+  }
+};
+on('retry', () => { R.overlay = null; render(); });
 R.render = render;
 
 function clockWarning() {
@@ -434,8 +448,8 @@ function overlay() {
   if (o.kind === 'world') {
     const w = o.world;
     return box(`
-      <div style="text-align:center"><div style="font-size:46px">${w.em}</div>
-        <div class="eyebrow">${esc(w.rank)}</div>
+      <div style="text-align:center"><div style="margin:0 auto;width:120px">${shell.pipPose('point', 120, 'Pip points the way')}</div>
+        <div class="eyebrow">${esc(w.rank)} · world ${WORLDS.indexOf(w) + 1}</div>
         <h2 style="margin:4px 0 8px;font-size:27px">${esc(w.name)}</h2>
         <p class="muted">${esc(w.blurb)}</p></div>
       <div style="margin-top:14px;background:var(--action-tint);border-radius:var(--r-md);padding:12px 14px;font-size:14px">

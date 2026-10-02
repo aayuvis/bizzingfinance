@@ -61,15 +61,15 @@ export function viewOnboard(draft) {
   if (step === 0) {
     return shell(`
       <div style="text-align:center">
-        <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:1px solid var(--line)">${CAST.pip.svg}</div>
+        <div style="margin:0 auto 6px;width:112px">${pipPose('wave', 112, 'Pip waves hello')}</div>
         ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ''}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : 'A new stall on Market Row'}</h1>
         <p class="muted" style="margin-top:8px">${first
           ? "Get a stall, a wallet and four jars — and learn money by running them."
           : 'Another child, their own town, their own money. Nothing is shared between them.'}</p>
       </div>
-      ${say('nana', first
-        ? 'The smallest stall on Market Row is going spare. It\'s yours! What shall I call you?'
+      ${say('pip', first
+        ? 'Hello! I am Pip. The smallest stall on Market Row is going spare, and it\'s yours. What shall I call you?'
         : 'Another one! There is always a stall going. What is this one called?')}
       <div class="card stack">
         <label class="eyebrow" for="nm">First name</label>
@@ -1924,10 +1924,10 @@ function todayCard(c) {
    in it FROM THE DATA (never a typed number), states the promises, and
    offers one button. */
 function landing() {
-  const counts = [[ALL_CARDS.length, 'lessons, every one read aloud'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'worlds to walk'], [Object.keys(BADGES).length, 'badges for decisions']];
+  const counts = [[ALL_CARDS.length, 'lessons, every one read aloud'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'places to walk'], [Object.keys(BADGES).length, 'medals for decisions']];
   return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
-    <div style="text-align:center">${mark(64)}
-      <div class="eyebrow" style="margin-top:12px">Bizzing Finance</div>
+    <div style="text-align:center">${pipPose('wave', 128, 'Pip the squirrel waves hello')}
+      <div class="eyebrow" style="margin-top:6px">Bizzing Finance</div>
       <h1 style="font-size:clamp(30px,8vw,40px);line-height:1.05;margin-top:4px">Earn it, keep it, grow it — in a town of your own.</h1>
       <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own — and a grown-up's page that reports what they learned, not how long they stayed.</p>
     </div>
