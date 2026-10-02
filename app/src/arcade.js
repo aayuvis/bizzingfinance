@@ -43,7 +43,9 @@ export const GAMES = [
 ];
 
 export function viewArcade() {
-  if (R.game) return R.game.view();
+  if (R.gameIntro) return introView(R.gameIntro);
+  /* the game's own painting sits behind its play screen */
+  if (R.game) { const art = current && COVERS[current]; return `<div class="gplay"${art ? ` style="--cover:url(${art.src})"` : ''}>${R.game.view()}</div>`; }
   const c = K();
   /* a cover per game — a painting when tools/art has drawn it, the game's
      own tint until then — with the words on a veil across the bottom */
@@ -83,7 +85,42 @@ export function viewArcade() {
   </div>`;
 }
 
+/* F3 · every game opens on a title card: the painting, three lines of how,
+   the keys, and Start — and closes on what it practised. */
+export const HOW = {
+  cr: ['Coins fall. Catch exactly the amount asked for.', 'One too many is overpaying.', 'Move with ← → or drag.'],
+  nw: ['A thing appears. Is it a need or a want?', 'Some can be both — those are the interesting ones.', 'Tap a side, or press ← →.'],
+  ss: ['A message arrives. Real, or a trap?', 'Traps rush you, flatter you, or want a secret kept.', 'Tap a side, or press ← →.'],
+  bb: ['A month of money. Bills arrive one at a time.', 'Pay what you must, keep what you can.', 'Tap a choice, or press 1 or 2.'],
+  cc: ['Hold to let your money grow, let go to bank it.', 'Grow too greedily and a crash can wipe it out.', 'Hold space, or press and hold.'],
+  sr: ['Sixty seconds of customers at your stall.', 'Serve the right thing at the right price.', 'Tap, or press 1–4 and R.'],
+  st: ['The market swings wildly. Do you act?', 'The winning move is usually to sit still.', 'Space to act — or don\'t.'],
+  mc: ['A season of the Exchange, a week at a time.', 'Spread your money and keep your nerve.', 'Arrows to choose, Enter to confirm.'],
+  mn: ['The board game: buy shops, collect rent.', 'Win when your street pays for your life.', 'Enter to roll, Y or N to buy.'],
+  tt: ['Monthly numbers, turned into yearly ones.', 'Times twelve, in your head.', 'Tap an answer, or press 1–4.'],
+  sn: ['Guess where compounding lands.', 'Nobody guesses high enough — try anyway.', 'Tap an answer, or press 1–4.'],
+};
+export const PRACTISED = {
+  cr: 'paying exact amounts and counting change', nw: 'telling needs from wants', ss: 'spotting the shape of a scam',
+  bb: 'paying bills first and living inside a month', cc: 'how compounding grows — and why greed crashes it', sr: 'pricing and serving under time pressure',
+  st: 'doing nothing on a red day', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
+  tt: 'turning monthly costs into yearly ones', sn: 'how big compounding really gets',
+};
+let current = null;
+export function introView(id) {
+  const g = GAMES.find((x) => x.id === id) || { name: id, keys: '' }, art = COVERS[id], how = HOW[id] || [];
+  return `<div class="stack">
+    <section class="gintro" style="${art ? `--cover:url(${art.src})` : ''}" aria-labelledby="gi-h">
+      <span class="cv-veil"></span>
+      <div class="gi-body"><span class="eyebrow">How to play</span><h1 id="gi-h">${esc(g.name)}</h1>
+        <ol>${how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol>
+        ${g.keys ? `<span class="pill">${esc(g.keys)}</span>` : ''}</div>
+    </section>
+    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start →</button>
+    <button class="btn ghost wide" data-act="gback">Back to the arcade</button></div>`;
+}
 export function startGame(id) {
+  current = id;
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
     mc: marketCup, mn: mainStreet }[id];
@@ -106,6 +143,7 @@ export function endCard(em, title, sub, wage, line, who) {
     <h2>${esc(title)}</h2>
     <p class="muted">${sub}</p>
     ${line ? say(who || 'pip', line) : ''}
+    ${current && PRACTISED[current] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current])}</p>` : ''}
     <p class="small muted">Earned ${money(wage)}, straight into your wallet.</p>
     <button class="btn wide" data-act="gquit">Back to the arcade</button></div>`;
 }

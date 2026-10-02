@@ -509,6 +509,7 @@ on('sessionEnd', () => {
 on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
+  R.gameIntro = null;
   if (R.game) quitGame();
   R.s.ui.nav = k;
   if (R.s.kids.length) C().learn.openCard = null;
@@ -1157,8 +1158,11 @@ on('game', (id) => {
   const c = C();
   sim.questTick(c, 'game', 1);
   if (id === 'mn') sim.questTick(c, 'board', 1);
-  startGame(id); render();
+  /* the title card first (F3); Start begins the game */
+  R.gameIntro = id; R.s.ui.nav = 'arcade'; sfx.click(); render(); window.scrollTo(0, 0);
 });
+on('gbegin', (id) => { R.gameIntro = null; startGame(id); render(); });
+on('gback', () => { R.gameIntro = null; render(); });
 /* Leaving a game is when a child is most willing to read one card — so the
    lesson is offered here rather than filed in a tab they have to remember. */
 on('gquit', () => {

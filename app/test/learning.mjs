@@ -76,5 +76,16 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   ok(checked > 100 && !wrong.length, 'every sum a try-it shows is true, at every setting', `${checked} sums · ${wrong.slice(0, 2).join(' | ')}`);
 }
 
+/* F3: every game has a title card's three lines of how, and says what it practised */
+{
+  globalThis.window = globalThis.window || globalThis;
+  const src = readFileSync(new URL('../src/arcade.js', import.meta.url), 'utf8');
+  const ids = [...src.matchAll(/\{ id: '([a-z]{2})', em:/g)].map((m) => m[1]);
+  const how = Object.fromEntries([...src.matchAll(/^  ([a-z]{2}): \[('[^\n]+)\],$/gm)].map((m) => [m[1], m[2].split(/', '/).length]));
+  const pr = new Set([...src.matchAll(/([a-z]{2}): '[^']+'/g)].map((m) => m[1]));
+  const missing = ids.filter((id) => how[id] !== 3 || !pr.has(id));
+  ok(ids.length >= 11 && !missing.length, 'every game has three lines of how-to and a "you practised" line', missing.join(',') || ids.join(','));
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

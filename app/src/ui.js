@@ -52,11 +52,21 @@ function tone(freq, dur, type, vol, delay) {
   o.connect(g); g.connect(c.destination);
   o.start(t); o.stop(t + dur + 0.02);
 }
+/* Motion on every answer (FAMILY-STANDARD §10, F3): a right or wrong sound
+   also marks the page for ~half a second, and CSS pops or shakes whatever
+   game stage or answer is on screen. The mark lives on <html>, so it
+   survives the re-render that the answer itself causes. */
+let flashT = null;
+function flash(kind) {
+  if (typeof document === 'undefined') return;
+  const r = document.documentElement; r.dataset.flash = kind;
+  clearTimeout(flashT); flashT = setTimeout(() => { delete r.dataset.flash; }, 520);
+}
 export const sfx = {
   click() { tone(520, 0.07, 'triangle', 0.06); },
   coin() { tone(880, 0.09, 'triangle', 0.11); tone(1320, 0.13, 'triangle', 0.09, 0.06); },
-  good() { tone(660, 0.1, 'sine', 0.12); tone(990, 0.16, 'sine', 0.1, 0.08); },
-  bad() { tone(220, 0.16, 'sawtooth', 0.07); tone(170, 0.2, 'sawtooth', 0.06, 0.08); },
+  good() { flash('ok'); tone(660, 0.1, 'sine', 0.12); tone(990, 0.16, 'sine', 0.1, 0.08); },
+  bad() { flash('no'); tone(220, 0.16, 'sawtooth', 0.07); tone(170, 0.2, 'sawtooth', 0.06, 0.08); },
   level() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.24, 'triangle', 0.11, i * 0.09)); },
   bell() { [784, 1175].forEach((f, i) => tone(f, 0.8, 'sine', 0.1, i * 0.14)); },
 };

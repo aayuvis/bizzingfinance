@@ -149,6 +149,18 @@ async function run(label, vp, isMobile, scheme) {
   await goto('#/learn');
   await shot('2-learn');
 
+  /* F3 · a game opens on its title card; Start plays it over its painting; an answer moves */
+  await goto('#/arcade');
+  await page.click('.cover[data-arg="nw"]'); await page.waitForTimeout(250);
+  const intro = await page.evaluate(() => ({ h: (document.querySelector('.gintro h1') || {}).textContent, n: document.querySelectorAll('.gintro li').length, art: !!getComputedStyle(document.querySelector('.gintro') || document.body).getPropertyValue('--cover') }));
+  ok(`${label}: a game opens on a title card with its painting and three lines of how`, intro.h === 'Needs vs Wants' && intro.n === 3 && intro.art, JSON.stringify(intro));
+  await page.click('[data-act="gbegin"]'); await page.waitForTimeout(250);
+  await page.click('[data-act="nwNeed"]'); await page.waitForTimeout(60);
+  const moved = await page.evaluate(() => ({ flash: document.documentElement.dataset.flash || '', stage: !!document.querySelector('.gplay .stage') }));
+  ok(`${label}: playing over the painting, and an answer moves the stage`, moved.stage && /^(ok|no)$/.test(moved.flash), JSON.stringify(moved));
+  await page.click('[data-act="gquit"]').catch(() => {}); await page.waitForTimeout(150);
+  await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
+
   /* D1 · try it: + changes the working */
   await page.evaluate(() => window.BZF.fire('card', 'c3d')); await page.waitForTimeout(250);
   const t0 = await page.textContent('.tryit .tout').catch(() => '');
