@@ -1213,6 +1213,9 @@ html[data-bz-dark] .mgoal{background:linear-gradient(160deg,#1C2A3E,#162030)}
 @keyframes rise{from{transform:scaleY(0)}}
 @media (prefers-reduced-motion:reduce){.wk-row i::after,.worthline .wl,.ss-col{animation:none !important;stroke-dashoffset:0}}
 :root[data-motion="reduced"] .wk-row i::after,:root[data-motion="reduced"] .worthline .wl,:root[data-motion="reduced"] .ss-col{animation:none !important;stroke-dashoffset:0}
+/* per-stop skipping: the offer, and the note while answering cold */
+.coldgo{justify-content:center;border-style:dashed}
+.coldnote{background:linear-gradient(135deg,var(--save-tint),var(--surface));border-left:4px solid var(--save)}
 
 </style>
 </head>
@@ -12915,6 +12918,152 @@ ${marks}`;
     };
   }
 
+  // src/reportcard.js
+  var reportcard_exports = {};
+  __export(reportcard_exports, {
+    card: () => card,
+    minutesThisWeek: () => minutesThisWeek
+  });
+
+  // src/next.js
+  function path(c) {
+    const out = [];
+    WORLDS.forEach((w, wi) => w.chapters.forEach((chId) => {
+      const ch = CHAPTERS.find((x) => x.id === chId);
+      if (!ch) return;
+      ch.cards.forEach((card3) => out.push({
+        card: card3,
+        ch,
+        wi,
+        w,
+        done: !!c.learn.done[card3.id],
+        locked: chapterLocked(c, ch) || !worldOpen2(c, wi)
+      }));
+    }));
+    return out;
+  }
+  function progress(c) {
+    const p = path(c), done = p.filter((s) => s.done).length;
+    const here = p.find((s) => !s.done) || p[p.length - 1];
+    const inWorld = p.filter((s) => s.wi === here.wi);
+    return {
+      done,
+      total: p.length,
+      world: here.w,
+      worldIndex: here.wi,
+      worldDone: inWorld.filter((s) => s.done).length,
+      worldTotal: inWorld.length
+    };
+  }
+  function nextStop(c) {
+    const s = path(c).find((x) => !x.done && !x.locked);
+    return s ? s.card : null;
+  }
+  function nextStep(c, now2) {
+    const bt = beat(c, ALL_CARDS, { mathsMet: mathsMet(c), now: now2 });
+    const answered = c.learn.beat && bt && c.learn.beat.cardId === bt.card.id && c.learn.beat.answered;
+    const stale = bt && bt.shape === "teach" && c.learn.done[bt.card.id];
+    const p = path(c);
+    const where = (card3) => p.find((s) => s.card.id === card3.id);
+    const open2 = p.find((s) => !s.done && !s.locked);
+    const ahead = bt && bt.shape === "teach" && open2 && (() => {
+      const bi = p.findIndex((s) => s.card.id === bt.card.id);
+      return bi > p.indexOf(open2);
+    })();
+    if (bt && !answered && !stale && !ahead) {
+      const s = where(bt.card);
+      return {
+        kind: bt.shape === "retrieve" ? "revise" : "learn",
+        act: "beat",
+        arg: "",
+        card: bt.card,
+        objective: bt.objective,
+        world: s ? s.w : WORLDS[0],
+        title: bt.shape === "retrieve" ? bt.objective.short : bt.card.title,
+        sub: bt.shape === "retrieve" ? "Still know this? One question, a different one." : bt.objective.short,
+        button: bt.shape === "retrieve" ? "One question" : "Continue"
+      };
+    }
+    if (open2) return {
+      kind: "learn",
+      act: "card",
+      arg: open2.card.id,
+      card: open2.card,
+      world: open2.w,
+      title: open2.card.title,
+      sub: open2.ch.title,
+      button: "Continue"
+    };
+    const shut = p.find((s) => !s.done);
+    if (shut) return {
+      kind: "locked",
+      act: "testout",
+      arg: shut.ch.id,
+      card: shut.card,
+      world: shut.w,
+      title: shut.ch.title,
+      sub: `Opens at level ${shut.ch.lv} \u2014 or pass a short test to open it now.`,
+      button: "Test out"
+    };
+    return {
+      kind: "revise",
+      act: "shelf",
+      arg: "revise",
+      card: null,
+      world: WORLDS[WORLDS.length - 1],
+      title: "Every stop walked",
+      sub: "Revising keeps it yours.",
+      button: "Revise"
+    };
+  }
+
+  // src/reportcard.js
+  var WEEK2 = 7 * 864e5;
+  var HELD = ["retained", "transferred"];
+  function minutesThisWeek(feed, name, now2 = Date.now()) {
+    const from = new Date(now2 - WEEK2);
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const since2 = `${from.getFullYear()}-${pad2(from.getMonth() + 1)}-${pad2(from.getDate())}`;
+    const who = String(name || "").trim().toLowerCase();
+    return (feed && feed.s || []).filter((x) => x.a === "finance" && x.d >= since2 && String(x.who || "").trim().toLowerCase() === who).reduce((t, x) => t + (x.m || 0), 0);
+  }
+  function card(c, feed, now2 = Date.now()) {
+    const pr = progress(c);
+    const states = OBJECTIVES.map((o) => ({ o, st: stateOf2(c, o.id) }));
+    const held2 = states.filter((x) => HELD.includes(x.st));
+    const lapsed = states.filter((x) => x.st === "lapsed");
+    const practising = states.filter((x) => x.st === "practised" || x.st === "introduced");
+    const moved = movedSince ? movedSince(c, now2 - WEEK2) : [];
+    const decided = (c.decisions || []).filter((d) => d.t >= now2 - WEEK2);
+    return {
+      time: { minutes: minutesThisWeek(feed, c.name, now2) },
+      progress: {
+        stops: pr.done,
+        of: pr.total,
+        world: pr.world.name,
+        worldDone: pr.worldDone,
+        worldOf: pr.worldTotal,
+        level: c.learn.level,
+        rank: rankObj(c.learn.level).name,
+        /* stops answered cold: walked, but without reading the lesson — said, never hidden */
+        cold: Object.keys(c.learn.cold || {}).filter((id) => c.learn.done[id]).length
+      },
+      mastery: {
+        held: held2.map((x) => x.o.short),
+        lapsed: lapsed.map((x) => x.o.short),
+        practising: practising.length,
+        of: OBJECTIVES.length,
+        movedThisWeek: Array.isArray(moved) ? moved.length : 0,
+        byStrand: (STRANDS || []).map((s) => ({
+          name: s.name || s.id,
+          held: held2.filter((x) => x.o.strand === (s.id || s)).length,
+          of: OBJECTIVES.filter((o) => o.strand === (s.id || s)).length
+        }))
+      },
+      decisions: decided.map((d) => ({ label: d.label, chose: d.chose, t: d.t }))
+    };
+  }
+
   // src/jobgames.js
   init_fmt();
 
@@ -17484,94 +17633,6 @@ ${marks}`;
     return genCard2(o, 5e3 + n * 37 + card3.id.length, { ceil: c ? mathsCeiling(c) : 6 });
   }
 
-  // src/next.js
-  function path(c) {
-    const out = [];
-    WORLDS.forEach((w, wi) => w.chapters.forEach((chId) => {
-      const ch = CHAPTERS.find((x) => x.id === chId);
-      if (!ch) return;
-      ch.cards.forEach((card3) => out.push({
-        card: card3,
-        ch,
-        wi,
-        w,
-        done: !!c.learn.done[card3.id],
-        locked: chapterLocked(c, ch) || !worldOpen2(c, wi)
-      }));
-    }));
-    return out;
-  }
-  function progress(c) {
-    const p = path(c), done = p.filter((s) => s.done).length;
-    const here = p.find((s) => !s.done) || p[p.length - 1];
-    const inWorld = p.filter((s) => s.wi === here.wi);
-    return {
-      done,
-      total: p.length,
-      world: here.w,
-      worldIndex: here.wi,
-      worldDone: inWorld.filter((s) => s.done).length,
-      worldTotal: inWorld.length
-    };
-  }
-  function nextStep(c, now2) {
-    const bt = beat(c, ALL_CARDS, { mathsMet: mathsMet(c), now: now2 });
-    const answered = c.learn.beat && bt && c.learn.beat.cardId === bt.card.id && c.learn.beat.answered;
-    const stale = bt && bt.shape === "teach" && c.learn.done[bt.card.id];
-    const p = path(c);
-    const where = (card3) => p.find((s) => s.card.id === card3.id);
-    const open2 = p.find((s) => !s.done && !s.locked);
-    const ahead = bt && bt.shape === "teach" && open2 && (() => {
-      const bi = p.findIndex((s) => s.card.id === bt.card.id);
-      return bi > p.indexOf(open2);
-    })();
-    if (bt && !answered && !stale && !ahead) {
-      const s = where(bt.card);
-      return {
-        kind: bt.shape === "retrieve" ? "revise" : "learn",
-        act: "beat",
-        arg: "",
-        card: bt.card,
-        objective: bt.objective,
-        world: s ? s.w : WORLDS[0],
-        title: bt.shape === "retrieve" ? bt.objective.short : bt.card.title,
-        sub: bt.shape === "retrieve" ? "Still know this? One question, a different one." : bt.objective.short,
-        button: bt.shape === "retrieve" ? "One question" : "Continue"
-      };
-    }
-    if (open2) return {
-      kind: "learn",
-      act: "card",
-      arg: open2.card.id,
-      card: open2.card,
-      world: open2.w,
-      title: open2.card.title,
-      sub: open2.ch.title,
-      button: "Continue"
-    };
-    const shut = p.find((s) => !s.done);
-    if (shut) return {
-      kind: "locked",
-      act: "testout",
-      arg: shut.ch.id,
-      card: shut.card,
-      world: shut.w,
-      title: shut.ch.title,
-      sub: `Opens at level ${shut.ch.lv} \u2014 or pass a short test to open it now.`,
-      button: "Test out"
-    };
-    return {
-      kind: "revise",
-      act: "shelf",
-      arg: "revise",
-      card: null,
-      world: WORLDS[WORLDS.length - 1],
-      title: "Every stop walked",
-      sub: "Revising keeps it yours.",
-      button: "Revise"
-    };
-  }
-
   // src/demo.js
   init_fmt();
   var DAY2 = 864e5;
@@ -18075,51 +18136,6 @@ ${marks}`;
         <span class="grow" style="min-width:0"><b style="font-size:14.5px">${esc(o.short || o.objective)}</b><div class="small muted">${t ? esc(t.k.title) + " \xB7 " + esc(t.ch.title) + " \xB7 " : ""}${why}</div></span></button>`;
     }).join("")}</div></div>` : `<div class="card"><p class="small muted">Nothing to revise. That is not nothing \u2014 it means everything you have met is holding.</p></div>`}
   </div>`;
-  }
-
-  // src/reportcard.js
-  var WEEK2 = 7 * 864e5;
-  var HELD = ["retained", "transferred"];
-  function minutesThisWeek(feed, name, now2 = Date.now()) {
-    const from = new Date(now2 - WEEK2);
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const since2 = `${from.getFullYear()}-${pad2(from.getMonth() + 1)}-${pad2(from.getDate())}`;
-    const who = String(name || "").trim().toLowerCase();
-    return (feed && feed.s || []).filter((x) => x.a === "finance" && x.d >= since2 && String(x.who || "").trim().toLowerCase() === who).reduce((t, x) => t + (x.m || 0), 0);
-  }
-  function card(c, feed, now2 = Date.now()) {
-    const pr = progress(c);
-    const states = OBJECTIVES.map((o) => ({ o, st: stateOf2(c, o.id) }));
-    const held2 = states.filter((x) => HELD.includes(x.st));
-    const lapsed = states.filter((x) => x.st === "lapsed");
-    const practising = states.filter((x) => x.st === "practised" || x.st === "introduced");
-    const moved = movedSince ? movedSince(c, now2 - WEEK2) : [];
-    const decided = (c.decisions || []).filter((d) => d.t >= now2 - WEEK2);
-    return {
-      time: { minutes: minutesThisWeek(feed, c.name, now2) },
-      progress: {
-        stops: pr.done,
-        of: pr.total,
-        world: pr.world.name,
-        worldDone: pr.worldDone,
-        worldOf: pr.worldTotal,
-        level: c.learn.level,
-        rank: rankObj(c.learn.level).name
-      },
-      mastery: {
-        held: held2.map((x) => x.o.short),
-        lapsed: lapsed.map((x) => x.o.short),
-        practising: practising.length,
-        of: OBJECTIVES.length,
-        movedThisWeek: Array.isArray(moved) ? moved.length : 0,
-        byStrand: (STRANDS || []).map((s) => ({
-          name: s.name || s.id,
-          held: held2.filter((x) => x.o.strand === (s.id || s)).length,
-          of: OBJECTIVES.filter((o) => o.strand === (s.id || s)).length
-        }))
-      },
-      decisions: decided.map((d) => ({ label: d.label, chose: d.chose, t: d.t }))
-    };
   }
 
   // src/family/bizzing-shell.js
@@ -19010,7 +19026,9 @@ ${drawerHTML(o)}`;
     return `<div class="stack">
     <button class="backlink" data-act="closeCard">${ico("back", "\u2190", 16)} ${card3.assess ? "Not now" : "All chapters"}</button>
     ${card3.assess && R.practice && R.practice.id === card3.id ? hero({ eyebrow: "Practice \xB7 asked fresh", title: esc(card3.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(cardById(R.practice.from, c)) ? "the same idea as" : "an idea from the chapter of"} \u201C${esc((cardById(R.practice.from, c) || {}).title || "the lesson")}\u201D, asked fresh. Nothing is recorded but what a right answer earns.</p>` : card3.assess ? hero({ eyebrow: card3.generated ? "Still know this? \xB7 in new numbers" : "Still know this?", title: esc(card3.title) }) : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card3.ch) || { title: "A stop off the road" }).title), title: esc(card3.title) })}
-    ${card3.assess && R.practice && R.practice.id === card3.id ? "" : card3.assess ? `<p class="small muted">You met this a while ago. One question \u2014 ${card3.generated ? "numbers the town has not asked you before" : "a different one from last time"}. Getting it right after a gap is how the town knows it is yours.</p>` : `
+    ${card3.assess && R.practice && R.practice.id === card3.id ? "" : card3.assess ? `<p class="small muted">You met this a while ago. One question \u2014 ${card3.generated ? "numbers the town has not asked you before" : "a different one from last time"}. Getting it right after a gap is how the town knows it is yours.</p>` : R.cold === card3.id ? `<div class="card coldnote" role="status"><b>Answering cold.</b> Get all three right first time and this stop is yours without the lesson. Miss one and the lesson opens \u2014 no harm done.
+          <button class="btn ghost sm" data-act="coldStop" style="margin-top:8px">Show me the lesson instead</button></div>` : `
+    ${!c.learn.done[card3.id] && !(st && st.card === card3.id && st.picks && st.picks.length) ? `<button class="btn ghost wide coldgo" data-act="coldStart" data-arg="${card3.id}">${ico("next", "", 16)} Know this already? Answer it cold</button>` : ""}
     ${lessonBlock(card3.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card3.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card3.teach}</span></p>
@@ -19049,7 +19067,7 @@ ${drawerHTML(o)}`;
       ${done ? `<div class="fb ${p.right ? "yes" : "no"}" role="status">
           <b>${p.right ? p.first === false ? "Got it on the second go." : "That\u2019s it." : dq.num ? "It is " + esc(String(dq.value)) + "." : "That one is " + esc(dq.opts[dq.answer]) + "."}</b> ${esc(dq.why)}</div>` : ""}
       ${done && !last2 ? `<button class="btn wide" data-act="nextQ">Next question \u2192</button>` : ""}
-      ${done && last2 && R.practice && R.practice.id === card3.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one \u2192</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>` : done && last2 ? `<button class="btn wide" data-act="cardDone" data-arg="${card3.id}">Take it back to town \u2192</button>
+      ${done && last2 && R.practice && R.practice.id === card3.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one \u2192</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>` : done && last2 && R.cold === card3.id && st.right ? `<button class="btn wide" data-act="cardDone" data-arg="${card3.id}">Skip ahead \u2014 it\u2019s yours \u2192</button>` : done && last2 ? `<button class="btn wide" data-act="cardDone" data-arg="${card3.id}">Take it back to town \u2192</button>
           ${!card3.assess && practiceFor(card3) ? `<button class="btn ghost wide" data-act="practise" data-arg="${card3.id}">${ico("repeat", "", 16)} One more on this, asked fresh</button>` : ""}` : ""}
     </div>`;
     })()}
@@ -19910,7 +19928,7 @@ ${drawerHTML(o)}`;
     <h2 id="rc-h" style="font-size:19px">${esc(c.name)} this week, at a glance</h2>
     <div class="rc-row">
       ${tile("Time", r.time.minutes ? `${r.time.minutes} min` : "\u2014", r.time.minutes ? "active minutes, from the family feed" : "no active minutes logged yet")}
-      ${tile("Progress", `${r.progress.stops} / ${r.progress.of}`, `stops \xB7 ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} \xB7 ${esc(r.progress.rank)} L${r.progress.level}`)}
+      ${tile("Progress", `${r.progress.stops} / ${r.progress.of}`, `stops${r.progress.cold ? ` (${r.progress.cold} answered cold, lesson skipped)` : ""} \xB7 ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} \xB7 ${esc(r.progress.rank)} L${r.progress.level}`)}
       ${tile("Mastery", `${r.mastery.held.length} / ${r.mastery.of}`, `skills shown again after a gap \xB7 ${r.mastery.practising} being practised`)}
     </div>
     ${r.mastery.held.length ? `<p class="small" style="margin-top:10px"><b>Can now do:</b> ${r.mastery.held.slice(0, 4).map(esc).join(" \xB7 ")}</p>` : '<p class="small muted" style="margin-top:10px">Nothing is counted as learned until it is shown again after a gap of a week. The first ones arrive in week two.</p>'}
@@ -22481,6 +22499,7 @@ ${drawerHTML(o)}`;
   var cardById2 = (id) => cardById(id, C3());
   on("closeCard", () => {
     R.practice = null;
+    R.cold = null;
     C3().learn.openCard = null;
     C3().learn.drill = null;
     render();
@@ -22501,6 +22520,10 @@ ${drawerHTML(o)}`;
     } else {
       sfx.bad();
       if (p.tries === 1 && isLesson(card3)) record2(c, card3.id, st.qi);
+    }
+    if (!p.right && R.cold === card3.id) {
+      R.cold = null;
+      toast("Here is the lesson \u2014 then have another go");
     }
     render();
   });
@@ -22558,6 +22581,19 @@ ${drawerHTML(o)}`;
     render();
     window.scrollTo(0, 0);
   });
+  on("coldStart", (id) => {
+    const c = C3();
+    if (c.learn.done[id]) return;
+    R.cold = id;
+    c.learn.drill = null;
+    sfx.click();
+    render();
+    window.scrollTo(0, 0);
+  });
+  on("coldStop", () => {
+    R.cold = null;
+    render();
+  });
   on("nextQ", () => {
     const c = C3(), st = c.learn.drill;
     if (!st || !st.picks || !settled(st.picks[st.qi])) return;
@@ -22597,6 +22633,12 @@ ${drawerHTML(o)}`;
       window.scrollTo(0, 0);
       return;
     }
+    const cold = R.cold === id && right;
+    R.cold = null;
+    if (cold) {
+      c.learn.cold = c.learn.cold || {};
+      c.learn.cold[id] = true;
+    }
     c.learn.done[id] = true;
     if (first && ch) questTick(c, "lesson", 1);
     const res = addXP(c, cardXP(first, right));
@@ -22610,7 +22652,13 @@ ${drawerHTML(o)}`;
     c.learn.openCard = null;
     c.learn.drill = null;
     c.lastDone = { id, title: card3.title, right, t: Date.now() };
-    if (finished) {
+    const onward = cold && !finished ? nextStop(c) : null;
+    if (onward) {
+      sfx.good();
+      toast("\u201C" + card3.title + "\u201D \u2014 yours already");
+      fire("card", onward.id);
+      if (res.leveled) levelUp(res);
+    } else if (finished) {
       sfx.level();
       confetti(70);
       R.overlay = { kind: "chapter", ch: ch.id, level: res.leveled ? res.level : null };
@@ -23594,6 +23642,7 @@ So it costs ${money(offer.cost)}.`);
     decisions: decisions_exports,
     letters: LETTERS,
     report: report_exports,
+    reportcard: reportcard_exports,
     validate: () => validate2(ALL_CARDS),
     objectives: OBJECTIVES,
     ambient: ambient_exports,
