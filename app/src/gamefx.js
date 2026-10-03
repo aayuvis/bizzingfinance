@@ -72,7 +72,7 @@ export function fx() {
       for (const p of pops) {
         const k = p.t / p.life, y = p.y - ease.out(k) * 34, sc = k < 0.15 ? ease.back(k / 0.15) : 1;
         ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
-        ctx.font = `800 ${Math.round(p.size * sc)}px Sono, ui-monospace, monospace`;
+        ctx.font = `600 ${Math.round(p.size * sc)}px Sono, ui-monospace, monospace`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,252,245,.95)'; ctx.strokeText(p.text, p.x, y);
         ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, y);
