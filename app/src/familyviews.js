@@ -141,13 +141,16 @@ export function profileCard(c) {
 
 /* ── Town: the money map — travel, the street's buildings, the repairs ── */
 export function viewTown(parts) {
+  /* Town is the Money tab too: the street, the money drawn, the seven places to walk
+     into, the day's three, the road to the next place, and what is left to mend */
   return `<div class="stack townpage">
-    ${hero({ eyebrow: 'The money map', title: 'Bizzington', who: 'pip', line: 'Five places, walked in order. You move on by learning, not by earning.' })}
+    <h1 class="sr">Town — Bizzington and your money</h1>
     ${parts.street}
+    ${parts.money}
+    ${parts.places}
     ${parts.today}
-    <div class="sect"><b>Travel</b><i></i></div>
-    ${parts.worlds}
-    ${parts.journeys}
+    <div class="sect"><b>The road</b><i></i><span class="small muted">five places, walked in order</span></div>
+    <div class="travel">${parts.worlds}</div>
     ${parts.repairs}
   </div>`;
 }

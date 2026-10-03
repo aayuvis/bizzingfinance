@@ -26,11 +26,11 @@ export const TABS = [
   { k: 'home', n: 'Home', i: 'home' },
   { k: 'town', n: 'Town', i: 'town' },
   { k: 'learn', n: 'Atlas', i: 'learn' },
-  { k: 'money', n: 'Money', i: 'wallet' },
   { k: 'play', n: 'Play', i: 'arcade' },
 ];
 /* routes that belong to a tab, so the tab stays lit inside it */
-const TAB_OF = { arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn' };
+/* Money lives inside the Town (owner, 3 Oct 2026): its screens are the town's buildings */
+const TAB_OF = { money: 'town', arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn' };
 export const tabOf = (nav) => TAB_OF[nav] || nav;
 
 export const DRAWER = [

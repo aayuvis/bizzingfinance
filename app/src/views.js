@@ -343,13 +343,75 @@ export function viewHome() {
 /* What used to fill Home — the street's day — lives on the Town tab now. */
 export function townDay() {
   const c = K(), quests = sim.questList(c);
-  return `${greeting(c)}
-    ${todaysThree(c, quests)}
+  /* the greeting and the day's ring live on Home; the Town starts with the street */
+  return `${todaysThree(c, quests)}
     ${fold('more', 'More today', 'The till puzzle, a real-world deed and the end of the day.', 'more', `<div class="stack">
       ${closingTime(c, quests)}
       ${tillCard(c)}
       ${todayCard(c)}
     </div>`)}`;
+}
+
+/* ── Town is Money (owner, 3 Oct 2026: "shouldn't town and money be in the same tab") ──
+   docs/01 §2: every building is a surface of the Money tab. So the money is drawn, not
+   listed: the wallet as a stack of coins, four glass jars filled to their real share,
+   the goal as a building going up — and then the seven places as painted buildings you
+   walk into, each with its own live figure, the locked ones drawn and dimmed. */
+const JAR_INK = { spend: 'var(--spend)', save: 'var(--save)', grow: 'var(--grow)', give: 'var(--give)' };
+const JAR_NAME = { spend: 'Spend', save: 'Save', grow: 'Grow', give: 'Give' };
+function jarSVG(k, share, top) {
+  /* the fullest jar is nearly full; the rest are drawn against it, so the shape of the
+     split is what you see (sim.glance owns the shares) */
+  const lvl = top > 0 ? Math.max(share > 0 ? 0.08 : 0, share / top * 0.86) : 0;
+  const yTop = 24 + (1 - lvl) * 62;
+  return `<svg viewBox="0 0 64 96" width="64" height="96" aria-hidden="true" class="jarsvg">
+    <defs><clipPath id="jc-${k}"><path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z"/></clipPath></defs>
+    <g clip-path="url(#jc-${k})"><rect class="jarfill" x="0" y="${yTop.toFixed(1)}" width="64" height="96" fill="${JAR_INK[k]}" opacity=".88"/>
+      <path class="jarwave" d="M0 ${yTop.toFixed(1)} q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 V96 H0Z" fill="${JAR_INK[k]}"/>
+      ${lvl > 0.12 ? `<g fill="#FFF3C4" opacity=".75"><circle cx="24" cy="${(yTop + 14).toFixed(0)}" r="3"/><circle cx="38" cy="${(yTop + 24).toFixed(0)}" r="2.4"/><circle cx="30" cy="${(yTop + 34).toFixed(0)}" r="2"/></g>` : ''}</g>
+    <path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z" fill="none" stroke="var(--ink)" stroke-opacity=".55" stroke-width="2.4"/>
+    <path d="M18 30 V78" stroke="#fff" stroke-opacity=".55" stroke-width="3.5" stroke-linecap="round"/>
+    <rect x="12" y="10" width="40" height="12" rx="4" fill="#B57E10"/><rect x="12" y="10" width="40" height="5" rx="3" fill="#F0B429"/>
+  </svg>`;
+}
+function coinStack(n) {
+  const k = Math.max(1, Math.min(9, n));
+  return `<svg viewBox="0 0 70 96" width="70" height="96" aria-hidden="true" class="coinstack">${Array.from({ length: k }, (_, i) =>
+    `<g class="coin" style="--i:${i}"><ellipse cx="35" cy="${84 - i * 8}" rx="26" ry="8" fill="#B57E10"/><ellipse cx="35" cy="${81 - i * 8}" rx="26" ry="8" fill="#F0B429" stroke="#8A5A00" stroke-width="1.2"/></g>`).join('')}
+    <path transform="translate(35 ${81 - (k - 1) * 8})" d="M0 -5 1.5 -1.6 5 -1.5 2.3 .8 3.1 4.3 0 2.4 -3.1 4.3 -2.3 .8 -5 -1.5 -1.5 -1.6Z" fill="#FFF3C4"/></svg>`;
+}
+export function moneyStrip(c) {
+  const g = sim.glance(c), top = Math.max(...g.jars.map((j) => j.share));
+  const jarsOpen = chapterOpen(c, 'jars'), goalsOpen = chapterOpen(c, 'goals');
+  return `<section class="mstrip" aria-label="Your money">
+    <button class="mtile mwallet" data-act="sub" data-arg="wallet">
+      ${coinStack(Math.ceil(g.wallet / Math.max(1, price(4))))}
+      <span class="mt-body"><span class="eyebrow">Your wallet</span><b class="mt-big tabnum">${money(g.wallet)}</b>
+        <span class="small">${money(g.weekIn)} in · ${money(g.weekOut)} out a week</span></span></button>
+    <button class="mtile mjars${jarsOpen ? '' : ' shut'}" data-act="${jarsOpen ? 'sub' : 'lockedSub'}" data-arg="jars">
+      <span class="jarrow">${g.jars.map((j) => `<span class="jar"><span class="jar-amt tabnum">${money(j.amt)}</span>${jarSVG(j.k, j.share, top)}<span class="jar-n">${JAR_NAME[j.k]}</span></span>`).join('')}</span>
+      ${jarsOpen ? '' : `<span class="mt-lock">${ico('lock', '🔒', 14)} The Jar Shed opens after “${esc(needFor('jars') || 'a chapter')}”</span>`}</button>
+    <button class="mtile mgoal${goalsOpen ? '' : ' shut'}" data-act="${goalsOpen ? 'sub' : 'lockedSub'}" data-arg="goals">
+      <span class="mt-body"><span class="eyebrow">${g.goal ? 'Building towards' : 'The Build Yard'}</span>
+        <b class="mt-mid">${g.goal ? esc(g.goal.name) : goalsOpen ? 'Name a thing to save for' : 'Opens after “' + esc(needFor('goals') || 'a chapter') + '”'}</b>
+        ${g.goal ? `<span class="gbuild" aria-label="${Math.round(g.goal.pct * 100)} percent built">${Array.from({ length: 10 }, (_, i) => `<i class="${i < Math.round(g.goal.pct * 10) ? 'on' : ''}" style="--i:${i}"></i>`).join('')}</span>
+        <span class="small tabnum">${money(g.goal.saved)} of ${money(g.goal.target)}</span>` : ''}</span></button>
+  </section>`;
+}
+const PLACE_ART = { place: (c) => 'home-' + Math.min(4, (c.home && c.home.tier) || 0), wallet: () => 'stall', jars: () => 'jars', goals: () => 'yard', bank: () => 'bank', exchange: () => 'exchange', shop: () => 'shop' };
+export function placeTiles(c) {
+  const g = sim.glance(c);
+  const fig = { place: g.home.name, wallet: money(g.wallet) + ' in hand', jars: money(g.jarTotal) + ' in four jars',
+    goals: g.goal ? Math.round(g.goal.pct * 100) + '% of ' + g.goal.name : g.goalsDone ? g.goalsDone + ' built' : 'nothing named yet',
+    bank: g.owed ? money(g.bank) + ' saved · ' + money(g.owed) + ' owed' : money(g.bank) + ' in the vault',
+    exchange: g.holdings ? money(g.holdings) + ' held' : 'nothing held yet', shop: g.shop ? money(g.shop) + ' in the till' : 'shutters down' };
+  return `<section aria-labelledby="pl-h"><div class="sect"><b id="pl-h">The seven places</b><i></i></div>
+    <div class="places">${PLACES.map((p) => {
+      const on = chapterOpen(c, p.sub), b = BLD[PLACE_ART[p.key](c)];
+      return `<button class="ptile${on ? '' : ' shut'}" data-act="${on ? 'sub' : 'lockedSub'}" data-arg="${p.sub}" data-focus="place:${p.sub}">
+        <span class="pt-art">${b ? `<img src="${b.src}" alt="" loading="lazy">` : ''}${on ? '' : `<span class="pt-lock">${ico('lock', '🔒', 16)}</span>`}</span>
+        <b>${esc(p.name)}</b><span class="small">${on ? esc(fig[p.key]) : 'Opens after “' + esc(needFor(p.sub) || 'a chapter') + '”'}</span></button>`;
+    }).join('')}</div></section>`;
 }
 
 /* Town (FAMILY-STANDARD §4): the money map — the street where you stand, the five
@@ -386,7 +448,7 @@ export function townParts() {
   return {
     street: `<div class="town hero${R.dark ? ' night' : ''}"><div class="town-scroll">${townSVG(c)}</div>
       <div class="town-head"><span class="town-chip"><span class="eyebrow" style="color:inherit">You are in</span><b>${esc(world.name)}</b></span></div></div>`,
-    worlds: posters, journeys: journeys(c), repairs, today: townDay(),
+    worlds: posters, journeys: journeys(c), repairs, today: townDay(), money: moneyStrip(c), places: placeTiles(c),
   };
 }
 
@@ -842,11 +904,13 @@ export function viewMoney() {
   let sub = R.s.ui.sub;
   if (!subs.find((x) => x.k === sub && chapterOpen(c, x.k))) sub = 'wallet';
 
+  /* inside a building: the way back to the street, and the next door along as pictures */
   const strip = `<div class="mnav">
+    <a class="mback" href="#/town">${ico('back', '←', 16)} Town</a>
     ${subs.map((x) => {
-      const open = chapterOpen(c, x.k);
+      const open = chapterOpen(c, x.k), p = PLACES.find((q) => q.sub === x.k), b = p && BLD[PLACE_ART[p.key](c)];
       return `<button class="mtab${open ? '' : ' shut'}" data-act="${open ? 'sub' : 'lockedSub'}" data-arg="${x.k}"
-        aria-current="${sub === x.k ? 'page' : 'false'}">
+        aria-current="${sub === x.k ? 'page' : 'false'}">${b ? `<img src="${b.src}" alt="" width="30" height="30">` : ''}
         ${open ? '' : ico('lock', '🔒', 14) + ' '}${x.n}</button>`;
     }).join('')}</div>`;
 

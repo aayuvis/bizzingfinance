@@ -352,7 +352,8 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: checkShell — the chrome and Home match Bee's`, shellFails.length === 0, JSON.stringify(shellFails));
   await page.setViewportSize(vp); await page.waitForTimeout(200);
   const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '[data-bz=tabbar] a' : '[data-bz=tabs] [data-bz=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
-  ok(`${label}: six tabs — Home · Town · Atlas · Money · Play · My Feed (last) — and no More`, tabs.join(',') === 'Home,Town,Atlas,Money,Play,My Feed', tabs.join(','));
+  /* five tabs: Money lives inside the Town (owner, 3 Oct 2026) */
+  ok(`${label}: five tabs — Home · Town · Atlas · Play · My Feed (last) — and no More`, tabs.join(',') === 'Home,Town,Atlas,Play,My Feed', tabs.join(','));
   /* §5 Settings: Me · Sound & music · Look · Comfort · Grown-ups */
   await page.evaluate(() => window.BZF.fire('settings')); await page.waitForTimeout(250);
   const secs = await page.evaluate(() => [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()));
@@ -629,6 +630,21 @@ async function demo() {
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"], .ov .ovx'); if (o) o.click(); });
   }
   ok('demo: every kind of deep link lands on its own thing, on screen', !missed.length, missed.join(' | '));
+  /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
+  await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
+  const town = await page.evaluate(() => {
+    const { R, sim } = window.BZF, c = R.s.kids[0], g = sim.glance(c);
+    const ys = [...document.querySelectorAll('.mjars .jarfill')].map((r) => +r.getAttribute('y'));
+    const order = (a) => a.map((v, i) => i).sort((x, y) => a[x] - a[y]).join();
+    return { places: document.querySelectorAll('.places .ptile').length, jars: ys.length,
+      /* a fuller jar has its liquid higher up (smaller y): the drawing follows the money */
+      follows: order(ys) === order(g.jars.map((j) => -j.share)) || g.jars.every((j) => j.share === g.jars[0].share),
+      wallet: (document.querySelector('.mwallet .mt-big') || {}).textContent };
+  });
+  ok('Town: seven places and four jars drawn to their real share', town.places === 7 && town.jars === 4 && town.follows, JSON.stringify(town));
+  await page.evaluate(() => document.querySelector('.ptile[data-arg="wallet"]').click()); await page.waitForTimeout(300);
+  const inside = await page.evaluate(() => ({ hash: location.hash, lit: (document.querySelector('.bz-tabbar [aria-current="page"], .bz-tabs [aria-current="page"]') || {}).textContent, back: !!document.querySelector('.mnav .mback[href="#/town"]') }));
+  ok('Town: a place opens its building, the Town tab stays lit, and there is a way back', /#\/money\/wallet/.test(inside.hash) && /Town/.test(inside.lit || '') && inside.back, JSON.stringify(inside));
   /* A3 · Continue's "still know this?" opens the question (it used to land on the map) */
   await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(300);
   await page.evaluate(() => document.querySelector('[data-bz=continue]').click()); await page.waitForTimeout(500);

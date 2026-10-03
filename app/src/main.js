@@ -222,7 +222,7 @@ function render() {
     kid: { name: c.name, avatar: avatarSrc(c.avatar) }, search: 'Search lessons, words, games…', query: R.sq || '',
     inRun: !!R.game,
     tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
-      { id: 'learn', label: 'Atlas', icon: 'learn', href: '#/atlas' }, { id: 'money', label: 'Money', icon: 'coins', href: '#/money' },
+      { id: 'learn', label: 'Atlas', icon: 'learn', href: '#/atlas' },
       { id: 'play', label: 'Play', icon: 'play', href: '#/play' },
       /* My Feed is the LAST tab (owner, 2 Oct 2026); a grown-up can switch it off behind the PIN */
       ...(FEED.on(s) ? [{ id: 'feed', label: 'My Feed', icon: 'feed', href: '#/feed' }] : [])],

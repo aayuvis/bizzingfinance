@@ -280,6 +280,21 @@ export function netWorth(c) {
   return Math.round(c.money.wallet + jarTotal(c) + c.money.bank.balance
     + holdingsValue(c) + bizValue(c) + homeEquity(c) - debt(c));
 }
+/* Every figure the Town draws, in one place (views render money, they never compute it):
+   the wallet, each jar and its share of the four, the goal under way, the bank, the
+   holdings, the shop, the home and the week's sum. */
+export function glance(c) {
+  const j = c.money.jars, jt = jarTotal(c), g = c.money.goals.find((x) => !x.done) || null;
+  const share = (k) => (jt > 0 ? j[k] / jt : 0);
+  return {
+    wallet: Math.round(c.money.wallet), worth: netWorth(c),
+    jars: ['spend', 'save', 'grow', 'give'].map((k) => ({ k, amt: Math.round(j[k]), share: share(k) })), jarTotal: Math.round(jt),
+    goal: g ? { name: g.name, saved: Math.round(g.saved), target: Math.round(g.target), pct: Math.min(1, g.saved / Math.max(1, g.target)) } : null,
+    goalsDone: c.money.goals.filter((x) => x.done).length,
+    bank: Math.round(c.money.bank.balance), owed: debt(c), holdings: holdingsValue(c), shop: bizValue(c),
+    home: homeOf(c), weekIn: Math.round(weeklyIncome(c)), weekOut: Math.round(weeklyCost(c)),
+  };
+}
 export function stamp(c) {
   const h = c.history, v = netWorth(c);
   if (!h.length || h[h.length - 1].v !== v) h.push({ t: Date.now(), v });
