@@ -21,13 +21,18 @@ console.log('\nGenerated items · fresh numbers, same idea\n' + '─'.repeat(56)
 
 const ids = Object.keys(GEN);
 ok(ids.every((id) => OBJECTIVES.some((o) => o.id === id)), `every template names a real objective (${ids.length})`);
-const bad = [], leak = [], hint = [], mcq = [];
+const missing = OBJECTIVES.filter((o) => !GEN[o.id]).map((o) => o.id);
+ok(ids.length === OBJECTIVES.length && !missing.length, `every objective has a template (${ids.length}/${OBJECTIVES.length})`, missing.join(' '));
+const bad = [], leak = [], hint = [], mcq = [], noWhy = [], stems = {}, mixed = [];
 for (const cur of Object.keys(CURRENCIES)) {
   setCurrency(cur);
   for (const id of ids) {
     const o = OBJECTIVES.find((x) => x.id === id);
     for (let seed = 1; seed <= 60; seed++) for (const ceil of [4, 12]) {
       const k = genCard(o, seed, { ceil }), d = k.drill;
+      const shape = d.kind === 'num' ? 'num' : 'mcq';
+      (stems[id] = stems[id] || { shape, q: new Set() }).q.add(d.q);
+      if (stems[id].shape !== shape) mixed.push(id);
       if (d.kind === 'num') {
         if (!(Number.isInteger(d.value) && d.value > 0)) bad.push(`${cur} ${k.id} ${d.value}`);
         if (numbersIn(d.q).includes(d.value)) leak.push(`${cur} ${k.id}: ${d.q}`);
@@ -35,7 +40,8 @@ for (const cur of Object.keys(CURRENCIES)) {
         if (!d.why) bad.push(k.id + ' no why');
       } else {
         const sd = shuffledDrill(k);
-        if (d.opts.length < 3 || new Set(d.opts).size !== d.opts.length || sd.opts[sd.answer] !== d.opts[d.a]) mcq.push(`${cur} ${k.id}`);
+        if (d.opts.length < 3 || d.opts.length > 4 || new Set(d.opts).size !== d.opts.length || sd.opts[sd.answer] !== d.opts[d.a]) mcq.push(`${cur} ${k.id}`);
+        if (!d.why || !String(d.why).trim()) noWhy.push(`${cur} ${k.id}`);
       }
     }
   }
@@ -44,6 +50,21 @@ ok(!bad.length, 'every typed answer is a whole, positive amount with a why', bad
 ok(!leak.length, 'no typed answer is printed in its own question', leak.slice(0, 2).join(' | '));
 ok(!hint.length, 'a hint is a method, never a number', hint.slice(0, 2).join(' | '));
 ok(!mcq.length, 'a four-option one has distinct options and one answer that survives the shuffle', mcq.slice(0, 3).join(' | '));
+ok(!noWhy.length, 'every four-option one has a why that teaches', noWhy.slice(0, 3).join(' | '));
+ok(!mixed.length, 'each template keeps one shape', [...new Set(mixed)].join(' '));
+/* a judgement question is built from pools, so it is not one sentence with a name swapped:
+   at least six different stems across the seeds, in the default currency */
+{
+  setCurrency('INR'); const thin = [];
+  for (const id of ids) {
+    if (stems[id].shape !== 'mcq') continue;
+    const o = OBJECTIVES.find((x) => x.id === id), qs = new Set();
+    for (let seed = 1; seed <= 60; seed++) qs.add(genCard(o, seed, { ceil: 6 }).drill.q);
+    if (qs.size < 6) thin.push(`${id} (${qs.size})`);
+  }
+  const nm = ids.filter((id) => stems[id].shape === 'mcq').length;
+  ok(!thin.length, `every four-option template asks at least six different questions over 60 seeds (${nm} templates)`, thin.join(' '));
+}
 
 /* the number spine: a child who has met small numbers gets small numbers */
 setCurrency('INR');
