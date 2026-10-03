@@ -295,3 +295,10 @@ html[data-bz-dark]:root{ --bz-card-line:#4a3f2a; --bz-chip:rgba(255,255,255,.09)
 /* AA (FAMILY-STANDARD §10): the shell's kicker gold is 3.7:1 on a white card; the
    app's treasure-deep keeps the same hue at 5.9:1 (light) — colour only, no geometry */
 html:not([data-bz-dark]) .bz-kicker{color:var(--treasure-deep)}
+.fring-take{flex:0 0 auto;font:800 12px var(--bz-body,inherit);padding:4px 10px;border-radius:999px;border:1.5px solid var(--bz-accent);background:transparent;color:var(--bz-ink);cursor:pointer;min-height:28px}
+.fring-take:hover,.fring-take:focus-visible{background:var(--bz-accent);color:#fff}
+/* the two chips the old bar carried (main.js inserts them after the brand) */
+.bz-hiveback,.bz-tester{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:999px;font:800 12px var(--bz-body,inherit);text-decoration:none;white-space:nowrap}
+.bz-hiveback{background:var(--bz-accent-soft,#FFF1D6);color:var(--bz-ink);border:1.5px solid var(--bz-line)}
+.bz-tester{background:#C2410C;color:#fff;border:0;letter-spacing:.06em;cursor:pointer}
+@media (max-width:720px){.bz-hiveback span{display:none}.bz-hiveback{width:30px;padding:0;justify-content:center}.bz-tester{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:60;height:16px;padding:0 9px;border-radius:0 0 8px 8px;font-size:9px}}

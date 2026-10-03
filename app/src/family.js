@@ -18,8 +18,11 @@ import { trackActivity, trackMilestone } from './family/bizzing-activity.js';
 import { earn as walletEarn, balance, ledger } from './family/bizzing-wallet.js';
 
 export const APP = 'finance';
-let demo = false;
-export function setDemo(v) { demo = !!v; }
+let demo = false, demoLed = [];
+/* the sample's coins live in memory only: a ledger built from the standard events it played */
+export function setDemo(v, sample) { demo = !!v; demoLed = (demo && sample) || []; }
+export function coinBalance(who) { return demo ? demoLed.reduce((t, x) => t + x.n, 0) : balance(who); }
+export function coinLedger(who) { return demo ? demoLed.slice() : ledger(who); }
 
 export function startActivity(getName) { return demo ? () => {} : trackActivity(APP, getName); }
 export function milestone(who, ev, label) { if (!demo && who) trackMilestone(APP, who, ev, label); }
@@ -31,6 +34,6 @@ export function coins(who, event) { return demo || !who ? 0 : walletEarn(APP, wh
 export function familyCoins(who, now = Date.now()) {
   if (!who) return { balance: 0, week: [] };
   const since = now - 7 * 864e5, by = {};
-  ledger(who).filter((x) => x.t >= since && x.n > 0).forEach((x) => { by[x.a] = (by[x.a] || 0) + x.n; });
-  return { balance: balance(who), week: Object.entries(by).sort((a, b) => b[1] - a[1]) };
+  coinLedger(who).filter((x) => x.t >= since && x.n > 0).forEach((x) => { by[x.a] = (by[x.a] || 0) + x.n; });
+  return { balance: coinBalance(who), week: Object.entries(by).sort((a, b) => b[1] - a[1]) };
 }

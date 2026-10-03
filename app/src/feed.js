@@ -30,6 +30,50 @@ import * as co from './companion.js';
 import * as family from './family.js';
 import { nextStep } from './next.js';
 import { R } from './runtime.js';
+import { ART } from './art-gen.js';
+import { COVERS } from './covers-gen.js';
+import { BLD } from './buildings-gen.js';
+import { HOMES, gameOpen } from './content.js';
+import { GAMES as GAME_DEFS } from './arcade.js';
+
+/* ── more on each card (owner, 3 Oct 2026) ─────────────────────────────────
+   The builder gives every card its provenance line (source) and an exact route.
+   Here, at render, Bizzington adds what only the child's own record knows — a
+   short status (read it, earned it, mended it, your next stop) — and a picture
+   for the kinds that have one: the chapter's painted world for a chapter or a
+   lesson's opening card, a game's cover, a place's plate, a home or a shop.
+   Questions, reasons and words stay plain so a session is never a wall of
+   pictures. Nothing here changes a card's words or what it pays. */
+const worldOfChapter = (n) => { const ch = CHAPTERS[n - 1]; return ch && WORLDS.find((w) => w.chapters.includes(ch.id)); };
+const plate = (w) => w && (ART['world-' + w.id] || null);
+const topicVal = (it, k) => ((it.topics || []).find((t) => t.startsWith(k + ':')) || '').slice(k.length + 1);
+function artFor(it) {
+  const m = /^#\/play\/(\w+)/.exec(it.route || '');
+  if (it.kind === 'game' && m && COVERS[m[1]]) return COVERS[m[1]].src;
+  if (['chapter', 'lesson', 'tryit', 'yourturn'].includes(it.kind) && it.level) return plate(worldOfChapter(it.level));
+  if (['place', 'fix', 'fixed', 'job'].includes(it.kind)) return plate(WORLDS.find((w) => w.id === topicVal(it, 'world')));
+  if (it.kind === 'home') { const i = HOMES.findIndex((h) => it.route.endsWith('/' + h.id)); return BLD['home-' + Math.min(4, Math.max(0, i))] && BLD['home-' + Math.min(4, Math.max(0, i))].src; }
+  if (it.kind === 'shopstock') return BLD.shop && BLD.shop.src;
+  if (it.kind === 'exchange') return BLD.exchange && BLD.exchange.src;
+  return null;
+}
+function statusFor(it, c, nextId) {
+  const tail = decodeURIComponent((it.route || '').split('/').pop());
+  const card = topicVal(it, 'card');
+  if (card && ['lesson', 'example', 'line', 'yourturn', 'tryit', 'goal'].includes(it.kind)) return card === nextId ? 'your next stop' : c.learn.done[card] ? 'you have read this one' : null;
+  if (it.kind === 'medal') return 'not earned yet';
+  if (it.kind === 'chapter') { const ch = CHAPTERS[it.level - 1]; const d = ch ? ch.cards.filter((k) => c.learn.done[k.id]).length : 0; return ch ? `${d} of ${ch.cards.length} read` : null; }
+  if (['letter', 'scamletter'].includes(it.kind)) return ((c.postbox || {}).log || []).some((x) => x.id === tail) ? 'you answered it' : null;
+  if (it.kind === 'game') { const g = GAME_DEFS.find((x) => x.id === tail); return g && !gameOpen(c, g) ? 'opens later' : null; }
+  if (['fix', 'fixed'].includes(it.kind)) return (c.fix && c.fix.done || []).includes(tail) ? 'mended' : null;
+  if (it.kind === 'store') return ((c.shop || {}).owned || []).includes(tail) ? 'you own this' : null;
+  if (it.kind === 'home') return c.home && HOMES[c.home.tier] && HOMES[c.home.tier].id === tail ? 'you live here' : null;
+  return null;
+}
+function enrich(it, c, nextId) {
+  const st = statusFor(it, c, nextId);
+  return { ...it, art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
+}
 
 const DAY = 864e5;
 let ITEMS = null, BY_ID = null, LOAD = null, loading = null;
@@ -140,8 +184,9 @@ export function view(c, s) {
     const it = BODY[x.id]; if (!it) return '';
     const P = play[x.id] || (state(c).paid[x.id] ? { st: 'right', o: 0 } : null);   /* paid once: it stays answered */
     /* after Continue, a missed question rests as its answer and its reason — it does not ask again */
-    if (P && P.st === 'held') return feedCard({ ...it, play: null, body: `It is “${it.play.opts[0]}”. ${it.play.after || ''}` }, x, {});
-    return feedCard(it, x, P || {});
+    const nextId = nx && nx.card && nx.card.id;
+    if (P && P.st === 'held') return feedCard(enrich({ ...it, play: null, body: `It is “${it.play.opts[0]}”. ${it.play.after || ''}` }, c, nextId), x, {});
+    return feedCard(enrich(it, c, nextId), x, P || {});
   }).join('') + feedEnd({ href: '#/continue', label: nx && nx.title ? 'Continue: ' + nx.title : 'Continue your journey', alt: { href: '#/play', label: 'Go and play' } }) + '</div>';
 }
 

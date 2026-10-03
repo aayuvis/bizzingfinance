@@ -551,13 +551,13 @@ export const QUESTS = [
   { id: 'q-letter', em: '✉️', kind: 'letter', n: 1, pay: 4,  t: 'Empty the postbox',         sub: 'One letter. Thirty seconds.' },
   { id: 'q-job',    em: '🧺', kind: 'job',    n: 2, pay: 6,  t: 'Take two jobs',             sub: 'Whatever is going on the Row.' },
   { id: 'q-play',   em: '🎮', kind: 'game',   n: 2, pay: 7,  t: 'Play two games',            sub: 'Any two in the arcade.' },
-  { id: 'q-earn',   em: '🪙', kind: 'earn',   n: 40, pay: 6, t: 'Earn 40 today',             sub: 'Jobs, games, letters — it all counts.' },
-  { id: 'q-jar',    em: '🫙', kind: 'jar',    n: 20, pay: 7, t: 'Put 20 away',               sub: 'Into any jar that is not Spend.', needs: 'c3' },
+  { id: 'q-earn',   em: '🪙', kind: 'earn',   n: 4, pay: 6, cash: true, short: 'Earn money today', t: 'Earn {m} today',             sub: 'Jobs, games, letters — it all counts.' },
+  { id: 'q-jar',    em: '🫙', kind: 'jar',    n: 2, pay: 7, cash: true, short: 'Put money away', t: 'Put {m} away',               sub: 'Into any jar that is not Spend.', needs: 'c3' },
   { id: 'q-goal',   em: '🏗️', kind: 'goal',   n: 1, pay: 8,  t: 'Feed the Build Yard',       sub: 'Any goal, any amount.', needs: 'c3' },
   { id: 'q-scam',   em: '🛡️', kind: 'scam',   n: 1, pay: 9,  t: 'Spot a scam',               sub: 'In the postbox or in Scam Spotter.' },
   { id: 'q-board',  em: '🎲', kind: 'board',  n: 1, pay: 12, t: 'Finish a game of Main Street', sub: 'About ten minutes.', needs: 'c1' },
   { id: 'q-invest', em: '📈', kind: 'invest', n: 1, pay: 10, t: 'Add to your holdings',      sub: 'From the Grow jar, as always.', needs: 'c7' },
-  { id: 'q-town',   em: '🔧', kind: 'town',   n: 40, pay: 8,  t: 'Put 40 towards the town', sub: 'Whatever is broken where you are.' },
+  { id: 'q-town',   em: '🔧', kind: 'town',   n: 4, pay: 8, cash: true, short: 'Put money towards the town', t: 'Put {m} towards the town', sub: 'Whatever is broken where you are.' },
   { id: 'q-shop',   em: '🏪', kind: 'trade',  n: 1, pay: 10, t: 'Trade a day at Bizz & Co',  sub: 'Open the doors and count it honestly.', needs: 'c8' },
 ];
 

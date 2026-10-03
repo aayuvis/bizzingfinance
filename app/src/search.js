@@ -25,8 +25,9 @@ export function index() {
   GAMES.forEach((g) => out.push({ kind: 'Game', title: g.name, sub: g.blurb, body: g.blurb, act: 'game', arg: g.id, icon: 'arcade' }));
   out.push({ kind: 'Game', title: 'The Market Game', sub: 'Forty companies, forty years', body: 'companies annual reports invest shares market', act: 'nav', arg: 'market40', icon: 'chartUp' });
   PLACES.forEach((p) => out.push({ kind: 'Place', title: p.name, sub: p.blurb, body: p.blurb, act: 'town', arg: p.key, icon: 'town' }));
-  WORLDS.forEach((w, i) => out.push({ kind: 'Place', title: w.name, sub: `World ${i + 1} of the journey`, body: plain(w.blurb || w.line || ''), act: 'nav', arg: 'town', icon: 'town' }));
-  LETTERS.forEach((l) => out.push({ kind: 'Story', title: l.title, sub: 'A letter in the postbox', body: plain(l.body), act: 'nav', arg: 'town', icon: 'envelope' }));
+  /* a result opens ITS thing — the world on the town page, the letter itself — not the page it lives on */
+  WORLDS.forEach((w, i) => out.push({ kind: 'Place', title: w.name, sub: `World ${i + 1} of the journey`, body: plain(w.blurb || w.line || ''), act: 'goto', arg: '#/town/' + w.id, icon: 'town' }));
+  LETTERS.forEach((l) => out.push({ kind: 'Story', title: l.title, sub: 'A letter in the postbox', body: plain(l.body), act: 'goto', arg: '#/letter/' + l.id, icon: 'envelope' }));
   return (INDEX = out);
 }
 

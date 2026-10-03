@@ -12,7 +12,7 @@ import { hero } from './hero.js';
 import { money, shortDate } from './fmt.js';
 import { CATALOGUE, PACKS, BY_ID, stateOf, ctxFor, TIERS, MILESTONES, milestonesOf, worldOf } from './catalogue.js';
 import { LOOKS, isOpen as lookOpen, openSay, WORLD_PRICE, plateFor } from './looks.js';
-import { balance, ledger } from './family/bizzing-wallet.js';
+import { coinBalance as balance, coinLedger as ledger } from './family.js';
 import { walletLine, coinSvg, kidBadge, pipPose } from './shell.js';
 import { avatarSrc, avatarName } from './avatars.js';
 import { BADGES, CHAPTERS, ALL_CARDS, WORLDS, rankObj, drillAt, shuffledDrill, hintFor, chapterDone, worldOpen as journeyOpen } from './content.js';
@@ -55,11 +55,14 @@ export function viewShop() {
   const coins = balance(c.name);
   let body = '';
   if (tab === 'avatars') {
-    const buyable = CATALOGUE.filter((a) => stateOf(a, ctx).state === 'buy');
+    /* "ready" means the coins are there; the rest are priced and waiting, said as such */
+    const forSale = CATALOGUE.filter((a) => stateOf(a, ctx).state === 'buy');
+    const buyable = forSale.filter((a) => !stateOf(a, ctx).short), saving = forSale.filter((a) => stateOf(a, ctx).short);
     const soon = CATALOGUE.filter((a) => ['world', 'milestone'].includes(stateOf(a, ctx).state)).slice(0, 8);
     body = `<p class="small muted">Rare 120 · Epic 250 · Legendary 500 coins. Commons are free to everyone. Nothing is drawn blind: what you see is what you get, and every price is printed.</p>
       <div class="sect"><b>Ready to buy · ${buyable.length}</b><i></i></div>
-      ${buyable.length ? `<div class="avgrid">${buyable.map((a) => avCard(a, c, ctx)).join('')}</div>` : `<div class="empty">${pipPose('think', 72)}<p class="small">Open a world to see more faces here.</p></div>`}
+      ${buyable.length ? `<div class="avgrid">${buyable.map((a) => avCard(a, c, ctx)).join('')}</div>` : `<div class="empty">${pipPose('think', 72)}<p class="small">${saving.length ? `You have ${coins} coins. The cheapest face here is ${Math.min(...saving.map((a) => TIERS[a.tier].price || 0)) || 120} — lessons and answers earn them.` : 'Open a world to see more faces here.'}</p></div>`}
+      ${saving.length ? `<div class="sect"><b>Saving for · ${saving.length}</b><i></i></div><div class="avgrid">${saving.slice(0, 8).map((a) => avCard(a, c, ctx)).join('')}</div>` : ''}
       <div class="sect"><b>Coming up</b><i></i></div>
       <div class="avgrid">${soon.map((a) => avCard(a, c, ctx)).join('')}</div>
       <button class="btn ghost wide" data-act="nav" data-arg="collection">${ico('frame', '', 18)} See all 96 in the Collection</button>`;

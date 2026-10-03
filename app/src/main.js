@@ -18,7 +18,7 @@ import * as backup from './backup.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester, GLOSSARY, LORE, chapterLocked as chapterLockedFor } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, gameOpen, isOpen as chapterOpen, needFor, setTester, GLOSSARY, LORE, chapterLocked as chapterLockedFor } from './content.js';
 import * as sim from './sim.js';
 import { Store } from './store.js';
 import { hashPin, checkPin, pinSet } from './pin.js';
@@ -32,6 +32,8 @@ import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { R } from './runtime.js';
 import { nextStep } from './next.js';
+import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
+import { ALL as MG_EVENTS } from '../content/events.js';
 import { demoState } from './demo.js';
 import * as SESSION from './session.js';
 import * as family from './family.js';
@@ -50,7 +52,8 @@ import * as ambient from './ambient.js';
 import * as audio from './audio.js';
 import { CATALOGUE, BY_ID, ctxFor, stateOf, validate as validateAvatars } from './catalogue.js';
 import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
-import { spend as spendCoins, balance as coinBalance } from './family/bizzing-wallet.js';
+import { spend as spendCoins } from './family/bizzing-wallet.js';
+const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
 import * as items from './items.js';
 import * as CERT from './cert.js';
@@ -87,6 +90,51 @@ const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me', atlas: 'learn' }
 /* ══ routing ══════════════════════════════════════════════════════════
    The back button is not a nice-to-have on a phone; it is how people leave
    a screen. Nav lives in the hash so it works. */
+/* ── deep links to one thing (owner, 3 Oct 2026: "the navigation is to that
+   specific topic, not the generic tool or collection"). A route names a
+   screen and, after it, the one thing on it; focusFor() turns that into the
+   selectors to look for, best first, and focusNow() — run after every render —
+   opens any fold around it, scrolls it to the middle and pulses it. A thing not
+   on screen (a repair in another world) falls back to its section. */
+function focusFor(m) {
+  const [a, b, c2] = m, q = (v) => CSS.escape(decodeURIComponent(v || ''));
+  if (!b) return null;
+  if (a === 'play' && GAMES.some((g) => g.id === b)) {
+    if (gameOpen(C(), GAMES.find((g) => g.id === b))) R.gameIntro = b;
+    return [`.cover[data-arg="${q(b)}"]`];
+  }
+  if (a === 'medals') return [`[data-focus="badge:${q(b)}"]`];
+  if (a === 'store') return [`[data-arg="${q(b)}"]`];
+  if (a === 'town') {
+    if (b === 'fix') return [`[data-focus="fix:${q(c2)}"]`, '[data-focus="repairs"]'];
+    if (b === 'job') return [`[data-act="job"][data-arg="${q(c2)}"]`, '[data-act="job"]'];
+    if (b === 'deed') return ['[data-act="deed"]', '.today'];
+    if (b === 'ask') return ['[data-arg="ask"]', '.today'];
+    if (b === 'today') return ['.today', '.t3'];
+    return [`[data-focus="world:${q(b)}"]`];
+  }
+  if (a === 'money' && c2) return [`[data-arg="${q(c2)}"]`, `[data-focus="${q(b)}:${q(c2)}"]`];
+  if ((a === 'learn' || a === 'atlas') && b === 'chapter') {
+    const ch = CHAPTERS.find((x) => x.id === c2);
+    if (ch) { const wi = WORLDS.findIndex((w) => w.chapters.includes(ch.id)); if (wi >= 0) R.shelf = 'act:' + wi; return [`.stop[data-arg="${q(ch.cards[0].id)}"]`, `#act-${wi}`]; }
+  }
+  if (a === 'me' && b === 'rank') return ['.pcard'];
+  if (a === 'market40' && b === 'era') return [`[data-act="mgAct"][data-arg="${q(c2)}"]`];
+  return null;
+}
+function focusNow() {
+  if (!R.focus) return;
+  const el = R.focus.map((sel) => { try { return document.querySelector(sel); } catch (e) { return null; } }).find(Boolean);
+  R.focusTries = (R.focusTries || 0) + 1;
+  if (!el) { if (R.focusTries > 3) { R.focus = null; R.focusTries = 0; } return; }
+  for (let p = el; p; p = p.parentElement) if (p.tagName === 'DETAILS') p.open = true;
+  /* an element that names itself (data-focus) is the thing; otherwise its row or card */
+  const box = el.matches('[data-focus]') ? el : (el.closest('.qrow, .poster, .cover, .stop, .acc, .jbeat, .t3card, .pcard, .card, section') || el);
+  box.classList.add('focus-pulse');
+  requestAnimationFrame(() => box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  R.focus = null; R.focusTries = 0;
+}
+
 function writeHash() {
   if (!R.s || !R.s.kids.length) return;
   const u = R.s.ui;
@@ -101,6 +149,12 @@ function readHash() {
   /* the ☰ drawer's Settings, Help and Privacy are sheets over the current screen */
   if (['settings', 'help', 'privacy'].includes(m[0])) { R.sheetNow = m[0]; return false; }
   /* a sheet that names its subject: a figure's "How we know" (My Feed's figure cards), a cast card */
+  /* a letter, read again; a Market Game company or event, read (never bought) */
+  if (m[0] === 'letter' && m[1]) { R.sheetNow = 'letterRead'; R.sheetArg = decodeURIComponent(m[1]); return false; }
+  if (m[0] === 'market40' && ['company', 'event'].includes(m[1]) && m[2]) { R.sheetNow = 'mgRead'; R.sheetArg = m[1] + ':' + decodeURIComponent(m[2]); return false; }
+  /* the shelter with one kind picked; the wardrobe at one thing */
+  if (m[0] === 'shelter') { R.sheetNow = 'shelterAt'; R.sheetArg = m[1] || ''; return false; }
+  if (m[0] === 'wardrobe') { R.sheetNow = 'wardrobeAt'; R.sheetArg = m[1] || ''; return false; }
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
   const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
   if (known.indexOf(m[0]) < 0) return false;
@@ -113,6 +167,7 @@ function readHash() {
     if (k && !(ch && chapterLockedFor(C(), ch))) { C().learn.openCard = k.id; C().learn.drill = null; R.shelf = ''; }
   }
   if (m[0] === 'words') R.query = m[1] ? decodeURIComponent(m[1]) : '';
+  R.focus = focusFor(m);
   return true;
 }
 
@@ -176,8 +231,7 @@ function render() {
       app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
         { icon: 'book', label: 'Money Words', sub: 'every word, in plain English', href: '#/words' },
         { icon: 'path', label: 'Ones to try again', sub: 'questions that tripped you, back after a gap', href: '#/mistakes' },
-        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' },
-        ...(FEED.on(s) ? [{ icon: 'feed', label: 'My Feed', sub: 'about twenty cards from across the town, and then it ends', href: '#/feed' }] : [])] },
+        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
     content: `${R.session && nav !== 'parents' ? sessionBar() : ''}
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
       ${sim.clockSuspect(s) ? clockWarning() : ''}${body}`,
@@ -187,9 +241,17 @@ function render() {
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  /* Two things the old bar carried that the family drop-in has no slot for (and must stay
+     byte-identical): a child sent here from the Hive gets the way back to their day, and
+     tester mode says so on every screen, because a tester-opened town is not a child's town. */
+  const brand = root.querySelector('.bz-brand');
+  if (brand) brand.insertAdjacentHTML('afterend',
+    (R.fromHive && !R.game ? `<a class="bz-hiveback" data-bz="hiveback" href="${shell.HIVE}">${ico('back', '', 15)}<span>back to my day</span></a>` : '') +
+    (s.settings.tester ? '<button class="bz-tester" data-bz="tester" data-act="nav" data-arg="parents" title="Tester mode is on — everything is open">TESTER</button>' : ''));
   /* the avatar menu hangs from the avatar itself, wherever the bar puts it */
   const km = document.querySelector('.kidmenu'), kb = document.querySelector('.bz-kid');
   if (km && kb) { const r = kb.getBoundingClientRect(); km.style.top = Math.round(r.bottom + 8) + 'px'; km.style.right = Math.max(10, Math.round(innerWidth - r.right)) + 'px'; }
+  focusNow();
   /* a freshly opened dialog takes focus on its first control */
   if (R.overlay && R.focusedOv !== R.overlay) { R.focusedOv = R.overlay; const f = root.querySelector('.drawer .dr-item, .drawer button, .ovbox input, .ovbox button'); if (f && !/search/.test(R.overlay.kind)) f.focus({ preventScroll: true }); }
   if (!R.overlay) R.focusedOv = null;
@@ -297,6 +359,32 @@ function overlay() {
   if (o.kind === 'about') return box(aboutSheet(), true);
   if (o.kind === 'sources') return box(sourcesSheet(o.key), true);
   if (o.kind === 'placement') return box(placementView(o), true);
+  /* a letter, read again from a feed card: its words, and — only once it has
+     reached the postbox and been answered — every choice with what it meant */
+  if (o.kind === 'letterRead') {
+    const L = LETTERS.find((x) => x.id === o.id); if (!L) return '';
+    const answered = ((c.postbox && c.postbox.log) || []).some((x) => x.id === L.id);
+    const from = L.from === 'scam' ? 'Sender unknown' : (CAST[L.from] ? CAST[L.from].name : 'The postbox');
+    return box(`<div class="eyebrow">${esc(from)} · ${answered ? 'a letter you answered' : 'from the postbox'}</div>
+      <h2 style="margin:2px 0 10px">${esc(L.title)}</h2>
+      <p style="font-size:15px;line-height:1.6;background:var(--tint);border-radius:var(--r-md);padding:13px 15px">${esc(L.body)}</p>
+      ${answered ? `<div class="sect"><b>What each choice meant</b><i></i></div>
+        <div class="stack" style="gap:8px">${L.choices.map((ch) => `<div class="card" style="padding:12px 14px"><b>${esc(ch.label)}</b><p class="small" style="margin-top:4px">${esc(ch.note || '')}</p></div>`).join('')}</div>`
+        : `<p class="small muted" style="margin-top:10px">This one arrives in your postbox one day. When it does, the choice is yours — what each answer means comes back here after.</p>`}
+      <a class="btn ghost wide" style="margin-top:12px" href="#/town/today">The postbox and today's three</a>`);
+  }
+  /* a Market Game company or event, read — the register's own words, labelled
+     fictional, and nothing on it can be bought */
+  if (o.kind === 'mgRead') {
+    const it = o.what === 'company' ? MG_COMPANIES.find((x) => x.id === o.id) : MG_EVENTS.find((x) => x.id === o.id);
+    if (!it) return '';
+    const p = (t, h) => t ? `<div class="sect"><b>${h}</b><i></i></div><p class="small">${esc(t)}</p>` : '';
+    return box(`<div class="row" style="gap:8px"><span class="eyebrow grow">The Market Game · ${o.what === 'company' ? 'the register' : 'what happened'}</span><span class="pill">Fictional</span></div>
+      <h2 style="margin:2px 0 6px">${esc(o.what === 'company' ? it.name : it.head)}</h2>
+      ${o.what === 'company' ? `${p(it.what, 'What it does')}${p(it.how, 'How it makes money')}${p(it.who, 'Who it sells to')}${p(it.model, 'What it depends on')}${p(it.risk, 'What could hurt it')}` : `<p>${esc(it.body)}</p>`}
+      <p class="small muted" style="margin-top:12px">No company here is real, and nothing on this page can be bought. In the Market Game you study one, say what would hurt it, then decide.</p>
+      <a class="btn ghost wide" style="margin-top:10px" href="#/market40">Play the Market Game</a>`);
+  }
   if (o.kind === 'shelter') return box(shelterView(o));
   if (o.kind === 'wardrobe') return box(wardrobeView(C()));
   if (o.kind === 'receipt') return box(`
@@ -584,6 +672,12 @@ on('musicOn', () => { const v = !audio.state().music; audio.set({ music: v }); S
 on('readAloud', () => { R.readAloud = R.readAloud === false; Store.saveDevice('readAloud', R.readAloud); render(); });
 on('motionSw', () => fire('motion', R.motion === 'reduced' ? 'full' : 'reduced'));
 on('calm', () => { R.calm = !R.calm; Store.saveDevice('calm', R.calm); applyDevice(); render(); });
+on('letterRead', (id) => { R.overlay = { kind: 'letterRead', id }; render(); });
+on('mgRead', (arg) => { const [what, id] = String(arg).split(':'); R.overlay = { kind: 'mgRead', what, id }; render(); });
+on('shelterAt', (kind) => { R.overlay = { kind: 'shelter', pick: co.KINDS[kind] ? kind : null, name: '' }; render(); });
+on('wardrobeAt', (id) => { R.overlay = { kind: 'wardrobe' }; R.focus = id ? [`[data-arg="${CSS.escape(id)}"]`] : null; render(); });
+/* a route as an action: search results and anything else that opens one thing */
+on('goto', (h) => { R.overlay = null; if (location.hash === h) { if (readHash()) render(); else { const k = R.sheetNow, a = R.sheetArg; R.sheetNow = null; if (k) fire(k, a); } } else location.hash = h; });
 on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('addKidGate', () => { R.overlay = null; if (R.gate) fire('addKid'); else { R.afterGate = 'addKid'; R.s.ui.nav = 'parents'; render(); } });
 /* worlds and faces: Bizzing coins only, through the family engine */
@@ -594,6 +688,7 @@ on('look', (id) => {
   fam().look = w.id; sfx.unlock(); sim.save(R.s); toast(`Wearing ${w.name}`); render();
 });
 on('buyWorld', (n) => {
+  if (R.demo) { toast('A sample — nothing is bought or saved here'); return; }
   const c = C(), ctx = ctxFor(R.s, c);
   if (!buyWorld(family.APP, c.name, +n, ctx)) { toast('Not enough coins yet'); sfx.bad(); return; }
   fam().worlds.push(+n); fam().look = LOOKS[+n - 1].id; sim.save(R.s);
@@ -602,6 +697,7 @@ on('buyWorld', (n) => {
 on('wear', (id) => { if (!BY_ID[id]) return; C().avatar = id; sim.save(R.s); sfx.click(); toast('Wearing ' + BY_ID[id].name); render(); });
 on('avInfo', (id) => { if (BY_ID[id]) { R.overlay = { kind: 'avInfo', id }; render(); } });
 on('buyAv', (id) => {
+  if (R.demo) { toast('A sample — nothing is bought or saved here'); return; }
   const c = C(), a = BY_ID[id]; if (!a) return;
   if (!buyAvatar(family.APP, c.name, a, ctxFor(R.s, c))) { R.overlay = { kind: 'avInfo', id }; render(); return; }
   fam().owned.push(id); c.avatar = id; sim.save(R.s);
@@ -609,6 +705,7 @@ on('buyAv', (id) => {
 });
 on('shopTab', (t) => { R.shopTab = t; render(); });
 on('buyExtra', (id) => {
+  if (R.demo) { toast('A sample — nothing is bought or saved here'); return; }
   const c = C(), x = EXTRA_BY[id]; if (!x) return;
   if (fam().extras.includes(id)) return;
   if (!spendCoins(family.APP, c.name, x.price, 'extra:' + id)) { toast('Not enough coins yet'); sfx.bad(); return; }
@@ -1464,7 +1561,9 @@ window.addEventListener('hashchange', () => {
   /* Our own write, echoing back — not a person pressing back. */
   if (selfHash !== null && location.hash === selfHash) { selfHash = null; return; }
   selfHash = null;
-  if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
+  /* a tab or link opens its screen at the top (Home once opened 131px down, under the bar);
+     a deep link that names one thing scrolls to that thing instead (focusNow) */
+  if (readHash()) { R.overlay = null; if (R.game) quitGame(); const aimed = !!R.focus; render(); if (!aimed) window.scrollTo(0, 0); }
   else if (R.continueNow) { R.continueNow = false; R.overlay = null; if (R.game) quitGame(); R.s.ui.nav = 'home'; goContinue(); }
   else if (R.sheetNow) { const k = R.sheetNow, a = R.sheetArg; R.sheetNow = null; R.sheetArg = undefined; fire(k, a); }
 });
@@ -1478,7 +1577,7 @@ applyDevice(); applyRate();
 /* ?demo: a sample household, labelled, never saved (demo.js, store.js). */
 R.demo = /[?&]demo\b/.test(location.search);
 R.s = R.demo ? demoState() : sim.load();
-family.setDemo(R.demo);
+family.setDemo(R.demo, R.demo && R.s && R.s.demoCoins);
 /* active minutes for the Hive (O3): the drop-in counts only a visible tab
    that was touched in the last two minutes, and never in the sample */
 family.startActivity(() => (R.s && R.s.kids.length ? C().name : null));

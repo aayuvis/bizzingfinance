@@ -335,8 +335,11 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   await go('#/home');
   /* C3 · the avatar ▾ lists every child, with a grown-ups-only + */
   await page.evaluate(() => window.BZF.fire('kids')); await page.waitForTimeout(150);
-  const kids = await page.evaluate(() => ({ n: document.querySelectorAll('.kidcard:not(.add)').length, add: !!document.querySelector('.kidcard.add') && /Grown-ups/.test(document.querySelector('.kidcard.add').textContent) }));
-  ok(`${label}: the switcher lists every child and a PIN-guarded “Add a child”`, kids.n === 1 && kids.add, JSON.stringify(kids));
+  /* the avatar menu (owner, 3 Oct 2026): every child (the one playing ticked), My page, Settings, + Add a child (grown-ups) */
+  const kids = await page.evaluate(() => ({ n: document.querySelectorAll('.kidmenu .km-kid').length, on: document.querySelectorAll('.kidmenu .km-kid[aria-checked="true"]').length,
+    rows: [...document.querySelectorAll('.kidmenu .km-row')].map((r) => r.getAttribute('data-act') + (r.getAttribute('data-arg') ? ':' + r.getAttribute('data-arg') : '')),
+    add: /grown-ups/i.test((document.querySelector('.kidmenu [data-act="addKidGate"]') || {}).textContent || '') }));
+  ok(`${label}: the avatar menu lists every child (ticked), My page, Settings and a PIN-guarded “Add a child”`, kids.n === 1 && kids.on === 1 && kids.rows.join() === 'nav:me,settings,addKidGate' && kids.add, JSON.stringify(kids));
   await page.evaluate(() => window.BZF.fire('closeOv'));
 
   /* §3 §4 §6 · Bee's chrome and home, measured (integration/shell-check.mjs): the top bar,
@@ -600,6 +603,47 @@ async function demo() {
   ok('demo: the sample has a feed', await page.locator('.bzf-card').count() > 10 && !!dq);
   const stored = await page.evaluate(() => [localStorage.getItem('bzf_profile'), localStorage.getItem('bizzing.wallet')].filter(Boolean).join(''));
   ok('demo: nothing is saved — the real household and the family wallet are untouched', !stored, stored ? stored.length + ' bytes written' : '');
+  /* deep links open ONE thing (owner, 3 Oct 2026): each route lands on, or opens, its own object */
+  const DEEP = [['#/medals/cool-head', 'focus', /Cool head/], ['#/town/fix/fountain', 'focus', /dry fountain/i], ['#/store/handcart', 'focus', /handcart/i],
+    ['#/atlas/chapter/c3', 'focus', /In, out/], ['#/letter/l3', 'sheet', /YOU HAVE WON/], ['#/market40/company/bigbox', 'sheet', /Fictional/],
+    ['#/play/nw', 'intro', /Needs vs Wants/], ['#/words/Interest', 'h1', /Money Words/]];
+  const missed = [];
+  for (const [r, how, re] of DEEP) {
+    await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(200);
+    await page.evaluate((h) => { location.hash = h; }, r); await page.waitForTimeout(600);
+    const t = await page.evaluate((how) => {
+      const el = how === 'focus' ? document.querySelector('.focus-pulse') : how === 'sheet' ? document.querySelector('.ov .ovbox, .ov .sheet') : how === 'intro' ? document.querySelector('.gintro h1') : document.querySelector('main h1');
+      if (!el) return '';
+      if (how === 'focus') { const b = el.getBoundingClientRect(); if (b.bottom < 0 || b.top > innerHeight) return 'offscreen'; }
+      return el.textContent.replace(/\s+/g, ' ');
+    }, how);
+    if (!re.test(t)) missed.push(`${r} → ${t.slice(0, 40) || 'nothing'}`);
+    await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"], .ov .ovx'); if (o) o.click(); });
+  }
+  ok('demo: every kind of deep link lands on its own thing, on screen', !missed.length, missed.join(' | '));
+  /* List B/C (owner, 3 Oct 2026): the sample has coins; Home counts a met quest and takes it */
+  ok('demo: the sample shows the coins it earned', +(await page.textContent('.bz-coins span')) > 0, await page.textContent('.bz-coins span'));
+  await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(300);
+  const ring = await page.evaluate(() => {
+    const { R, sim } = window.BZF, c = R.s.kids[R.s.active || 0], q = sim.questList(c)[0];
+    c.quests.prog[q.id] = 999; window.BZF.fire('nav', 'home');
+    const take = document.querySelector('.fring [data-act="claim"]');
+    const label = document.querySelector('.fring svg').getAttribute('aria-label');
+    if (take) take.click();
+    return { take: !!take, label, claimed: !!c.quests.claimed[q.id], after: document.querySelector('.fring svg').getAttribute('aria-label') };
+  });
+  ok('Home: a met quest counts on the ring and can be taken right there', ring.take && /: 1 of/.test(ring.label) && ring.claimed && /: 1 of/.test(ring.after), JSON.stringify(ring));
+  await page.evaluate(() => { window.scrollTo(0, 400); location.hash = '#/town'; }); await page.waitForTimeout(250);
+  await page.evaluate(() => { window.scrollTo(0, 400); location.hash = '#/home'; }); await page.waitForTimeout(350);
+  ok('Home: a tab opens its screen at the top', await page.evaluate(() => window.scrollY) === 0, String(await page.evaluate(() => window.scrollY)));
+  const plates = await page.evaluate(() => [...document.querySelectorAll('.bz-journey .bz-plate')].map((x) => x.style.backgroundImage));
+  ok('Home: the two journey cards carry two different pictures', plates.length === 2 && plates[0] !== plates[1], plates.join(' | ').slice(0, 120));
+  await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.fire('nav', 'home'); }); await page.waitForTimeout(200);
+  ok('tester mode says so in the bar', await page.locator('.bz-bar .bz-tester').count() === 1);
+  await page.evaluate(() => { window.BZF.R.s.settings.tester = false; window.BZF.fire('nav', 'home'); });
+  await page.goto(URL0 + '?demo&from=hive'); await page.waitForSelector('[data-bz=next]');
+  const back = await page.evaluate(() => { const a = document.querySelector('.bz-bar [data-bz=hiveback]'); return a ? a.getAttribute('href') : ''; });
+  ok('from the Hive: the bar offers the way back to my day', /Bizzing_Schedule/.test(back), back);
   ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await ctx.close();
   /* §3 §6 · the chrome and Home match Bee's on a dark desk too (the other three are in run()) */
@@ -621,8 +665,6 @@ async function demo() {
   const still = await rp.evaluate(() => ({ running: window.BZF.ambient.state().running, layers: window.BZF.ambient.state().layers, anim: getComputedStyle(document.querySelector('.fz-idle')).animationName }));
   ok('reduced motion: the world stands still (three layers drawn, nothing running)', !still.running && still.layers >= 3 && still.anim === 'none', JSON.stringify(still));
   await rctx.close();
-  return;
-  await ctx.close();
 }
 
 /* a run that throws is a failed check with a name, never a bare crash */

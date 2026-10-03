@@ -2,7 +2,7 @@
    Nothing here computes money; sim.js owns that and these render it. */
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
-import { money, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
+import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
 import { townSVG, PLACES } from './town.js';
 import { townGrowth, GROW_LABEL } from './world.js';
@@ -304,7 +304,9 @@ const CAST_LINES = [
 export function viewHome() {
   const c = K();
   const n = nextStep(c), pr = progress(c), rank = rankObj(c.learn.level);
-  const quests = sim.questList(c), qd = quests.filter((q) => q.claimed).length;
+  /* the ring counts what was MET, not what was claimed elsewhere: a met quest is
+     done on Home and can be taken from Home (it once sat at 0/1 until the Town tab) */
+  const quests = sim.questList(c), qd = quests.filter((q) => q.done).length;
   const h = new Date().getHours();
   const hello = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
   const line = String(hometalk(c)).replace(/<[^>]+>/g, '');
@@ -314,20 +316,23 @@ export function viewHome() {
       <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-line)" stroke-width="14"/>
       <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(C0 * frac).toFixed(1)} ${C0.toFixed(1)}" transform="rotate(-90 55 55)"/>
       <text x="55" y="61" text-anchor="middle" font-family="Sono, monospace" font-weight="700" font-size="20" fill="currentColor">${qd}/${quests.length}</text></svg>
-    <div><b class="fring-h">Today's three</b>${quests.map((q, i) => `<p class="fring-q${q.claimed ? ' done' : ''}"><i style="--d:${['#E0457B', '#16956B', '#3D7DF0', '#E8962C'][i % 4]}"></i><span>${esc(q.t)}</span><b>${q.claimed ? '1/1' : '0/1'}</b></p>`).join('')}</div></div>`;
+    <div><b class="fring-h">Today's three</b>${quests.map((q, i) => `<p class="fring-q${q.done ? ' done' : ''}"><i style="--d:${['#E0457B', '#16956B', '#3D7DF0', '#E8962C'][i % 4]}"></i><span>${esc(q.t)}</span>${q.done && !q.claimed ? `<button class="fring-take" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>` : `<b>${q.done ? '1/1' : '0/1'}</b>`}</p>`).join('')}</div></div>`;
   const world = n.world || WORLDS[0], here = WORLDS[c.world || 0];
   const jobs = sim.jobsToday(c), jdone = jobs.filter((j) => j.done).length;
   const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
   const body = bzHome({
     greet: { mascot: './mascot/pip-wave.webp', hello, name: c.name, line },
-    ring: { html: ring, foot: { kicker: 'Your level', title: `${rank.name} · level ${c.learn.level}`, href: '#/me' } },
-    hour: { kicker: 'Money word of the hour', title: w.term, sub: w.meaning, href: '#/words', icon: 'book' },
+    ring: { html: ring, foot: { kicker: 'Your level', title: `${rank.name} · level ${c.learn.level}`, href: '#/me/rank' } },
+    hour: { kicker: 'Money word of the hour', title: w.term, sub: w.meaning, href: '#/words/' + encodeURIComponent(w.term), icon: 'book' },
     next: { plate: plateFor(world.id, R.dark), chip: `Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}`, kicker: n.kind === 'revise' ? 'Keep it yours' : 'Next on your journey',
       title: n.title, sub: n.sub, href: '#/continue', cta: n.button || 'Continue', progress: { pct: Math.round(pr.worldDone / Math.max(1, pr.worldTotal) * 100), label: `${pr.world.name} · ${pr.worldDone} of ${pr.worldTotal} stops` } },
-    second: { plate: plateFor(here.id, R.dark), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
+    /* two cards, two pictures: when the journey and the street are the same place,
+       the street card shows it at the other end of the day */
+    second: { plate: plateFor(here.id, here.id === world.id ? !R.dark : R.dark), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
       progress: { pct: Math.round(frac * 100) } },
-    tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas' } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/learn' },
-    quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/medals' },
+    /* every tile goes to its own thing (owner, 3 Oct): the word, the card, the person quoted */
+    tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas/' + tip.card.id } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/atlas/c3b' },
+    quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/cast/' + ({ 'Nana Bizz': 'nana', Pip: 'pip', Mags: 'mags', Bea: 'bea', Bo: 'bo' }[cast[0]] || 'pip') },
     foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
   });
   return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}`;
@@ -352,12 +357,12 @@ export function townParts() {
   const world = WORLDS[c.world || 0];
   const fx = sim.townFixes(c).filter((f) => !f.locked);
   const tp = sim.townProgress(c);
-  const repairs = !fx.length ? '' : `<div class="sect"><b>Put the town right · ${tp.done}/${tp.all} mended</b><i></i></div><div class="card">
+  const repairs = !fx.length ? '' : `<div class="sect" data-focus="repairs"><b>Put the town right · ${tp.done}/${tp.all} mended</b><i></i></div><div class="card">
         <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
           <p class="small muted">Money spent on something useful keeps paying you back.</p></div>
           <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
         <div class="rows" style="margin-top:6px">
-          ${fx.map((f) => `<div class="qrow block${f.done ? ' done' : ''}">
+          ${fx.map((f) => `<div class="qrow block${f.done ? ' done' : ''}" data-focus="fix:${f.id}">
             <div class="row" style="gap:10px">
               <span class="iw" style="${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${ico(f.em, f.em, 20)}</span>
               <span class="grow" style="min-width:0">
@@ -600,7 +605,7 @@ export function viewWorlds() {
         ? `Finish ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch)).map((ch) => '“' + esc(title(ch)) + '”').join(' and ') || 'the last stretch'} in ${esc(WORLDS[i - 1].name)} to walk on.`
         : here && left.length ? `Still to learn here: ${left.map((ch) => '<b>' + esc(title(ch)) + '</b>').join(', ')}.`
         : here && !left.length && i < WORLDS.length - 1 ? 'Everything here is learned. The road is open.' : '';
-      return `<button class="poster${here ? ' here' : ''}${open ? '' : ' locked'}" data-act="${open && !here ? 'travel' : 'noop'}" data-arg="${i}"
+      return `<button data-focus="world:${w.id}" class="poster${here ? ' here' : ''}${open ? '' : ' locked'}" data-act="${open && !here ? 'travel' : 'noop'}" data-arg="${i}"
         style="--ja:${w.tint};${plate ? `--plate:url(${plate})` : ''}">
         <span class="pv"></span>
         <span class="pb">
@@ -805,9 +810,13 @@ function viewGlossary() {
 /* ══ MONEY ════════════════════════════════════════════════════════════ */
 export function viewMoney() {
   const c = K();
-  const NAMES = { place: 'Home', wallet: 'Wallet', jars: 'Jars', goals: 'Goals',
+  /* "Your place", never "Home": Home is a tab. Only the places that are open, and the
+     one that opens next — a row of padlocks is a list of things you cannot do. */
+  const NAMES = { place: 'Your place', wallet: 'Wallet', jars: 'Jars', goals: 'Goals',
     bank: 'Bank', portfolio: 'Exchange', business: 'Your shop' };
-  const subs = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name }));
+  const all = PLACES.map((p) => ({ k: p.sub, n: NAMES[p.sub] || p.name }));
+  const firstShut = all.findIndex((x) => !chapterOpen(c, x.k));
+  const subs = all.filter((x, i) => chapterOpen(c, x.k) || i === firstShut);
   let sub = R.s.ui.sub;
   if (!subs.find((x) => x.k === sub && chapterOpen(c, x.k))) sub = 'wallet';
 
@@ -1057,7 +1066,7 @@ function viewBank() {
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Every pay day</div>
         <div class="big" style="font-size:24px">${ra.toFixed(2)}% <span class="small muted" style="font-family:var(--ui);font-weight:600">a year — the town's rate</span></div></div></div>
-      <p class="small muted" style="margin-top:8px">Each pay day the bank pays a fifty-second of that: ${money(b.balance)} × ${ra.toFixed(2)}% ÷ 52 = <b>${wk.toFixed(2)}</b>. Bits smaller than a coin wait in the vault until they make a whole one.</p>
+      <p class="small muted" style="margin-top:8px">${b.balance > 0 ? `Each pay day the bank pays a fifty-second of that: ${money(b.balance)} × ${ra.toFixed(2)}% ÷ 52 = <b>${moneyExact(wk)}</b>. Bits smaller than a coin wait in the vault until they make a whole one.` : `Each pay day the bank pays a fifty-second of that on whatever is in the vault. The vault is empty, so this week that is nothing — put some in and the sum appears here.`}</p>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-act="bankIn" ${c.money.jars.save <= 0 ? 'disabled' : ''}>Deposit ${money(Math.min(price(10), Math.max(0, c.money.jars.save)))} from Save</button>
         <button class="btn ghost sm" data-act="bankOut" ${b.balance <= 0 ? 'disabled' : ''}>Take some out</button>
@@ -1779,7 +1788,7 @@ export function viewCollection() {
         const keys = Object.keys(BADGES);
         const got = keys.filter((k) => c.badges.includes(k)), ahead = keys.filter((k) => !c.badges.includes(k));
         const tile = (k, hint) => { const b = BADGES[k], has = c.badges.includes(k);
-          return `<div class="badge${has ? ' got' : ''}">
+          return `<div data-focus="badge:${k}" class="badge${has ? ' got' : ''}">
             <div class="bic">${ico(has ? b.em : 'lock', has ? b.em : '🔒', 24)}</div>
             <div class="bnm">${esc(b.name)}</div>
             <div class="small muted bds">${has || hint ? esc(b.desc) : 'Not yet'}</div></div>`; };

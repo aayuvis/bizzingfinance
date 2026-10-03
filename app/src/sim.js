@@ -9,7 +9,7 @@ import { Store } from './store.js';
 import { CLASSES, byId as classById, marketPath, classesFor } from './assetclasses.js';
 import * as biz from './business.js';
 import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
-import { price, setCurrency, dayIndex, DAY, convert } from './fmt.js';
+import { price, money, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { tester, levelAtLeast, levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
   WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
 
@@ -445,12 +445,15 @@ export function rollQuests(c) {
   c.quests = { day: d, list: picked.map((q) => q.id), prog: {}, claimed: {}, bonus: false };
   return c.quests;
 }
+/* A money quest is authored in units like every price, so "Put 40 towards the town"
+   is the same effort in rupees as in dollars, and says which money it means. */
+export function questTarget(def) { return def.cash ? price(def.n) : def.n; }
 export function questList(c) {
   const q = rollQuests(c);
   return q.list.map((id) => {
     const def = QUESTS.find((x) => x.id === id);
-    const at = q.prog[id] || 0;
-    return { ...def, at: Math.min(at, def.n), done: at >= def.n, claimed: !!q.claimed[id] };
+    const at = q.prog[id] || 0, n = questTarget(def);
+    return { ...def, n, t: def.t.replace('{m}', money(n)), at: Math.min(at, n), done: at >= n, claimed: !!q.claimed[id] };
   });
 }
 /* One call site per kind, so a quest can never be advanced twice by accident. */
@@ -466,7 +469,7 @@ export function claimQuest(c, id) {
   const def = QUESTS.find((x) => x.id === id);
   if (!def || !c.quests.list.includes(id)) return 0;
   if (c.quests.claimed[id]) return 0;
-  if ((c.quests.prog[id] || 0) < def.n) return 0;
+  if ((c.quests.prog[id] || 0) < questTarget(def)) return 0;
   c.quests.claimed[id] = true;
   const a = earn(c, price(def.pay), 'Quest — ' + def.t, 'quest');
   stamp(c);

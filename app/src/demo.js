@@ -28,8 +28,12 @@ export function demoState(now = Date.now()) {
 
   /* three weeks of lessons: the first ten stops, most right first time */
   const read = ALL_CARDS.slice(0, 10);
+  const coins = [];
   read.forEach((card, i) => {
     const t = start + (i * 2 + 1) * DAY;
+    /* the family's standard amounts, as the wallet would have paid them (answer 1, stop 5) */
+    if (i % 4 !== 3) coins.push({ a: 'finance', t, n: 1, why: 'answer' });
+    coins.push({ a: 'finance', t: t + 6e4, n: 5, why: 'stop' });
     c.learn.done[card.id] = true;
     sim.addXP(c, sim.cardXP(true, i % 4 !== 3));
     sim.markGoodDay(c, t);
@@ -53,5 +57,6 @@ export function demoState(now = Date.now()) {
   decisions.log(c, { t: now - 1 * DAY, surface: 'letter', chose: 'Bin it and tell a grown-up', label: 'YOU HAVE WON 5,000!', alternatives: ['Pay the fee'] });
   [0, 1, 3, 4].forEach((d) => sim.markGoodDay(c, now - d * DAY));
   c.lastDay = Math.floor((now - new Date(now).getTimezoneOffset() * 60000) / DAY);
+  s.demoCoins = coins;
   return s;
 }

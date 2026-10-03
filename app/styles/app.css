@@ -298,13 +298,13 @@ input{font:inherit; color:inherit}
 .care{height:7px;border-radius:999px;background:var(--tint);overflow:hidden;margin-top:8px;max-width:260px}
 .care i{display:block;height:100%;background:var(--grow);border-radius:999px;transition:width .5s}
 .cocard.poorly .care i{background:var(--spend)}
-.shelter{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
-.shelf{display:grid;justify-items:center;gap:6px;padding:10px 6px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);font:inherit;color:inherit}
+.shelter{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px;margin-top:14px}
+.shelf{min-width:0;display:grid;justify-items:center;gap:6px;padding:10px 6px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);font:inherit;color:inherit}
 .shelf b{font-size:12px}
+.shelf img,.shelf svg{max-width:100%;height:auto}
 .shelf.on{border-color:var(--action);background:var(--action-tint)}
 .acc{gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px}
 .acc.on{border-color:var(--grow);background:var(--grow-tint)}
-@media (max-width:440px){.shelter{grid-template-columns:repeat(3,1fr)}}
 
 /* ── keepsakes: a receipt is paper, so it looks like paper ─────────────── */
 .slip{background:var(--surface);border:1px solid var(--line);border-top:3px dashed var(--line);border-bottom:3px dashed var(--line);border-radius:6px;padding:12px 14px;font-family:'Sono',ui-monospace,monospace;font-size:12.5px;max-width:380px}
@@ -886,3 +886,8 @@ html[data-bz-dark] .town.night svg image{filter:none}
 .kidmenu hr{border:0;height:1.5px;background:var(--line);margin:8px 6px}
 .km-row{display:flex;align-items:center;width:100%;padding:13px 16px;border-radius:14px;text-align:left;font-weight:800;font-size:16px;color:var(--ink)}
 .km-tag{font-size:13px;font-weight:700;color:var(--muted)}
+
+/* a deep link's target: it arrives in the middle of the screen and glows once */
+.focus-pulse{animation:focuspulse 2.2s ease 1;border-radius:var(--r-lg)}
+@keyframes focuspulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--action) 70%,transparent)}25%{box-shadow:0 0 0 6px color-mix(in srgb,var(--action) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){ .focus-pulse{animation:none;outline:3px solid var(--action);outline-offset:3px} }

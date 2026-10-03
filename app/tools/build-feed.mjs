@@ -86,6 +86,8 @@ function add(c) {
     if (twin) { dropped.push(`${c.src} ≈ ${twin.src}`); return; }
     bodies.push({ w: bw, src: c.src });
   }
+  c.route = routeOf(c) || c.route;
+  c.source = sourceOf(c);
   c.id = idOf(c.src);
   if (ids.has(c.id)) throw new Error('duplicate id ' + c.id);
   ids.add(c.id);
@@ -97,7 +99,81 @@ function add(c) {
   if (!c.body) delete c.body;
   items.push(c);
 }
-const learnRoute = (id) => '#/learn/' + id;
+const learnRoute = (id) => '#/atlas/' + id;
+
+/* ── where a card leads, and where it comes from ───────────────────────────
+   Owner, 3 Oct 2026: a card's button goes to THAT thing, never the generic
+   tool — the medal, not the medals page; the letter, not the town; the game's
+   own title card, not the arcade. routeOf() reads the object a card was cut
+   from (its src) and names the exact place; the app's focusFor() / sheets open
+   it. sourceOf() is the card's provenance line — which chapter and lesson,
+   which letter-writer, which game — made only of names the corpus already has,
+   never new words. */
+const [kindOf, idOfSrc] = [(src) => src.split(':')[0], (src) => src.split(':').slice(1).join(':').split('#')[0]];
+const GAME_OF = { needwant: 'nw', scamspot: 'ss', shout: 'st', chance: 'mn', bot: 'mn' };
+function routeOf(c) {
+  const k = kindOf(c.src), id = idOfSrc(c.src), e = encodeURIComponent;
+  switch (k) {
+    case 'card': case 'lesson': case 'item': case 'tryit': return learnRoute(id);
+    case 'chapter': return '#/atlas/chapter/' + id;
+    case 'game': return '#/play/' + id;
+    case 'needwant': case 'scamspot': case 'shout': case 'chance': case 'bot': return '#/play/' + GAME_OF[k];
+    case 'quest': return '#/town/today';
+    case 'badge': return '#/medals/' + e(id);
+    case 'asset': case 'class': return '#/money/portfolio/' + e(id);
+    case 'stock': return '#/money/business/' + e(id);
+    case 'letter': return '#/letter/' + e(id);
+    case 'deed': return '#/town/deed';
+    case 'ask': return '#/town/ask';
+    case 'world': return '#/town/' + e(id);
+    case 'fix': return '#/town/fix/' + e(id);
+    case 'job': return '#/town/job/' + e(id);
+    case 'home': return '#/money/place/' + e(id);
+    case 'shop': return '#/store/' + e(id);
+    case 'wardrobe': return '#/wardrobe/' + e(id);
+    case 'companion': return '#/shelter/' + e(id);
+    case 'rank': return '#/me/rank';
+    case 'era': return '#/market40/era/' + e(id);
+    case 'company': return '#/market40/company/' + e(id);
+    case 'event': return '#/market40/event/' + e(id);
+    default: return null;                                   /* words, figures, cast: already exact */
+  }
+}
+const chapterLine = (n) => (n ? `Chapter ${n} · ${CHAPTERS[n - 1].title}` : null);
+const gameName = (id) => (GAMES.find((g) => g.id === id) || {}).name;
+function sourceOf(c) {
+  const k = kindOf(c.src), id = idOfSrc(c.src);
+  const who = ((c.topics || []).find((t) => t.startsWith('who:')) || '').slice(4);
+  /* a question card never names its lesson: a lesson title can hint at the answer, which
+     is why the builder swaps such a question's title for the chapter's */
+  const lessonBits = () => { const card = C.card(id); return [chapterLine(c.level), card && !c.play && card.title !== c.title ? card.title : null, who && CAST[who] ? 'with ' + CAST[who] : null]; };
+  const L = k === 'letter' ? LETTERS.find((x) => x.id === id) : null;
+  const parts = {
+    card: lessonBits, lesson: lessonBits, item: lessonBits, tryit: lessonBits,
+    goal: () => [chapterLine(c.level), 'what the lesson is for'],
+    chapter: () => [`Chapter ${c.level} of ${CHAPTERS.length}`, `${(CHAPTERS[c.level - 1] || { cards: [] }).cards.length} lessons on the Money Atlas`],
+    word: () => ['Money Words', c.level ? 'first used in ' + chapterLine(c.level) : null],
+    figure: () => ['How we know'],
+    game: () => { const g = GAMES.find((x) => x.id === id) || {}; return ['Play', g.keys ? 'keys ' + g.keys : null, g.needs ? 'opens with ' + chapterLine(chLevel(g.needs)) : null]; },
+    quest: () => ["Today's three", 'on the town page'],
+    badge: () => ['Medal', c.level ? 'for finishing ' + chapterLine(c.level) : 'for a decision'],
+    asset: () => ['The Exchange', chapterLine(chLevel('c7'))], class: () => ['The Exchange', chapterLine(chLevel('c7'))],
+    stock: () => ['Bizz & Co', chapterLine(chLevel('c8'))],
+    cast: () => [CAST[who] ? CAST[who] + ' of Bizzington' : 'Bizzington'],
+    letter: () => [L && L.from !== 'scam' && CAST[L.from] ? 'A letter from ' + CAST[L.from] : 'The postbox', /#choice/.test(c.src) ? 'what one answer meant' : null],
+    deed: () => ['Do one', 'one a day, out in the real world'], ask: () => ['Ask at home', "this week's question"],
+    world: () => { const i = WORLDS.findIndex((w) => w.id === id); return [`Place ${i + 1} of ${WORLDS.length} in Bizzington`]; },
+    fix: () => { const f = FIXES.find((x) => x.id === id); const w = f && WORLDS.find((x) => x.id === f.world); return ['Put it right', w ? w.name : null]; },
+    job: () => { const w = WORLDS.find((x) => x.jobs.includes(id)); return ['A job', w ? w.name : null]; },
+    home: () => { const i = HOMES.findIndex((h) => h.id === id); return ['Your place', `rung ${i + 1} of ${HOMES.length}`]; },
+    shop: () => ["Mags' General Store"], wardrobe: () => ["The companion's wardrobe"], companion: () => ['The shelter behind the Jar Shed'],
+    rank: () => { const r = RANKS.find((x) => x.name === id); return ['Rank', r ? 'from level ' + r.at : null]; },
+    needwant: () => ['From ' + gameName('nw')], scamspot: () => ['From ' + gameName('ss')], shout: () => ['From ' + gameName('st')],
+    chance: () => ['From ' + gameName('mn')], bot: () => ['From ' + gameName('mn')],
+    era: () => ['The Market Game', 'a decade to play'], company: () => ['The Market Game', 'the register'], event: () => ['The Market Game', 'what happened'],
+  }[k];
+  return parts ? parts().filter(Boolean).join(' · ') : undefined;
+}
 
 /* 1 · the lessons: one idea each — the teaching, the example, every narrated line */
 const allCards = [...ALL_CARDS, ...NEW_CARD_LIST];
@@ -167,7 +243,7 @@ for (const g of GAMES) {
 }
 for (const q of QUESTS) {
   add({ kind: 'quest', src: `quest:${q.id}`, level: q.needs ? chLevel(q.needs) : null, topics: ['quest', ...(q.needs ? ['ch:' + q.needs] : [])],
-    gate: q.needs ? { chapter: q.needs } : undefined, title: q.t, body: [q.sub], route: '#/town', cta: "Today's three" });
+    gate: q.needs ? { chapter: q.needs } : undefined, title: q.short || q.t, body: [q.sub], route: '#/town', cta: "Today's three" });
 }
 
 /* 7 · medals, as "how to earn this": a chapter's medal is that chapter's */

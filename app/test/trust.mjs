@@ -70,5 +70,23 @@ ok(sim.cardXP(true, true) > sim.cardXP(false, true) && sim.cardXP(false, true) >
   ok(/on\('grantXP', \(\) => \{[\s\S]{0,160}if \(!R\.s\.settings\.tester\) return;/.test(m), 'the grantXP handler refuses outside tester mode');
 }
 
+
+/* a money quest is the same effort in every currency, and says which money it means */
+{
+  const { QUESTS } = await import('../src/content.js');
+  const { setCurrency, price, dayIndex } = await import('../src/fmt.js');
+  const town = QUESTS.find((q) => q.id === 'q-town');
+  /* within one whole coin of that currency: £0.80 rounds to £1, which is not the bug */
+  const effort = ['INR', 'USD', 'GBP'].map((cur) => { setCurrency(cur); const u = price(100) / 100; return { e: sim.questTarget(town) / u, coin: 1 / u }; });
+  ok(effort.every((x) => Math.abs(x.e - town.n) <= Math.max(0.5, x.coin)), 'a money quest asks the same number of units in rupees, dollars and pounds', effort.map((x) => x.e.toFixed(1)).join(' · '));
+  for (const cur of ['INR', 'USD']) {
+    const s = sim.newState(); const c = sim.newChild('Ahana', 'builder', cur); s.kids.push(c);
+    c.quests = { day: dayIndex(Date.now()), list: ['q-town', 'q-earn'], prog: {}, claimed: {}, bonus: false };
+    const q = sim.questList(c).find((x) => x.id === 'q-town');
+    ok(!!q && /[₹$£€]/.test(q.t) && !/\{m\}/.test(q.t), `the quest names its money (${cur})`, q && q.t);
+  }
+  setCurrency('INR');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

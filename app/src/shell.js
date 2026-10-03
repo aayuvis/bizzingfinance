@@ -15,7 +15,7 @@ import { ico } from './art.js';
 import { R } from './runtime.js';
 import * as sim from './sim.js';
 import { avatarSrc, avatarName } from './avatars.js';
-import { balance, ledger } from './family/bizzing-wallet.js';
+import { coinBalance as balance, coinLedger as ledger } from './family.js';
 import { LOOKS, isOpen as lookOpen, openSay } from './looks.js';
 import { ctxFor, BY_ID } from './catalogue.js';
 import * as audio from './audio.js';

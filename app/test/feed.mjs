@@ -81,7 +81,7 @@ const realBad = DATA.filter((x) => x.kind !== 'figure' && x.kind !== 'scamletter
 ok(!realBad.length, 'no card states a real-world figure', realBad.slice(0, 3).map((x) => x.id).join(' '));
 /* money: nothing to buy, no projection */
 ok(!DATA.some((x) => /\b(buy|invest|trade)\b/i.test(x.cta || '')), 'no card asks the child to buy or invest — its button reads, plays or opens');
-ok(DATA.filter((x) => ['company', 'event', 'market'].includes(x.kind)).every((x) => x.route === '#/market40' && x.badge && x.badge.id === 'fiction'), 'the Market Game\'s companies are labelled fictional and only ever read');
+ok(DATA.filter((x) => ['company', 'event', 'market'].includes(x.kind)).every((x) => /^#\/market40\/(company|event|era)\//.test(x.route) && x.badge && x.badge.id === 'fiction' && !/buy|invest/i.test(x.cta || '')), 'the Market Game\'s companies are labelled fictional and only ever read — each opens its own read-only page');
 const feedSrc = (await import('node:fs')).readFileSync(new URL('../src/feed.js', import.meta.url), 'utf8');
 ok(!/money\.|bankProjection|townGrowth|addXP|ledger\.answer|mastery\.(check|retrieve|transfer|introduce)/.test(feedSrc.replace(/\/\*[\s\S]*?\*\//g, '')), 'feed.js touches no town money, no projection, no XP and no mastery record');
 /* bands and maths */
@@ -90,19 +90,42 @@ ok(DATA.filter((x) => ['company', 'event', 'market'].includes(x.kind)).every((x)
 ok(DATA.every((x) => /^M\d+$/.test(x.maths || '')), 'every card declares the arithmetic it demands');
 ok(DATA.filter((x) => /%/.test([x.title, x.body].join(' '))).every((x) => +x.maths.slice(1) >= 10), 'a card that says a percent demands the percent rung (M10)');
 
-/* routes: every one is a screen the app opens */
-const SCREENS = ['home', 'town', 'learn', 'money', 'play', 'store', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'market40', 'feed'];
+/* routes: every one opens ONE real thing (owner, 3 Oct 2026: "to that specific topic, not the
+   generic tool or collection"). A specific route must name an object that exists. */
+const SCREENS = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'store', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'market40', 'feed'];
+const has = (list, id, key = 'id') => (list || []).some((o) => String(o[key]) === String(id));
 const badRoute = DATA.filter((x) => {
-  const m = /^#\/([a-z0-9]+)(?:\/(.+))?$/.exec(x.route || ''); if (!m) return true;
-  const [, a, b] = m;
-  if (a === 'learn' && b) return !card(b);
-  if (a === 'words' && b) return !GLOSSARY.some((g) => g[0] === decodeURIComponent(b));
+  const m = /^#\/([a-z0-9]+)(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(x.route || ''); if (!m) return true;
+  const [, a, b0, c0] = m, b = b0 && decodeURIComponent(b0), d = c0 && decodeURIComponent(c0);
+  if ((a === 'learn' || a === 'atlas') && b === 'chapter') return !has(CHAPTERS, d);
+  if ((a === 'learn' || a === 'atlas') && b) return !card(b);
+  if (a === 'words' && b) return !GLOSSARY.some((g) => g[0] === b);
   if (a === 'sources') return !SOURCES[b];
   if (a === 'cast') return !LORE[b];
+  if (a === 'play') return !has(C.GAMES, b);
+  if (a === 'medals') return !C.BADGES[b];
+  if (a === 'letter') return !has(C.LETTERS, b);
+  if (a === 'store') return !has(C.SHOP, b);
+  if (a === 'wardrobe') return !has(C.WARDROBE, b);
+  if (a === 'shelter') return !C.KINDS[b];
+  if (a === 'me') return b !== 'rank';
+  if (a === 'town' && b === 'fix') return !has(C.FIXES, d);
+  if (a === 'town' && b === 'job') return !has(C.JOBS, d);
+  if (a === 'town' && b) return !['today', 'deed', 'ask'].includes(b) && !has(C.WORLDS, b);
+  if (a === 'money' && b && d) return !({ place: C.HOMES, portfolio: [...C.ASSETS, ...C.CLASSES], business: C.STOCK }[b] || []).some((o) => o.id === d);
   if (a === 'money' && b) return !PLACES.some((p) => p.sub === b);
+  if (a === 'market40' && b === 'company') return !has(C.COMPANIES, d);
+  if (a === 'market40' && b === 'event') return !has(C.EVENTS, d);
+  if (a === 'market40' && b === 'era') return !has(C.ERAS, d);
   return !SCREENS.includes(a) || !!b;
 });
 ok(!badRoute.length, 'routes: every card opens a real screen', `${new Set(DATA.map((x) => x.route)).size} routes` + (badRoute.length ? ' · ' + badRoute[0].route : ''));
+/* and none is the generic tool where a specific thing exists */
+const GENERIC = ['#/play', '#/medals', '#/town', '#/store', '#/market40', '#/learn', '#/atlas', '#/money/portfolio', '#/money/business', '#/money/place', '#/me'];
+const generic = DATA.filter((x) => GENERIC.includes(x.route));
+ok(!generic.length, 'no card sends the child to a generic page — the medal, the letter, the game, the company itself', generic.slice(0, 3).map((x) => x.id + ' → ' + x.route).join(' | '));
+ok(DATA.every((x) => typeof x.source === 'string' && x.source.length > 2 || ['word', 'wordmore', 'figure'].includes(x.kind) && x.source), 'every card says where it comes from', DATA.filter((x) => !x.source).slice(0, 2).map((x) => x.id).join(' '));
+ok(DATA.filter((x) => x.play).every((x) => { const k = C.card(((x.topics || []).find((t) => t.startsWith('card:')) || '').slice(5)); return !k || !x.source.includes(k.title) || !leaks(x.source, { q: x.play.q, opts: [x.play.opts[0]], a: 0 }); }), "a question card's source line never names a lesson that would hint at its answer");
 
 /* levels: Finance's eight chapters */
 const per = CHAPTERS.map((_, i) => DATA.filter((x) => x.level === i + 1).length);

@@ -37,6 +37,11 @@ export function money(n, opts) {
   if (opts && opts.signed && v > 0) return '+' + body;
   return v < 0 ? '−' + body : body;
 }
+/* Interest arrives in bits smaller than a coin; this is the one place they are shown. */
+export function moneyExact(n) {
+  const c = CURRENCIES[cur];
+  return c.sign + new Intl.NumberFormat(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n));
+}
 export function pct(n) { return Math.round(n * 100) + '%'; }
 export const DAY = 86400000;
 export function dayIndex(ts) { return Math.floor((ts - new Date(ts).getTimezoneOffset() * 60000) / DAY); }
