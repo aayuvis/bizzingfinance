@@ -175,8 +175,8 @@ is binding where it is not stricter here. What it changed in this repo:
   extra**; nothing in `catalogue.js`, `looks.js` or the Shop reads or writes `c.money`.
   `validate(CATALOGUE)` returns `[]` in `test/avatars.mjs`. **Nothing random, ever**: no blind
   packs, no chance, no duplicates, no trading — and the money rules above all still hold.
-- **The family chrome** lives in `src/shell.js`: Bee's top bar, five tabs (Home · Town · Learn ·
-  Money · Play), the ☰ drawer in the family order, Settings in the five sections, the coin chip's
+- **The family chrome** lives in `src/shell.js`: Bee's top bar, six tabs (Home · Town · Learn ·
+  Money · Play · My Feed — the feed last, owner 2 Oct 2026), the ☰ drawer in the family order, Settings in the five sections, the coin chip's
   history sheet, search over the whole town (`src/search.js`). Pip the squirrel is the one mascot
   (six poses in `public/mascot/`); Nana Bizz, Mags, Bo and Bea stay as the town's cast.
 - **Music and effects are composed in code** (`src/audio.js`, `music/CREDITS.md`) — no audio files.
