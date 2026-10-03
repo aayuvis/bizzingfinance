@@ -1,15 +1,17 @@
 {
   "name": "Bizzing Finance",
-  "short_name": "Bizzing Finance",
+  "short_name": "Finance",
   "description": "A town where kids 8+ get a wallet, a budget, a bank and a portfolio that are entirely simulated and entirely theirs.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#FFFCF5",
-  "theme_color": "#0E6B78",
-  "categories": ["education", "finance", "kids"],
+  "background_color": "#FFF8EC",
+  "theme_color": "#1F8A5B",
+  "categories": ["education", "kids"],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
