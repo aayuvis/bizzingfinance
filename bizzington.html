@@ -1122,6 +1122,69 @@ html[data-bz-dark] .town.night svg image{filter:none}
 .numrow input{width:100%;font:700 22px var(--mono);padding:10px 14px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:48px}
 .numrow input:focus{outline:none;border-color:var(--action)}
 
+/* ══ Town is Money (owner, 3 Oct 2026) ══════════════════════════════════
+   The money drawn rather than listed, the seven places as painted buildings. */
+.mstrip{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:12px}
+@media (max-width:820px){.mstrip{grid-template-columns:1fr 1fr}.mstrip .mjars{grid-column:1 / -1;order:-1}}
+.mtile{position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;border:0;border-radius:var(--r-xl);text-align:left;font:inherit;color:var(--ink);cursor:pointer;
+  background:var(--surface);box-shadow:0 1px 2px rgb(40 25 5 / .06),0 10px 26px rgb(90 60 20 / .09);transition:transform .18s cubic-bezier(.2,1.4,.4,1),box-shadow .18s}
+.mtile:hover,.mtile:focus-visible{transform:translateY(-3px);box-shadow:0 2px 4px rgb(40 25 5 / .08),0 16px 34px rgb(90 60 20 / .15)}
+.mtile .mt-body{display:grid;gap:3px;min-width:0}
+.mt-big{font:800 30px var(--display);line-height:1.05}
+.mt-mid{font:800 18px var(--display);line-height:1.2}
+.mwallet{background:linear-gradient(160deg,#FFF6DA,#FFE7A8)}
+html[data-bz-dark] .mwallet{background:linear-gradient(160deg,#3A3018,#2A2412)}
+.mwallet .coin{animation:coindrop .5s cubic-bezier(.2,1.5,.4,1) both;animation-delay:calc(var(--i) * 60ms)}
+@keyframes coindrop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+.mjars{justify-content:center;flex-direction:column;background:linear-gradient(180deg,var(--surface),var(--surface2))}
+.jarrow{display:flex;justify-content:space-around;gap:6px;width:100%}
+.jar{display:grid;justify-items:center;gap:2px}
+.jar-amt{font:800 13px var(--mono)}
+.jar-n{font:800 12px var(--ui);text-transform:uppercase;letter-spacing:.06em;opacity:.8}
+.jarsvg .jarfill,.jarsvg .jarwave{animation:jarfill .9s cubic-bezier(.2,1,.3,1) both}
+.jarsvg .jarwave{animation:jarfill .9s cubic-bezier(.2,1,.3,1) both,jarwave 3.2s ease-in-out infinite .9s}
+@keyframes jarfill{from{transform:translateY(60px)}to{transform:none}}
+@keyframes jarwave{50%{transform:translateX(-16px)}}
+.mt-lock{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;margin-top:6px}
+.mtile.shut .jarrow,.mtile.shut .mt-body .eyebrow{filter:grayscale(.85);opacity:.55}
+.mgoal{background:linear-gradient(160deg,#EAF4FF,#D7E8FF)}
+html[data-bz-dark] .mgoal{background:linear-gradient(160deg,#1C2A3E,#162030)}
+.gbuild{display:flex;flex-direction:column-reverse;gap:2px;width:46px;margin:4px 0}
+.gbuild i{display:block;height:6px;border-radius:2px;background:rgb(61 125 240 / .16)}
+.gbuild i.on{background:var(--save);animation:floor .4s ease both;animation-delay:calc(var(--i) * 70ms)}
+.mgoal .mt-body{grid-template-columns:auto 1fr;column-gap:12px}
+.mgoal .mt-body > :not(.gbuild){grid-column:2}
+.mgoal .gbuild{grid-column:1;grid-row:1 / span 3;height:auto;justify-content:flex-start}
+@keyframes floor{from{transform:scaleX(0)}to{transform:none}}
+
+.places{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ptile{position:relative;display:grid;justify-items:center;text-align:center;gap:3px;padding:12px 10px 14px;border:0;border-radius:var(--r-xl);font:inherit;color:var(--ink);cursor:pointer;
+  background:radial-gradient(120% 80% at 50% 100%,var(--surface2),var(--surface));box-shadow:0 1px 2px rgb(40 25 5 / .06),0 10px 24px rgb(90 60 20 / .08);transition:transform .2s cubic-bezier(.2,1.4,.4,1),box-shadow .2s}
+.ptile:hover,.ptile:focus-visible{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 3px 6px rgb(40 25 5 / .08),0 18px 36px rgb(90 60 20 / .16)}
+.ptile .pt-art{position:relative;width:100%;height:110px;display:grid;place-items:end center}
+.ptile .pt-art::after{content:"";position:absolute;bottom:2px;left:18%;right:18%;height:10px;border-radius:50%;background:rgb(40 25 5 / .14);filter:blur(2px);z-index:0}
+.ptile img{position:relative;z-index:1;max-width:100%;max-height:110px;object-fit:contain;transition:transform .25s}
+.ptile:hover img{transform:scale(1.06)}
+.ptile b{font:800 15px var(--display)}
+.ptile .small{color:var(--ink);opacity:.78}
+.ptile.shut img{filter:grayscale(.9) opacity(.5)}
+.ptile .pt-lock{position:absolute;z-index:2;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--surface);box-shadow:0 2px 6px rgb(0 0 0 / .15)}
+
+/* the road: the five place posters as a strip you swipe, not a column you scroll past */
+.travel > .stack{display:grid;grid-auto-flow:column;grid-auto-columns:min(78%,420px);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin:0 -4px;padding-left:4px}
+.travel > .stack > *{scroll-snap-align:start;margin:0}
+
+/* inside a building: back to the street, and the doors as small pictures */
+.mnav{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;align-items:center}
+.mback{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;font-weight:800;text-decoration:none;color:var(--ink);padding:6px 12px 6px 6px}
+.mtab img{width:30px;height:30px;object-fit:contain;margin:-6px 2px -6px -6px}
+.mtab.shut img{filter:grayscale(.9) opacity(.5)}
+@media (prefers-reduced-motion:reduce){.mwallet .coin,.jarsvg .jarfill,.jarsvg .jarwave,.gbuild i.on{animation:none !important}.mtile,.ptile,.ptile img{transition:none}}
+:root[data-motion="reduced"] .mwallet .coin,:root[data-motion="reduced"] .jarsvg .jarfill,:root[data-motion="reduced"] .jarsvg .jarwave,:root[data-motion="reduced"] .gbuild i.on{animation:none !important}
+@media (min-width:1080px){.places{grid-template-columns:repeat(7,1fr)}}
+@media (max-width:720px){.places{grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:42%;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 8px;margin:0 -4px}.places .ptile{scroll-snap-align:start}}
+@media (max-width:480px){.mstrip{grid-template-columns:1fr}.mt-big{font-size:26px}}
+
 </style>
 </head>
 <body>
@@ -5837,6 +5900,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     fromJar: () => fromJar,
     fundGoal: () => fundGoal,
     gameWage: () => gameWage,
+    glance: () => glance,
     goodDaysThisWeek: () => goodDaysThisWeek,
     hasPerk: () => hasPerk,
     holdingsValue: () => holdingsValue,
@@ -9089,6 +9153,25 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   function netWorth(c) {
     return Math.round(c.money.wallet + jarTotal(c) + c.money.bank.balance + holdingsValue(c) + bizValue(c) + homeEquity(c) - debt(c));
   }
+  function glance(c) {
+    const j = c.money.jars, jt = jarTotal(c), g = c.money.goals.find((x) => !x.done) || null;
+    const share2 = (k) => jt > 0 ? j[k] / jt : 0;
+    return {
+      wallet: Math.round(c.money.wallet),
+      worth: netWorth(c),
+      jars: ["spend", "save", "grow", "give"].map((k) => ({ k, amt: Math.round(j[k]), share: share2(k) })),
+      jarTotal: Math.round(jt),
+      goal: g ? { name: g.name, saved: Math.round(g.saved), target: Math.round(g.target), pct: Math.min(1, g.saved / Math.max(1, g.target)) } : null,
+      goalsDone: c.money.goals.filter((x) => x.done).length,
+      bank: Math.round(c.money.bank.balance),
+      owed: debt(c),
+      holdings: holdingsValue(c),
+      shop: bizValue(c),
+      home: homeOf(c),
+      weekIn: Math.round(weeklyIncome(c)),
+      weekOut: Math.round(weeklyCost(c))
+    };
+  }
   function stamp(c) {
     const h = c.history, v = netWorth(c);
     if (!h.length || h[h.length - 1].v !== v) h.push({ t: Date.now(), v });
@@ -10106,16 +10189,6 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   function spriteKey(c) {
     const p = get(c);
     return p ? `${p.kind}-${STAGES[p.stage]}-${p.mood}` : null;
-  }
-  function line(c) {
-    const p = get(c);
-    if (!p) return "";
-    const k = KINDS[p.kind].name.toLowerCase();
-    if (p.ill) return `${p.name} is off colour. The vet's letter is in the postbox.`;
-    if (p.missed > 0) return `${p.name} went hungry on pay day \u2014 the wallet ran out before the food. Next pay day puts it right.`;
-    if (p.mood === "happy") return p.stage === 2 ? `${p.name} is grown, glossy and pleased with you.` : `${p.name} is thriving. ${p.stage === 0 ? "Still tiny." : "Growing fast."}`;
-    if (p.care < 40) return `${p.name} is all right, but a little play would go a long way.`;
-    return `${p.name} is content. A ${k} with a full bowl is an easy ${k}.`;
   }
   function weeklyCost2(c) {
     return has2(c) ? price(C.food) : 0;
@@ -12154,7 +12227,7 @@ ${marks}`;
 
   // src/shell.js
   var HIVE = "https://aayuvis.github.io/Bizzing_Schedule/";
-  var TAB_OF = { arcade: "play", market40: "play", worlds: "town", store: "town", words: "learn", mistakes: "learn" };
+  var TAB_OF = { money: "town", arcade: "play", market40: "play", worlds: "town", store: "town", words: "learn", mistakes: "learn" };
   var tabOf = (nav) => TAB_OF[nav] || nav;
   var DRAWER = [
     { k: "me", n: "My page", i: "user" },
@@ -17389,52 +17462,6 @@ ${drawerHTML(o)}`;
     ${o.foot || ""}
   </div>`;
   }
-  function greeting(c) {
-    const o = c.overnight, fresh = !!(o && !o.seen);
-    const has4 = has2(c), p = get(c);
-    const h = (/* @__PURE__ */ new Date()).getHours();
-    const hello = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-    const line2 = has4 ? esc(line(c)) : hometalk(c);
-    const chips = [];
-    if (fresh) {
-      if (o.fuse) chips.push(["postbox", "", "A letter you were expecting", true]);
-      else if (!c.postbox.answered) chips.push(["postbox", "", "A letter came"]);
-      if (payDue(c, R.s)) chips.push(["payday", "", "Ring the bell", true]);
-      if (has4 && canPlay(c)) chips.push(["play", "", `${esc(p.name)} waited by the door`]);
-      const jobs = jobsToday(c).length;
-      if (jobs) chips.push(["sub", "wallet", `${nWord(jobs)} ${jobs === 1 ? "shift" : "shifts"} on the board`]);
-    }
-    const can = has4 && canPlay(c);
-    return `<div class="card greet">
-    <div class="gfig">${has4 ? companionFigure(c, 112, { bob: p.mood === "happy" }) : pipPose("wave", 108, "Pip waves hello")}</div>
-    <div class="gbody">
-      ${fresh ? `<span class="eyebrow">${o.nights === 1 ? "Overnight" : `${nWord(o.nights)} nights away`}</span>` : `<span class="eyebrow">${hello}</span>`}
-      <h2 class="gname">${kidBadge(c, 34)}<span>${fresh ? "Welcome back, " : ""}${esc(c.name)}</span></h2>
-      <div class="bub">${line2}</div>
-      ${chips.length ? `<div class="waiting">${chips.map(([act, arg, t, hot]) => `<button class="wchip${hot ? " hot" : ""}" data-act="${act}" ${arg ? `data-arg="${arg}"` : ""}>${t}</button>`).join("")}
-        <button class="wchip quiet" data-act="ovSeen" aria-label="Got it">Got it</button></div>` : ""}
-      ${has4 ? `<div class="gco">
-          <span class="small muted">${esc(p.name)} \xB7 ${STAGES[p.stage]} ${esc(KINDS[p.kind].name).toLowerCase()} \xB7 ${p.paydays} pay ${p.paydays === 1 ? "day" : "days"} with you${p.everMissed ? ` \xB7 went hungry ${p.everMissed}\xD7` : ""}</span>
-          <div class="care ${p.mood}"><i style="width:${p.care}%"></i></div>
-          <div class="row" style="gap:6px;margin-top:9px;flex-wrap:wrap">
-            <button class="btn ghost sm" data-act="play">${can ? "Play" : "Played today"}</button>
-            <button class="btn ghost sm" data-act="wardrobe">Wardrobe${p.wardrobe.length ? " \xB7 " + p.wardrobe.length : ""}</button>
-          </div></div>` : ""}
-    </div>
-    ${dayStrip(c)}
-  </div>`;
-  }
-  function dayStrip(c) {
-    const q = questList(c), n = q.length || 1, d = q.filter((x) => x.claimed).length;
-    const R0 = 19, C4 = 2 * Math.PI * R0, w = wordOfDay();
-    return `<div class="daystrip">
-    <div class="dring" role="img" aria-label="Today's three: ${d} of ${q.length} done">
-      <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><circle cx="24" cy="24" r="${R0}" fill="none" stroke="var(--line)" stroke-width="5"/>
-        <circle cx="24" cy="24" r="${R0}" fill="none" stroke="var(--action)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(C4 * d / n).toFixed(1)} ${C4.toFixed(1)}" transform="rotate(-90 24 24)"/></svg>
-      <b>${d}/${q.length}</b></div>
-    <div class="dword"><span class="eyebrow">Word of the day</span><b>${esc(w.term)}</b><span class="small muted">${esc(w.meaning)}</span></div>
-  </div>`;
-  }
   var FOLDS = /* @__PURE__ */ new Set();
   if (typeof document !== "undefined") document.addEventListener("toggle", (e) => {
     const d = e.target;
@@ -17508,13 +17535,70 @@ ${drawerHTML(o)}`;
   }
   function townDay() {
     const c = K6(), quests = questList(c);
-    return `${greeting(c)}
-    ${todaysThree(c, quests)}
+    return `${todaysThree(c, quests)}
     ${fold("more", "More today", "The till puzzle, a real-world deed and the end of the day.", "more", `<div class="stack">
       ${closingTime(c, quests)}
       ${tillCard(c)}
       ${todayCard(c)}
     </div>`)}`;
+  }
+  var JAR_INK = { spend: "var(--spend)", save: "var(--save)", grow: "var(--grow)", give: "var(--give)" };
+  var JAR_NAME = { spend: "Spend", save: "Save", grow: "Grow", give: "Give" };
+  function jarSVG(k, share2, top) {
+    const lvl = top > 0 ? Math.max(share2 > 0 ? 0.08 : 0, share2 / top * 0.86) : 0;
+    const yTop = 24 + (1 - lvl) * 62;
+    return `<svg viewBox="0 0 64 96" width="64" height="96" aria-hidden="true" class="jarsvg">
+    <defs><clipPath id="jc-${k}"><path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z"/></clipPath></defs>
+    <g clip-path="url(#jc-${k})"><rect class="jarfill" x="0" y="${yTop.toFixed(1)}" width="64" height="96" fill="${JAR_INK[k]}" opacity=".88"/>
+      <path class="jarwave" d="M0 ${yTop.toFixed(1)} q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 V96 H0Z" fill="${JAR_INK[k]}"/>
+      ${lvl > 0.12 ? `<g fill="#FFF3C4" opacity=".75"><circle cx="24" cy="${(yTop + 14).toFixed(0)}" r="3"/><circle cx="38" cy="${(yTop + 24).toFixed(0)}" r="2.4"/><circle cx="30" cy="${(yTop + 34).toFixed(0)}" r="2"/></g>` : ""}</g>
+    <path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z" fill="none" stroke="var(--ink)" stroke-opacity=".55" stroke-width="2.4"/>
+    <path d="M18 30 V78" stroke="#fff" stroke-opacity=".55" stroke-width="3.5" stroke-linecap="round"/>
+    <rect x="12" y="10" width="40" height="12" rx="4" fill="#B57E10"/><rect x="12" y="10" width="40" height="5" rx="3" fill="#F0B429"/>
+  </svg>`;
+  }
+  function coinStack(n) {
+    const k = Math.max(1, Math.min(9, n));
+    return `<svg viewBox="0 0 70 96" width="70" height="96" aria-hidden="true" class="coinstack">${Array.from({ length: k }, (_, i) => `<g class="coin" style="--i:${i}"><ellipse cx="35" cy="${84 - i * 8}" rx="26" ry="8" fill="#B57E10"/><ellipse cx="35" cy="${81 - i * 8}" rx="26" ry="8" fill="#F0B429" stroke="#8A5A00" stroke-width="1.2"/></g>`).join("")}
+    <path transform="translate(35 ${81 - (k - 1) * 8})" d="M0 -5 1.5 -1.6 5 -1.5 2.3 .8 3.1 4.3 0 2.4 -3.1 4.3 -2.3 .8 -5 -1.5 -1.5 -1.6Z" fill="#FFF3C4"/></svg>`;
+  }
+  function moneyStrip(c) {
+    const g = glance(c), top = Math.max(...g.jars.map((j) => j.share));
+    const jarsOpen = isOpen2(c, "jars"), goalsOpen = isOpen2(c, "goals");
+    return `<section class="mstrip" aria-label="Your money">
+    <button class="mtile mwallet" data-act="sub" data-arg="wallet">
+      ${coinStack(Math.ceil(g.wallet / Math.max(1, price(4))))}
+      <span class="mt-body"><span class="eyebrow">Your wallet</span><b class="mt-big tabnum">${money(g.wallet)}</b>
+        <span class="small">${money(g.weekIn)} in \xB7 ${money(g.weekOut)} out a week</span></span></button>
+    <button class="mtile mjars${jarsOpen ? "" : " shut"}" data-act="${jarsOpen ? "sub" : "lockedSub"}" data-arg="jars">
+      <span class="jarrow">${g.jars.map((j) => `<span class="jar"><span class="jar-amt tabnum">${money(j.amt)}</span>${jarSVG(j.k, j.share, top)}<span class="jar-n">${JAR_NAME[j.k]}</span></span>`).join("")}</span>
+      ${jarsOpen ? "" : `<span class="mt-lock">${ico("lock", "\u{1F512}", 14)} The Jar Shed opens after \u201C${esc(needFor("jars") || "a chapter")}\u201D</span>`}</button>
+    <button class="mtile mgoal${goalsOpen ? "" : " shut"}" data-act="${goalsOpen ? "sub" : "lockedSub"}" data-arg="goals">
+      <span class="mt-body"><span class="eyebrow">${g.goal ? "Building towards" : "The Build Yard"}</span>
+        <b class="mt-mid">${g.goal ? esc(g.goal.name) : goalsOpen ? "Name a thing to save for" : "Opens after \u201C" + esc(needFor("goals") || "a chapter") + "\u201D"}</b>
+        ${g.goal ? `<span class="gbuild" aria-label="${Math.round(g.goal.pct * 100)} percent built">${Array.from({ length: 10 }, (_, i) => `<i class="${i < Math.round(g.goal.pct * 10) ? "on" : ""}" style="--i:${i}"></i>`).join("")}</span>
+        <span class="small tabnum">${money(g.goal.saved)} of ${money(g.goal.target)}</span>` : ""}</span></button>
+  </section>`;
+  }
+  var PLACE_ART = { place: (c) => "home-" + Math.min(4, c.home && c.home.tier || 0), wallet: () => "stall", jars: () => "jars", goals: () => "yard", bank: () => "bank", exchange: () => "exchange", shop: () => "shop" };
+  function placeTiles(c) {
+    const g = glance(c);
+    const fig = {
+      place: g.home.name,
+      wallet: money(g.wallet) + " in hand",
+      jars: money(g.jarTotal) + " in four jars",
+      goals: g.goal ? Math.round(g.goal.pct * 100) + "% of " + g.goal.name : g.goalsDone ? g.goalsDone + " built" : "nothing named yet",
+      bank: g.owed ? money(g.bank) + " saved \xB7 " + money(g.owed) + " owed" : money(g.bank) + " in the vault",
+      exchange: g.holdings ? money(g.holdings) + " held" : "nothing held yet",
+      shop: g.shop ? money(g.shop) + " in the till" : "shutters down"
+    };
+    return `<section aria-labelledby="pl-h"><div class="sect"><b id="pl-h">The seven places</b><i></i></div>
+    <div class="places">${PLACES.map((p) => {
+      const on3 = isOpen2(c, p.sub), b = BLD[PLACE_ART[p.key](c)];
+      return `<button class="ptile${on3 ? "" : " shut"}" data-act="${on3 ? "sub" : "lockedSub"}" data-arg="${p.sub}" data-focus="place:${p.sub}">
+        <span class="pt-art">${b ? `<img src="${b.src}" alt="" loading="lazy">` : ""}${on3 ? "" : `<span class="pt-lock">${ico("lock", "\u{1F512}", 16)}</span>`}</span>
+        <b>${esc(p.name)}</b><span class="small">${on3 ? esc(fig[p.key]) : "Opens after \u201C" + esc(needFor(p.sub) || "a chapter") + "\u201D"}</span></button>`;
+    }).join("")}</div></section>`;
   }
   function townParts() {
     const c = K6();
@@ -17549,7 +17633,9 @@ ${drawerHTML(o)}`;
       worlds: posters,
       journeys: journeys(c),
       repairs,
-      today: townDay()
+      today: townDay(),
+      money: moneyStrip(c),
+      places: placeTiles(c)
     };
   }
   function todaysThree(c, quests) {
@@ -17820,10 +17906,11 @@ ${drawerHTML(o)}`;
     let sub = R.s.ui.sub;
     if (!subs.find((x) => x.k === sub && isOpen2(c, x.k))) sub = "wallet";
     const strip = `<div class="mnav">
+    <a class="mback" href="#/town">${ico("back", "\u2190", 16)} Town</a>
     ${subs.map((x) => {
-      const open2 = isOpen2(c, x.k);
+      const open2 = isOpen2(c, x.k), p = PLACES.find((q) => q.sub === x.k), b = p && BLD[PLACE_ART[p.key](c)];
       return `<button class="mtab${open2 ? "" : " shut"}" data-act="${open2 ? "sub" : "lockedSub"}" data-arg="${x.k}"
-        aria-current="${sub === x.k ? "page" : "false"}">
+        aria-current="${sub === x.k ? "page" : "false"}">${b ? `<img src="${b.src}" alt="" width="30" height="30">` : ""}
         ${open2 ? "" : ico("lock", "\u{1F512}", 14) + " "}${x.n}</button>`;
     }).join("")}</div>`;
     const body = sub === "place" ? viewPlace() : sub === "jars" ? viewJars() : sub === "goals" ? viewGoals() : sub === "bank" ? viewBank() : sub === "portfolio" ? viewExchange() : sub === "business" ? viewBusiness() : viewWallet();
@@ -19153,12 +19240,13 @@ ${drawerHTML(o)}`;
   }
   function viewTown(parts2) {
     return `<div class="stack townpage">
-    ${hero({ eyebrow: "The money map", title: "Bizzington", who: "pip", line: "Five places, walked in order. You move on by learning, not by earning." })}
+    <h1 class="sr">Town \u2014 Bizzington and your money</h1>
     ${parts2.street}
+    ${parts2.money}
+    ${parts2.places}
     ${parts2.today}
-    <div class="sect"><b>Travel</b><i></i></div>
-    ${parts2.worlds}
-    ${parts2.journeys}
+    <div class="sect"><b>The road</b><i></i><span class="small muted">five places, walked in order</span></div>
+    <div class="travel">${parts2.worlds}</div>
     ${parts2.repairs}
   </div>`;
   }
@@ -19968,7 +20056,6 @@ ${drawerHTML(o)}`;
         { id: "home", label: "Home", icon: "home", href: "#/home" },
         { id: "town", label: "Town", icon: "town", href: "#/town" },
         { id: "learn", label: "Atlas", icon: "learn", href: "#/atlas" },
-        { id: "money", label: "Money", icon: "coins", href: "#/money" },
         { id: "play", label: "Play", icon: "play", href: "#/play" },
         /* My Feed is the LAST tab (owner, 2 Oct 2026); a grown-up can switch it off behind the PIN */
         ...on2(s) ? [{ id: "feed", label: "My Feed", icon: "feed", href: "#/feed" }] : []
