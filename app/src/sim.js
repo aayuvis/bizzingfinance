@@ -292,7 +292,7 @@ export function glance(c) {
     goal: g ? { name: g.name, saved: Math.round(g.saved), target: Math.round(g.target), pct: Math.min(1, g.saved / Math.max(1, g.target)) } : null,
     goalsDone: c.money.goals.filter((x) => x.done).length,
     bank: Math.round(c.money.bank.balance), owed: debt(c), holdings: holdingsValue(c), shop: bizValue(c),
-    home: homeOf(c), weekIn: Math.round(weeklyIncome(c)), weekOut: Math.round(weeklyCost(c)),
+    home: homeOf(c), weekIn: Math.round(weeklyIncome(c)), weekOut: Math.round(weeklyCost(c)), weekLeft: Math.round(weeklyIncome(c)) - Math.round(weeklyCost(c)),
   };
 }
 export function stamp(c) {

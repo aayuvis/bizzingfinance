@@ -366,7 +366,7 @@ function jarSVG(k, share, top) {
   const yTop = 24 + (1 - lvl) * 62;
   return `<svg viewBox="0 0 64 96" width="64" height="96" aria-hidden="true" class="jarsvg">
     <defs><clipPath id="jc-${k}"><path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z"/></clipPath></defs>
-    <g clip-path="url(#jc-${k})"><rect class="jarfill" x="0" y="${yTop.toFixed(1)}" width="64" height="96" fill="${JAR_INK[k]}" opacity=".88"/>
+    <g clip-path="url(#jc-${k})"${lvl > 0 ? '' : ' display="none"'}><rect class="jarfill" x="0" y="${yTop.toFixed(1)}" width="64" height="96" fill="${JAR_INK[k]}" opacity=".88"/>
       <path class="jarwave" d="M0 ${yTop.toFixed(1)} q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 V96 H0Z" fill="${JAR_INK[k]}"/>
       ${lvl > 0.12 ? `<g fill="#FFF3C4" opacity=".75"><circle cx="24" cy="${(yTop + 14).toFixed(0)}" r="3"/><circle cx="38" cy="${(yTop + 24).toFixed(0)}" r="2.4"/><circle cx="30" cy="${(yTop + 34).toFixed(0)}" r="2"/></g>` : ''}</g>
     <path d="M14 22 Q10 26 10 34 V82 Q10 90 18 90 H46 Q54 90 54 82 V34 Q54 26 50 22 Z" fill="none" stroke="var(--ink)" stroke-opacity=".55" stroke-width="2.4"/>
@@ -944,6 +944,40 @@ function familyCoinsCard(c) {
   </section>`;
 }
 
+/* One pile becoming four: the pay-day rule as a single bar split in the jars' colours. */
+function splitBar(r) {
+  const k4 = ['spend', 'save', 'grow', 'give'];
+  return `<div class="splitbar" role="img" aria-label="Pay day splits ${k4.map((k) => r[k] + ' in every 100 to ' + k).join(', ')}">
+    ${k4.filter((k) => r[k] > 0).map((k) => `<i style="flex:${r[k]};background:${JARMETA[k][1]}"><span>${JARMETA[k][0]}</span></i>`).join('')}</div>`;
+}
+/* The week as a picture: what comes in against what goes out, and the money over time. */
+function weekPicture(c) {
+  const g = sim.glance(c), top = Math.max(1, g.weekIn, g.weekOut), h = (c.history || []).slice(-30);
+  let chart = '';
+  if (h.length >= 2) {
+    const W = 320, H = 90, lo = Math.min(0, ...h.map((p) => p.v)), hi = Math.max(1, ...h.map((p) => p.v));
+    const pts = h.map((p, i) => [i / (h.length - 1) * W, H - 6 - (p.v - lo) / (hi - lo || 1) * (H - 16)]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    chart = `<figure class="worthline"><figcaption class="eyebrow">Everything you have, over time</figcaption>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="From ${money(h[0].v)} to ${money(h[h.length - 1].v)}">
+        <path d="${line} L${W} ${H} L0 ${H}Z" fill="var(--grow)" opacity=".14"/><path class="wl" d="${line}" fill="none" stroke="var(--grow)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        <circle cx="${pts[pts.length - 1][0].toFixed(1)}" cy="${pts[pts.length - 1][1].toFixed(1)}" r="4" fill="var(--grow)"/></svg>
+      <div class="row small muted"><span class="grow">${money(h[0].v)}</span><b class="tabnum" style="color:var(--ink)">${money(h[h.length - 1].v)} now</b></div></figure>`;
+  }
+  return `<section class="card weekpic" aria-label="Your week">
+    <div class="wk-bars"><div class="eyebrow">Every week</div>
+      <div class="wk-row"><span>In</span><i style="--w:${(g.weekIn / top * 100).toFixed(0)}%;--c:var(--grow)"></i><b class="tabnum">${money(g.weekIn)}</b></div>
+      <div class="wk-row"><span>Out</span><i style="--w:${(g.weekOut / top * 100).toFixed(0)}%;--c:var(--spend)"></i><b class="tabnum">${money(g.weekOut)}</b></div>
+      <p class="small">${g.weekLeft >= 0 ? money(g.weekLeft) + ' left for you to decide about.' : money(-g.weekLeft) + ' more goes out than comes in.'}</p></div>
+    ${chart}</section>`;
+}
+/* The snowball as coin stacks: the same money, left alone, a little taller each year. */
+function snowballStacks(now, proj) {
+  const all = [{ y: 0, v: now }, ...proj], top = Math.max(...all.map((p) => p.v));
+  return `<div class="snowstacks" role="img" aria-label="${all.map((p) => (p.y ? p.y + ' years: ' : 'Now: ') + money(p.v)).join(', ')}">
+    ${all.map((p, i) => `<div class="ss"><b class="tabnum">${money(p.v)}</b><span class="ss-col" style="--h:${Math.max(10, p.v / top * 100).toFixed(0)}%;--i:${i}"></span><small>${p.y ? p.y + (p.y > 1 ? ' years' : ' year') : 'Now'}</small></div>`).join('')}</div>`;
+}
+
 function viewWallet() {
   const c = K();
   const jobs = sim.jobsToday(c);
@@ -952,6 +986,7 @@ function viewWallet() {
       line: c.band === 'sprout'
         ? 'This can never go below zero — debt comes later, when it is taught.'
         : 'Every coin in and out, with its date.' })}
+    ${weekPicture(c)}
     ${familyCoinsCard(c)}
     <div class="card">
       <div class="eyebrow">Work going on Market Row today</div>
@@ -969,11 +1004,12 @@ function viewWallet() {
       <div style="padding:12px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center">
         <span class="eyebrow grow">Every movement</span>
         <button class="small muted" data-act="print">${ico('printer', '🖨', 15)} Statement</button></div>
-      ${c.money.txns.slice(0, 18).map((t) => `<div style="display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)">
+      ${c.money.txns.slice(0, 8).map((t) => `<div style="display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)">
         <span style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:0 0 auto;background:${t.kind === 'in' ? 'var(--grow-tint)' : 'var(--spend-tint)'};color:${t.kind === 'in' ? 'var(--grow)' : 'var(--spend)'}">${t.kind === 'in' ? '↓' : '↑'}</span>
         <span class="grow" style="font-weight:650;font-size:14px">${esc(t.label)}<br><span class="small muted">${shortDate(t.t)}</span></span>
         <span class="tabnum" style="font-weight:800;color:${t.kind === 'in' ? 'var(--grow)' : 'var(--ink)'}">${t.kind === 'in' ? '+' : '−'}${money(t.amt)}</span>
       </div>`).join('')}
+      ${c.money.txns.length > 8 ? `<p class="small muted" style="padding:10px 16px">The latest eight. The Statement has every one.</p>` : ''}
     </div>
   </div>`;
 }
@@ -1057,7 +1093,7 @@ function viewJars() {
     <div class="card">
       <div class="jars">
         ${Object.keys(JARMETA).map((k) => `<div class="jar" style="--jc:${JARMETA[k][1]}">
-          <div class="jarglass"><div class="jarfill" style="height:${Math.max(4, j[k] / max * 100)}%;background:${JARMETA[k][1]};opacity:.85"></div></div>
+          <div class="jarbig">${jarSVG(k, j[k], max)}</div>
           <div class="jarlbl">${JARMETA[k][0]}<br><span class="jaramt">${money(j[k])}</span></div>
           <div class="row" style="gap:4px">
             <button class="btn ghost sm" style="padding:5px 9px" data-act="jarOut" data-arg="${k}" aria-label="Take out of ${JARMETA[k][0]}">−</button>
@@ -1068,6 +1104,7 @@ function viewJars() {
     </div>
     ${!ledger.mathsMet(c)('M10') ? `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
+      ${splitBar(r)}
       <p class="small muted">Every twenty coins that arrive, split like this:</p>
       <div class="stack" style="gap:9px">
         ${Object.keys(JARMETA).map((k) => {
@@ -1087,6 +1124,7 @@ function viewJars() {
         ${tot === 100 ? 'Twenty coins, all spoken for. Good.' : 'That is ' + Math.round(tot / 5) + ' coins out of twenty. Every coin has to go somewhere.'}</p>
     </div>` : `<div class="card stack">
       <div class="eyebrow">Pay-day rule — this fires by itself on ${weekday(c.money.nextPay)}</div>
+      ${splitBar(r)}
       <p class="small muted">${esc(String(Math.round(r.save / 5)))} coins in every twenty go to Save, and so on — percent is just another way to write it.${ledger.mathsMeasured(c) ? '' : ' (Until a grown-up runs the maths check, the town is guessing what maths you know.)'}</p>
       ${Object.keys(JARMETA).map((k) => `<div class="row">
         <span style="width:58px;font-weight:800;font-size:13.5px;color:${JARMETA[k][1]}">${JARMETA[k][0]}</span>
@@ -1193,17 +1231,15 @@ function viewBank() {
         <div class="row"><span class="grow" style="font-weight:800">So borrowing costs</span>
           <span class="big" style="font-size:20px;color:var(--spend)">${money(offer.cost)}</span></div>
       </div>
+      <div class="loansplit" role="img" aria-label="Of ${money(offer.total)} handed back, ${money(offer.amount)} is what you borrowed and ${money(offer.cost)} is the price">
+        <i style="flex:${offer.amount}"><span>${money(offer.amount)} borrowed</span></i><i class="cost" style="flex:${Math.max(offer.cost, offer.total * 0.08)}"><span>${money(offer.cost)} price</span></i></div>
       <button class="btn wide" style="margin-top:12px" data-act="loan">Take the loan</button>
       <p class="small muted" style="margin-top:8px">You see the full cost before you agree. Better trust makes the same loan cheaper.</p>
     </div>`}
 
     <div class="card">
       <div class="eyebrow">The snowball, on this balance</div>
-      ${b.balance > 0 ? `<div class="grid3" style="margin-top:8px">
-        ${proj.map((p) => `<div style="background:var(--tint);border-radius:var(--r-md);padding:10px 12px">
-          <div class="small muted">${p.y} year${p.y > 1 ? 's' : ''}</div>
-          <div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p.v)}</div></div>`).join('')}
-      </div>
+      ${b.balance > 0 ? snowballStacks(b.balance, proj) + `
       <p class="small muted" style="margin-top:9px">Your ${money(b.balance)}, left alone at today's ${ra.toFixed(2)}% a year. The town's own rate — it moves, and this is not a forecast.</p>`
       : `<p class="small muted" style="margin-top:6px">The vault is empty, and nothing grows on nothing. Put some of your Save jar in and this shows what it becomes.</p>`}
     </div>
