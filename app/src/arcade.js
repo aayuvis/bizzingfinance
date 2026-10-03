@@ -16,6 +16,7 @@ import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { pipPose, kidBadge } from './shell.js';
+import { fx as makeFx, countdown, plate, backdrop, rr, shadow, coin, crate, still } from './gamefx.js';
 
 const K = () => sim.kid(R.s);
 
@@ -634,12 +635,26 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSk
    charge more for a higher average AND a wider swing, past a point wide
    enough to go backwards. Fifteen years, and you can be wiped out — which
    is the half of "high return" nobody puts on the poster. */
+/* A canvas only draws a face the page has already loaded: ask for the ones the games letter in. */
+let fontsWarm = false;
+function warmFonts() {
+  if (fontsWarm || typeof document === 'undefined' || !document.fonts) return;
+  fontsWarm = true;
+  try { ['600 18px Sono', '800 18px "Hanken Grotesk"', '800 24px Fraunces'].forEach((f) => document.fonts.load(f)); } catch (e) { /* the fallbacks still read */ }
+}
 function compoundClimb() {
-  const YEARS = 15, START = 100, TARGET = 420, W = 360, H = 320;
+  const YEARS = 15, START = 100, TARGET = 420, W = 360, H = 350;
   const st = { year: 0, money: START, charge: 0, holding: false, done: false,
     hist: [START], last: null, ruined: false, peak: START };
   let raf = 0, prev = 0, ctx = null, cv = null;
   const r = rng(8821);
+  /* everything below is drawing — the money is decided in release() and nowhere else */
+  const fxl = makeFx();
+  let cd = countdown();
+  const look = { disp: START, land: 1, tumble: [], pour: [], pourT: 0, clock: 0, ending: false, endT: 0, fwT: 0, newest: -1 };
+  const TX = 196, CW = 66, SL = 6, PLINTH = H - 44, TOPPAD = 58;
+  const scaleTop = () => Math.max(TARGET * 1.15, st.peak * 1.1);
+  const yOf = (v) => PLINTH - (v / scaleTop()) * (PLINTH - TOPPAD);
 
   const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
   const finish = () => {
@@ -649,8 +664,13 @@ function compoundClimb() {
     if (st.money >= TARGET) sim.badge(K(), 'climbed');
     sfx.level(); R.render();
   };
+  /* the last year lands, the tower is seen, then the card — a beat, never a delay to input */
+  const endWith = (ms) => {
+    if (still() || !ctx) { finish(); return; }
+    look.ending = true; look.endT = ms; look.fwT = 0;
+  };
   const release = () => {
-    if (st.done || !st.holding) return;
+    if (st.done || look.ending || !st.holding) return;
     st.holding = false;
     const ch = st.charge / 100;
     const mean = ch * 0.22;                     // 0 % → 22 % expected
@@ -663,59 +683,235 @@ function compoundClimb() {
     st.last = { pct: actual, before, after: st.money };
     st.year++;
     st.charge = 0;
-    if (st.money < 20) { st.ruined = true; finish(); return; }
+    look.land = 0; look.newest = st.year;
+    const pct = (actual >= 0 ? '+' : '−') + Math.abs(actual * 100).toFixed(1) + '%';
+    if (actual < 0) {
+      /* the coins that were lost come off the top and tumble away */
+      const y0 = yOf(look.disp), y1 = yOf(st.money);
+      const m = Math.min(34, Math.round((y1 - y0) / SL));
+      if (!still()) for (let i = 0; i < m; i++) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        look.tumble.push({ x: TX + (Math.random() - 0.5) * 8, y: y0 + i * SL, vx: side * (0.06 + Math.random() * 0.18), vy: -0.12 - Math.random() * 0.2,
+          a: 0, va: side * (0.004 + Math.random() * 0.01) });
+      }
+      look.disp = st.money;
+      fxl.shake(10, 380); fxl.flash('#E0483A', 220);
+      fxl.pop(TX, Math.max(76, y1 - 58), pct, { color: '#B23A2E', size: 24, life: 1100 });
+    } else {
+      fxl.pop(TX, Math.max(76, yOf(st.money) - 58), pct, { color: '#127A43', size: 24, life: 1100 });
+      fxl.burst(TX, yOf(st.money), { n: 10 + Math.round(actual * 90), speed: 0.2, colors: ['#FFF3C4', '#F0B429', '#FFFFFF'] });
+    }
+    if (st.money < 20) { st.ruined = true; sfx.bad(); endWith(1300); R.render(); return; }
     if (actual < 0) sfx.bad(); else sfx.coin();
-    if (st.year >= YEARS) { finish(); return; }
+    if (st.year >= YEARS) { endWith(st.money >= TARGET ? 2000 : 1100); }
     R.render();
   };
-  const press = () => { if (!st.done && !st.holding) { st.holding = true; st.charge = 0; } };
+  const press = () => {
+    if (st.done || look.ending || st.holding) return;
+    if (!cd.done) cd = countdown(1);            // a press is a GO: nobody waits on a count they have already beaten
+    st.holding = true; st.charge = 0;
+  };
 
   const step = (ts) => {
     if (st.done) return;
     const dt = Math.min(60, ts - (prev || ts)); prev = ts;
+    look.clock += dt;
+    cd.step(dt);
     if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075);
+    /* the tower rises to its new height rather than jumping to it */
+    look.disp = still() ? st.money : look.disp + (st.money - look.disp) * Math.min(1, dt * 0.007);
+    look.land = Math.min(1, look.land + dt / 520);
+    animate(dt);
+    fxl.step(dt);
     draw();
     const bar = document.getElementById('ccCharge');
     if (bar) bar.style.width = st.charge.toFixed(1) + '%';
+    if (look.ending) { look.endT -= dt; if (look.endT <= 0) { finish(); return; } }
     raf = requestAnimationFrame(step);
   };
+  const animate = (dt) => {
+    const topY = yOf(look.disp);
+    /* while held, coins pour onto the tower — faster the harder you push */
+    if (st.holding && !still()) {
+      look.pourT -= dt;
+      if (look.pourT <= 0) {
+        look.pourT = Math.max(38, 150 - st.charge * 1.1);
+        look.pour.push({ x: TX + (Math.random() - 0.5) * 34, y: -12, vy: 0.12 + Math.random() * 0.08, r: 6 + Math.random() * 3 });
+      }
+    }
+    for (let i = look.pour.length - 1; i >= 0; i--) {
+      const p = look.pour[i]; p.vy += 0.0011 * dt; p.y += p.vy * dt;
+      if (p.y >= topY - 4) { look.pour.splice(i, 1); fxl.burst(p.x, topY - 2, { n: 3, size: 2.4, speed: 0.12, life: 380, colors: ['#FFFFFF', '#FFF3C4'] }); }
+    }
+    for (let i = look.tumble.length - 1; i >= 0; i--) {
+      const t = look.tumble[i]; t.vy += 0.0012 * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.a += t.va * dt;
+      if (t.y > H + 30) look.tumble.splice(i, 1);
+    }
+    /* the line was met: the sky fills with coins */
+    if (look.ending && !st.ruined && st.money >= TARGET) {
+      look.fwT -= dt;
+      if (look.fwT <= 0) {
+        look.fwT = 230;
+        const x = 60 + Math.random() * (W - 120), y = 50 + Math.random() * 120;
+        const pal = [['#F0B429', '#FFF3C4', '#FFFFFF'], ['#2FBF71', '#C9F7DC', '#FFF3C4'], ['#F07A5A', '#FFD3C4', '#F0B429']][Math.floor(Math.random() * 3)];
+        fxl.burst(x, y, { n: 36, speed: 0.36, life: 1000, size: 4.4, colors: pal, gravity: 0.0004 });
+        fxl.coins(x, y, 6);
+      }
+    }
+  };
+
+  /* one coin edge-on: a slice of a cylinder, shaded across its width */
+  const goldGrad = (deep) => {
+    const g = ctx.createLinearGradient(-CW / 2, 0, CW / 2, 0);
+    if (deep) { g.addColorStop(0, '#7A4400'); g.addColorStop(0.28, '#F0B03A'); g.addColorStop(0.55, '#C98010'); g.addColorStop(1, '#663800'); }
+    else { g.addColorStop(0, '#9A6A08'); g.addColorStop(0.28, '#FFE08A'); g.addColorStop(0.55, '#F0B429'); g.addColorStop(1, '#8A5A00'); }
+    return g;
+  };
+  const band = (L) => { let j = -1; for (let i = 0; i < st.hist.length; i++) if (st.hist[i] < L) j = i; return j + 1; };
+  const lerpC = (a, b, k) => {
+    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const A = p(a), B = p(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`;
+  };
+  const heat = (c) => (c < 50 ? lerpC('#2FBF71', '#F0B429', c / 50) : lerpC('#F0B429', '#E0483A', (c - 50) / 50));
+  const label = (text, x, y, { size = 13, color = '#1C2A2E', align = 'center', weight = 800, font = '"Hanken Grotesk", system-ui, sans-serif', halo = R.dark ? 'rgba(12,16,28,.92)' : 'rgba(255,252,245,.95)' } = {}) => {
+    ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size / 3.5);
+    ctx.strokeStyle = halo; ctx.strokeText(text, x, y);
+    ctx.fillStyle = color; ctx.fillText(text, x, y);
+  };
+
   const draw = () => {
     if (!ctx) return;
-    const cs = getComputedStyle(document.documentElement);
-    const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
+    const dark = !!R.dark, ink = dark ? '#F4EEE4' : '#1C2A2E', t = look.clock;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = tok('--tint', '#EDF2F2'); ctx.fillRect(0, 0, W, H);
-    const top = Math.max(TARGET * 1.15, st.peak * 1.1);
-    const y = (v) => H - 14 - (v / top) * (H - 40);
-    // the line you are climbing towards
-    ctx.setLineDash([5, 5]); ctx.strokeStyle = tok('--grow', '#178A4C'); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(0, y(TARGET)); ctx.lineTo(W, y(TARGET)); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = tok('--grow', '#178A4C'); ctx.font = '600 11px system-ui'; ctx.textAlign = 'left';
-    ctx.fillText('target', 6, y(TARGET) - 6);
-    // the tower: one block a year, so compounding is a shape rather than a claim
-    const bw = Math.max(6, (W - 40) / YEARS);
-    /* G5 · each year is a stack of painted coins, not a bar: a down year's top coins
-       turn coral, so a crash is a stack that shrank */
-    st.hist.forEach((v, i) => {
-      const bx = 20 + i * bw, w = bw - 3, base = H - 14, topY = y(v);
-      const grew = i === 0 || v >= st.hist[i - 1];
-      const n = Math.max(1, Math.floor((base - topY) / 6));
-      for (let k = 0; k < n; k++) {
-        const cy = base - 3 - k * 6, last = k >= n - 2;
-        ctx.beginPath(); ctx.ellipse(bx + w / 2, cy, w / 2, 3.2, 0, 0, Math.PI * 2);
-        ctx.fillStyle = !grew && last ? '#E8846F' : (k % 2 ? '#F0B429' : '#E3A21E'); ctx.fill();
-        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(58,42,92,.55)'; ctx.stroke();
+    const done = fxl.begin(ctx);
+    backdrop(ctx, W, H, plate(K().world), { veil: dark ? 0.3 : 0.22, shift: still() ? 0 : Math.sin(t / 4200) * 6 });
+    /* a pool of light behind the tower, and the floor it stands on */
+    const glow = ctx.createRadialGradient(TX, PLINTH - 60, 10, TX, PLINTH - 60, 200);
+    glow.addColorStop(0, dark ? 'rgba(255,214,120,.22)' : 'rgba(255,246,214,.55)'); glow.addColorStop(1, 'rgba(255,246,214,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    const floor = ctx.createLinearGradient(0, PLINTH + 8, 0, H);
+    floor.addColorStop(0, 'rgba(60,36,12,0)'); floor.addColorStop(1, dark ? 'rgba(8,10,20,.6)' : 'rgba(60,36,12,.32)');
+    ctx.fillStyle = floor; ctx.fillRect(0, PLINTH, W, H - PLINTH);
+
+    /* the target: a glowing line and a flag on a pole */
+    const yT = yOf(TARGET), met = st.money >= TARGET;
+    ctx.save();
+    ctx.shadowColor = met ? 'rgba(255,214,90,.95)' : 'rgba(47,191,113,.9)'; ctx.shadowBlur = 10 + (still() ? 0 : Math.sin(t / 260) * 4);
+    ctx.strokeStyle = met ? '#F0B429' : '#2FBF71'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]); ctx.lineDashOffset = still() ? 0 : -t * 0.02;
+    ctx.beginPath(); ctx.moveTo(48, yT); ctx.lineTo(W - 30, yT); ctx.stroke();
+    ctx.restore();
+    const fx0 = W - 30;
+    ctx.strokeStyle = dark ? '#E8DCC8' : '#5A4630'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(fx0, yT + 6); ctx.lineTo(fx0, yT - 40); ctx.stroke(); ctx.lineCap = 'butt';
+    const wv = still() ? 0 : Math.sin(t / 180) * 3;
+    ctx.fillStyle = met ? '#F0B429' : '#2FBF71'; ctx.strokeStyle = 'rgba(20,30,20,.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(fx0, yT - 40);
+    ctx.quadraticCurveTo(fx0 - 12, yT - 40 + wv, fx0 - 24, yT - 34 - wv);
+    ctx.quadraticCurveTo(fx0 - 12, yT - 30 + wv, fx0, yT - 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    /* the years, a timeline up the side: green for a year that grew, coral for one that shrank */
+    const TLX = 24, tlTop = 62, tlBot = PLINTH + 4, gap = (tlBot - tlTop) / (YEARS - 1);
+    ctx.strokeStyle = dark ? 'rgba(244,238,228,.35)' : 'rgba(40,30,20,.25)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(TLX, tlBot); ctx.lineTo(TLX, tlTop); ctx.stroke();
+    const doneTo = tlBot - Math.max(0, st.year - 1) * gap;
+    if (st.year > 0) { ctx.strokeStyle = '#F0B429'; ctx.beginPath(); ctx.moveTo(TLX, tlBot); ctx.lineTo(TLX, doneTo); ctx.stroke(); }
+    ctx.lineCap = 'butt';
+    for (let i = 0; i < YEARS; i++) {
+      const py = tlBot - i * gap;
+      if (i < st.year) {
+        const up = st.hist[i + 1] >= st.hist[i];
+        ctx.fillStyle = up ? '#2FBF71' : '#E8846F'; ctx.beginPath(); ctx.arc(TLX, py, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+      } else if (i === st.year && !look.ending) {
+        const pr = still() ? 0 : (t / 900) % 1;
+        ctx.strokeStyle = `rgba(240,180,41,${1 - pr})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(TLX, py, 6 + pr * 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#F0B429'; ctx.beginPath(); ctx.arc(TLX, py, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      } else {
+        ctx.fillStyle = dark ? 'rgba(20,24,36,.8)' : 'rgba(255,252,245,.9)'; ctx.beginPath(); ctx.arc(TLX, py, 3.6, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = dark ? 'rgba(244,238,228,.5)' : 'rgba(40,30,20,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
       }
-      if (i === st.hist.length - 1) { ctx.beginPath(); ctx.ellipse(bx + w / 2, base - 3 - (n - 1) * 6, w / 2 + 2, 4.5, 0, 0, Math.PI * 2); ctx.strokeStyle = tok('--action', '#0E6B78'); ctx.lineWidth = 2; ctx.stroke(); }
+      if (i === 0 || i === 4 || i === 9 || i === 14) label(String(i + 1), TLX + 16, py, { size: 10.5, color: ink, weight: 700 });
+    }
+    label('YEAR', TLX, tlTop - 16, { size: 9.5, color: ink, weight: 800 });
+
+    /* the plinth: a crate, with its shadow on the floor */
+    shadow(ctx, TX, PLINTH + 36, 150, dark ? 0.4 : 0.26);
+    crate(ctx, TX - 52, PLINTH, 104, 34, dark ? '#A8743E' : '#C98A46');
+
+    /* how far this year could swing: grows with the charge, and grows faster on the bottom */
+    if (st.holding && st.charge > 2) {
+      const c = st.charge / 100, mean = c * 0.22, vol = c * c * 0.34;
+      const hiY = Math.max(TOPPAD - 30, yOf(st.money * (1 + mean + vol))), loY = Math.min(PLINTH - 2, yOf(Math.max(0, st.money * (1 + mean - vol))));
+      const rx = TX + CW / 2 + 26;
+      const g = ctx.createLinearGradient(0, hiY, 0, loY); g.addColorStop(0, 'rgba(47,191,113,.85)'); g.addColorStop(1, 'rgba(224,72,58,.85)');
+      ctx.fillStyle = g; rr(ctx, rx - 4, hiY, 8, Math.max(8, loY - hiY), 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5; ctx.stroke();
+      label('could land', rx + 10, hiY + 6, { size: 9.5, color: ink, align: 'left', weight: 700 });
+      label('anywhere here', rx + 10, hiY + 18, { size: 9.5, color: ink, align: 'left', weight: 700 });
+    }
+
+    /* the tower: one slice per coin, each year's coins their own shade, so compounding is a shape */
+    const v = look.disp, topY = yOf(v);
+    const n = Math.max(1, Math.round((PLINTH - topY) / SL));
+    const k = look.land, s = still() ? 0 : Math.sin(k * Math.PI * 2.5) * (1 - k) * 0.12;
+    ctx.save(); ctx.translate(TX, PLINTH); ctx.scale(1 + s * 0.9, 1 - s);
+    const gA = goldGrad(false), gB = goldGrad(true);
+    for (let i = 0; i < n; i++) {
+      const y = -i * SL, L = ((i + 0.5) / n) * v, b = band(L), jx = Math.sin(i * 12.9898) * 1.6;
+      ctx.fillStyle = b % 2 ? gB : gA;
+      rr(ctx, -CW / 2 + jx, y - SL, CW, SL, 2.4); ctx.fill();
+      ctx.fillStyle = 'rgba(90,56,0,.55)'; ctx.fillRect(-CW / 2 + jx + 2, y - 1, CW - 4, 1);
+      if (i > 0 && b !== band(((i - 0.5) / n) * v)) { ctx.fillStyle = 'rgba(255,244,200,.85)'; ctx.fillRect(-CW / 2 + jx + 1, y - 1.5, CW - 2, 1.5); }
+      if (b === look.newest && k < 1) { ctx.fillStyle = `rgba(255,250,220,${0.6 * (1 - k)})`; rr(ctx, -CW / 2 + jx, y - SL, CW, SL, 2.4); ctx.fill(); }
+    }
+    /* the top coin, face up, with its shine */
+    const ty = -n * SL, jt = Math.sin((n - 1) * 12.9898) * 1.6;
+    ctx.fillStyle = '#B57E10'; ctx.beginPath(); ctx.ellipse(jt, ty + 1.5, CW / 2, 9, 0, 0, Math.PI * 2); ctx.fill();
+    const face = ctx.createRadialGradient(jt - 10, ty - 4, 2, jt, ty, CW / 2);
+    face.addColorStop(0, '#FFF3C4'); face.addColorStop(0.5, '#F7C948'); face.addColorStop(1, '#D99A1B');
+    ctx.fillStyle = face; ctx.beginPath(); ctx.ellipse(jt, ty, CW / 2, 9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#8A5A00'; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.strokeStyle = 'rgba(138,90,0,.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(jt, ty, CW / 2 - 7, 5.5, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    const realTop = PLINTH - n * SL * (1 - s);
+
+    /* while held: rings hum outward from the top, gold → red as the swing grows */
+    if (st.holding) {
+      const col = heat(st.charge);
+      for (let j = 0; j < 3; j++) {
+        const ph = still() ? j / 3 : ((t * 0.0016 * (1 + st.charge / 60)) + j / 3) % 1;
+        ctx.globalAlpha = (1 - ph) * 0.8; ctx.strokeStyle = col; ctx.lineWidth = 3 - ph * 2;
+        ctx.beginPath(); ctx.ellipse(TX, realTop, CW / 2 + 6 + ph * (30 + st.charge * 0.45), 10 + ph * (10 + st.charge * 0.15), 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      const hum = 1 + (still() ? 0 : Math.sin(t / 60) * 0.03 * (st.charge / 100));
+      ctx.save(); ctx.translate(TX, realTop - 26); ctx.scale(hum, hum);
+      label(Math.round(st.charge) + '%', 0, 0, { size: 13, color: col });
+      ctx.restore();
+    }
+    look.pour.forEach((p) => coin(ctx, p.x, p.y, p.r));
+    look.tumble.forEach((tb) => {
+      ctx.save(); ctx.translate(tb.x, tb.y); ctx.rotate(tb.a);
+      ctx.fillStyle = '#E3A21E'; rr(ctx, -CW / 2, -SL / 2, CW, SL, 2.4); ctx.fill();
+      ctx.strokeStyle = '#8A5A00'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
     });
-    ctx.fillStyle = tok('--ink', '#16262A'); ctx.font = '800 15px system-ui'; ctx.textAlign = 'right';
-    ctx.fillText(String(Math.round(st.money)), W - 8, Math.max(16, y(st.money) - 8));
+
+    label(met ? 'over the line!' : 'target ' + TARGET, W - 38, yT - 14, { size: 12.5, color: met ? '#9A6A00' : (dark ? '#7BE0A6' : '#127A43'), align: 'right' });
+    /* the number, riding the top of the tower */
+    label(String(Math.round(look.disp)), TX - CW / 2 - 12, Math.max(22, realTop + 6), { size: 24, color: ink, align: 'right', font: 'Fraunces, Georgia, serif' });
+    label('started at ' + START, TX, PLINTH + 17, { size: 10.5, color: '#3A2208', weight: 700, halo: 'rgba(255,240,210,.9)' });
+
+    fxl.draw(ctx, W, H);
+    done();
+    if (!look.ending) cd.draw(ctx, W, H);
   };
 
   return {
     id: 'cc',
     mount() {
+      warmFonts();
       cv = document.getElementById('ccCanvas');
       if (!cv) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -723,17 +919,24 @@ function compoundClimb() {
       ctx = cv.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); }
+      const hold = (e) => { e.preventDefault(); press(); };
+      const let_go = (e) => { if (e) e.preventDefault(); release(); };
       const btn = document.getElementById('ccBtn');
       if (btn) {
-        btn.onpointerdown = (e) => { e.preventDefault(); press(); };
-        btn.onpointerup = (e) => { e.preventDefault(); release(); };
+        btn.onpointerdown = hold;
+        btn.onpointerup = let_go;
         btn.onpointerleave = () => { if (st.holding) release(); };
+        btn.onpointercancel = () => { if (st.holding) release(); };
       }
+      /* the tower itself is a button too: press and hold anywhere on the picture */
+      cv.onpointerdown = hold; cv.onpointerup = let_go;
+      cv.onpointerleave = () => { if (st.holding) release(); };
+      cv.onpointercancel = () => { if (st.holding) release(); };
     },
     stop,
     key(e) {
       if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
-      if ((e.key === ' ' || e.key === 'Spacebar') && e.type === 'keydown') press();
+      if ((e.key === ' ' || e.key === 'Spacebar') && e.type === 'keydown') { if (e.preventDefault) e.preventDefault(); press(); }
     },
     keyup(e) { if (e.key === ' ' || e.key === 'Spacebar') release(); },
     act(n) { if (n === 'ccHold') press(); else if (n === 'ccRelease') release(); },
@@ -753,22 +956,45 @@ function compoundClimb() {
       }
       const l = st.last;
       return `<div class="stack">
-        ${hud([`Year ${st.year + 1} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
-        <div class="stage" style="min-height:0;padding:12px">
-          <canvas id="ccCanvas" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
-          ${l ? `<div style="background:${l.pct >= 0 ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:10px 12px;font-size:13.5px;text-align:center">
+        ${hud([`Year ${Math.min(YEARS, st.year + 1)} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
+        <div class="stage arcstage" style="min-height:0;padding:12px">
+          <canvas id="ccCanvas" class="arccv" role="img" aria-label="Your coin tower, the target line and the years so far" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
+          ${l ? `<div class="ccyear ${l.pct >= 0 ? 'up' : 'down'}">
             Year ${st.year}: <b>${l.pct >= 0 ? '+' : ''}${(l.pct * 100).toFixed(1)}%</b> · ${Math.round(l.before)} → ${Math.round(l.after)}</div>` : ''}
           <div>
             <div class="row"><span class="eyebrow grow">This year's growth</span>
               <span class="small muted">longer = more, and wilder</span></div>
-            <div class="bar" style="height:16px;margin-top:5px">
+            <div class="bar ccbar" style="height:16px;margin-top:5px">
               <i id="ccCharge" style="width:${st.charge}%;background:linear-gradient(90deg,var(--grow),var(--treasure) 55%,var(--spend))"></i></div>
           </div>
-          <button class="btn wide" id="ccBtn" style="padding:18px" data-act="noop">HOLD TO GROW</button>
-          <p class="hint">Hold space or the button, let go to lock the year in. Steady beats spectacular — usually.</p>
+          <button class="btn wide ccbtn" id="ccBtn" style="padding:18px" data-act="noop">HOLD TO GROW</button>
+          <p class="hint">Hold space, the button or the tower; let go to lock the year in. Steady beats spectacular — usually.</p>
         </div></div>`;
     },
   };
+}
+
+/* DOM juice for the two card-table games: a word that floats up off whatever it is
+   about, and a jolt of the stage. Pops live in a fixed layer outside the game, so a
+   re-render cannot cut one short; under reduced motion CSS leaves them standing still. */
+function domPop(anchor, text, kind = 'good') {
+  if (typeof document === 'undefined') return;
+  const a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
+  const b = a && a.getBoundingClientRect ? a.getBoundingClientRect() : null;
+  const s = document.createElement('span');
+  s.className = 'arcpop ' + kind; s.textContent = text; s.setAttribute('aria-hidden', 'true');
+  s.style.top = (b ? b.top + Math.min(24, b.height / 2) : innerHeight / 2) + 'px';
+  document.body.appendChild(s);
+  const half = s.offsetWidth / 2 + 8;   // keep the whole word on screen
+  s.style.left = clamp(b ? b.left + b.width / 2 : innerWidth / 2, half, Math.max(half, innerWidth - half)) + 'px';
+  setTimeout(() => s.remove(), 1100);
+}
+let joltT = 0;
+function jolt(kind = 'bad') {
+  if (typeof document === 'undefined') return;
+  const h = document.documentElement;
+  delete h.dataset.arc; void h.offsetWidth; h.dataset.arc = kind;
+  clearTimeout(joltT); joltT = setTimeout(() => { delete h.dataset.arc; }, 460);
 }
 
 /* ══ STALL RUSH ═══════════════════════════════════════════════════════
@@ -782,6 +1008,8 @@ function stallRush() {
   let raf = 0, prev = 0, nid = 0;
   const r = rng(3312);
   const items = STOCK.map((x) => x.id);
+  const shown = new Set();   // customers already dealt in, so only a newcomer slides in
+  const btnFor = (id) => document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`);
 
   const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
   const finish = () => {
@@ -795,12 +1023,16 @@ function stallRush() {
   const serve = (id) => {
     if (st.done) return;
     const i = st.q.findIndex((c) => c.want === id);
-    if (i < 0) { sfx.bad(); st.msg = 'Nobody is waiting for that'; R.render(); return; }
-    if (!st.stock[id]) { sfx.bad(); st.msg = 'Out of ' + id + ' — restock costs time'; R.render(); return; }
+    if (i < 0) { sfx.bad(); st.msg = 'Nobody is waiting for that'; R.render(); jolt('bad'); domPop(btnFor(id), 'nobody wants it', 'bad'); return; }
+    if (!st.stock[id]) { sfx.bad(); st.msg = 'Out of ' + id + ' — restock costs time'; R.render(); jolt('bad'); domPop(btnFor(id), 'sold out', 'bad'); return; }
     const item = STOCK.find((x) => x.id === id);
     st.stock[id]--; st.q.splice(i, 1);
     st.revenue += price(item.sells); st.served++;
     st.msg = ''; sfx.coin(); R.render();
+    const b = btnFor(id);
+    if (b) b.classList.add('srhit');
+    domPop(b, '+' + money(price(item.sells)), 'good');
+    jolt('good');
   };
   const restock = () => {
     if (st.done || st.restock > 0) return;
@@ -810,6 +1042,7 @@ function stallRush() {
     st.spent += cost; st.restock = 2600;
     st.msg = 'Restocked for ' + money(cost) + ' — and the queue did not wait';
     sfx.click(); R.render();
+    domPop('.gplay [data-act="srStock"]', '−' + money(cost), 'cost');
   };
   const step = (ts) => {
     if (st.done) return;
@@ -825,12 +1058,17 @@ function stallRush() {
     }
     for (let i = st.q.length - 1; i >= 0; i--) {
       st.q[i].patience -= dt / 9000;
-      if (st.q[i].patience <= 0) { st.q.splice(i, 1); st.lost++; dirty = true; sfx.bad(); }
+      if (st.q[i].patience <= 0) { st.q.splice(i, 1); st.lost++; dirty = true; sfx.bad(); domPop('.gplay .srq', 'gave up waiting', 'bad'); }
     }
     if (st.t >= LEN) { finish(); return; }
     const tl = document.getElementById('srTime');
     if (tl) tl.textContent = Math.ceil((LEN - st.t) / 1000);
-    st.q.forEach((c) => { const b = document.getElementById('srP' + c.id); if (b) b.style.width = Math.max(0, c.patience * 100) + '%'; });
+    st.q.forEach((c) => {
+      const b = document.getElementById('srP' + c.id); if (!b) return;
+      b.style.width = Math.max(0, c.patience * 100) + '%';
+      const card = b.closest('.srcust'); if (card) card.classList.toggle('hurry', c.patience < 0.34);
+    });
+    if (tl && tl.parentElement) tl.parentElement.classList.toggle('arctick', LEN - st.t <= 10000);
     if (dirty) R.render();
     raf = requestAnimationFrame(step);
   };
@@ -872,25 +1110,26 @@ function stallRush() {
         <div class="stage">
           ${BLD.stall ? `<img class="srstall" src="${BLD.stall.src}" alt="Your stall" width="${BLD.stall.w}" height="${BLD.stall.h}">` : ''}
           <div class="eyebrow">The queue</div>
-          <div class="stack" style="gap:7px;min-height:132px">
+          <div class="stack srq" style="gap:7px;min-height:132px">
             ${st.q.length ? st.q.map((c) => {
               const item = STOCK.find((x) => x.id === c.want);
-              return `<div class="row" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
+              const fresh = !shown.has(c.id); shown.add(c.id);
+              return `<div class="row srcust${fresh ? ' in' : ''}${c.patience < 0.34 ? ' hurry' : ''}" style="gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px">
                 ${ico(item.em, item.em, 22)}
                 <span class="grow"><b style="font-size:14px">${esc(item.name)}</b>
                   <div class="bar" style="height:5px;margin-top:5px"><i id="srP${c.id}" style="width:${c.patience * 100}%;background:var(--treasure);transition:none"></i></div></span>
                 <span class="pill">${money(price(item.sells))}</span></div>`;
             }).join('') : '<p class="small muted">Nobody yet. They come in waves.</p>'}
           </div>
-          ${st.msg ? `<p class="small" style="color:var(--spend);font-weight:650;text-align:center">${esc(st.msg)}</p>` : ''}
-          <div class="choices" style="grid-template-columns:repeat(4,1fr)">
+          ${st.msg ? `<p class="small srmsg" style="color:var(--spend);font-weight:650;text-align:center">${esc(st.msg)}</p>` : ''}
+          <div class="choices srstock" style="grid-template-columns:repeat(4,1fr)">
             ${STOCK.map((x, i) => `<button class="btn ${st.stock[x.id] ? '' : 'ghost'}" data-act="srServe" data-arg="${x.id}"
               style="flex-direction:column;gap:1px;padding:8px 3px;font-size:11px;line-height:1.15">
               ${ico(x.em, x.em, 18)}
               <span style="font-weight:800">${esc(x.name)}</span>
               <span style="opacity:.75;font-family:var(--mono);font-size:10.5px">${i + 1} · ${st.stock[x.id] || 0} left</span></button>`).join('')}
           </div>
-          <button class="btn ghost wide" data-act="srStock" ${st.restock > 0 ? 'disabled' : ''}>
+          <button class="btn ghost wide${st.restock > 0 ? ' srbusy' : ''}" data-act="srStock" ${st.restock > 0 ? 'disabled' : ''}>
             ${st.restock > 0 ? 'Restocking…' : 'R · Restock everything'}</button>
           <p class="hint">Number keys to serve, R to restock. Restocking costs money and takes time you do not have.</p>
         </div></div>`;
@@ -912,6 +1151,11 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
   /* seeded, so a round can be replayed and tested; the score is the arithmetic,
      never the luck of the draw (a coin that can finish the job is always coming) */
   const r = rng(seed);
+  /* drawing only: none of this is read by the rules, so a replay stays a replay */
+  const fxl = makeFx();
+  let cd = countdown();
+  const LX = (lane) => lane * (W / LANES) + W / LANES / 2;
+  const look = { px: LX(1), sq: 0, meter: 0, hold: null, clock: 0 };
 
   const newTarget = () => {
     const n = 2 + Math.floor(r() * 3);
@@ -938,21 +1182,36 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     const n = el('crNeed'); if (n) n.textContent = money(st.target);
     const g = el('crGot'); if (g) g.textContent = money(st.got);
     const l = el('crLives'); if (l) l.textContent = String(Math.max(0, st.lives));
-    const b = el('crBar'); if (b) { b.style.width = Math.min(100, st.got / st.target * 100) + '%'; b.style.background = st.got > st.target ? 'var(--spend)' : 'var(--action)'; }
     const m = el('crMsg'); if (m) m.textContent = st.msg ? st.msg + ' · ' : '';
   };
   const catchCoin = (v, x, y) => {
     if (st.done) return;
     st.got += v;
     st.pops.push({ x, y, v, t: 0 });
+    look.sq = 1;
     if (st.got === st.target) {
+      look.hold = { t: 900, kind: 'ok', text: 'Exact! ' + money(st.target) };
+      fxl.pop(x, H - 64, '+' + money(v), { color: '#127A43', size: 18 });
+      fxl.pop(W / 2, H / 2 - 18, 'Exact!', { color: '#127A43', size: 42, life: 1150 });
+      fxl.coins(x, H - 44, 16); fxl.burst(x, H - 44, { n: 26, speed: 0.28, colors: ['#F0B429', '#FFF3C4', '#2FBF71', '#FFFFFF'] });
+      fxl.flash('#FFF3C4', 200);
       st.score += 4 + st.round; st.round++; st.exact++; st.flash = 1; st.msg = 'Exact!';
       sfx.coin(); newTarget();
     } else if (st.got > st.target) {
+      look.hold = { t: 900, kind: 'over', text: 'Over by ' + money(st.got - st.target) };
+      fxl.pop(x, H - 64, '+' + money(v), { color: '#B23A2E', size: 18 });
+      fxl.pop(W / 2, H / 2 - 18, 'Overpaid!', { color: '#B23A2E', size: 34, life: 1100 });
+      fxl.shake(11, 400); fxl.flash('#E0483A', 240);
+      /* the purse bursts: what you handed over spills on the ground */
+      fxl.coins(x, H - 40, 10); fxl.burst(x, H - 36, { n: 18, speed: 0.26, gravity: 0.0012, colors: ['#E0483A', '#F0B429', '#C87533'] });
       st.lives--; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
       sfx.bad(); newTarget();
       if (st.lives <= 0) end();
-    } else { sfx.click(); }
+    } else {
+      fxl.pop(x, H - 64, '+' + money(v), { color: '#1C2A2E', size: 18 });
+      fxl.burst(x, H - 44, { n: 8, speed: 0.16, size: 3, colors: ['#FFF3C4', '#F0B429'] });
+      sfx.click();
+    }
     hudSync();
   };
 
@@ -990,48 +1249,172 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
   const step = (ts) => {
     if (st.done) return;
     const dt = Math.min(50, ts - (last || ts)); last = ts;
-    advance(dt);
+    look.clock += dt;
+    /* the clock and the coins wait for GO; the purse can already be moved */
+    if (cd.step(dt)) advance(dt);
+    look.px += (LX(st.lane) - look.px) * (still() ? 1 : Math.min(1, dt * 0.022));
+    look.sq = Math.max(0, look.sq - dt / 320);
+    const frac = Math.min(1.15, st.got / st.target);
+    look.meter += (frac - look.meter) * Math.min(1, dt * 0.012);
+    if (look.hold && (look.hold.t -= dt) <= 0) { look.hold = null; look.meter = 0; }
+    fxl.step(dt);
     draw();
     if (!st.done) raf = requestAnimationFrame(step);
   };
 
+  /* coins by size and metal, smallest copper to biggest two-tone, each with its value on it */
+  const sorted = COINS.slice().sort((a, b) => a - b);
+  const METAL = [
+    ['#F6C9A0', '#C87533', '#7A3E12'],
+    ['#FFFFFF', '#C3CAD4', '#6B7480'],
+    ['#FFF0B8', '#F0B429', '#8A5A00'],
+    ['#FFF0B8', '#E8A92A', '#7A4E00'],
+    ['#FFF6D0', '#F5C443', '#7A4E00'],
+  ];
+  const coinStyle = (v) => {
+    const i = Math.max(0, sorted.indexOf(v)), k = sorted.length > 1 ? i / (sorted.length - 1) : 0.5;
+    const m = sorted.length <= 2 ? [METAL[1], METAL[2]][i] : METAL[Math.min(METAL.length - 1, Math.round(k * (METAL.length - 1)))];
+    return { r: 13 + k * 8, m, ring: k > 0.6 };
+  };
+  const denomCoin = (x, y, v, wob = 0) => {
+    const { r: rad, m, ring } = coinStyle(v);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(wob);
+    ctx.fillStyle = m[2]; ctx.beginPath(); ctx.arc(0, rad * 0.16, rad, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(-rad * 0.35, -rad * 0.4, rad * 0.1, 0, 0, rad);
+    g.addColorStop(0, m[0]); g.addColorStop(0.6, m[1]); g.addColorStop(1, m[2]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = m[2]; ctx.stroke();
+    if (ring) { ctx.lineWidth = rad * 0.22; ctx.strokeStyle = 'rgba(214,220,228,.95)'; ctx.beginPath(); ctx.arc(0, 0, rad * 0.86, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.arc(0, 0, rad * 0.7, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-rad * 0.35, -rad * 0.45, rad * 0.32, rad * 0.16, -0.6, 0, Math.PI * 2); ctx.fill();
+    const s = String(v), fs = Math.round(rad * (s.length > 2 ? 0.72 : s.length > 1 ? 0.9 : 1.05));
+    ctx.rotate(-wob);
+    ctx.font = `800 ${fs}px "Hanken Grotesk", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(255,252,240,.95)'; ctx.strokeText(s, 0, 1);
+    ctx.fillStyle = '#2A1C00'; ctx.fillText(s, 0, 1);
+    ctx.restore();
+  };
+  const label = (text, x, y, size, color, align = 'center') => {
+    ctx.font = `800 ${size}px "Hanken Grotesk", system-ui, sans-serif`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size / 3.2);
+    ctx.strokeStyle = R.dark ? 'rgba(12,16,28,.9)' : 'rgba(255,252,245,.95)'; ctx.strokeText(text, x, y);
+    ctx.fillStyle = color; ctx.fillText(text, x, y);
+  };
+  /* the purse: a leather pouch on a drawstring, squashing as a coin lands in it */
+  const purse = (x, y) => {
+    const q = still() ? 0 : Math.sin(look.sq * Math.PI) * 0.22 * look.sq + look.sq * 0.08;
+    shadow(ctx, x, y + 21, 78, R.dark ? 0.45 : 0.3);
+    ctx.save(); ctx.translate(x, y + 20); ctx.scale(1 + q, 1 - q); ctx.translate(0, -20);
+    /* coins peeking out of the top, more of them the closer you are */
+    const peek = Math.min(5, Math.ceil(Math.min(1, st.got / st.target) * 5));
+    for (let i = 0; i < peek; i++) coin(ctx, -14 + i * 7, -22 - (i % 2) * 3, 6);
+    const g = ctx.createRadialGradient(-10, -4, 4, 0, 4, 40);
+    const tint = st.flash < -0.1 ? ['#E8846F', '#B23A2E', '#6A1A12'] : st.flash > 0.1 ? ['#9BE3B8', '#2FA866', '#15532F'] : ['#D9965A', '#A8642C', '#5A3010'];
+    g.addColorStop(0, tint[0]); g.addColorStop(0.6, tint[1]); g.addColorStop(1, tint[2]);
+    ctx.fillStyle = g; ctx.strokeStyle = '#3A220C'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(-15, -18);
+    ctx.bezierCurveTo(-30, -12, -38, 4, -32, 14);
+    ctx.quadraticCurveTo(-26, 22, 0, 22); ctx.quadraticCurveTo(26, 22, 32, 14);
+    ctx.bezierCurveTo(38, 4, 30, -12, 15, -18); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(58,34,12,.35)'; ctx.lineWidth = 1.4;
+    for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(k * 9, -16); ctx.quadraticCurveTo(k * 20, 2, k * 16, 18); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,240,210,.28)'; ctx.beginPath(); ctx.ellipse(-14, -2, 6, 10, 0.4, 0, Math.PI * 2); ctx.fill();
+    /* the gathered neck and its drawstring */
+    ctx.fillStyle = '#6A3C14'; rr(ctx, -18, -24, 36, 8, 4); ctx.fill(); ctx.strokeStyle = '#3A220C'; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.strokeStyle = '#E8C47A'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(-8, -29, 5, 4, -0.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(8, -29, 5, 4, 0.5, 0, Math.PI * 2); ctx.stroke();
+    coin(ctx, 0, 5, 8);
+    ctx.restore();
+  };
+
   const draw = () => {
     if (!ctx) return;
-    const cs = getComputedStyle(document.documentElement);
-    const tok = (n, f) => (cs.getPropertyValue(n) || f).trim() || f;
+    const dark = !!R.dark, t = look.clock;
     ctx.clearRect(0, 0, W, H);
-    /* the market lane behind the falling coins: a warm wash over the painting */
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, 'rgba(255,248,232,.55)'); sky.addColorStop(1, 'rgba(240,180,41,.2)');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(58,42,92,.14)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
-    for (let i = 1; i < LANES; i++) {
-      ctx.beginPath(); ctx.moveTo(i * (W / LANES), 0); ctx.lineTo(i * (W / LANES), H); ctx.stroke();
+    const done = fxl.begin(ctx);
+    backdrop(ctx, W, H, plate(0), { veil: dark ? 0.28 : 0.16, shift: still() ? 0 : Math.sin(t / 5000) * 5 });
+    /* four lanes, four soft beams of light; yours is the bright one */
+    const lw = W / LANES;
+    ctx.save(); ctx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+    for (let i = 0; i < LANES; i++) {
+      const on = i === st.lane, x = i * lw, cx = x + lw / 2;
+      /* a shaft of light, widening as it falls, brightest where it meets the ground */
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      const a = on ? (dark ? 0.26 : 0.62) : (dark ? 0.07 : 0.22);
+      g.addColorStop(0, `rgba(255,246,220,${a * 0.25})`); g.addColorStop(0.6, `rgba(255,238,190,${a * 0.6})`); g.addColorStop(1, `rgba(255,214,120,${a})`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(cx - lw * 0.3, 0); ctx.lineTo(cx + lw * 0.3, 0); ctx.lineTo(cx + lw * 0.46, H); ctx.lineTo(cx - lw * 0.46, H); ctx.closePath(); ctx.fill();
+      if (on) {
+        const pool = ctx.createRadialGradient(cx, H - 12, 4, cx, H - 12, lw * 0.6);
+        pool.addColorStop(0, dark ? 'rgba(255,214,120,.45)' : 'rgba(255,236,170,.9)'); pool.addColorStop(1, 'rgba(255,236,170,0)');
+        ctx.fillStyle = pool; ctx.beginPath(); ctx.ellipse(cx, H - 12, lw * 0.6, 18, 0, 0, Math.PI * 2); ctx.fill();
+      }
     }
-    ctx.setLineDash([]);
-    st.drops.forEach((d) => coin(ctx, d.lane * (W / LANES) + W / LANES / 2, d.y, 16, d.v));
-    /* the purse: a woven basket that squashes on a catch */
-    const bx = st.lane * (W / LANES) + W / LANES / 2;
-    const sq = Math.abs(st.flash) > 0.1 ? 1 + Math.abs(st.flash) * 0.12 : 1;
-    ctx.save(); ctx.translate(bx, H - 20); ctx.scale(sq, 1 / sq);
-    ctx.fillStyle = st.flash > 0.1 ? tok('--grow', '#178A4C') : st.flash < -0.1 ? tok('--spend', '#C4453C') : '#B9783A';
-    ctx.strokeStyle = '#3A2A5C'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(-34, -14); ctx.lineTo(34, -14); ctx.lineTo(26, 14); ctx.lineTo(-26, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = 'rgba(58,42,92,.35)'; ctx.lineWidth = 1.5;
-    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(k * 12, -14); ctx.lineTo(k * 9.5, 14); ctx.stroke(); }
     ctx.restore();
-    /* number pops: what you just caught rises off the purse */
-    st.pops.forEach((p) => {
-      const k = p.t / 700;
-      ctx.globalAlpha = 1 - k; ctx.fillStyle = '#3A2A5C'; ctx.font = '800 18px Sono, system-ui';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+' + p.v, p.x, H - 50 - k * 40); ctx.globalAlpha = 1;
+    ctx.strokeStyle = dark ? 'rgba(244,238,228,.12)' : 'rgba(90,60,20,.16)'; ctx.lineWidth = 1; ctx.setLineDash([3, 7]);
+    for (let i = 1; i < LANES; i++) { ctx.beginPath(); ctx.moveTo(i * lw, 46); ctx.lineTo(i * lw, H - 50); ctx.stroke(); }
+    ctx.setLineDash([]);
+    /* the ground the purse sits on */
+    const gr = ctx.createLinearGradient(0, H - 46, 0, H);
+    gr.addColorStop(0, 'rgba(60,36,12,0)'); gr.addColorStop(1, dark ? 'rgba(8,10,20,.55)' : 'rgba(60,36,12,.3)');
+    ctx.fillStyle = gr; ctx.fillRect(0, H - 46, W, 46);
+    /* the falling coins, each with a faint streak behind it */
+    st.drops.forEach((d, i) => {
+      const x = LX(d.lane) + (still() ? 0 : Math.sin(d.y * 0.035 + i) * 2), rad = coinStyle(d.v).r;
+      if (!still()) {
+        const tr = ctx.createLinearGradient(0, d.y - rad - 34, 0, d.y);
+        tr.addColorStop(0, 'rgba(255,240,190,0)'); tr.addColorStop(1, 'rgba(255,240,190,.55)');
+        ctx.fillStyle = tr; rr(ctx, x - rad * 0.6, d.y - rad - 34, rad * 1.2, 34 + rad * 0.4, rad * 0.6); ctx.fill();
+      }
+      denomCoin(x, d.y, d.v, still() ? 0 : Math.sin(d.y * 0.05 + i) * 0.18);
     });
+    purse(look.px, H - 26);
+    /* the meter: how much you need, how much you have, filling as you catch */
+    const mx = 12, my = 10, mw = W - 24, mh = 28;
+    ctx.fillStyle = dark ? 'rgba(14,18,30,.78)' : 'rgba(255,252,245,.86)'; rr(ctx, mx, my, mw, mh, 14); ctx.fill();
+    ctx.strokeStyle = dark ? 'rgba(244,238,228,.25)' : 'rgba(58,42,20,.18)'; ctx.lineWidth = 1; ctx.stroke();
+    const h = look.hold, frac = h ? 1 : Math.min(1, look.meter), over = h ? h.kind === 'over' : st.got > st.target;
+    if (frac > 0.01) {
+      const fg = ctx.createLinearGradient(mx, 0, mx + mw, 0);
+      if (h && h.kind === 'ok') { fg.addColorStop(0, '#2FBF71'); fg.addColorStop(1, '#8BE3AE'); }
+      else if (over) { fg.addColorStop(0, '#E0483A'); fg.addColorStop(1, '#F08A6A'); }
+      else { fg.addColorStop(0, '#F0B429'); fg.addColorStop(1, '#FFD978'); }
+      ctx.save(); rr(ctx, mx + 3, my + 3, mw - 6, mh - 6, 11); ctx.clip();
+      ctx.fillStyle = fg; ctx.fillRect(mx + 3, my + 3, (mw - 6) * frac, mh - 6);
+      if (!still()) { ctx.fillStyle = 'rgba(255,255,255,.35)'; const sx = ((t * 0.15) % (mw + 60)) - 30; ctx.fillRect(mx + sx, my, 18, mh); }
+      ctx.restore();
+    }
+    /* a tick for every coin's worth of the target, so the gap is countable */
+    const step1 = sorted[0] || 1, ticks = Math.round(st.target / step1);
+    if (!h && ticks > 1 && ticks <= 40) {
+      ctx.fillStyle = dark ? 'rgba(244,238,228,.3)' : 'rgba(58,42,20,.22)';
+      for (let i = 1; i < ticks; i++) ctx.fillRect(mx + 3 + ((mw - 6) * i) / ticks, my + mh - 8, 1, 5);
+    }
+    const ink = dark ? '#F4EEE4' : '#1C2A2E';
+    if (h) label(h.text, W / 2, my + mh / 2 + 1, 14, h.kind === 'ok' ? '#0E3B22' : '#5A0E08');
+    else {
+      label('Need ' + money(st.target), mx + 12, my + mh / 2 + 1, 13, ink, 'left');
+      label('Got ' + money(st.got), mx + mw - 12, my + mh / 2 + 1, 13, over ? '#B23A2E' : ink, 'right');
+      label('still ' + money(Math.max(0, st.target - st.got)), W / 2, my + mh / 2 + 1, 11.5, dark ? '#FFD978' : '#8A5A00');
+    }
+    /* tries left, as hearts */
+    for (let i = 0; i < 3; i++) {
+      const on = i < st.lives, x = W - 20 - i * 18, y = my + mh + 16;
+      ctx.fillStyle = on ? '#E0483A' : (dark ? 'rgba(244,238,228,.25)' : 'rgba(58,42,20,.2)');
+      ctx.beginPath(); ctx.moveTo(x, y + 5); ctx.bezierCurveTo(x - 9, y - 2, x - 5, y - 9, x, y - 4); ctx.bezierCurveTo(x + 5, y - 9, x + 9, y - 2, x, y + 5); ctx.fill();
+      if (on) { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    }
+    fxl.draw(ctx, W, H);
+    done();
+    cd.draw(ctx, W, H);
   };
 
   return {
     id: 'cr',
     st, advance,
     mount() {
+      warmFonts();
       cv = document.getElementById('crCanvas');
       if (!cv) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1039,10 +1422,14 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
       ctx = cv.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!st.done) { last = 0; stop(); raf = requestAnimationFrame(step); }
-      cv.onpointerdown = (e) => {
+      /* tap a lane, or drag the purse along */
+      const to = (e) => {
         const b = cv.getBoundingClientRect();
-        st.lane = clamp(Math.floor(((e.clientX - b.left) / b.width) * LANES), 0, LANES - 1);
+        const l = clamp(Math.floor(((e.clientX - b.left) / b.width) * LANES), 0, LANES - 1);
+        if (l !== st.lane) { st.lane = l; lanes(); }
       };
+      cv.onpointerdown = (e) => { to(e); if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (x) { /* fine */ } };
+      cv.onpointermove = (e) => { if (e.buttons || e.pointerType === 'touch') to(e); };
     },
     stop,
     key(e) {
@@ -1058,27 +1445,15 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
           'Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.', 'mags')}</div>`;
       return `<div class="stack">
         ${hud([`Need <b id="crNeed">${money(st.target)}</b>`, `Got <b id="crGot">${money(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
-        <div class="stage" style="min-height:0;padding:12px">
-          <div class="bar"><i id="crBar" style="width:${Math.min(100, st.got / st.target * 100)}%;background:${st.got > st.target ? 'var(--spend)' : 'var(--action)'}"></i></div>
-          <canvas id="crCanvas" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none"></canvas>
-          <div class="choices" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
+        <div class="stage arcstage" style="min-height:0;padding:12px">
+          <canvas id="crCanvas" class="arccv" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
+          <div class="choices crlanes" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
             ${[0, 1, 2, 3].map((i) => `<button class="btn ghost crlane" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}" aria-pressed="${st.lane === i}">${i + 1}</button>`).join('')}
           </div>
-          <p class="hint"><span id="crMsg">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, or tap a lane. Stop at exactly the amount.</p>
+          <p class="hint"><span id="crMsg">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, tap a lane, or drag. Stop at exactly the amount.</p>
         </div></div>`;
     },
   };
-}
-
-/* A painted coin: a gold disc with a rim, a shine and its value in Sono. */
-function coin(ctx, x, y, r, v) {
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
-  g.addColorStop(0, '#FFE9A3'); g.addColorStop(0.55, '#F0B429'); g.addColorStop(1, '#C98A12');
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
-  ctx.lineWidth = 2; ctx.strokeStyle = '#3A2A5C'; ctx.stroke();
-  ctx.beginPath(); ctx.arc(x, y, r - 4, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(122,79,0,.45)'; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.fillStyle = '#4A3000'; ctx.font = '800 13px Sono, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(String(v), x, y + 1);
 }
 
 /* ══ MARKET STORM ═════════════════════════════════════════════════════
@@ -1095,11 +1470,30 @@ export const SHOUTS = [
   ['mags', 'My cousin sold at the top. You could have been my cousin.'],
   ['bea', 'It has never been this bad. Well — it has, but still.'],
 ];
+/* The storm's chart: what you paid as a dashed line, the fall as a red area, and a
+   pulsing head that crawls toward the live price every frame, so the line draws itself. */
+function stormChart(line, live, t) {
+  const w = 300, h = 84, lo = 500, hi = 1060;
+  const vals = line.concat([Math.round(live)]), n = Math.max(2, vals.length);
+  const X = (i) => 4 + (i / (n - 1)) * (w - 22), Y = (v) => 6 + (1 - (v - lo) / (hi - lo)) * (h - 12);
+  const pts = vals.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1));
+  const hx = X(vals.length - 1), hy = Y(vals[vals.length - 1]);
+  const pulse = still() ? 0 : Math.abs(Math.sin(t / 260));
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" style="display:block;width:100%;height:${h}px">
+    <defs><linearGradient id="stFall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E0483A" stop-opacity=".45"/><stop offset="1" stop-color="#E0483A" stop-opacity="0"/></linearGradient></defs>
+    <line x1="0" x2="${w}" y1="${Y(1000).toFixed(1)}" y2="${Y(1000).toFixed(1)}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="5 5" stroke-width="1.4"/>
+    <text x="6" y="${(Y(1000) - 5).toFixed(1)}" font-size="10" font-weight="700" fill="currentColor" fill-opacity=".7" font-family="Hanken Grotesk, system-ui, sans-serif">you paid 1000</text>
+    <path d="M${X(0).toFixed(1)},${h} L${pts.join(' L')} L${hx.toFixed(1)},${h} Z" fill="url(#stFall)"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="#E0483A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(6 + pulse * 7).toFixed(1)}" fill="#E0483A" fill-opacity="${(0.35 - pulse * 0.3).toFixed(2)}"/>
+    <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4.5" fill="#fff" stroke="#E0483A" stroke-width="2.5"/>
+  </svg>`;
+}
 function marketStorm() {
   const START = 1000, LEN = 42000;
   const st = { t: 0, panic: 0, val: START, low: START, line: [START, START, START], done: false,
-    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0 };
-  let iv = 0, last = 0;
+    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0, shoutN: 0 };
+  let iv = 0, last = 0, seenShout = 0;
   const r = rng(4477);
 
   const stop = () => { if (iv) cancelAnimationFrame(iv); iv = 0; };
@@ -1130,12 +1524,22 @@ function marketStorm() {
       st.shoutT = 3400;
       st.shout = SHOUTS[Math.floor(r() * SHOUTS.length)];
       st.panic = clamp(st.panic + 11, 0, 100);
+      st.shoutN++;
       R.render();
+      jolt('bad'); domPop('.gplay .stpanic', '+11 panic', 'bad');
     }
     if (st.panic >= 100) { finish(true); return; }
     if (st.t >= LEN) { finish(false); return; }
     const el = document.getElementById('stPanic');
-    if (el) el.style.width = st.panic.toFixed(1) + '%';
+    if (el) {
+      el.style.width = st.panic.toFixed(1) + '%';
+      const wrap = el.parentElement; if (wrap) { wrap.classList.toggle('hot', st.panic >= 55); wrap.classList.toggle('crit', st.panic >= 80); }
+    }
+    /* the stage reddens at the edges as the panic climbs, and the sell button starts to call */
+    const sg = document.querySelector('.gplay .ststage');
+    if (sg) sg.style.setProperty('--panic', (st.panic / 100).toFixed(3));
+    const sb = document.querySelector('.gplay [data-act="stSell"]');
+    if (sb) sb.classList.toggle('tempt', st.panic >= 65);
     const vv = document.getElementById('stVal');
     if (vv) vv.textContent = Math.round(st.val);
     const tt = document.getElementById('stTime');
@@ -1143,7 +1547,7 @@ function marketStorm() {
     /* the falling line is the emotional core, so it updates in the loop —
        a full re-render every frame would thrash the whole document */
     const ch = document.getElementById('stChart');
-    if (ch) ch.innerHTML = sparkline(st.line, 300, 62, 'var(--spend)');
+    if (ch) ch.innerHTML = stormChart(st.line, st.val, st.t);
     iv = requestAnimationFrame(tick);
   };
   const calm = () => {
@@ -1152,6 +1556,7 @@ function marketStorm() {
     st.calmT = 2600;
     sfx.good();
     R.render();
+    domPop('.gplay .stpanic', '−26 panic', 'good');
   };
   return {
     id: 'st',
@@ -1186,24 +1591,24 @@ function marketStorm() {
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
-      const sh = st.shout;
+      const sh = st.shout, freshShout = st.shoutN !== seenShout; seenShout = st.shoutN;
       return `<div class="stack">
         ${hud([`<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `<span id="stVal">${Math.round(st.val)}</span> / ${START}`])}
-        <div class="stage">
+        <div class="stage ststage" style="--panic:${(st.panic / 100).toFixed(3)}">
           <div>
             <div class="row"><span class="eyebrow grow">Panic</span>
               <span class="small muted">${st.calmT > 0 ? 'reading your plan…' : 'space, or the small button'}</span></div>
-            <div class="bar" style="height:14px;margin-top:5px">
+            <div class="bar stpanic${st.panic >= 55 ? ' hot' : ''}${st.panic >= 80 ? ' crit' : ''}" style="height:14px;margin-top:5px">
               <i id="stPanic" style="width:${st.panic}%;background:linear-gradient(90deg,var(--treasure),var(--spend));transition:width .2s linear"></i></div>
           </div>
-          <div id="stChart">${sparkline(st.line, 300, 62, 'var(--spend)')}</div>
-          ${sh ? say(sh[0], esc(sh[1])) : say('bo', 'It is going to be fine. Probably. I say that every week too.')}
-          <div class="card" style="box-shadow:none;border-style:dashed">
+          <div id="stChart" class="stchart">${stormChart(st.line, st.val, st.t)}</div>
+          <div class="stshout${freshShout ? ' in' : ''}">${sh ? say(sh[0], esc(sh[1])) : say('bo', 'It is going to be fine. Probably. I say that every week too.')}</div>
+          <div class="card stplan${st.calmT > 0 ? ' calm' : ''}" style="box-shadow:none;border-style:dashed">
             <div class="eyebrow">Your plan, in your words</div>
             <p style="font-weight:650;font-size:14.5px">"I'm in for five years. I won't sell before then unless the company stops making anything."</p>
           </div>
           <div class="grow"></div>
-          <button class="btn wide" style="background:var(--spend)" data-act="stSell">SELL EVERYTHING</button>
+          <button class="btn wide${st.panic >= 65 ? ' tempt' : ''}" style="background:var(--spend)" data-act="stSell">SELL EVERYTHING</button>
           <button class="btn ghost wide" data-act="stPlan" ${st.calmT > 0 ? 'disabled' : ''}>Re-read my plan · space</button>
           <p class="hint">Doing nothing is the move. It will not feel like one.</p>
         </div></div>`;
