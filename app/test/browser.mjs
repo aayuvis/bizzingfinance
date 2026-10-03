@@ -311,6 +311,7 @@ async function run(label, vp, isMobile, scheme) {
   ok(`${label}: confetti never lands on the Continue button`, conf2 === 0, conf2 + ' overlaps');
 
   await familyChecks(page, label, vp, isMobile, scheme, errors, shot);
+  await feedChecks(page, label, vp, isMobile, errors, shot, noOverflow);
 
   ok(`${label}: no errors and no third-party requests`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
@@ -348,7 +349,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: checkShell — the chrome and Home match Bee's`, shellFails.length === 0, JSON.stringify(shellFails));
   await page.setViewportSize(vp); await page.waitForTimeout(200);
   const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '[data-bz=tabbar] a' : '[data-bz=tabs] [data-bz=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
-  ok(`${label}: five tabs — Home · Town · Learn · Money · Play — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play', tabs.join(','));
+  ok(`${label}: six tabs — Home · Town · Learn · Money · Play · My Feed (last) — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play,My Feed', tabs.join(','));
   /* §5 Settings: Me · Sound & music · Look · Comfort · Grown-ups */
   await page.evaluate(() => window.BZF.fire('settings')); await page.waitForTimeout(250);
   const secs = await page.evaluate(() => [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()));
@@ -417,12 +418,16 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
     const st = await page.evaluate(() => ({ ...window.BZF.ambient.state(), plate: (document.querySelector('.fz-plate') || {}).style && document.querySelector('.fz-plate').style.backgroundImage }));
     const night = /-night\.webp/.test(st.plate || ''), dark = scheme === 'dark';
     const cr = await page.evaluate(CONTRAST);
-    worldRes.push({ w, layers: st.layers, world: st.world, plateOk: dark ? night : !night, aa: cr.length });
+    /* §6a · My Feed passes AA in every world, by day and by night */
+    await go('#/feed'); await page.waitForSelector('.bzf-card'); await page.waitForTimeout(150);
+    const fcr = await page.evaluate(CONTRAST);
+    await go('#/home');
+    worldRes.push({ w, layers: st.layers, world: st.world, plateOk: dark ? night : !night, aa: cr.length + fcr.length, feed: fcr.slice(0, 2) });
     if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${label}-world-${w}.png` });
   }
   ok(`${label}: six worlds, each with three layers of life`, worldRes.length === 6 && worldRes.every((x) => x.layers >= 3), JSON.stringify(worldRes.map((x) => x.w + ':' + x.layers)));
   ok(`${label}: every world wears its ${scheme === 'dark' ? 'night' : 'day'} painting`, worldRes.every((x) => x.plateOk), JSON.stringify(worldRes.filter((x) => !x.plateOk)));
-  ok(`${label}: text meets AA in every world (${scheme})`, worldRes.every((x) => x.aa === 0), JSON.stringify(worldRes.filter((x) => x.aa)));
+  ok(`${label}: text on Home and My Feed meets AA in every world (${scheme})`, worldRes.every((x) => x.aa === 0), JSON.stringify(worldRes.filter((x) => x.aa)));
   await page.evaluate(() => window.BZF.fire('look', 'market'));
   /* §7 the ambient life pauses when the page is hidden */
   if (!process.env.REDUCED) {
@@ -489,6 +494,96 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   await go('#/home');
 }
 
+/* ══ FAMILY-STANDARD §6a — My Feed ═══════════════════════════════════════
+   Each was watched failing first (see the commit that added it). */
+async function feedChecks(page, label, vp, isMobile, errors, shot, noOverflow) {
+  const go = async (h) => { await page.evaluate((x) => { location.hash = x; }, h); await page.waitForTimeout(450); };
+  const fetchedGroups = [];
+  const seeGroup = (r) => { const m = /\/assets\/g(\d)-[^/]*\.js$/.exec(r.url()); if (m) fetchedGroups.push(+m[1]); };
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('[data-bz=next]');
+  await go('#/feed'); await page.waitForSelector('.bzf-card');
+  await shot('6-feed');
+  const v = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.bzf-list > .bzf-card')];
+    return { h1: document.querySelectorAll('main h1').length, head: !!document.querySelector('main [data-bz=phead]'), n: cards.length - 1,
+      endLast: cards.length && cards.at(-1).matches('[data-bz=feed-end]'), whys: [...document.querySelectorAll('.bzf-why')].every((w) => w.textContent.trim().length > 3),
+      audio: document.querySelectorAll('audio[autoplay], video[autoplay]').length, more: /load more|see more|\blikes\b|streak/i.test(document.querySelector('main').innerText),
+      tab: (document.querySelector('[data-bz=tabs] [aria-current=page], [data-bz=tabbar] [aria-current=page]') || {}).textContent };
+  });
+  ok(`${label}: #/feed opens on the page head, about twenty cards that each say why, then the finished card`, v.h1 === 1 && v.head && v.n >= 10 && v.n <= 20 && v.endLast && v.whys, JSON.stringify(v));
+  ok(`${label}: #/feed has no likes, counts, streaks, autoplay or "load more"`, !v.audio && !v.more);
+  /* lazy: a fresh page on #/feed fetches the index and only the groups today's cards are in */
+  const p2 = await page.context().newPage();
+  p2.on('request', seeGroup);
+  await p2.goto(URL0 + '#/feed'); await p2.waitForSelector('.bzf-card'); await p2.waitForTimeout(300);
+  const lz = await p2.evaluate(() => {
+    const F = window.BZF.feed, c = window.BZF.R.s.kids[window.BZF.R.s.active];
+    const want = [...new Set(c.feed.ids.map((x) => F.byId(x.id).g))].sort();
+    return { want: want.join(), have: F.groups().join() };
+  });
+  lz.fetched = [...new Set(fetchedGroups)].sort().join();
+  await p2.close();
+  ok(`${label}: #/feed loads only the card groups its session shows`, lz.want === lz.have && lz.fetched === lz.want && lz.want.split(',').length < 9, JSON.stringify(lz));
+  ok(`${label}: My Feed's tab is lit on #/feed`, /My Feed/.test(v.tab || ''), v.tab);
+  await noOverflow('My Feed');
+  /* questions: wrong holds with "Not this time" and Continue; right pays one family coin, once */
+  const coins = () => page.evaluate(() => { const w = JSON.parse(localStorage.getItem('bizzing.wallet') || '{"kids":{}}'); return (w.kids.asha || { coins: 0 }).coins; });
+  const qs = await page.evaluate(() => [...document.querySelectorAll('.bzf-card')].filter((c) => c.querySelector('[data-bzf=ans]')).map((c) => c.dataset.id));
+  ok(`${label}: the feed asks at most five questions`, qs.length >= 2 && qs.length <= 5, qs.length + ' questions');
+  if (qs.length >= 2) {
+    const press = async (sel) => { if (isMobile) await page.tap(sel); else { await page.focus(sel); await page.keyboard.press('Enter'); } await page.waitForTimeout(200); };
+    const c0 = await coins();
+    await press(`.bzf-card[data-id="${qs[0]}"] [data-bzf=ans]:not([data-o="0"])`);
+    const held = await page.evaluate((id) => { const c = document.querySelector(`.bzf-card[data-id="${id}"]`); return { not: /Not this time — it is/.test(c.textContent), cont: !!c.querySelector('[data-bzf=cont]'), off: [...c.querySelectorAll('[data-bzf=ans]')].every((b) => b.disabled) }; }, qs[0]);
+    ok(`${label}: a wrong answer ${isMobile ? '(touch)' : '(keyboard)'} holds — "Not this time — it is …" and Continue`, held.not && held.cont && held.off && (await coins()) === c0, JSON.stringify(held));
+    await press(`.bzf-card[data-id="${qs[0]}"] [data-bzf=cont]`);
+    ok(`${label}: Continue lets it rest with its answer`, await page.evaluate((id) => !document.querySelector(`.bzf-card[data-id="${id}"] [data-bzf]`), qs[0]));
+    await press(`.bzf-card[data-id="${qs[1]}"] [data-bzf=ans][data-o="0"]`);
+    const c1 = await coins();
+    await go('#/home'); await go('#/feed'); await page.waitForSelector('.bzf-card');
+    const again = await page.evaluate((id) => !!document.querySelector(`.bzf-card[data-id="${id}"] [data-bzf=ans]:not([disabled])`), qs[1]);
+    ok(`${label}: a right answer ${isMobile ? '(touch)' : '(keyboard)'} pays one coin, through 'answer', once`, c1 === c0 + 1 && !again,
+      `${c0} → ${c1}` + (again ? ' · asked again' : ''));
+    const town = await page.evaluate(() => { const c = window.BZF.R.s.kids[window.BZF.R.s.active]; return c.money.txns.filter((t) => /feed/i.test(t.label || '')).length; });
+    ok(`${label}: a feed answer never pays town money`, town === 0);
+  }
+  /* keys: j / k and the arrows step card to card */
+  if (!isMobile) {
+    await page.focus('.bzf-card'); await page.keyboard.press('j'); await page.waitForTimeout(80); await page.keyboard.press('ArrowDown'); await page.waitForTimeout(80);
+    const i2 = await page.evaluate(() => [...document.querySelectorAll('.bzf-card')].indexOf(document.activeElement));
+    await page.keyboard.press('k'); await page.waitForTimeout(80);
+    const i1 = await page.evaluate(() => [...document.querySelectorAll('.bzf-card')].indexOf(document.activeElement));
+    ok(`${label}: j / k and the arrows move card to card`, i2 === 2 && i1 === 1, `${i2} ${i1}`);
+    /* routes: every card's route opens a real screen (the whole set, not just today's twenty) */
+    const routes = await page.evaluate(async () => { const F = window.BZF.feed, ids = F.items().map((x) => x.id); await F.loadGroups(ids); return [...new Set(ids.map((id) => F.card(id).route))]; });
+    const dead = [];
+    for (const r of routes) {
+      await page.evaluate(() => window.BZF.fire('closeOv'));
+      await page.evaluate((x) => { location.hash = x; }, r); await page.waitForTimeout(220);
+      const ok2 = await page.evaluate((x) => {
+        const sheet = /^#\/(sources|cast)\//.test(x);
+        if (sheet) return !!document.querySelector('.ovbox');
+        return document.querySelectorAll('main h1').length === 1;
+      }, r);
+      if (!ok2) dead.push(r);
+    }
+    await page.evaluate(() => window.BZF.fire('closeOv'));
+    ok(`${label}: every card's route opens a real screen`, routes.length > 50 && !dead.length, `${routes.length} routes` + (dead.length ? ' · ' + dead.slice(0, 3).join(' ') : ''));
+  }
+  /* the grown-ups' switch, behind the PIN, takes the tab and the ☰ row away */
+  await go('#/parents');
+  if (await page.locator('[data-field="pin"]').count()) { await page.fill('[data-field="pin"]', '2468'); await page.click('[data-act="gateGo"]'); await page.waitForTimeout(300); }
+  await page.click('[data-act="feedToggle"]'); await page.waitForTimeout(250);
+  const off = await page.evaluate(() => ({ tab: [...document.querySelectorAll('[data-bz=tabs] a, [data-bz=tabbar] a')].some((a) => /feed/.test(a.getAttribute('href') || '')),
+    row: [...document.querySelectorAll('[data-bz=drawer] a')].some((a) => /#\/feed/.test(a.getAttribute('href') || '')) }));
+  await go('#/feed');
+  const offScreen = await page.evaluate(() => ({ cards: document.querySelectorAll('.bzf-card').length, says: /switched off/.test(document.querySelector('main').innerText) }));
+  ok(`${label}: the grown-ups' switch removes the tab, the ☰ row and the cards`, !off.tab && !off.row && !offScreen.cards && offScreen.says, JSON.stringify({ ...off, ...offScreen }));
+  await go('#/parents'); await page.click('[data-act="feedToggle"]'); await page.waitForTimeout(200);
+  ok(`${label}: …and puts them back`, await page.evaluate(() => [...document.querySelectorAll('[data-bz=tabs] a, [data-bz=tabbar] a')].some((a) => /#\/feed/.test(a.getAttribute('href') || ''))));
+  await page.click('[data-act="lock"]').catch(() => {}); await page.waitForTimeout(150);
+}
+
 /* A5 · ?demo: a labelled sample with weeks of progress that saves nothing */
 async function demo() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -498,8 +593,13 @@ async function demo() {
   ok('demo: the sample is labelled as a sample', /Sample/.test(await page.textContent('.demobar').catch(() => '')));
   ok('demo: it opens on weeks of progress', /Stop (\d+) of/.test(await page.textContent('[data-bz=next]')) && +(await page.textContent('[data-bz=next]')).match(/Stop (\d+)/)[1] > 5);
   await page.evaluate(() => { location.hash = '#/money/jars'; }); await page.waitForTimeout(400);
-  const stored = await page.evaluate(() => localStorage.getItem('bzf_profile'));
-  ok('demo: nothing is saved — the real household is untouched', stored === null, stored ? stored.length + ' bytes written' : '');
+  /* §6a · the sample's feed: cards, a question answered, and still nothing written */
+  await page.evaluate(() => { location.hash = '#/feed'; }); await page.waitForSelector('.bzf-card');
+  const dq = await page.evaluate(() => (document.querySelector('[data-bzf=ans][data-o="0"]') || {}).outerHTML ? document.querySelector('[data-bzf=ans][data-o="0"]').closest('.bzf-card').dataset.id : null);
+  if (dq) { await page.tap(`.bzf-card[data-id="${dq}"] [data-bzf=ans][data-o="0"]`); await page.waitForTimeout(250); }
+  ok('demo: the sample has a feed', await page.locator('.bzf-card').count() > 10 && !!dq);
+  const stored = await page.evaluate(() => [localStorage.getItem('bzf_profile'), localStorage.getItem('bizzing.wallet')].filter(Boolean).join(''));
+  ok('demo: nothing is saved — the real household and the family wallet are untouched', !stored, stored ? stored.length + ' bytes written' : '');
   ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await ctx.close();
   /* §3 §6 · the chrome and Home match Bee's on a dark desk too (the other three are in run()) */

@@ -18,7 +18,7 @@ import * as backup from './backup.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester, GLOSSARY } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, isOpen as chapterOpen, needFor, setTester, GLOSSARY, LORE, chapterLocked as chapterLockedFor } from './content.js';
 import * as sim from './sim.js';
 import { Store } from './store.js';
 import { hashPin, checkPin, pinSet } from './pin.js';
@@ -55,6 +55,8 @@ import * as mistakes from './mistakes.js';
 import * as items from './items.js';
 import * as CERT from './cert.js';
 import { search as searchTown } from './search.js';
+import * as FEED from './feed.js';
+import { bindFeedKeys } from './family/bizzing-feed.js';
 
 const root = document.getElementById('app');
 let draft = { step: 0 };
@@ -97,10 +99,19 @@ function readHash() {
   if (m[0] === 'continue') { R.continueNow = true; return false; }
   /* the ☰ drawer's Settings, Help and Privacy are sheets over the current screen */
   if (['settings', 'help', 'privacy'].includes(m[0])) { R.sheetNow = m[0]; return false; }
-  const known = ['home', 'town', 'learn', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40'];
+  /* a sheet that names its subject: a figure's "How we know" (My Feed's figure cards), a cast card */
+  if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
+  const known = ['home', 'town', 'learn', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
+  /* deep links (My Feed's cards): #/learn/<card> opens the lesson when its chapter is open;
+     #/words/<term> opens Money Words on that word */
+  if (m[0] === 'learn' && m[1] && R.s.kids.length) {
+    const k = cardById(m[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
+    if (k && !(ch && chapterLockedFor(C(), ch))) { C().learn.openCard = k.id; C().learn.drill = null; R.shelf = ''; }
+  }
+  if (m[0] === 'words') R.query = m[1] ? decodeURIComponent(m[1]) : '';
   return true;
 }
 
@@ -139,12 +150,15 @@ function render() {
     nav === 'mistakes' ? viewMistakes() :
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
-    nav === 'market40' ? viewMarketGame() : viewHome();
+    nav === 'market40' ? viewMarketGame() :
+    nav === 'feed' ? FEED.view(c, s) : viewHome();
+  if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
+  R.lastNav = nav;
 
   dressWorld(c);
   /* The family chrome is Bee's, measured (integration/bizzing-shell.js): one top bar,
      one tab row, one phone tab bar and one ☰ drawer, identical in every Bizzing app.
-     Finance brings its words, Pip, the child's face, its five tabs and its routes. */
+     Finance brings its words, Pip, the child's face, its six tabs (My Feed last) and its routes. */
   const tabOf = shell.tabOf(nav);
   root.innerHTML = bzShell({
     app: 'finance', name: 'Finance', mascot: './mascot/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
@@ -152,14 +166,17 @@ function render() {
     inRun: !!R.game,
     tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
       { id: 'learn', label: 'Learn', icon: 'learn', href: '#/learn' }, { id: 'money', label: 'Money', icon: 'coins', href: '#/money' },
-      { id: 'play', label: 'Play', icon: 'play', href: '#/play' }],
+      { id: 'play', label: 'Play', icon: 'play', href: '#/play' },
+      /* My Feed is the LAST tab (owner, 2 Oct 2026); a grown-up can switch it off behind the PIN */
+      ...(FEED.on(s) ? [{ id: 'feed', label: 'My Feed', icon: 'feed', href: '#/feed' }] : [])],
     active: tabOf,
     drawer: { sub: `${rankObj(c.learn.level).name} · level ${c.learn.level}`,
       routes: { me: '#/me', shop: '#/shop', collection: '#/collection', medals: '#/medals', settings: '#/settings', grownups: '#/parents', help: '#/help', privacy: '#/privacy' },
       app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
         { icon: 'book', label: 'Money Words', sub: 'every word, in plain English', href: '#/words' },
         { icon: 'path', label: 'Ones to try again', sub: 'questions that tripped you, back after a gap', href: '#/mistakes' },
-        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
+        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' },
+        ...(FEED.on(s) ? [{ icon: 'feed', label: 'My Feed', sub: 'about twenty cards from across the town, and then it ends', href: '#/feed' }] : [])] },
     content: `${R.session && nav !== 'parents' ? sessionBar() : ''}
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
       ${sim.clockSuspect(s) ? clockWarning() : ''}${body}`,
@@ -1445,7 +1462,7 @@ window.addEventListener('hashchange', () => {
   selfHash = null;
   if (readHash()) { R.overlay = null; if (R.game) quitGame(); render(); }
   else if (R.continueNow) { R.continueNow = false; R.overlay = null; if (R.game) quitGame(); R.s.ui.nav = 'home'; goContinue(); }
-  else if (R.sheetNow) { const k = R.sheetNow; R.sheetNow = null; fire(k); }
+  else if (R.sheetNow) { const k = R.sheetNow, a = R.sheetArg; R.sheetNow = null; R.sheetArg = undefined; fire(k, a); }
 });
 
 /* ══ boot ═════════════════════════════════════════════════════════════ */
@@ -1469,6 +1486,31 @@ if (R.s && R.s.kids.length) {
 }
 render();
 if (R.continueNow && R.s && R.s.kids.length) { R.continueNow = false; R.s.ui.nav = 'home'; goContinue(); }
+if (R.sheetNow && R.s && R.s.kids.length) { const k = R.sheetNow, x = R.sheetArg; R.sheetNow = null; R.sheetArg = undefined; fire(k, x); }
+
+/* ══ My Feed (feed.js) ════════════════════════════════════════════════
+   The family card's controls carry data-bzf, not data-act: an answer, and Continue after a
+   wrong one. Buttons, so Enter and Space work as well as a tap; j/k and the arrows step card
+   to card (bindFeedKeys). Nothing here plays a sound before a tap. */
+bindFeedKeys();
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bzf]'); if (!b || !R.s || !R.s.kids.length) return;
+  e.preventDefault();
+  const id = b.getAttribute('data-id');
+  if (b.getAttribute('data-bzf') === 'ans') {
+    const r = FEED.answer(C(), id, +b.getAttribute('data-o'));
+    if (r === 'right') sfx.good(); else if (r === 'wrong') sfx.bad();
+  } else FEED.cont(id);
+  sim.save(R.s); render();
+  const card = document.querySelector(`.bzf-card[data-id="${CSS.escape(id)}"]`);
+  const f = card && (card.querySelector('[data-bzf="cont"]') || card);
+  if (f) f.focus({ preventScroll: true });
+});
+on('feedToggle', () => {
+  if (!R.gate) return;
+  R.s.settings.feedOff = !R.s.settings.feedOff; sim.save(R.s);
+  toast(R.s.settings.feedOff ? 'My Feed is off — the tab and the ☰ row are gone' : 'My Feed is on'); render();
+});
 
 /* Offline-first is a hard rule, so the shell caches itself when served over
    http. Skipped in the single-file build, which has nothing to fetch. */
@@ -1492,7 +1534,7 @@ on('install', async () => { const e = R.install; if (!e) return; R.install = nul
 on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
-window.BZF = { R, sim, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+window.BZF = { R, sim, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   cardById, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
@@ -1526,13 +1568,7 @@ on('quizPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'quiz') return
 on('quizNext', () => { const o = R.overlay; if (!o || o.kind !== 'quiz') return; quiz.next(o); if (o.done) { const r = quiz.finish(C(), o); sim.save(R.s); if (r && r.pass) { sfx.level(); confetti(40); } } render(); });
 
 /* ── the cast, as cards (India's avatar cards, Bee's trading cards) ──── */
-const LORE = {
-  pip:  { line: 'Your neighbour on Market Row, and the first to say "there is work going".', quote: 'Wages from in here land in the same wallet as everything else. There is no second, magic money.', why: 'Pip is the voice of the street: jobs, quests, the postbox, and the plain sentence when a number needs one.' },
-  nana: { line: 'Ran the shop at the end of the road for sixty years, and is shutting it up.', quote: 'Split it the moment it lands. What sits in one pile gets spent as one pile.', why: 'Nana Bizz teaches: every lesson is hers, and so are the jars, the Bank, and the shop she hands over.' },
-  mags: { line: "Bizzington's best salesperson, and honest about it.", quote: 'Some of this earns its keep and some of it is just lovely — and I have written which is which.', why: 'Mags runs the General Store and sends most of the letters. When something is "today only", it is usually her.' },
-  bo:   { line: 'Sure the market is going up. Always.', quote: 'Up on the week! I said it would be. I say that every week.', why: 'Bo and Bea argue on the Exchange steps so you can hear both sides and do nothing, which is usually right.' },
-  bea:  { line: 'Sure the market is going down. Always.', quote: 'Down on the week. Sell? No. I only say that so you notice the feeling.', why: 'Bea is the other half of the argument. Neither of them is a forecast; they are the two voices in your own head.' },
-};
+/* LORE lives in content.js now, so My Feed's build can cut the cast's lines from it */
 function castCard(who) {
   const p = CAST[who] || CAST.pip, l = LORE[who] || LORE.pip;
   return `<div style="text-align:center">${face(who, 120)}</div>

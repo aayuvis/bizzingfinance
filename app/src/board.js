@@ -40,7 +40,7 @@ export const SQUARES = [
 /* Chance is where the real money events live: insurance that only pays off
    if you bought it before you needed it, a subscription nobody remembers
    signing up for, a rent rise that never goes away again. */
-const CARDS = [
+export const CARDS = [
   { id: 'crack', em: '📱', t: 'Your screen is cracked',
     body: 'Thirty to fix it — unless you took the cover when it was offered.',
     run: (g, p) => p.insured
@@ -86,7 +86,7 @@ const CARDS = [
    200 games: steady 92, Mags 87, Bo 21 — so the boring middle wins, narrowly,
    and both failure modes are on the table. */
 const SHINY = 18, BIG = 140;
-const BOTS = [
+export const BOTS = [
   { name: 'Mags', who: 'mags', buy: (p, sq) => p.cash >= sq.cost, insure: false,
     line: 'If I can afford it I am having it.' },
   { name: 'Bo', who: 'bo', buy: (p, sq) => sq.cost >= BIG && p.cash - sq.cost >= 60, insure: true,

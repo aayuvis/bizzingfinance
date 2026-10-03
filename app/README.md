@@ -101,6 +101,7 @@ build rides along at `/bizzington.html`.
 | `src/catalogue.js` `src/looks.js` | The 96 avatars and the six worlds, through the family's `bizzing-avatars.js`; bought with Bizzing coins only. |
 | `src/familyviews.js` | Shop (Avatars · Worlds · Extras + coin history), Collection, My page card, Town, Ones to try again. |
 | `src/ambient.js` `src/audio.js` | A world's three layers of life behind the top bar; music and effects composed in code (`music/CREDITS.md`). |
+| `src/feed.js` `tools/build-feed.mjs` `tools/feed-corpus.mjs` | **My Feed**, the last tab (FAMILY-STANDARD §6a): cards cut from the corpus at build time into `src/feed/` (an index plus nine lazy groups — one per chapter, one with no level; never hand-edit, rerun the tool), ranked on the device by the family's `bizzing-feed.js` from the chapter she is on, what she just did and what slipped, behind the arithmetic gate. About twenty, then it ends; only a right answer to a card's question pays — one family coin, once. A grown-up switches it off behind the PIN. `test/feed.mjs` holds it; `tools/feed-manifest.json` says what each chapter holds and what would close its gap. |
 | `src/search.js` `src/mistakes.js` `src/items.js` `src/cert.js` `src/pin.js` | Search over the town · the mistakes deck · "Your turn" items (sort, order, amount) · world certificates · the hashed PIN. |
 
 `state → render()` returning a string, clicks dispatched by `[data-act]` — the Bizzing Bee

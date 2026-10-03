@@ -432,7 +432,15 @@ export function hintFor(card, qi = 0) {
   return [`Read ${who}'s lesson above once more, then try a different answer.`, 'Read the lesson above once more, then pick again.']
     .find((x) => !leaks(x, d)) || 'Have another go.';
 }
-const CAST_NAMES = { nana: 'Nana Bizz', pip: 'Pip', mags: 'Mags', bo: 'Bo', bea: 'Bea' };
+/* ── the cast, in their own words (the cast cards; My Feed cuts its cast cards from here) ── */
+export const LORE = {
+  pip:  { line: 'Your neighbour on Market Row, and the first to say "there is work going".', quote: 'Wages from in here land in the same wallet as everything else. There is no second, magic money.', why: 'Pip is the voice of the street: jobs, quests, the postbox, and the plain sentence when a number needs one.' },
+  nana: { line: 'Ran the shop at the end of the road for sixty years, and is shutting it up.', quote: 'Split it the moment it lands. What sits in one pile gets spent as one pile.', why: 'Nana Bizz teaches: every lesson is hers, and so are the jars, the Bank, and the shop she hands over.' },
+  mags: { line: "Bizzington's best salesperson, and honest about it.", quote: 'Some of this earns its keep and some of it is just lovely — and I have written which is which.', why: 'Mags runs the General Store and sends most of the letters. When something is "today only", it is usually her.' },
+  bo:   { line: 'Sure the market is going up. Always.', quote: 'Up on the week! I said it would be. I say that every week.', why: 'Bo and Bea argue on the Exchange steps so you can hear both sides and do nothing, which is usually right.' },
+  bea:  { line: 'Sure the market is going down. Always.', quote: 'Down on the week. Sell? No. I only say that so you notice the feeling.', why: 'Bea is the other half of the argument. Neither of them is a forecast; they are the two voices in your own head.' },
+};
+export const CAST_NAMES = { nana: 'Nana Bizz', pip: 'Pip', mags: 'Mags', bo: 'Bo', bea: 'Bea' };
 
 /* ── the worlds ──────────────────────────────────────────────────────────
    The game is a journey between places, not one street. Each world carries

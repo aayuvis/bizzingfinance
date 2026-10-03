@@ -1673,7 +1673,8 @@ export function viewParents() {
       <div class="row"><span class="small grow">Mode</span>
         <button class="btn ghost sm" data-act="band">${c.band === 'sprout' ? 'Sprout (8–10)' : 'Builder (11+)'}</button></div>
       <div class="row"><span class="small grow">Sound</span>
-        <button class="btn ${s.settings.sound ? '' : 'ghost'} sm" data-act="sound">${s.settings.sound ? 'On' : 'Off'}</button></div>
+        <button class="btn ${s.settings.sound ? '' : 'ghost'} sm" data-act="sound">${s.settings.sound ? 'On' : 'Off'}</button></div>      <div class="row"><span class="small grow">My Feed <span class="muted">— about twenty cards from across the town, and then it ends. Off removes the tab and the ☰ row.</span></span>
+        <button class="btn ${s.settings.feedOff ? 'ghost' : ''} sm" role="switch" aria-checked="${!s.settings.feedOff}" data-act="feedToggle">${s.settings.feedOff ? 'Off' : 'On'}</button></div>
     </div>
 
     ${placementCard(c)}

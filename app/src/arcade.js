@@ -221,7 +221,7 @@ function twoChoice(cfg) {
 }
 
 /* ══ 1 · NEEDS vs WANTS ═══════════════════════════════════════════════ */
-const NW = [
+export const NW = [
   { em: '🍚', t: 'Rice for the week', a: 'need' },
   { em: '🎮', t: 'A new game', a: 'want' },
   { em: '🧥', t: 'A winter coat', a: 'need' },
@@ -250,7 +250,7 @@ function needsWants() {
 /* ══ 2 · SCAM SPOTTER ═════════════════════════════════════════════════
    Half of these are real and ordinary. A game where everything is a scam
    teaches suspicion; the skill is telling them apart. */
-const SS = [
+export const SS = [
   { t: 'Your parcel could not be delivered. Pay the £1.99 redelivery fee here to reschedule.', a: 'scam',
     note: 'A tiny fee is the hook — it is not about the £1.99, it is about your card details.' },
   { t: 'Hi, it\'s Nani. Are you free on Sunday? Ask your mother and let me know.', a: 'safe',
@@ -1085,7 +1085,7 @@ function coin(ctx, x, y, r, v) {
    A game whose winning move is inaction. The only big button sells; the
    small one re-reads your own plan. Panic rises on its own and jumps every
    time somebody shouts. Nothing else in the app can teach this. */
-const SHOUTS = [
+export const SHOUTS = [
   ['bea', 'It is down again. I told you. GET OUT.'],
   ['bea', 'Everyone is selling. Everyone.'],
   ['mags', 'Sell me yours cheap and I will look after it for you.'],
