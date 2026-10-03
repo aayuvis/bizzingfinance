@@ -12043,7 +12043,7 @@ ${marks}`;
     <ul class="plist">
       <li><b>Continue</b> on Home is always the next thing \u2014 a lesson, or a question you met a while ago.</li>
       <li><b>Town</b> is the map of the town: travel between places, the street's buildings, and the repairs.</li>
-      <li><b>Learn</b> is the Money Atlas. <b>Money</b> is your wallet, jars, bank and the Exchange. <b>Play</b> has the games.</li>
+      <li><b>Atlas</b> is the Money Atlas \u2014 every lesson, stop by stop. <b>Money</b> is your wallet, jars, bank and the Exchange. <b>Play</b> has the games.</li>
       <li><b>Town money</b> is the money you are learning to run. <b>Bizzing coins</b> come from learning in any Bizzing app and buy faces and worlds in the Shop.</li>
       <li>Nothing is random. Nothing is lost for a day off.</li>
     </ul>
@@ -17207,7 +17207,7 @@ ${drawerHTML(o)}`;
         ctaIcon: "town",
         progress: { pct: Math.round(frac * 100) }
       },
-      tip: tip ? { kicker: "Tip from a card you read", text: tip.text, href: "#/learn" } : { kicker: "Tip", text: "Split money the moment it lands \u2014 a pile gets spent as a pile.", href: "#/learn" },
+      tip: tip ? { kicker: "Tip from a card you read", text: tip.text, href: "#/atlas" } : { kicker: "Tip", text: "Split money the moment it lands \u2014 a pile gets spent as a pile.", href: "#/learn" },
       quote: { kicker: "Overheard in Bizzington", text: cast[1], who: cast[0], href: "#/medals" },
       foot: '<a href="#/privacy">Privacy</a> \xB7 Bizzing Finance \u2014 no real money, ever'
     });
@@ -19454,11 +19454,11 @@ ${drawerHTML(o)}`;
     fire(n.act, n.arg || void 0);
   }
   var kidBadge2 = kidBadge;
-  var ALIAS = { arcade: "play", worlds: "town", progress: "me" };
+  var ALIAS = { arcade: "play", worlds: "town", progress: "me", atlas: "learn" };
   function writeHash() {
     if (!R.s || !R.s.kids.length) return;
     const u = R.s.ui;
-    const h = "#/" + u.nav + (u.nav === "money" ? "/" + u.sub : "");
+    const h = "#/" + (u.nav === "learn" ? "atlas" : u.nav) + (u.nav === "money" ? "/" + u.sub : "");
     if (location.hash !== h) {
       selfHash = h;
       location.hash = h;
@@ -19480,11 +19480,11 @@ ${drawerHTML(o)}`;
       R.sheetArg = decodeURIComponent(m[1] || "");
       return false;
     }
-    const known = ["home", "town", "learn", "money", "play", "arcade", "store", "progress", "me", "collection", "medals", "shop", "words", "mistakes", "parents", "worlds", "report", "market40", "feed"];
+    const known = ["home", "town", "learn", "atlas", "money", "play", "arcade", "store", "progress", "me", "collection", "medals", "shop", "words", "mistakes", "parents", "worlds", "report", "market40", "feed"];
     if (known.indexOf(m[0]) < 0) return false;
     R.s.ui.nav = ALIAS[m[0]] || m[0];
     if (m[0] === "money" && m[1]) R.s.ui.sub = m[1];
-    if (m[0] === "learn" && m[1] && R.s.kids.length) {
+    if ((m[0] === "learn" || m[0] === "atlas") && m[1] && R.s.kids.length) {
       const k = cardById(m[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
       if (k && !(ch && chapterLocked(C3(), ch))) {
         C3().learn.openCard = k.id;
@@ -19532,7 +19532,7 @@ ${drawerHTML(o)}`;
       tabs: [
         { id: "home", label: "Home", icon: "home", href: "#/home" },
         { id: "town", label: "Town", icon: "town", href: "#/town" },
-        { id: "learn", label: "Learn", icon: "learn", href: "#/learn" },
+        { id: "learn", label: "Atlas", icon: "learn", href: "#/atlas" },
         { id: "money", label: "Money", icon: "coins", href: "#/money" },
         { id: "play", label: "Play", icon: "play", href: "#/play" },
         /* My Feed is the LAST tab (owner, 2 Oct 2026); a grown-up can switch it off behind the PIN */
