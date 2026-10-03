@@ -149,7 +149,7 @@ The [Bizzing family standard](https://github.com/aayuvis/Bizzing_Schedule/blob/c
 is binding where it is not stricter here. What it changed in this repo:
 
 - **One next step.** `src/next.js` `nextStep()` is the only function that decides what Continue
-  means. Home's Continue, Learn's Up next and the rail all ask it. Never compute a "next thing"
+  means. Home's Continue, the Atlas's Up next and the rail all ask it. Never compute a "next thing"
   anywhere else (`test/family.mjs`).
 - **One filled button on Home** — Continue. Everything else on Home is ghost (`test/browser.mjs`).
 - **No streaks.** `goodDays` is a fortnight of days something was learned, shown as *good days this
@@ -175,7 +175,7 @@ is binding where it is not stricter here. What it changed in this repo:
   extra**; nothing in `catalogue.js`, `looks.js` or the Shop reads or writes `c.money`.
   `validate(CATALOGUE)` returns `[]` in `test/avatars.mjs`. **Nothing random, ever**: no blind
   packs, no chance, no duplicates, no trading — and the money rules above all still hold.
-- **The family chrome** lives in `src/shell.js`: Bee's top bar, six tabs (Home · Town · Learn ·
+- **The family chrome** lives in `src/shell.js`: Bee's top bar, six tabs (Home · Town · Atlas ·
   Money · Play · My Feed — the feed last, owner 2 Oct 2026), the ☰ drawer in the family order, Settings in the five sections, the coin chip's
   history sheet, search over the whole town (`src/search.js`). Pip the squirrel is the one mascot
   (six poses in `public/mascot/`); Nana Bizz, Mags, Bo and Bea stay as the town's cast.

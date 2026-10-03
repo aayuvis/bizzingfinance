@@ -82,7 +82,7 @@ function goContinue() {
 const kidBadge = shell.kidBadge;
 
 /* old names, still accepted in a link or a bookmark */
-const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me' };
+const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me', atlas: 'learn' };
 
 /* ══ routing ══════════════════════════════════════════════════════════
    The back button is not a nice-to-have on a phone; it is how people leave
@@ -90,7 +90,8 @@ const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me' };
 function writeHash() {
   if (!R.s || !R.s.kids.length) return;
   const u = R.s.ui;
-  const h = '#/' + u.nav + (u.nav === 'money' ? '/' + u.sub : '');
+  /* the Learn screen is called the Atlas, and so is its address */
+  const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '');
   if (location.hash !== h) { selfHash = h; location.hash = h; }
 }
 function readHash() {
@@ -101,13 +102,13 @@ function readHash() {
   if (['settings', 'help', 'privacy'].includes(m[0])) { R.sheetNow = m[0]; return false; }
   /* a sheet that names its subject: a figure's "How we know" (My Feed's figure cards), a cast card */
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
-  const known = ['home', 'town', 'learn', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
+  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
-  /* deep links (My Feed's cards): #/learn/<card> opens the lesson when its chapter is open;
+  /* deep links (My Feed's cards): #/atlas/<card> (or the older #/learn/<card>) opens the lesson when its chapter is open;
      #/words/<term> opens Money Words on that word */
-  if (m[0] === 'learn' && m[1] && R.s.kids.length) {
+  if ((m[0] === 'learn' || m[0] === 'atlas') && m[1] && R.s.kids.length) {
     const k = cardById(m[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
     if (k && !(ch && chapterLockedFor(C(), ch))) { C().learn.openCard = k.id; C().learn.drill = null; R.shelf = ''; }
   }
@@ -165,7 +166,7 @@ function render() {
     kid: { name: c.name, avatar: avatarSrc(c.avatar) }, search: 'Search lessons, words, games…', query: R.sq || '',
     inRun: !!R.game,
     tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
-      { id: 'learn', label: 'Learn', icon: 'learn', href: '#/learn' }, { id: 'money', label: 'Money', icon: 'coins', href: '#/money' },
+      { id: 'learn', label: 'Atlas', icon: 'learn', href: '#/atlas' }, { id: 'money', label: 'Money', icon: 'coins', href: '#/money' },
       { id: 'play', label: 'Play', icon: 'play', href: '#/play' },
       /* My Feed is the LAST tab (owner, 2 Oct 2026); a grown-up can switch it off behind the PIN */
       ...(FEED.on(s) ? [{ id: 'feed', label: 'My Feed', icon: 'feed', href: '#/feed' }] : [])],

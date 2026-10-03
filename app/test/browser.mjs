@@ -137,7 +137,7 @@ async function run(label, vp, isMobile, scheme) {
   await goto('#/learn');
   const learnNext = (await page.textContent('.upnext .untitle')).trim();
   ok(`${label}: Home and Learn name the same next step`, homeNext === learnNext, `${homeNext} / ${learnNext}`);
-  await a11y('Learn'); await noOverflow('Learn');
+  await a11y('Atlas'); await noOverflow('Atlas');
   await page.waitForTimeout(300);
   ok(`${label}: every picture on Learn loads`, !(await broken()).length, (await broken()).join(' '));
   await goto('#/arcade');
@@ -349,7 +349,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: checkShell — the chrome and Home match Bee's`, shellFails.length === 0, JSON.stringify(shellFails));
   await page.setViewportSize(vp); await page.waitForTimeout(200);
   const tabs = await page.evaluate((m) => [...document.querySelectorAll(m ? '[data-bz=tabbar] a' : '[data-bz=tabs] [data-bz=tab]')].filter((t) => t.offsetParent).map((t) => t.textContent.trim()), isMobile);
-  ok(`${label}: six tabs — Home · Town · Learn · Money · Play · My Feed (last) — and no More`, tabs.join(',') === 'Home,Town,Learn,Money,Play,My Feed', tabs.join(','));
+  ok(`${label}: six tabs — Home · Town · Atlas · Money · Play · My Feed (last) — and no More`, tabs.join(',') === 'Home,Town,Atlas,Money,Play,My Feed', tabs.join(','));
   /* §5 Settings: Me · Sound & music · Look · Comfort · Grown-ups */
   await page.evaluate(() => window.BZF.fire('settings')); await page.waitForTimeout(250);
   const secs = await page.evaluate(() => [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()));

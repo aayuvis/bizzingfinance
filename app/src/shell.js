@@ -4,7 +4,7 @@
      [⬡ Hive] [☰] [Pip + Bizzing Finance] ……… [search] [coin chip] [theme] [🔒] [avatar ▾]
    On a phone it keeps ⬡ ☰ logo … coin · avatar; search, theme and 🔒 move into ☰.
 
-   Five tabs — Home · Town · Learn · Money · Play — as Bee's row on a desk and a bottom
+   Five tabs — Home · Town · Atlas · Money · Play — as Bee's row on a desk and a bottom
    bar on a phone. Everything else lives in the ☰ drawer, in the family's order: My
    page · Shop · Collection · Medals · (four Finance areas) · Settings · Grown-ups ·
    Help · Privacy · Back to the Hive. There is no "More" tab.
@@ -25,7 +25,7 @@ export const HIVE = 'https://aayuvis.github.io/Bizzing_Schedule/';
 export const TABS = [
   { k: 'home', n: 'Home', i: 'home' },
   { k: 'town', n: 'Town', i: 'town' },
-  { k: 'learn', n: 'Learn', i: 'learn' },
+  { k: 'learn', n: 'Atlas', i: 'learn' },
   { k: 'money', n: 'Money', i: 'wallet' },
   { k: 'play', n: 'Play', i: 'arcade' },
 ];
@@ -220,7 +220,7 @@ export function helpSheet() {
     <ul class="plist">
       <li><b>Continue</b> on Home is always the next thing — a lesson, or a question you met a while ago.</li>
       <li><b>Town</b> is the map of the town: travel between places, the street's buildings, and the repairs.</li>
-      <li><b>Learn</b> is the Money Atlas. <b>Money</b> is your wallet, jars, bank and the Exchange. <b>Play</b> has the games.</li>
+      <li><b>Atlas</b> is the Money Atlas — every lesson, stop by stop. <b>Money</b> is your wallet, jars, bank and the Exchange. <b>Play</b> has the games.</li>
       <li><b>Town money</b> is the money you are learning to run. <b>Bizzing coins</b> come from learning in any Bizzing app and buy faces and worlds in the Shop.</li>
       <li>Nothing is random. Nothing is lost for a day off.</li>
     </ul>

@@ -326,7 +326,7 @@ export function viewHome() {
       title: n.title, sub: n.sub, href: '#/continue', cta: n.button || 'Continue', progress: { pct: Math.round(pr.worldDone / Math.max(1, pr.worldTotal) * 100), label: `${pr.world.name} · ${pr.worldDone} of ${pr.worldTotal} stops` } },
     second: { plate: plateFor(here.id, R.dark), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
       progress: { pct: Math.round(frac * 100) } },
-    tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/learn' } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/learn' },
+    tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas' } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/learn' },
     quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/medals' },
     foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
   });
@@ -639,7 +639,7 @@ function viewLearnOld() {
   const rank = rankObj(c.learn.level);
 
   return `<div class="stack">
-    ${hero({ eyebrow: `${ico(rank.em, rank.em, 14)} ${rank.name} · level ${c.learn.level} of 30`, title: 'Learn',
+    ${hero({ eyebrow: `${ico(rank.em, rank.em, 14)} ${rank.name} · level ${c.learn.level} of 30`, title: 'Atlas',
       big: `${c.learn.xp} XP`, sub: `${bar.need} XP to level ${c.learn.level + 1}`, figure: face('nana', 118),
       who: 'pip', line: 'Every card ends with one question. Get it right and the town grows. Get it wrong and I tell you why — that counts too.' })}
     <div class="ladder">
