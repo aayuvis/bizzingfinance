@@ -39,22 +39,26 @@ const K = () => sim.kid(R.s);
 const W = 360, H = 300;
 
 /* Which mechanic each job uses, and the dressing that makes it that job.
-   `par` is a competent run — pay is the score against it — and it is tuned so
-   an average shift pays about what the old button paid. */
+   `par` is a competent run — pay is the score against it. The score is the
+   skill (square drops, the right side, clean chains, every door) and mistakes
+   subtract, so it is tuned against three headless players: a careful one
+   lands near 1.6x par (A cracking shift), a careless one near 0.6-1.0x
+   (Got it done), and no input at all scores about nothing and still
+   reaches the end card. */
 export const JOB_GAME = {
-  crates:    { kind: 'stack',  par: 8,  item: '📦', verb: 'Stack them square', tint: '--treasure' },
-  haul:      { kind: 'stack',  par: 8,  item: '🛒', verb: 'Load the handcart',  tint: '--treasure' },
-  counter:   { kind: 'stack',  par: 9,  item: '🥫', verb: 'Stock the shelves',  tint: '--treasure' },
-  cargo:     { kind: 'trim',   par: 14, item: '⚓', verb: 'Keep her level',     tint: '--save' },
-  nets:      { kind: 'trim',   par: 12, item: '🕸️', verb: 'Balance the load',   tint: '--save' },
-  books:     { kind: 'trim',   par: 13, item: '📒', verb: 'Balance the books',  tint: '--save' },
-  sweep:     { kind: 'sweep',  par: 16, item: '🧹', verb: 'Clear the Row',      tint: '--grow' },
-  lamplight: { kind: 'sweep',  par: 15, item: '🏮', verb: 'Light every lamp',   tint: '--grow' },
-  mend:      { kind: 'sweep',  par: 15, item: '🧵', verb: 'Mend the lot',       tint: '--grow' },
-  flyers:    { kind: 'runner', par: 12, item: '📄', verb: 'Every door on the Row', tint: '--action' },
-  errands:   { kind: 'runner', par: 13, item: '🏃', verb: 'Every stop, in order',  tint: '--action' },
-  runner:    { kind: 'runner', par: 14, item: '📨', verb: 'Get the orders out',    tint: '--action' },
-  board:     { kind: 'runner', par: 13, item: '🖍️', verb: 'Chalk up every price',  tint: '--action' },
+  crates:    { kind: 'stack',  par: 40, item: '📦', verb: 'Stack them square', tint: '--treasure' },
+  haul:      { kind: 'stack',  par: 40, item: '🛒', verb: 'Load the handcart',  tint: '--treasure' },
+  counter:   { kind: 'stack',  par: 41, item: '🥫', verb: 'Stock the shelves',  tint: '--treasure' },
+  cargo:     { kind: 'trim',   par: 26, item: '⚓', verb: 'Keep her level',     tint: '--save' },
+  nets:      { kind: 'trim',   par: 24, item: '🕸️', verb: 'Balance the load',   tint: '--save' },
+  books:     { kind: 'trim',   par: 25, item: '📒', verb: 'Balance the books',  tint: '--save' },
+  sweep:     { kind: 'sweep',  par: 36, item: '🧹', verb: 'Clear the Row',      tint: '--grow' },
+  lamplight: { kind: 'sweep',  par: 35, item: '🏮', verb: 'Light every lamp',   tint: '--grow' },
+  mend:      { kind: 'sweep',  par: 35, item: '🧵', verb: 'Mend the lot',       tint: '--grow' },
+  flyers:    { kind: 'runner', par: 23, item: '📄', verb: 'Every door on the Row', tint: '--action' },
+  errands:   { kind: 'runner', par: 24, item: '🏃', verb: 'Every stop, in order',  tint: '--action' },
+  runner:    { kind: 'runner', par: 25, item: '📨', verb: 'Get the orders out',    tint: '--action' },
+  board:     { kind: 'runner', par: 24, item: '🖍️', verb: 'Chalk up every price',  tint: '--action' },
 };
 export function hasJobGame(id) { return !!JOB_GAME[id]; }
 
@@ -156,7 +160,7 @@ function shell(spec) {
   const job = JOBS.find((j) => j.id === jobId) || { name: 'Work', who: 'the town' };
   const cfg = JOB_GAME[jobId];
   const FX = fx(), CD = countdown(), img = plate((K() && K().world) || 0);
-  let raf = 0, last = 0, ctx = null, cv = null, T = 0, said = 3;
+  let raf = 0, last = 0, ctx = null, cv = null, T = 0, said = 3, dpr = 1;
   st.over = false; st.overT = 0;
   const live = () => CD.done && !st.over && !st.done;
 
@@ -221,7 +225,8 @@ function shell(spec) {
     } else if (!st.over) step(dt, finish);
     else { st.overT += dt; if (st.overT >= (still() ? 500 : 1500)) { end(); return; } }
     FX.step(dt);
-    if (ctx) paint();
+    /* a drawing fault must never stop the shift: the clock keeps running */
+    if (ctx) { try { paint(); } catch (e) { if (ctx.reset) { ctx.reset(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); } } }
     raf = requestAnimationFrame(loop);
   };
 
@@ -235,7 +240,7 @@ function shell(spec) {
     mount() {
       cv = document.getElementById('jobCanvas');
       if (!cv) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = W * dpr; cv.height = H * dpr;
       ctx = cv.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -302,6 +307,7 @@ function shade(hex) {
   return '#' + [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((c) => f(c).toString(16).padStart(2, '0')).join('');
 }
 function cargoOne(ctx, look, x, y, w, h, tint) {
+  if (w < 6) { ctx.fillStyle = tint; ctx.fillRect(x, y, Math.max(0, w), h); return; }
   if (look === 'sack') {
     ctx.fillStyle = tint; rr(ctx, x, y + 1, w, h - 1, Math.min(9, w / 3)); ctx.fill();
     ctx.strokeStyle = 'rgba(90,64,30,.7)'; ctx.lineWidth = 1.6; rr(ctx, x + 0.8, y + 1.8, w - 1.6, h - 2.6, Math.min(9, w / 3)); ctx.stroke();
@@ -324,11 +330,11 @@ function cargoOne(ctx, look, x, y, w, h, tint) {
 function stackGame(jobId, quit) {
   const c = K(), t = tier(c);
   const look = STACK_LOOK[jobId] || 'crate', tints = STACK_TINT[look];
-  const SHIFT = 16, CLOCK = 60000, CH = 26, BASEW = 120, BASEX = (W - BASEW) / 2, BASEY = H - 42, HOOK = 66, SNAP = 6;
-  const st = { score: 0, done: false, w: BASEW, x: 0, dir: 1, pile: [], falling: null, msg: '', lives: 3, combo: 0,
+  const SHIFT = 16, CLOCK = 60000, CH = 26, BASEW = 120, BASEX = (W - BASEW) / 2, BASEY = H - 42, HOOK = 66, SNAP = 5;
+  const st = { score: 0, landed: 0, done: false, w: BASEW, x: 0, dir: 1, pile: [], falling: null, msg: '', lives: 3, combo: 0,
     left: CLOCK, cam: 0, debris: [], land: 0, misses: 0 };
   const top = () => (st.pile.length ? st.pile[st.pile.length - 1] : { x: BASEX, w: BASEW });
-  const speed = () => 0.11 + t * 0.015 + st.score * 0.007;
+  const speed = () => 0.11 + t * 0.015 + st.landed * 0.007;
   const topScreen = () => BASEY - st.pile.length * CH + st.cam;
 
   const drop = () => {
@@ -339,29 +345,35 @@ function stackGame(jobId, quit) {
     const f = st.falling; st.falling = null;
     const tp = top(), ty = topScreen();
     if (Math.abs(f.x - tp.x) <= SNAP) {
-      st.pile.push({ x: tp.x, w: tp.w, tint: f.tint });
-      st.combo++; st.score++; st.land = 1;
-      st.msg = st.combo >= 3 ? `Combo x${st.combo}` : 'Dead square!';
-      FX.pop(tp.x + tp.w / 2, ty - CH - 10, st.combo >= 3 ? `Perfect! x${st.combo}` : 'Perfect!', { color: '#8A5B00', size: 18 });
+      /* a square drop wins back a little width, so care keeps a run alive */
+      const nw = Math.min(BASEW, tp.w + 8), nx = clamp(tp.x - (nw - tp.w) / 2, 0, W - nw);
+      st.pile.push({ x: nx, w: nw, tint: f.tint });
+      st.w = nw;
+      /* square pays four: the skill is the score */
+      st.combo++; st.score += 4; st.landed++; st.land = 1;
+      st.msg = st.combo >= 3 ? `${st.combo} square in a row` : 'Dead square!';
+      FX.pop(tp.x + tp.w / 2, ty - CH - 10, st.combo >= 3 ? `Perfect x${st.combo} +4` : 'Perfect! +4', { color: '#8A5B00', size: 18 });
       FX.coins(tp.x + tp.w / 2, ty - CH, 4 + Math.min(4, st.combo));
       sfx.good();
     } else {
       const l = Math.max(f.x, tp.x), r = Math.min(f.x + f.w, tp.x + tp.w), overlap = r - l;
       if (overlap <= 8) {
-        st.lives--; st.combo = 0; st.misses++;
-        st.msg = st.lives > 0 ? 'Wobble!' : 'Off the pile';
+        st.lives--; st.combo = 0; st.misses++; st.score = Math.max(0, st.score - 3);
+        st.msg = st.lives > 0 ? 'Wobble! −3' : 'Off the pile';
         st.debris.push({ x: f.x, w: f.w, y: ty - CH, vx: (f.x + f.w / 2 < tp.x + tp.w / 2 ? -1 : 1) * 0.12, vy: -0.1, rot: 0, vr: (Math.random() - 0.5) * 0.012, tint: f.tint });
         FX.shake(9, 320); FX.flash('#E0483E', 200);
-        FX.pop(f.x + f.w / 2, ty - CH - 12, st.lives > 0 ? 'Wobble!' : 'Off the pile!', { color: '#C4453C', size: 18 });
+        FX.pop(f.x + f.w / 2, ty - CH - 12, st.lives > 0 ? 'Wobble! −3' : 'Off the pile!', { color: '#C4453C', size: 18 });
         sfx.bad();
         if (st.lives <= 0) { st.end(); return; }
       } else {
         st.pile.push({ x: l, w: overlap, tint: f.tint });
         const cut = f.w - overlap;
         if (cut > 0.5) st.debris.push({ x: f.x < tp.x ? f.x : r, w: cut, y: ty - CH, vx: (f.x < tp.x ? -1 : 1) * 0.08, vy: -0.05, rot: 0, vr: (f.x < tp.x ? -1 : 1) * 0.006, tint: f.tint });
-        st.w = overlap; st.combo = 0; st.score++; st.land = 1;
-        st.msg = '';
-        FX.pop(l + overlap / 2, ty - CH - 10, '+1', { color: '#1C2A2E', size: 17 });
+        /* close pays two, rough pays one — and the pile is narrower either way */
+        const pts = cut / f.w < 0.1 ? 2 : 1;
+        st.w = overlap; st.combo = 0; st.score += pts; st.landed++; st.land = 1;
+        st.msg = pts > 1 ? 'Close' : '';
+        FX.pop(l + overlap / 2, ty - CH - 10, pts > 1 ? 'Close +2' : 'Rough +1', { color: pts > 1 ? '#1C2A2E' : '#8A5A3C', size: 17 });
         FX.burst(l + overlap / 2, ty, { n: 8, colors: ['#D8C29A', '#B9A684'], speed: 0.12, size: 3 });
         sfx.click();
       }
@@ -369,12 +381,12 @@ function stackGame(jobId, quit) {
     /* the next crate starts from a side, never where the last one landed */
     st.dir = st.pile.length % 2 ? -1 : 1;
     st.x = st.dir > 0 ? 0 : W - st.w;
-    if (st.score >= SHIFT) { st.msg = 'Shift done'; st.end(); }
+    if (st.landed >= SHIFT) { st.msg = 'Shift done'; st.end(); }
   };
 
   let FXref = null;
   return shell({
-    jobId, st, quit, unit: look === 'sack' ? 'sacks' : look === 'carton' ? 'boxes' : 'crates',
+    jobId, st, quit, unit: 'points',
     step(dt) {
       st.left -= dt;
       if (st.left <= 0) { st.left = 0; st.end(); return; }
@@ -500,18 +512,19 @@ function stackGame(jobId, quit) {
     hud(ctx) {
       const w = pill(ctx, `${Math.ceil(st.left / 1000)}s`, W - 8, 8, { warn: st.left < 10000 });
       lives(ctx, st.lives, 3, W - 14 - w, 8);
-      if (st.combo >= 2) label(ctx, `Combo x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#B57E10' });
+      pill(ctx, `${st.landed}/${SHIFT}`, W - 8, 32);
+      if (st.combo >= 2) label(ctx, `Square x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#B57E10' });
     },
     probe: () => { const tp = top();
-      return { kind: 'stack', x: st.x, w: st.w, topX: tp.x, topW: tp.w, falling: !!st.falling, score: st.score, lives: st.lives, left: st.left }; },
+      return { kind: 'stack', x: st.x, w: st.w, topX: tp.x, topW: tp.w, falling: !!st.falling, score: st.score, landed: st.landed, lives: st.lives, left: st.left }; },
     onKey(e) { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') { if (e.preventDefault) e.preventDefault(); drop(); } },
     onPoint() { drop(); },
     onAct(n) { if (n === 'jgDrop') drop(); },
     controls: () => `<button class="btn wide" data-act="jgDrop" style="margin-top:8px">Drop it</button>`,
-    hint: 'Space, or tap anywhere. Land it square and it snaps — whatever hangs over the edge falls off. Three wobbles and the shift is over.',
-    boxes: () => [`${st.score} stacked`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
-    finishLine: (s) => s.score >= 12
-      ? 'Nobody stacks twelve by accident. That is a skill, and it is worth more per hour than the sweeping.'
+    hint: 'Space, or tap anywhere. Square pays 4, close pays 2, rough pays 1 — and what hangs over falls off. A wobble costs 3; three and the shift is over.',
+    boxes: () => [`${st.landed}/${SHIFT} ${look === 'sack' ? 'sacks' : look === 'carton' ? 'boxes' : 'crates'}`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
+    finishLine: (s) => s.quality >= 1.4
+      ? 'Nobody stacks that square by accident. That is a skill, and it is worth more per hour than the sweeping.'
       : 'Every one you land square makes the next one easier. That is most jobs, really.',
   });
 }
@@ -564,9 +577,9 @@ function trimGame(jobId, quit) {
   const c = K(), t = tier(c);
   const SHIFT = 20, PX = W / 2, PY = 202, HANG = 74;
   const kinds = TRIM_LOOKS[jobId] || TRIM_LOOKS.cargo;
-  const st = { score: 0, done: false, tilt: 0, shown: 0, queue: [], spawn: 600, t: 0, msg: '', limit: 42, lives: 3, combo: 0,
+  const st = { score: 0, loads: 0, done: false, tilt: 0, shown: 0, queue: [], spawn: 600, t: 0, msg: '', limit: 42, lives: 3, combo: 0,
     deck: [], flying: [], swing: 0 };
-  const gap = () => Math.max(620, 1500 - t * 90 - st.score * 40);
+  const gap = () => Math.max(560, 1350 - t * 90 - st.loads * 40);
   const ang = () => (st.shown / st.limit) * 0.34;
   /* where on deck a load of this side sits, in the boat's own frame */
   const slot = (side, i) => ({ x: side * (30 + (i % 3) * 34 + Math.floor(i / 3) * 14), y: -20 - Math.floor(i / 3) * 20 });
@@ -574,7 +587,7 @@ function trimGame(jobId, quit) {
   let FX = null;
 
   const lurch = (why) => {
-    st.lives--; st.combo = 0; st.msg = why;
+    st.lives--; st.combo = 0; st.msg = why; st.score = Math.max(0, st.score - 3);
     if (FX) { FX.shake(10, 340); FX.flash('#E0483E', 200); FX.pop(PX, 120, why, { color: '#C4453C', size: 18 }); }
     sfx.bad();
     if (st.lives <= 0) { st.end(); return true; }
@@ -583,28 +596,31 @@ function trimGame(jobId, quit) {
   const send = (side) => {
     if (st.done || st.over || !st.queue.length) return;
     const box = st.queue.shift();
+    /* the score is the decision: the side that leaves her nearer level pays two,
+       the other side costs two, and a lurch costs three */
+    const right = Math.abs(st.tilt + side * box.w * 4) <= Math.abs(st.tilt - side * box.w * 4);
     st.tilt += side * box.w * 4;
-    st.score++;
+    st.loads++;
     const n = st.deck.filter((d) => d.side === side).length + st.flying.filter((d) => d.side === side).length;
     st.flying.push({ side, w: box.w, kind: box.kind, t: 0, i: Math.min(5, n) });
     if (Math.abs(st.tilt) > st.limit) {
       /* she lurches; the crew heave the last load over the side and she rights a little */
       const sign = Math.sign(st.tilt); st.tilt = sign * st.limit * 0.5;
       if (lurch('Whoa — she lurched!')) return;
-    } else if (Math.abs(st.tilt) < 8) {
-      st.combo++; st.msg = st.combo >= 3 ? `Level x${st.combo}` : 'Level';
-      if (FX) { FX.pop(PX + side * 60, 110, st.combo >= 3 ? `Level! x${st.combo}` : 'Level!', { color: '#178A4C', size: 17 }); FX.coins(PX + side * 60, 120, 3 + Math.min(4, st.combo)); }
+    } else if (right) {
+      st.score += 2; st.combo++; st.msg = st.combo >= 3 ? `Good trim x${st.combo}` : 'Good trim';
+      if (FX) { FX.pop(PX + side * 60, 110, st.combo >= 3 ? `Trim x${st.combo} +2` : 'Good trim +2', { color: '#178A4C', size: 17 }); FX.coins(PX + side * 60, 120, 3 + Math.min(4, st.combo)); }
       sfx.coin();
     } else {
-      st.msg = '';
-      if (FX) FX.pop(PX + side * 60, 110, '+1', { size: 16 });
+      st.combo = 0; st.msg = 'Wrong side'; st.score = Math.max(0, st.score - 2);
+      if (FX) FX.pop(PX + side * 60, 110, 'Wrong side −2', { color: '#C4453C', size: 15 });
       sfx.click();
     }
-    if (st.score >= SHIFT) { st.msg = 'Shift done'; st.end(); }
+    if (st.loads >= SHIFT) { st.msg = 'Shift done'; st.end(); }
   };
 
   return shell({
-    jobId, st, quit, unit: 'loads',
+    jobId, st, quit, unit: 'points',
     step(dt) {
       st.t += dt; st.spawn -= dt;
       if (st.spawn <= 0 && st.queue.length < 4) {
@@ -614,7 +630,7 @@ function trimGame(jobId, quit) {
       }
       /* The sea does not wait: an unattended boat drifts back towards even,
          slowly, so standing still is neither a win nor instant death. */
-      st.tilt *= 0.9992 ** dt;
+      st.tilt *= 0.9997 ** dt;
       st.shown += (st.tilt - st.shown) * Math.min(1, dt * 0.007);
       st.swing = Math.max(0, st.swing - dt / 900);
       for (let i = st.flying.length - 1; i >= 0; i--) {
@@ -716,12 +732,12 @@ function trimGame(jobId, quit) {
       label(ctx, 'STARBOARD', lx + lw + 2, ly - 12, { size: 9, align: 'right', weight: 700 });
     },
     hud(ctx) {
-      const w = pill(ctx, `${st.score}/${SHIFT}`, W - 8, 8);
+      const w = pill(ctx, `${st.loads}/${SHIFT}`, W - 8, 8);
       lives(ctx, st.lives, 3, W - 14 - w, 8);
-      if (st.combo >= 2) label(ctx, `Level x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#178A4C' });
+      if (st.combo >= 2) label(ctx, `Trim x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#178A4C' });
       if (st.queue.length >= 3) label(ctx, 'Deck filling up!', PX, 150, { size: 13, color: '#C4453C' });
     },
-    probe: () => ({ kind: 'trim', tilt: st.tilt, queue: st.queue.length, next: st.queue.length ? st.queue[0].w : 0, score: st.score, lives: st.lives }),
+    probe: () => ({ kind: 'trim', tilt: st.tilt, queue: st.queue.length, next: st.queue.length ? st.queue[0].w : 0, score: st.score, loads: st.loads, lives: st.lives }),
     onKey(e) {
       if (e.key === 'ArrowLeft') send(-1);
       else if (e.key === 'ArrowRight') send(1);
@@ -731,9 +747,9 @@ function trimGame(jobId, quit) {
     controls: () => `<div class="choices" style="margin-top:8px">
       <button class="btn" data-act="jgPort">← Port</button>
       <button class="btn" data-act="jgStar">Starboard →</button></div>`,
-    hint: 'Arrows, the two buttons, or tap a side of the boat. Heavy one side, heavy the other — let her lean too far and she lurches.',
-    boxes: () => [`${st.score}/${SHIFT} aboard`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
-    finishLine: (s) => s.score >= 16
+    hint: 'Arrows, the two buttons, or tap a side of the boat. The side that brings her back towards level pays 2, the other costs 2 — and a lurch costs 3.',
+    boxes: () => [`${st.loads}/${SHIFT} aboard`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
+    finishLine: (s) => s.quality >= 1.4
       ? 'That is the whole job, and it is the same shape as a budget: it is not what you take on, it is whether it balances.'
       : 'Weight is easy. Weight on one side is the problem — and you can feel it coming before it goes.',
   });
@@ -799,25 +815,27 @@ function sweepGame(jobId, quit) {
   const move = (d) => { st.target = clamp(st.target + d, 20, W - 20); };
 
   return shell({
-    jobId, st, quit, unit: look === 'lamp' ? 'lit' : look === 'mend' ? 'mended' : 'cleared',
+    jobId, st, quit, unit: 'points',
     step(dt) {
       st.left -= dt;
       if (st.left <= 0) { st.left = 0; st.end(); return; }
       st.spawn -= dt;
-      if (st.spawn <= 0 && st.bits.length < 6) {
-        st.spawn = Math.max(1050, 1500 - t * 70);
-        st.bits.push({ x: 30 + Math.random() * (W - 60), y: 30, vy: 0.062 + Math.random() * 0.016 + t * 0.004, age: 0,
+      if (st.spawn <= 0 && st.bits.length < 8) {
+        st.spawn = Math.max(480, 620 - t * 30);
+        st.bits.push({ x: 30 + Math.random() * (W - 60), y: 30, vy: 0.08 + Math.random() * 0.03 + t * 0.004, age: 0,
           ph: Math.random() * 6, amp: 8 + Math.random() * 12, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.006, v: st.n++ });
       }
       const ox = st.x;
-      st.x += (st.target - st.x) * Math.min(1, 0.012 * dt);
+      /* the catcher has a top speed, so reading what lands next is the skill */
+      const dx = st.target - st.x, cap = 0.34 * dt;
+      st.x += Math.max(-cap, Math.min(cap, dx * Math.min(1, 0.02 * dt)));
       st.vx = (st.x - ox) / Math.max(1, dt);
       st.swish += Math.abs(st.vx) * dt * 0.05;
       for (let i = st.bits.length - 1; i >= 0; i--) {
         const b = st.bits[i];
         b.age += dt; b.y += b.vy * dt; b.rot += b.vr * dt;
         const bx = posX(b);
-        if (b.y >= CY - 16 && b.y <= CY + 12 && Math.abs(bx - st.x) < 34) {
+        if (b.y >= CY - 16 && b.y <= CY + 12 && Math.abs(bx - st.x) < 24) {
           st.bits.splice(i, 1); st.chain++; const pts = st.chain % 5 === 0 ? 2 : 1; st.score += pts; st.caught++;
           st.msg = st.chain >= 5 ? st.chain + ' in a row' : '';
           const before = st.glow.length; while (st.glow.length < done()) st.glow.push(1);
@@ -831,7 +849,9 @@ function sweepGame(jobId, quit) {
           sfx.click();
         } else if (b.y > H - 14) {
           st.bits.splice(i, 1);
-          if (st.chain >= 3 && FX) FX.pop(bx, H - 40, 'Chain broken', { color: '#C4453C', size: 14 });
+          /* a miss costs two, and breaks the chain */
+          st.score = Math.max(0, st.score - 2);
+          if (FX) FX.pop(bx, H - 40, st.chain >= 3 ? 'Chain broken −2' : '−2', { color: '#C4453C', size: 14 });
           st.chain = 0; st.msg = 'Missed one';
           if (look === 'sweep') st.ground.push({ x: bx, y: H - 10 - Math.random() * 8, v: b.v, rot: b.rot, a: 1 });
           if (FX) { FX.shake(4, 180); FX.flash('#E0483E', 120); }
@@ -974,11 +994,11 @@ function sweepGame(jobId, quit) {
     controls: () => `<div class="choices" style="margin-top:8px">
       <button class="btn ghost" data-act="jgLeft">←</button>
       <button class="btn ghost" data-act="jgRight">→</button></div>`,
-    hint: look === 'lamp' ? 'Arrows, the buttons, or drag along the Row. Catch the sparks to light the lamps — every fifth in a row counts double.'
-      : look === 'mend' ? 'Arrows, the buttons, or drag along the Row. Catch the thread and patches to mend the bunting — every fifth in a row counts double.'
-      : 'Arrows, the buttons, or drag along the Row. Catch it all before it lands — every fifth in a row counts double.',
+    hint: look === 'lamp' ? 'Arrows, the buttons, or drag along the Row. Catch the sparks to light the lamps — a miss costs 2, every fifth in a row counts double.'
+      : look === 'mend' ? 'Arrows, the buttons, or drag along the Row. Catch the thread and patches to mend the bunting — a miss costs 2, every fifth in a row counts double.'
+      : 'Arrows, the buttons, or drag along the Row. Catch it all before it lands — a miss costs 2, every fifth in a row counts double.',
     boxes: () => [`${st.score}`, `${Math.ceil(st.left / 1000)}s`, st.msg || ' '],
-    finishLine: (s) => s.score >= 20
+    finishLine: (s) => s.quality >= 1.4
       ? 'Fast and tidy. The chain is where the money is, and that is true of the real one too.'
       : 'Every one you let land broke the chain. Steady beats frantic here.',
   });
@@ -1084,7 +1104,7 @@ function runnerGame(jobId, quit) {
   let FX = null, houseAt = [];
 
   return shell({
-    jobId, st, quit, unit: 'delivered',
+    jobId, st, quit, unit: 'points',
     step(dt) {
       st.left -= dt;
       if (st.left <= 0) { st.left = 0; st.end(); return; }
@@ -1093,9 +1113,12 @@ function runnerGame(jobId, quit) {
       st.hurt = Math.max(0, st.hurt - dt);
       st.spawn -= dt;
       if (st.spawn <= 0) {
-        st.spawn = Math.max(520, 1000 - t * 60);
+        /* one drop-off per stretch of street, so every one can be reached —
+           and sometimes a dog in another lane, so getting there takes care */
+        st.spawn = Math.max(560, 900 - t * 50);
         const lane = Math.floor(Math.random() * LANES);
-        st.things.push({ lane, x: W + 20, bad: Math.random() < 0.3 + t * 0.03 });
+        if (Math.random() < 0.82) st.things.push({ lane, x: W + 20, bad: false });
+        if (Math.random() < 0.38 + t * 0.03) st.things.push({ lane: (lane + 1 + Math.floor(Math.random() * 2)) % LANES, x: W + 20, bad: true });
       }
       for (let i = st.things.length - 1; i >= 0; i--) {
         const o = st.things[i];
@@ -1103,19 +1126,19 @@ function runnerGame(jobId, quit) {
         if (o.x < 54 && o.x > 18 && o.lane === st.lane) {
           st.things.splice(i, 1);
           if (o.bad) {
-            st.lives--; st.combo = 0; st.hurt = 700; st.msg = 'Woof!'; sfx.bad();
-            if (FX) { FX.shake(9, 300); FX.flash('#E0483E', 200); FX.pop(RX + 20, LY[o.lane] - 30, 'Woof!', { color: '#C4453C', size: 18 }); }
+            st.lives--; st.combo = 0; st.hurt = 700; st.msg = 'Woof! −3'; st.score = Math.max(0, st.score - 3); sfx.bad();
+            if (FX) { FX.shake(9, 300); FX.flash('#E0483E', 200); FX.pop(RX + 20, LY[o.lane] - 30, 'Woof! −3', { color: '#C4453C', size: 18 }); }
             if (st.lives <= 0) { st.end(); return; }
           } else {
-            st.score++; st.combo++; st.msg = st.combo >= 3 ? `Combo x${st.combo}` : ''; sfx.click();
+            st.combo++; const pts = st.combo % 5 === 0 ? 2 : 1; st.score += pts; st.msg = st.combo >= 3 ? `Combo x${st.combo}` : ''; sfx.click();
             /* the post flies up to the nearest door ahead */
             const door = houseAt.find((h) => h.dx > RX + 10) || { dx: RX + 60, i: -1 };
             st.posts.push({ x0: RX, y0: st.ly - 10, x1: door.dx, y1: 96, t: 0, i: door.i });
-            if (FX) { FX.pop(RX + 24, LY[o.lane] - 34, st.combo >= 3 ? `+1 x${st.combo}` : '+1', { color: st.combo >= 3 ? '#B57E10' : '#1C2A2E', size: 17 }); if (st.combo % 3 === 0) FX.coins(RX + 20, LY[o.lane] - 20, 5); }
+            if (FX) { FX.pop(RX + 24, LY[o.lane] - 34, pts > 1 ? `Combo x${st.combo} +2` : '+1', { color: pts > 1 ? '#B57E10' : '#1C2A2E', size: 17 }); if (pts > 1) FX.coins(RX + 20, LY[o.lane] - 20, 5); }
           }
         } else if (o.x < -24) {
           st.things.splice(i, 1);
-          if (!o.bad) { st.msg = 'Missed a door'; if (st.combo >= 3 && FX) FX.pop(60, LY[o.lane] - 20, 'Missed', { color: '#C4453C', size: 13 }); st.combo = 0; }
+          if (!o.bad) { st.msg = 'Missed a door'; st.score = Math.max(0, st.score - 1); if (FX) FX.pop(40, LY[o.lane] - 20, 'Missed −1', { color: '#C4453C', size: 13 }); st.combo = 0; }
         }
       }
       for (let i = st.posts.length - 1; i >= 0; i--) {
@@ -1198,9 +1221,9 @@ function runnerGame(jobId, quit) {
     controls: () => `<div class="choices" style="grid-template-columns:repeat(3,1fr);margin-top:8px">
       ${[0, 1, 2].map((i) => `<button class="btn ${st.lane === i ? '' : 'ghost'}" data-act="jgLane" data-arg="${i}"
         aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}</div>`,
-    hint: 'Up and down, or tap a lane. Run past every drop-off in your lane. The dog is not a drop-off.',
+    hint: 'Up and down, or tap a lane. Every drop-off pays 1 and every fifth in a row pays 2; a missed one costs 1 and the dog costs 3.',
     boxes: () => [`${st.score} done`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
-    finishLine: (s) => s.score >= 16
+    finishLine: (s) => s.quality >= 1.4
       ? 'You can move. That is worth actual money on the Row — the fast runner gets asked back.'
       : 'The doors come in a rhythm once you stop chasing every one of them.',
   });
