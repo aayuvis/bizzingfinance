@@ -1071,6 +1071,19 @@ html[data-bz-dark] .continue:not(.night)::before,
 html[data-bz-dark] .gintro::before{content:"";position:absolute;inset:0;background:rgb(8 14 30 / .34);pointer-events:none}
 html[data-bz-dark] .town.night svg image{filter:none}
 
+/* the avatar menu: a dropdown from the child's face, not a dialog */
+.ov.pop{background:transparent;display:block;padding:0;backdrop-filter:none}
+.kidmenu{position:fixed;top:60px;right:10px;width:min(360px,calc(100vw - 20px));
+  background:var(--surface);border-radius:22px;padding:8px;box-shadow:0 0 0 1px var(--line),0 18px 44px rgb(20 20 40 / .22);
+  animation:pop .22s cubic-bezier(.2,1.4,.4,1) both;max-height:calc(100dvh - 80px);overflow:auto;z-index:130}
+.km-kid{display:flex;align-items:center;gap:14px;width:100%;padding:10px 14px;border-radius:16px;text-align:left;font-size:17px;color:var(--ink)}
+.km-kid.on{background:color-mix(in srgb,var(--action-tint, #e4e6f7) 80%,var(--surface))}
+.km-kid .tick{color:var(--action)}
+.km-kid:not(.on):hover,.km-row:hover{background:var(--surface2)}
+.kidmenu hr{border:0;height:1.5px;background:var(--line);margin:8px 6px}
+.km-row{display:flex;align-items:center;width:100%;padding:13px 16px;border-radius:14px;text-align:left;font-weight:800;font-size:16px;color:var(--ink)}
+.km-tag{font-size:13px;font-weight:700;color:var(--muted)}
+
 </style>
 </head>
 <body>
@@ -11960,12 +11973,16 @@ ${marks}`;
   function pipPose(pose, size2 = 96, alt = "") {
     return `<img class="pip pip-${pose}" src="./mascot/pip-${pose}.webp" alt="${esc(alt)}" width="${size2}" height="${size2}">`;
   }
-  function kidsSheet() {
-    return `<div class="sheet-h"><span class="eyebrow">Who is playing?</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
-    <div class="kids">${R.s.kids.map((k, i) => `<button class="kidcard${i === R.s.active ? " on" : ""}" data-act="switchKid" data-arg="${i}" ${i === R.s.active ? 'aria-current="true"' : ""}>
-      ${kidBadge(k, 64)}<b>${esc(k.name)}</b><span class="small muted">${i === R.s.active ? "Playing now" : "Tap to switch"}</span></button>`).join("")}
-      <button class="kidcard add" data-act="addKidGate">${ico("plus", "", 30)}<b>Add a child</b><span class="small muted">${ico("lock", "", 13)} Grown-ups</span></button>
-    </div>`;
+  function kidMenu() {
+    const tick2 = '<svg class="tick" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return `<div class="ov pop" data-act="closeOv"><div class="kidmenu" data-act="noop" role="menu" aria-label="Who is playing">
+    ${R.s.kids.map((k, i) => `<button class="km-kid${i === R.s.active ? " on" : ""}" role="menuitemradio" aria-checked="${i === R.s.active}" data-act="switchKid" data-arg="${i}">
+      ${kidBadge(k, 44)}<b class="grow">${esc(k.name)}</b>${i === R.s.active ? tick2 : ""}</button>`).join("")}
+    <hr>
+    <button class="km-row" role="menuitem" data-act="nav" data-arg="me">My page \u2014 avatar, badges, collection</button>
+    <button class="km-row" role="menuitem" data-act="settings">Settings</button>
+    <button class="km-row" role="menuitem" data-act="addKidGate"><span class="grow">+ Add a child</span><span class="km-tag">grown-ups</span></button>
+  </div></div>`;
   }
   var sw = (act, on3, label2) => `<button class="sw" role="switch" aria-checked="${!!on3}" data-act="${act}" aria-label="${esc(label2)}"><i></i></button>`;
   var seg = (act, opts, cur3, label2) => `<span class="seg" role="group" aria-label="${esc(label2)}">${opts.map(([v, l]) => `<button data-act="${act}" data-arg="${v}" aria-pressed="${cur3 === v}">${l}</button>`).join("")}</span>`;
@@ -19540,6 +19557,12 @@ ${drawerHTML(o)}`;
     ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready \xB7 Reload</button>' : ""}
     ${R.overlay ? overlay() : ""}`;
     if (R.game && R.game.mount) R.game.mount();
+    const km = document.querySelector(".kidmenu"), kb = document.querySelector(".bz-kid");
+    if (km && kb) {
+      const r = kb.getBoundingClientRect();
+      km.style.top = Math.round(r.bottom + 8) + "px";
+      km.style.right = Math.max(10, Math.round(innerWidth - r.right)) + "px";
+    }
     if (R.overlay && R.focusedOv !== R.overlay) {
       R.focusedOv = R.overlay;
       const f = root.querySelector(".drawer .dr-item, .drawer button, .ovbox input, .ovbox button");
@@ -19856,7 +19879,7 @@ ${drawerHTML(o)}`;
         <button class="btn ghost" data-act="closeOv">Not now</button>
       </div>`);
     }
-    if (o.kind === "kids") return box(kidsSheet(), true);
+    if (o.kind === "kids") return kidMenu();
     return "";
   }
   var C3 = () => kid2(R.s);
