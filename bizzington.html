@@ -1116,6 +1116,11 @@ html[data-bz-dark] .town.night svg image{filter:none}
 .focus-pulse{animation:focuspulse 2.2s ease 1;border-radius:var(--r-lg)}
 @keyframes focuspulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--action) 70%,transparent)}25%{box-shadow:0 0 0 6px color-mix(in srgb,var(--action) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){ .focus-pulse{animation:none;outline:3px solid var(--action);outline-offset:3px} }
+/* a typed answer (generate.js): the field and its Check button on one row */
+.numrow{display:flex;gap:10px;align-items:stretch}
+.numrow .yamt{flex:1}
+.numrow input{width:100%;font:700 22px var(--mono);padding:10px 14px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:48px}
+.numrow input:focus{outline:none;border-color:var(--action)}
 
 </style>
 </head>
@@ -2012,28 +2017,28 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const T2 = TRACKS[k];
     return T2.bars * 4 * 60 / T2.bpm;
   };
-  var hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  var hz = (m2) => 440 * Math.pow(2, (m2 - 69) / 12);
   var deg = (T2, d, oct = 0) => T2.root + T2.scale[(d % 7 + 7) % 7] + 12 * (oct + Math.floor(d / 7));
   var scoreCache = {};
   function score(k) {
     if (scoreCache[k]) return scoreCache[k];
     const T2 = TRACKS[k], r = rng(T2.seed);
     const motif = () => {
-      const m = [];
+      const m2 = [];
       let d = 2 + Math.floor(r() * 3);
       for (let i = 0; i < 16; i++) {
         if (r() < 0.28 && i % 4) {
-          m.push(null);
+          m2.push(null);
           continue;
         }
         d += [-2, -1, -1, 0, 1, 1, 2][Math.floor(r() * 7)];
         d = Math.max(0, Math.min(9, d));
-        m.push(d);
+        m2.push(d);
       }
-      return m;
+      return m2;
     };
     const A3 = motif(), B2 = motif();
-    const vary = (m, s) => m.map((d, i) => d == null ? null : i % 8 === 7 ? d + s : d);
+    const vary = (m2, s) => m2.map((d, i) => d == null ? null : i % 8 === 7 ? d + s : d);
     const phrase = [A3, vary(A3, 1), B2, vary(A3, -1)];
     const mel = [];
     for (let bar = 0; bar < T2.bars; bar += 2) mel.push(...phrase[bar / 2 % 4]);
@@ -2041,14 +2046,14 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function play8(T2, i, t) {
     const sec8 = 30 / T2.bpm, bar = Math.floor(i / 8), inBar = i % 8, chord = T2.prog[bar % T2.prog.length];
-    const S = score(T2.key), m = S.mel[i];
+    const S = score(T2.key), m2 = S.mel[i];
     if (inBar === 0) {
       [0, 2, 4].forEach((x) => note(hz(deg(T2, chord + x, -1)), t, sec8 * 8.2, { type: "sine", vol: 0.028, attack: 0.25, bus: musicBus, lp: 1400 }));
       note(hz(deg(T2, chord, -2)), t, sec8 * 3.5, { type: "triangle", vol: 0.07, attack: 0.02, bus: musicBus, lp: 600 });
     }
     if (inBar === 4) note(hz(deg(T2, chord + 4, -2)), t, sec8 * 3, { type: "triangle", vol: 0.05, bus: musicBus, lp: 600 });
-    if (m != null) {
-      const f = hz(deg(T2, m, T2.lead === "box" ? 1 : 0));
+    if (m2 != null) {
+      const f = hz(deg(T2, m2, T2.lead === "box" ? 1 : 0));
       if (T2.lead === "box") {
         note(f, t, sec8 * 1.6, { type: "triangle", vol: 0.035, bus: musicBus, lp: 3800 });
         note(f * 2, t, sec8 * 0.8, { type: "sine", vol: 0.012, bus: musicBus });
@@ -2861,19 +2866,19 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       <path d="M22 34q4 2.5 8 0" stroke="#2F3A33" stroke-width="1.4" fill="none" stroke-linecap="round"/>`)
     }
   };
-  function face(who, size2) {
+  function face(who, size3) {
     const c = CAST[who] || CAST.pip;
     const img = art("cast-" + who);
     const inner = img ? `<img src="${img}" alt="${c.name}" width="256" height="256" loading="lazy"
         style="width:100%;height:100%;object-fit:cover;display:block">` : c.svg;
-    return `<span class="who" style="${size2 ? `width:${size2}px;height:${size2}px` : ""}">${inner}</span>`;
+    return `<span class="who" style="${size3 ? `width:${size3}px;height:${size3}px` : ""}">${inner}</span>`;
   }
   function say2(who, text) {
     const c = CAST[who] || CAST.pip;
     return `<div class="say">${face(who)}<div class="bub"><span class="nm">${c.name}</span>${text}<button class="sayit" data-act="sayEl" aria-label="Read it to me">${ico("sound", "", 16)}</button></div></div>`;
   }
-  function ico(name, fallback, size2) {
-    const s = size2 || 24;
+  function ico(name, fallback, size3) {
+    const s = size3 || 24;
     const key2 = ICONS[name] ? name : EMOJI_MAP[String(name || "").replace(/\uFE0F/g, "")];
     const ic = ICONS[key2];
     if (!ic) {
@@ -2882,8 +2887,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     }
     return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" style="--ic:${ic.a}" aria-hidden="true" focusable="false">` + (ic.b ? `<g fill="var(--ic)" fill-opacity=".26">${ic.b}</g>` : "") + (ic.l ? `<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ic.l}</g>` : "") + (ic.k ? `<g fill="var(--ic)">${ic.k}</g>` : "") + "</svg>";
   }
-  function mark(size2) {
-    const s = size2 || 28;
+  function mark(size3) {
+    const s = size3 || 28;
     return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Finance">
     <rect width="48" height="48" rx="12" fill="#0E6B78"/>
     <path fill="#F0B429" fill-rule="evenodd" d="M24 6a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-8.5 24.5a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v3.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6zm6.1-5.6a1.6 1.6 0 0 1 1.6-1.6h1.6a1.6 1.6 0 0 1 1.6 1.6v9.5a1.6 1.6 0 0 1-1.6 1.6h-1.6a1.6 1.6 0 0 1-1.6-1.6zm6-6.4a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v15.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6z"/>
@@ -4375,6 +4380,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function shuffledDrill(card3, qi = 0) {
     const d = drillAt(card3, qi);
+    if (d.kind === "num") return { num: true, order: [], opts: [], answer: 0, value: d.value, q: d.q, why: d.why };
     const seed = card3.id + "#" + qi;
     let h = 2166136261;
     for (let i = 0; i < seed.length; i++) {
@@ -4395,6 +4401,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   var STOP = new Set("that this with from your what when they them their there then than have will would could should about which into only just more most some been were does done doing because before after every other these those thing things money".split(" "));
   var words = (x) => (String(x || "").replace(/<[^>]+>/g, "").toLowerCase().match(/[a-z\u00c0-\u024f']{4,}/g) || []).map((w) => w.replace(/'s$/, "")).filter((w) => !STOP.has(w));
   var stemOf = (w) => w.replace(/(ing|ed|es|s)$/, "");
+  var numbersInText = (t) => (String(t).match(/\d[\d,]*/g) || []).map((x) => Number(x.replace(/,/g, "")));
   function tellingWords(d) {
     const shared = new Set([...words(d.q), ...d.opts.filter((_, i) => i !== d.a).flatMap(words)].map(stemOf));
     return [...new Set(words(d.opts[d.a]).map(stemOf))].filter((w) => !shared.has(w));
@@ -4408,6 +4415,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function hintFor(card3, qi = 0) {
     const d = drillAt(card3, qi);
+    if (d.kind === "num") return d.hint && !numbersInText(d.hint).includes(d.value) ? d.hint : "Work it out step by step, then type the amount again.";
+    if (card3.assess && !d.hint) {
+      return [`Think back to \u201C${card3.title}\u201D, then try a different answer.`, "Think back to the lesson, then try a different answer.", "Go back over it in your head, then pick again.", "Have another go."].find((x) => !leaks(x, d)) || "Have another go.";
+    }
     if (d.hint && !leaks(d.hint, d)) return d.hint;
     const plain2 = (x) => String(x || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
     const sentences = [...plain2(card3.teach).split(/(?<=[.!?])\s+/), plain2(card3.eg)].filter((x) => x.length > 12);
@@ -5470,7 +5481,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   var MEDIA = {};
   function loadLesson(id) {
     if (MEDIA[id]) return Promise.resolve(MEDIA[id]);
-    return LOADERS[id]().then((m) => MEDIA[id] = m.default);
+    return LOADERS[id]().then((m2) => MEDIA[id] = m2.default);
   }
   var clipURL = (key2) => "voice/lessons/" + key2 + ".mp3";
   function stagePlate(lid) {
@@ -5574,9 +5585,9 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function apply(st, stage) {
     for (const cmd of stage.split(";").map((s) => s.trim()).filter(Boolean)) {
-      const m = cmd.match(/^(\w+)\(([^)]*)\)$/);
-      if (!m) throw new Error('lesson stage: unreadable action "' + cmd + '"');
-      const [, op, args] = m;
+      const m2 = cmd.match(/^(\w+)\(([^)]*)\)$/);
+      if (!m2) throw new Error('lesson stage: unreadable action "' + cmd + '"');
+      const [, op, args] = m2;
       const a = args.split(",").map((s) => s.trim());
       if (op === "avatar") st.pose = a[0];
       else if (op === "show") {
@@ -7859,14 +7870,14 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     11: [["pixel", "Pixel", "common"], ["drum", "Drum", "common"], ["kite", "Kite", "rare"], ["balloondog", "Balloon Dog", "rare"], ["toucan", "Trumpet Toucan", "rare"], ["melody", "Melody", "epic"], ["discoball", "Disco Ball", "epic"], ["goldlegend", "Gold Legend", "legendary", "atlas"]],
     12: [["lantern", "Paper Lantern", "common"], ["sparkler", "Sparkler", "common"], ["firefly", "Firefly", "rare"], ["fireflower", "Firework Flower", "rare"], ["candyfloss", "Candy Floss", "rare"], ["glowmoth", "Glow Moth", "epic"], ["lanternfish", "Lantern Fish", "epic"], ["lanterndragon", "Lantern Dragon", "legendary", "transfer-5"]]
   };
-  var CATALOGUE = Object.entries(RAW).flatMap(([pack, rows]) => rows.map(([id, name, tier2, m]) => ({
+  var CATALOGUE = Object.entries(RAW).flatMap(([pack, rows]) => rows.map(([id, name, tier2, m2]) => ({
     id,
     name,
     pack: +pack,
     tier: tier2,
     art: A2(id),
     thumb: T(id),
-    ...m ? { milestone: ms(m) } : {}
+    ...m2 ? { milestone: ms(m2) } : {}
   })));
   var BY_ID2 = Object.fromEntries(CATALOGUE.map((a) => [a.id, a]));
   var COMMONS = CATALOGUE.filter((a) => a.tier === "common");
@@ -7997,10 +8008,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const bytes = new TextEncoder().encode(str);
     const len = bytes.length, bits = len * 8;
     const n = len + 9 + 63 >> 6 << 6;
-    const m = new Uint8Array(n);
-    m.set(bytes);
-    m[len] = 128;
-    const dv = new DataView(m.buffer);
+    const m2 = new Uint8Array(n);
+    m2.set(bytes);
+    m2[len] = 128;
+    const dv = new DataView(m2.buffer);
     dv.setUint32(n - 4, bits >>> 0);
     dv.setUint32(n - 8, Math.floor(bits / 4294967296));
     const H3 = new Uint32Array([1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]);
@@ -8106,8 +8117,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       if (d[k] !== void 0) return d[k];
       if (k === "mode") {
         try {
-          const m = localStorage.getItem("bzf_mode");
-          if (m) return m;
+          const m2 = localStorage.getItem("bzf_mode");
+          if (m2) return m2;
         } catch (e) {
         }
       }
@@ -8534,7 +8545,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       const indexR = basket / names.length - wk(P3.indexFee);
       const goldR = wk(P3.goldBase - P3.goldOnRealRate * s.real) + n() * P3.goldVol;
       const propR = wk(P3.propYield) + wk(s.inflation + (s.growth - CAL.growthMean) * P3.propOnGrowth) + n() * P3.propVol;
-      const step3 = {
+      const step4 = {
         cash: cashR,
         deposit: depR,
         bond: bondR,
@@ -8542,9 +8553,9 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         gold: goldR,
         property: propR
       };
-      step3.shares = weekly2.shares[weekly2.shares.length - 1];
+      step4.shares = weekly2.shares[weekly2.shares.length - 1];
       ids.forEach((id) => {
-        const rr2 = step3[id];
+        const rr2 = step4[id];
         if (id !== "shares") weekly2[id].push(rr2);
         series[id].push(Math.max(0.5, series[id][series[id].length - 1] * (1 + rr2)));
       });
@@ -9754,26 +9765,26 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const from = c.currency;
     if (from === to) return;
     const f = (n) => Math.round(convert(n, from, to));
-    const m = c.money;
-    m.wallet = f(m.wallet);
-    m.wage = f(m.wage);
+    const m2 = c.money;
+    m2.wallet = f(m2.wallet);
+    m2.wage = f(m2.wage);
     ["spend", "save", "grow", "give"].forEach((k2) => {
-      m.jars[k2] = f(m.jars[k2]);
+      m2.jars[k2] = f(m2.jars[k2]);
     });
-    m.bills.forEach((b) => {
+    m2.bills.forEach((b) => {
       b.amt = f(b.amt);
     });
-    m.goals.forEach((g) => {
+    m2.goals.forEach((g) => {
       g.target = f(g.target);
       g.saved = f(g.saved);
       g.auto = f(g.auto || 0);
     });
-    m.txns.forEach((t) => {
+    m2.txns.forEach((t) => {
       t.amt = f(t.amt);
     });
-    m.bank.balance = f(m.bank.balance);
-    if (m.bank.loan) {
-      const L = m.bank.loan;
+    m2.bank.balance = f(m2.bank.balance);
+    if (m2.bank.loan) {
+      const L = m2.bank.loan;
       L.amount = f(L.amount);
       L.owed = f(L.owed);
       L.perWeek = f(L.perWeek);
@@ -10177,12 +10188,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
 
   // src/companionview.js
   var KIND_ICON = { pup: "family", kitten: "family", parrot: "quest", bunny: "family", duck: "family" };
-  function companionFigure(c, size2, opts = {}) {
+  function companionFigure(c, size3, opts = {}) {
     const p = get(c);
     if (!p) return "";
     const key2 = spriteKey(c);
     const sp = CO[key2] || CO[`${p.kind}-${STAGES[p.stage]}-okay`] || CO[`${p.kind}-baby-okay`];
-    const s = size2 || 120;
+    const s = size3 || 120;
     if (!sp) return `<div class="cofig" style="width:${s}px;height:${s}px">${ico(KIND_ICON[p.kind] || "quest", "\u{1F43E}", Math.round(s * 0.6))}</div>`;
     const h = Math.round(s * sp.h / sp.w);
     const worn = Object.values(p.wearing || {}).filter((id) => ACC[id]);
@@ -10204,7 +10215,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function shelterView(o) {
     const kinds = Object.keys(KINDS);
-    const pick3 = o.pick;
+    const pick4 = o.pick;
     return `
     <div class="eyebrow">The shelter behind the Jar Shed</div>
     <h2 style="margin:4px 0 6px">Five who need homes</h2>
@@ -10212,14 +10223,14 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     <div class="shelter">
       ${kinds.map((k) => {
       const sp = CO[`${k}-baby-happy`] || CO[`${k}-baby-okay`];
-      return `<button class="shelf${pick3 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
+      return `<button class="shelf${pick4 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
           ${sp ? `<img src="${sp.src}" alt="" style="width:76px;height:${Math.round(76 * sp.h / sp.w)}px">` : `<div style="height:76px;display:grid;place-items:center">${ico(KIND_ICON[k] || "quest", "\u{1F43E}", 34)}</div>`}
           <b>${esc(KINDS[k].name)}</b></button>`;
     }).join("")}
     </div>
-    ${pick3 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick3].line)}</p>
+    ${pick4 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick4].line)}</p>
       <label class="small muted" style="display:block;margin-top:12px">What will you call them?</label>
-      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick3].name)}" value="${esc(o.name || "")}">
+      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick4].name)}" value="${esc(o.name || "")}">
       <button class="btn wide" style="margin-top:12px" data-act="adopt">Take ${esc(o.name || "them")} home \xB7 ${money(price(C.adopt))}</button>` : ""}
     <button class="btn ghost wide" style="margin-top:10px" data-act="closeOv">Not today</button>`;
   }
@@ -10439,8 +10450,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       for (let qi = 0; qi < drillCount(card3); qi++) pairs.push([card3.id, qi]);
     });
     if (!pairs.length) return [];
-    const step3 = Math.max(1, Math.floor(pairs.length / N)), start3 = d % pairs.length, out = [];
-    for (let i = 0; i < pairs.length && out.length < N; i++) out.push(pairs[(start3 + i * step3) % pairs.length]);
+    const step4 = Math.max(1, Math.floor(pairs.length / N)), start3 = d % pairs.length, out = [];
+    for (let i = 0; i < pairs.length && out.length < N; i++) out.push(pairs[(start3 + i * step4) % pairs.length]);
     return out;
   }
   function start(chId, mode) {
@@ -10580,10 +10591,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const d = day2 == null ? dayNo() : day2;
     const r = rng2(d + 1);
     const n = 3 + Math.floor(r() * 2);
-    const pick3 = [];
+    const pick4 = [];
     const pool = GOODS.slice();
-    for (let i = 0; i < n; i++) pick3.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
-    const lines = pick3.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
+    for (let i = 0; i < n; i++) pick4.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+    const lines = pick4.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
     const multi = r() < 0.5;
     const hidden = Math.floor(r() * lines.length);
     if (multi) lines[hidden].qty = 2 + Math.floor(r() * 3);
@@ -10782,7 +10793,7 @@ ${marks}`;
     if (!supported()) throw new Error("This device cannot record.");
     if (live) stop2();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
+    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m2) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m2)) || "";
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : void 0);
     const chunks = [];
     rec.ondataavailable = (e) => {
@@ -11204,6 +11215,7 @@ ${marks}`;
     answer: () => answer3,
     available: () => available,
     beat: () => beat,
+    itemFor: () => itemFor,
     mathsCeiling: () => mathsCeiling,
     mathsMeasured: () => mathsMeasured,
     mathsMet: () => mathsMet,
@@ -11211,6 +11223,174 @@ ${marks}`;
     seen: () => seen,
     strandProgress: () => strandProgress
   });
+
+  // src/generate.js
+  function rng3(seed) {
+    let h = seed >>> 0 || 1;
+    return () => {
+      h ^= h << 13;
+      h >>>= 0;
+      h ^= h >>> 17;
+      h ^= h << 5;
+      h >>>= 0;
+      return h / 4294967296;
+    };
+  }
+  var pick = (r, a) => a[Math.floor(r() * a.length)];
+  var int = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+  var step2 = () => Math.max(1, Math.round(price(10) / 10));
+  var m = (n) => money(n);
+  var size = (cx) => cx.ceil >= 9 ? "big" : "small";
+  var WHO = ["Pip", "Mags", "Bea", "Bo", "Nana Bizz"];
+  var JOBS2 = ["stacking crates", "delivering flyers", "sweeping Market Row", "minding the stall", "washing the bandstand"];
+  var THINGS = ["a kite", "a cricket bat", "a paint set", "a bicycle bell", "a board game", "a lantern"];
+  var GEN = {
+    "EARN-2": (r, cx) => {
+      const h = size(cx) === "big" ? int(r, 3, 12) : int(r, 2, 5), p = step2() * (size(cx) === "big" ? int(r, 4, 15) : int(r, 2, 6));
+      const w = pick(r, WHO), j = pick(r, JOBS2);
+      return {
+        kind: "num",
+        hint: "The hours, times what one hour pays.",
+        q: `${w} spends ${h} hours ${j} at ${m(p)} an hour. How much is that?`,
+        value: h * p,
+        why: `${h} hours \xD7 ${m(p)} \u2014 an hour is worth what it pays, so the hours multiply it.`
+      };
+    },
+    "EARN-4": (r, cx) => {
+      const s = step2(), h1 = int(r, 2, 4), h2 = h1 + int(r, 1, 3);
+      let r1 = int(r, 3, 9), r2 = int(r, 3, 9);
+      if (r1 === r2) r2 += 1;
+      const ja = pick(r, JOBS2), jb = pick(r, JOBS2.filter((x) => x !== ja));
+      const pa = h1 * r1 * s, pb = h2 * r2 * s;
+      return {
+        q: `Two shifts on the board: ${ja} pays ${m(pa)} for ${h1} hours; ${jb} pays ${m(pb)} for ${h2} hours. Which pays more for each hour?`,
+        opts: [cap(ja), cap(jb), "They pay the same for each hour"],
+        a: r1 > r2 ? 0 : 1,
+        why: `Divide by the hours: ${m(pa)} \xF7 ${h1} is ${m(r1 * s)} an hour; ${m(pb)} \xF7 ${h2} is ${m(r2 * s)}. The bigger total is not always the better rate.`
+      };
+    },
+    "KEEP-1": (r, cx) => {
+      const s = step2(), big = size(cx) === "big";
+      const a = s * (big ? int(r, 3, 15) * 10 : int(r, 2, 6)), b = s * (big ? int(r, 2, 12) * 10 : int(r, 1, 5));
+      const inn = a + b + s * (big ? int(r, 5, 60) * 10 : int(r, 2, 15));
+      return {
+        kind: "num",
+        hint: "Start with what came in, then take away each thing that went out.",
+        q: `Pay day brings ${m(inn)}. Out go ${m(a)} for the bus and ${m(b)} for lunch. What is left over?`,
+        value: inn - a - b,
+        why: `In, minus everything out: ${m(inn)} \u2212 ${m(a)} \u2212 ${m(b)}. What is left is the only part you get to choose about.`
+      };
+    },
+    "KEEP-2": (r, cx) => {
+      const s = step2(), part = pick(r, [2, 3, 4, 5]), pay = s * 10 * (size(cx) === "big" ? int(r, 4, 20) : int(r, 1, 5));
+      return {
+        kind: "num",
+        hint: "Find what one tenth of the pay is first.",
+        q: `${pick(r, WHO)} saves ${part} in every 10 the moment pay lands. Pay day brings ${m(pay)}. How much goes into Save?`,
+        value: pay / 10 * part,
+        why: `${m(pay)} is ten lots of ${m(pay / 10)}, and ${part} of those lots go to Save. Split first, spend second.`
+      };
+    },
+    "KEEP-4": (r, cx) => {
+      const s = step2(), per = s * int(r, 2, size(cx) === "big" ? 12 : 6), weeks = int(r, 3, size(cx) === "big" ? 15 : 8), thing = pick(r, THINGS);
+      return {
+        kind: "num",
+        hint: "How many weekly amounts fit into the price?",
+        q: `${cap(thing)} costs ${m(per * weeks)}. You put ${m(per)} towards it every week. How many weeks until it is yours?`,
+        value: weeks,
+        why: `${m(per * weeks)} \xF7 ${m(per)} a week = ${weeks} weeks. A price and a weekly amount turn a wish into a date.`
+      };
+    },
+    "CHOOSE-4": (r, cx) => {
+      const s = step2(), n1 = pick(r, [2, 3, 4]), n2 = n1 * pick(r, [2, 3]);
+      const u1 = int(r, 3, 9), u2 = u1 + pick(r, [-2, -1, 1, 2]);
+      const thing = pick(r, ["pencils", "mangoes", "notebooks", "balloons"]);
+      return {
+        q: `Mags sells ${thing}: ${n1} for ${m(n1 * u1 * s)}, or ${n2} for ${m(n2 * u2 * s)}. Which is better value for each one?`,
+        opts: [`${n1} for ${m(n1 * u1 * s)}`, `${n2} for ${m(n2 * u2 * s)}`, "They cost the same for each one"],
+        a: u1 < u2 ? 0 : 1,
+        why: `Price for one: ${m(u1 * s)} in the small pack, ${m(u2 * s)} in the big one. Bigger is not always cheaper \u2014 work it out per one.`
+      };
+    },
+    "CHOOSE-7": (r, cx) => {
+      const s = step2(), a = s * int(r, 1, size(cx) === "big" ? 9 : 4), what = pick(r, ["a juice", "a comic", "a snack", "a game top-up"]);
+      return {
+        kind: "num",
+        hint: "One week\u2019s cost, times the weeks in a year.",
+        q: `${cap(what)} costs ${m(a)}, once a week, every week. How much is that in a year of 52 weeks?`,
+        value: a * 52,
+        why: `${m(a)} \xD7 52 weeks. A small amount that repeats is a big amount wearing a disguise.`
+      };
+    },
+    "GUARD-5": (r, cx) => {
+      const s = step2(), a = s * int(r, 2, size(cx) === "big" ? 25 : 8);
+      return {
+        kind: "num",
+        hint: "One month\u2019s cost, times the months in a year.",
+        q: `An app asks for just ${m(a)} a month. How much is that over 12 months?`,
+        value: a * 12,
+        why: `${m(a)} \xD7 12. "Just" a month is the word doing the work \u2014 the year is the real price.`
+      };
+    },
+    "GROW-2": (r, cx) => {
+      const s = step2(), bal = s * 100 * int(r, 1, size(cx) === "big" ? 9 : 3), part = pick(r, [5, 10]);
+      return {
+        kind: "num",
+        hint: "Count the hundreds in the balance; each hundred earns the same.",
+        q: `A bank in a story pays ${part} in every 100 a year. ${pick(r, WHO)} leaves ${m(bal)} in it for a year. How much interest is that?`,
+        value: bal / 100 * part,
+        why: `${m(bal)} is ${bal / 100 / s} lots of ${m(100 * s)}, and each lot earns ${m(part * s)}. Interest is rent the bank pays for your money.`
+      };
+    },
+    "GROW-3": (r, cx) => {
+      const s = step2(), bal = s * 100 * int(r, 1, 5);
+      return {
+        kind: "num",
+        hint: "The second year\u2019s tenth is a tenth of the NEW amount.",
+        q: `${m(bal)} grows by a tenth of itself each year. After one year it is ${m(bal * 1.1)}. What is it after the second year?`,
+        value: Math.round(bal * 1.21),
+        why: `The second year adds a tenth of ${m(bal * 1.1)}, not of ${m(bal)} \u2014 the interest earns interest. That is why the second time is bigger.`
+      };
+    },
+    "OWE-1": (r, cx) => {
+      const s = step2(), loan = s * 10 * int(r, 2, 10), fee = s * int(r, 1, 4), w = int(r, 2, 6);
+      return {
+        kind: "num",
+        hint: "The cost of one week, times the weeks.",
+        q: `Borrowing ${m(loan)} costs ${m(fee)} for every week you keep it. You keep it ${w} weeks. What did borrowing cost?`,
+        value: fee * w,
+        why: `${m(fee)} \xD7 ${w} weeks. A loan is not free money \u2014 the price is the extra you pay back, and it grows with time.`
+      };
+    },
+    "OWE-2": (r, cx) => {
+      const s = step2(), w = int(r, 3, 8), pay = s * int(r, 3, 12), loan = pay * w - s * int(r, 2, 3 * w);
+      return {
+        kind: "num",
+        hint: "Add up every payment, then take away what you borrowed.",
+        q: `You borrow ${m(loan)} and pay it back as ${w} weekly payments of ${m(pay)}. How much more than you borrowed did you pay?`,
+        value: pay * w - loan,
+        why: `Everything paid back is ${w} \xD7 ${m(pay)} = ${m(pay * w)}; take away the ${m(loan)} borrowed. That difference is the number that matters.`
+      };
+    }
+  };
+  var numbersIn = (t) => (String(t).match(/\d[\d,]*(\.\d+)?/g) || []).map((x) => Number(x.replace(/,/g, "")));
+  function leaks2(d) {
+    return d.kind === "num" ? numbersIn(d.q).includes(d.value) : new Set(d.opts.map(String)).size !== d.opts.length;
+  }
+  var cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  function genCard(o, seed, cx) {
+    const g = GEN[o.id];
+    if (!g) return null;
+    let d;
+    for (let k = 0; k < 12; k++) {
+      d = g(rng3(seed * 2654435761 + o.id.length + k * 7919), cx || { ceil: 6 });
+      if (!leaks2(d)) break;
+    }
+    return { id: `${o.id}~${seed}`, title: o.short, who: "pip", objective: o.id, assess: true, generated: true, drill: d };
+  }
+  var hasGen = (id) => !!GEN[id];
+
+  // src/ledger.js
   var BAND_FLOOR = { sprout: 6, builder: 10 };
   function mathsCeiling(c) {
     if (c.maths && c.maths.ceiling) return Math.min(17, c.maths.ceiling + Math.floor((c.learn && c.learn.level || 1) / 6));
@@ -11222,16 +11402,21 @@ ${marks}`;
   }
   function mathsMet(c) {
     const ceil = mathsCeiling(c);
-    return (m) => (parseInt(String(m).slice(1), 10) || 0) <= ceil;
+    return (m2) => (parseInt(String(m2).slice(1), 10) || 0) <= ceil;
   }
-  function pickItem(o, r) {
-    return assessCard(o, r.hist.length % o.assess.length);
+  function pickItem(o, r, c) {
+    const n = r.hist.length;
+    if (hasGen(o.id) && n >= o.assess.length && n % 2 === 1) return genCard(o, 1 + n * 31 + (r.box || 0), { ceil: mathsCeiling(c) });
+    return assessCard(o, n % o.assess.length);
+  }
+  function itemFor(c, o) {
+    return pickItem(o, record(c, o.id), c);
   }
   function available(c, mathsMet2) {
     return OBJECTIVES.filter((o) => {
       if (isMet(c, o.id)) return false;
       if (!o.needs.every((n) => ["practised", "retained", "transferred"].includes(stateOf2(c, n)))) return false;
-      if (mathsMet2 && !o.needs_maths.every((m) => mathsMet2(m))) return false;
+      if (mathsMet2 && !o.needs_maths.every((m2) => mathsMet2(m2))) return false;
       return true;
     });
   }
@@ -11248,7 +11433,7 @@ ${marks}`;
       return {
         shape: "retrieve",
         objective: ob,
-        card: pickItem(ob, r),
+        card: pickItem(ob, r, c),
         overdue: Math.max(0, Math.round((now2 - r.due) / 864e5))
       };
     }
@@ -11258,7 +11443,7 @@ ${marks}`;
     }
     if (dueList.length) {
       const ob = dueList[0];
-      return { shape: "retrieve", objective: ob, card: pickItem(ob, record(c, ob.id)) };
+      return { shape: "retrieve", objective: ob, card: pickItem(ob, record(c, ob.id), c) };
     }
     return null;
   }
@@ -11351,8 +11536,8 @@ ${marks}`;
   };
   var placeOf = (s) => PLACE[s] || s;
   function headline2(c, moved, dec, weeks, wasIn) {
-    const gained = moved.filter((m) => m.to === "retained" || m.to === "transferred");
-    const tr = moved.filter((m) => m.to === "transferred");
+    const gained = moved.filter((m2) => m2.to === "retained" || m2.to === "transferred");
+    const tr = moved.filter((m2) => m2.to === "transferred");
     if (tr.length) return `${c.name} used something taught somewhere else entirely \u2014 ${nameOf(tr[0].id).toLowerCase()}, over at ${placeOf(tr[0].surface)}, without being asked.`;
     if (gained.length > 1) return `${c.name} held on to ${gained.length} things this week that were first met a while ago \u2014 the gap is the point, not the answer.`;
     if (gained.length === 1) return `${c.name} still had ${nameOf(gained[0].id).toLowerCase()} ${gained[0].gap || 7} days after meeting it.`;
@@ -11379,8 +11564,8 @@ ${marks}`;
     return { when: day2, text, reversed: d.reversed };
   }
   function conversation(c, moved) {
-    const pick3 = moved.find((m) => m.to === "retained" || m.to === "transferred") || moved[moved.length - 1];
-    const o = pick3 ? objective(pick3.id) : null;
+    const pick4 = moved.find((m2) => m2.to === "retained" || m2.to === "transferred") || moved[moved.length - 1];
+    const o = pick4 ? objective(pick4.id) : null;
     if (!o) return null;
     return {
       objective: o.id,
@@ -11409,10 +11594,10 @@ ${marks}`;
     const weeks = dec.length + moved.length;
     const d0 = dayIndex(from), d1 = dayIndex(now2);
     const wasIn = c.lastDay != null && c.lastDay >= d0 && c.lastDay <= d1 || (c.goodDays || []).some((x) => x >= d0 && x <= d1) || (o.activity || []).some((x) => x.a === "finance" && (x.who || "").toLowerCase() === String(c.name).toLowerCase() && x.d >= ymd2(from) && x.d <= ymd2(now2));
-    const up = moved.filter((m) => m.to === "retained" || m.to === "transferred");
-    const down = moved.filter((m) => m.to === "lapsed");
+    const up = moved.filter((m2) => m2.to === "retained" || m2.to === "transferred");
+    const down = moved.filter((m2) => m2.to === "lapsed");
     const hard = [];
-    down.forEach((m) => hard.push({ id: m.id, why: "slipped after having it" }));
+    down.forEach((m2) => hard.push({ id: m2.id, why: "slipped after having it" }));
     OBJECTIVES.forEach((ob) => {
       const r = c.mastery && c.mastery.rec[ob.id];
       if (!r) return;
@@ -11427,11 +11612,11 @@ ${marks}`;
       quiet: !weeks,
       wasIn,
       headline: headline2(c, moved, dec, weeks, wasIn),
-      moved: up.map((m) => ({
-        id: m.id,
-        name: nameOf(m.id),
-        to: m.to,
-        detail: m.to === "transferred" ? `used it at ${placeOf(m.surface)}, unprompted` : `still had it after ${m.gap} days`
+      moved: up.map((m2) => ({
+        id: m2.id,
+        name: nameOf(m2.id),
+        to: m2.to,
+        detail: m2.to === "transferred" ? `used it at ${placeOf(m2.surface)}, unprompted` : `still had it after ${m2.gap} days`
       })),
       story: story(c, headline(c, from), money2),
       hard: hard.slice(0, 3).map((h) => ({ id: h.id, name: nameOf(h.id), why: h.why })),
@@ -11736,8 +11921,8 @@ ${marks}`;
           R.render();
           return;
         }
-        const pick3 = card3.choices ? card3.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card3;
-        const res = pick3.run(g, p);
+        const pick4 = card3.choices ? card3.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card3;
+        const res = pick4.run(g, p);
         p.cash += res.cash || 0;
         note3(`${p.name} \u2014 ${card3.t}. ${res.note}`);
         settle(p);
@@ -11988,9 +12173,9 @@ ${marks}`;
     { k: "privacy", n: "Privacy", i: "shield", act: "privacy" },
     { k: "hive", n: "Back to the Hive", i: "hive", href: HIVE }
   ];
-  function kidBadge(k, size2, frame2) {
+  function kidBadge(k, size3, frame2) {
     const f = frame2 || k.fam && k.fam.frame;
-    return `<span class="kbadge${f ? " fr-" + f : ""}" style="width:${size2}px;height:${size2}px"><img src="${avatarSrc(k.avatar)}" alt="" width="${size2}" height="${size2}"></span>`;
+    return `<span class="kbadge${f ? " fr-" + f : ""}" style="width:${size3}px;height:${size3}px"><img src="${avatarSrc(k.avatar)}" alt="" width="${size3}" height="${size3}"></span>`;
   }
   var coinSvg = (s = 20) => `<svg class="bzcoin" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="#F0B429" stroke="#3A2A5C" stroke-width="1.6"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#B57E10" stroke-width="1.2"/><path d="M12 8.2 13.2 10.8 16 11.2 14 13.1 14.5 15.9 12 14.6 9.5 15.9 10 13.1 8 11.2 10.8 10.8z" fill="#FFF3C4"/></svg>`;
   function drawer(c) {
@@ -12032,8 +12217,8 @@ ${marks}`;
     ${led.length ? `<ol class="ledger">${led.map((x) => `<li class="${x.n > 0 ? "in" : "out"}"><span class="when small muted">${new Date(x.t).toLocaleDateString(void 0, { day: "numeric", month: "short" })}</span><span>${esc(walletLine(x))}</span></li>`).join("")}</ol>` : `<div class="empty">${pipPose("sleep", 72)}<p class="small">Nothing yet. Your first right answer puts the first coin here.</p></div>`}
     <button class="btn ghost wide" style="margin-top:12px" data-act="nav" data-arg="shop">${ico("cart", "", 18)} Open the Shop</button>`;
   }
-  function pipPose(pose, size2 = 96, alt = "") {
-    return `<img class="pip pip-${pose}" src="./mascot/pip-${pose}.webp" alt="${esc(alt)}" width="${size2}" height="${size2}">`;
+  function pipPose(pose, size3 = 96, alt = "") {
+    return `<img class="pip pip-${pose}" src="./mascot/pip-${pose}.webp" alt="${esc(alt)}" width="${size3}" height="${size3}">`;
   }
   function kidMenu() {
     const tick2 = '<svg class="tick" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -12386,7 +12571,7 @@ ${marks}`;
   function twoChoice(cfg2) {
     const items2 = shuffle(cfg2.items.slice(), cfg2.seed);
     const st = { i: 0, right: 0, note: null, done: false };
-    const pick3 = (side) => {
+    const pick4 = (side) => {
       if (st.done) return;
       const it = items2[st.i];
       const ok = it.a === side || it.a === "both";
@@ -12419,12 +12604,12 @@ ${marks}`;
           }
           return;
         }
-        if (e.key === "ArrowLeft") pick3(cfg2.left.side);
-        else if (e.key === "ArrowRight") pick3(cfg2.right.side);
+        if (e.key === "ArrowLeft") pick4(cfg2.left.side);
+        else if (e.key === "ArrowRight") pick4(cfg2.right.side);
       },
       act(n) {
-        if (n === cfg2.left.act) pick3(cfg2.left.side);
-        else if (n === cfg2.right.act) pick3(cfg2.right.side);
+        if (n === cfg2.left.act) pick4(cfg2.left.side);
+        else if (n === cfg2.right.act) pick4(cfg2.right.side);
       },
       view() {
         if (st.done) return `<div class="stack">${hud(["Done"])}
@@ -12711,14 +12896,14 @@ ${marks}`;
         const r = rng(5150);
         const out = [];
         const monthly = [15, 25, 30, 40, 60, 12, 20];
-        shuffle(monthly.slice(), 991).slice(0, 4).forEach((m) => {
-          const right = m * 12;
-          const opts = shuffle([right, m * 10, m * 6, right + m], Math.round(r() * 1e6) + m);
+        shuffle(monthly.slice(), 991).slice(0, 4).forEach((m2) => {
+          const right = m2 * 12;
+          const opts = shuffle([right, m2 * 10, m2 * 6, right + m2], Math.round(r() * 1e6) + m2);
           out.push({
-            q: `A club costs <b>${money(price(m))} a month</b>. What is that in a year?`,
+            q: `A club costs <b>${money(price(m2))} a month</b>. What is that in a year?`,
             opts: opts.map((v) => money(price(v))),
             a: opts.indexOf(right),
-            why: `${money(price(m))} \xD7 12 = <b>${money(price(right))}</b>. Small monthly numbers are the entire technique.`
+            why: `${money(price(m2))} \xD7 12 = <b>${money(price(right))}</b>. Small monthly numbers are the entire technique.`
           });
         });
         const weekly2 = [8, 15, 25];
@@ -13056,7 +13241,7 @@ ${marks}`;
         st.charge = 0;
       }
     };
-    const step3 = (ts) => {
+    const step4 = (ts) => {
       if (st.done) return;
       const dt = Math.min(60, ts - (prev || ts));
       prev = ts;
@@ -13064,7 +13249,7 @@ ${marks}`;
       draw2();
       const bar = document.getElementById("ccCharge");
       if (bar) bar.style.width = st.charge.toFixed(1) + "%";
-      raf2 = requestAnimationFrame(step3);
+      raf2 = requestAnimationFrame(step4);
     };
     const draw2 = () => {
       if (!ctx3) return;
@@ -13127,7 +13312,7 @@ ${marks}`;
         if (ctx3) ctx3.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (!st.done && !raf2) {
           prev = 0;
-          raf2 = requestAnimationFrame(step3);
+          raf2 = requestAnimationFrame(step4);
         }
         const btn = document.getElementById("ccBtn");
         if (btn) {
@@ -13272,7 +13457,7 @@ ${marks}`;
       sfx.click();
       R.render();
     };
-    const step3 = (ts) => {
+    const step4 = (ts) => {
       if (st.done) return;
       const dt = Math.min(60, ts - (prev || ts));
       prev = ts;
@@ -13305,14 +13490,14 @@ ${marks}`;
         if (b) b.style.width = Math.max(0, c.patience * 100) + "%";
       });
       if (dirty) R.render();
-      raf2 = requestAnimationFrame(step3);
+      raf2 = requestAnimationFrame(step4);
     };
     return {
       id: "sr",
       mount() {
         if (!st.done && !raf2) {
           prev = 0;
-          raf2 = requestAnimationFrame(step3);
+          raf2 = requestAnimationFrame(step4);
         }
       },
       stop: stop3,
@@ -13447,8 +13632,8 @@ ${marks}`;
         b.style.width = Math.min(100, st.got / st.target * 100) + "%";
         b.style.background = st.got > st.target ? "var(--spend)" : "var(--action)";
       }
-      const m = el3("crMsg");
-      if (m) m.textContent = st.msg ? st.msg + " \xB7 " : "";
+      const m2 = el3("crMsg");
+      if (m2) m2.textContent = st.msg ? st.msg + " \xB7 " : "";
     };
     const catchCoin = (v, x, y) => {
       if (st.done) return;
@@ -13506,13 +13691,13 @@ ${marks}`;
       const tm = el3("crTime");
       if (tm) tm.textContent = Math.max(0, Math.ceil((LEN - st.t) / 1e3));
     };
-    const step3 = (ts) => {
+    const step4 = (ts) => {
       if (st.done) return;
       const dt = Math.min(50, ts - (last2 || ts));
       last2 = ts;
       advance3(dt);
       draw2();
-      if (!st.done) raf2 = requestAnimationFrame(step3);
+      if (!st.done) raf2 = requestAnimationFrame(step4);
     };
     const draw2 = () => {
       if (!ctx3) return;
@@ -13586,7 +13771,7 @@ ${marks}`;
         if (!st.done) {
           last2 = 0;
           stop3();
-          raf2 = requestAnimationFrame(step3);
+          raf2 = requestAnimationFrame(step4);
         }
         cv2.onpointerdown = (e) => {
           const b = cv2.getBoundingClientRect();
@@ -13852,7 +14037,7 @@ ${marks}`;
     return (cs.getPropertyValue(n) || f).trim() || f;
   }
   function shell(spec) {
-    const { jobId, st, step: step3, draw: draw2, onKey, onPoint, controls, hint, finishLine } = spec;
+    const { jobId, st, step: step4, draw: draw2, onKey, onPoint, controls, hint, finishLine } = spec;
     const job = JOBS.find((j) => j.id === jobId) || { name: "Work", who: "the town" };
     const cfg2 = JOB_GAME[jobId];
     let raf2 = 0, last2 = 0, ctx3 = null, cv2 = null;
@@ -13875,7 +14060,7 @@ ${marks}`;
       if (st.done) return;
       const dt = Math.min(50, ts - (last2 || ts));
       last2 = ts;
-      step3(dt, end);
+      step4(dt, end);
       if (ctx3) draw2(ctx3);
       raf2 = requestAnimationFrame(loop2);
     };
@@ -15366,7 +15551,7 @@ ${marks}`;
     /* how much of a one-off panic unwinds a year later */
     eventsPerYear: { macro: 1.1, country: 0.9, sector: 0.7, company: 0.55 }
   };
-  function pick(list3, r) {
+  function pick2(list3, r) {
     const total = list3.reduce((t, e) => t + e.w, 0);
     let x = r() * total;
     for (const e of list3) {
@@ -15385,15 +15570,15 @@ ${marks}`;
       ["macro", "country"].forEach((lvl) => {
         let n = M.eventsPerYear[lvl];
         while (n > 0) {
-          if (r() < Math.min(1, n)) add(y, pick(byLevel[lvl], r), { kind: lvl });
+          if (r() < Math.min(1, n)) add(y, pick2(byLevel[lvl], r), { kind: lvl });
           n -= 1;
         }
       });
       SECTORS.forEach((s) => {
-        if (r() < M.eventsPerYear.sector) add(y, pick(byLevel.sector, r), { kind: "sector", sector: s.id });
+        if (r() < M.eventsPerYear.sector) add(y, pick2(byLevel.sector, r), { kind: "sector", sector: s.id });
       });
       COMPANIES.forEach((c) => {
-        if (r() < M.eventsPerYear.company) add(y, pick(byLevel.company, r), { kind: "company", company: c.id });
+        if (r() < M.eventsPerYear.company) add(y, pick2(byLevel.company, r), { kind: "company", company: c.id });
       });
     }
     return cal;
@@ -15569,10 +15754,10 @@ ${marks}`;
     const revUp = p ? r.revenue / p.revenue - 1 : 0;
     const netUp = p ? r.net / Math.max(1, Math.abs(p.net)) - 1 : 0;
     const marginDown = p ? r.margin < p.margin : false;
-    const pick3 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
+    const pick4 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
     const good = netUp > 0.08 && revUp > 0.04;
     const bad = netUp < -0.1 || r.net < 0;
-    const open2 = good ? pick3(OPEN_GOOD) : bad ? pick3(OPEN_BAD) : pick3(OPEN_MIXED);
+    const open2 = good ? pick4(OPEN_GOOD) : bad ? pick4(OPEN_BAD) : pick4(OPEN_MIXED);
     const body = [];
     body.push(!p ? `In our first year, revenue was ${inr(r.revenue)}.` : revUp >= 0 ? `Revenue grew ${pc(revUp)} to ${inr(r.revenue)}.` : `Revenue fell ${pc(-revUp)} to ${inr(r.revenue)}, which is not where we wanted to be.`);
     if (marginDown) {
@@ -15685,10 +15870,10 @@ ${marks}`;
   function study(g, id) {
     if (!g.studied.includes(id)) g.studied.push(id);
   }
-  function assess(g, id, pick3) {
+  function assess(g, id, pick4) {
     const c = byId2[id], a = assessOptions(c);
-    const right = pick3 === a.answer;
-    g.assessed[id] = { pick: pick3, right, answer: a.answer };
+    const right = pick4 === a.answer;
+    g.assessed[id] = { pick: pick4, right, answer: a.answer };
     g.score.asked++;
     if (right) g.score.right++;
     return { right, answer: a.answer, why: a.why, label: a.options.find((o) => o.id === a.answer).t };
@@ -15965,6 +16150,27 @@ ${marks}`;
   </div>`;
   }
 
+  // src/cards.js
+  function cardById(id, c) {
+    if (!id) return null;
+    const chapter2 = ALL_CARDS.find((x) => x.id === id);
+    if (chapter2) return chapter2;
+    const extra = NEW_CARD_LIST.find((x) => x.id === id);
+    if (extra) return extra;
+    let m2 = /^(.+)#(\d+)$/.exec(id);
+    if (m2) {
+      const o = objective(m2[1]);
+      return o && o.assess[+m2[2]] ? assessCard(o, +m2[2]) : null;
+    }
+    m2 = /^(.+)~(\d+)$/.exec(id);
+    if (m2) {
+      const o = objective(m2[1]);
+      return o ? genCard(o, +m2[2], { ceil: c ? mathsCeiling(c) : 6 }) : null;
+    }
+    return null;
+  }
+  var isLesson = (card3) => !!card3 && !card3.assess;
+
   // src/next.js
   function path(c) {
     const out = [];
@@ -16220,7 +16426,7 @@ ${marks}`;
     const w = W2[id], st = state4 && state4[id] || {};
     return Object.fromEntries(Object.entries(w.vars).map(([k, [v0]]) => [k, st[k] != null ? st[k] : v0]));
   }
-  function step2(state4, id, key2, dir) {
+  function step3(state4, id, key2, dir) {
     const w = W2[id];
     if (!w || !w.vars[key2]) return state4;
     const [, min, max, inc] = w.vars[key2], v = values(id, state4);
@@ -16238,7 +16444,7 @@ ${marks}`;
   function holding(p) {
     return !!p && !p.right && p.tries === 1;
   }
-  function pick2(st, qi, i, answer6) {
+  function pick3(st, qi, i, answer6) {
     const cur3 = st.picks[qi];
     if (settled(cur3)) return cur3;
     if (cur3 && cur3.wrong === i) return cur3;
@@ -16374,11 +16580,11 @@ ${marks}`;
     ${s.done ? `<span class="small" style="color:var(--grow);font-weight:800">${ico("star", "", 14).repeat(Math.max(1, Math.min(3, c.learn.done[s.card.id] && c.learn.done[s.card.id].right || 1)))}</span>` : ""}
   </button>`;
   }
-  function ring(done, total, size2, col) {
-    const R2 = (size2 - 6) / 2, C4 = 2 * Math.PI * R2, pct = total ? done / total : 0;
-    return `<span class="aring" style="width:${size2}px;height:${size2}px"><svg viewBox="0 0 ${size2} ${size2}">
-    <circle cx="${size2 / 2}" cy="${size2 / 2}" r="${R2}" fill="rgba(10,20,24,.34)" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
-    <circle cx="${size2 / 2}" cy="${size2 / 2}" r="${R2}" fill="none" stroke="${col}" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="${(C4 * pct).toFixed(1)} ${C4.toFixed(1)}" transform="rotate(-90 ${size2 / 2} ${size2 / 2})"/></svg>
+  function ring(done, total, size3, col) {
+    const R2 = (size3 - 6) / 2, C4 = 2 * Math.PI * R2, pct = total ? done / total : 0;
+    return `<span class="aring" style="width:${size3}px;height:${size3}px"><svg viewBox="0 0 ${size3} ${size3}">
+    <circle cx="${size3 / 2}" cy="${size3 / 2}" r="${R2}" fill="rgba(10,20,24,.34)" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
+    <circle cx="${size3 / 2}" cy="${size3 / 2}" r="${R2}" fill="none" stroke="${col}" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="${(C4 * pct).toFixed(1)} ${C4.toFixed(1)}" transform="rotate(-90 ${size3 / 2} ${size3 / 2})"/></svg>
     <b>${done}/${total}</b></span>`;
   }
   function actSection(c, wi, r, opts = {}) {
@@ -16991,11 +17197,11 @@ ${drawerHTML(o)}`;
   var dayIndexOf = (t) => Math.floor((t - new Date(t).getTimezoneOffset() * 6e4) / 864e5);
   var K6 = () => kid2(R.s);
   function viewOnboard(draft2) {
-    const step3 = draft2.step || 0;
+    const step4 = draft2.step || 0;
     const shell4 = (body) => `<div class="stack" style="max-width:520px;margin:5vh auto 0">${body}</div>`;
     const first = R.s ? R.s.kids.length === 0 : true;
-    if (step3 === 0 && first && !draft2.go) return landing();
-    if (step3 === 0) {
+    if (step4 === 0 && first && !draft2.go) return landing();
+    if (step4 === 0) {
       return shell4(`
       <div style="text-align:center">
         <div style="margin:0 auto 6px;width:112px">${pipPose("wave", 112, "Pip waves hello")}</div>
@@ -17017,7 +17223,7 @@ ${drawerHTML(o)}`;
         ${first ? "" : '<button class="small muted" style="text-align:center;width:100%" data-act="obCancel">Cancel</button>'}
       </div>`);
     }
-    if (step3 === 1) {
+    if (step4 === 1) {
       return shell4(`
       ${say2("pip", `Good to meet you, <b>${esc(draft2.name)}</b>. How old are you? It changes what the street shows \u2014 no debt and no market before they are taught.`)}
       <p class="small muted" style="text-align:center">Tap one and you're in. Money is counted in ${esc(CURRENCIES[guessCurrency()].name.toLowerCase())} \u2014 a grown-up can change that in settings.</p>
@@ -17458,7 +17664,7 @@ ${drawerHTML(o)}`;
   function viewLearn() {
     const c = K6();
     if (c.learn.openCard) {
-      const card3 = ALL_CARDS.find((x) => x.id === c.learn.openCard);
+      const card3 = cardById(c.learn.openCard, c);
       if (card3) return viewCard(card3);
     }
     if (R.shelf === "words") return viewGlossary();
@@ -17470,8 +17676,9 @@ ${drawerHTML(o)}`;
     const c = K6(), st = c.learn.drill;
     const who = CAST[card3.who] || CAST.pip;
     return `<div class="stack">
-    <button class="backlink" data-act="closeCard">${ico("back", "\u2190", 16)} All chapters</button>
-    ${hero({ eyebrow: esc(CHAPTERS.find((x) => x.id === card3.ch).title), title: esc(card3.title) })}
+    <button class="backlink" data-act="closeCard">${ico("back", "\u2190", 16)} ${card3.assess ? "Not now" : "All chapters"}</button>
+    ${card3.assess ? hero({ eyebrow: card3.generated ? "Still know this? \xB7 in new numbers" : "Still know this?", title: esc(card3.title) }) : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card3.ch) || { title: "A stop off the road" }).title), title: esc(card3.title) })}
+    ${card3.assess ? `<p class="small muted">You met this a while ago. One question \u2014 ${card3.generated ? "numbers the town has not asked you before" : "a different one from last time"}. Getting it right after a gap is how the town knows it is yours.</p>` : `
     ${lessonBlock(card3.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card3.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card3.teach}</span></p>
@@ -17479,7 +17686,7 @@ ${drawerHTML(o)}`;
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card3.id}">${ico("sound", "\u{1F50A}", 15)} Read it to me</button></div>` : ""}
     </div>
     ${tryBlock(card3)}
-    ${itemBlock(card3)}
+    ${itemBlock(card3)}`}
     ${(() => {
       const total = drillCount(card3);
       const live2 = st && st.card === card3.id && st.picks ? st : null;
@@ -17492,6 +17699,10 @@ ${drawerHTML(o)}`;
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : "One question"}</div>
       <div class="row" style="align-items:flex-start;gap:8px"><h3 class="grow" style="font-size:18px">${esc(dq.q)}</h3>
         <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card3.id}#${qi}" aria-label="Read the question and the answers to me">${ico("sound", "", 18)}</button></div>
+      ${dq.num ? `<div class="numrow">
+        <label class="yamt"><span class="sr">Your answer</span><input id="numAns" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" data-enter="answerNum"
+          value="${done ? dq.value : hold ? esc(String(p.typed)) : ""}" ${done ? "disabled" : ""} aria-label="Your answer \u2014 type the amount"></label>
+        ${done ? "" : '<button class="btn" data-act="answerNum">Check</button>'}</div>` : ""}
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
         let k = "";
@@ -17504,7 +17715,7 @@ ${drawerHTML(o)}`;
       ${hold ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card3, qi))}
           <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">${ico("sound", "", 16)}</button></div>` : ""}
       ${done ? `<div class="fb ${p.right ? "yes" : "no"}" role="status">
-          <b>${p.right ? p.first === false ? "Got it on the second go." : "That\u2019s it." : "That one is " + esc(dq.opts[dq.answer]) + "."}</b> ${esc(dq.why)}</div>` : ""}
+          <b>${p.right ? p.first === false ? "Got it on the second go." : "That\u2019s it." : dq.num ? "It is " + esc(String(dq.value)) + "." : "That one is " + esc(dq.opts[dq.answer]) + "."}</b> ${esc(dq.why)}</div>` : ""}
       ${done && !last2 ? `<button class="btn wide" data-act="nextQ">Next question \u2192</button>` : ""}
       ${done && last2 ? `<button class="btn wide" data-act="cardDone" data-arg="${card3.id}">Take it back to town \u2192</button>` : ""}
     </div>`;
@@ -17943,7 +18154,7 @@ ${drawerHTML(o)}`;
   </div>`;
   }
   function viewExchange() {
-    const c = K6(), step3 = c.market.step;
+    const c = K6(), step4 = c.market.step;
     const val = holdingsValue(c);
     const sp = spread(c);
     return `<div class="stack">
@@ -17965,7 +18176,7 @@ ${drawerHTML(o)}`;
     ${CLASSES.filter((a) => mathsMet(c)(a.needs)).map((a) => {
       const series = c.market.series[a.id];
       if (!series) return "";
-      const p = series[step3], prev = series[Math.max(0, step3 - 1)];
+      const p = series[step4], prev = series[Math.max(0, step4 - 1)];
       const mv = (p - prev) / prev;
       const u = c.market.holdings[a.id] || 0;
       return `<div class="card">
@@ -17974,7 +18185,7 @@ ${drawerHTML(o)}`;
           <p class="small muted">${esc(a.one)}</p></div>
           <div style="text-align:right"><div style="font-weight:800;font-variant-numeric:tabular-nums">${money(p)}</div>
           <div class="small" style="color:${mv >= 0 ? "var(--grow)" : "var(--spend)"};font-weight:700">${mv >= 0 ? "\u25B2" : "\u25BC"} ${Math.abs(mv * 100).toFixed(1)}%</div></div></div>
-        ${sparkline(series.slice(0, step3 + 1), 300, 40, mv >= 0 ? "var(--grow)" : "var(--spend)")}
+        ${sparkline(series.slice(0, step4 + 1), 300, 40, mv >= 0 ? "var(--grow)" : "var(--spend)")}
         <p class="small muted" style="margin:2px 0 6px">${esc(a.why)}</p>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
           <span class="pill">${u > 0 ? "you hold " + money(u * p) : "not held"}</span>
@@ -18263,10 +18474,10 @@ ${drawerHTML(o)}`;
 
     <div class="card">
       <div class="eyebrow">What moved</div>
-      ${r.moved.length ? `<div class="stack" style="gap:8px;margin-top:10px">${r.moved.map((m) => row2(
-      m.to === "transferred" ? "\u{1F3AF}" : "\u2713",
-      esc(m.name),
-      esc(m.detail)
+      ${r.moved.length ? `<div class="stack" style="gap:8px;margin-top:10px">${r.moved.map((m2) => row2(
+      m2.to === "transferred" ? "\u{1F3AF}" : "\u2713",
+      esc(m2.name),
+      esc(m2.detail)
     )).join("")}</div>` : '<p class="small muted" style="margin-top:7px">Nothing reached the point of being worth reporting this week. Meeting something is not learning it; this line only moves when it survives a gap.</p>'}
     </div>
 
@@ -18703,12 +18914,12 @@ ${drawerHTML(o)}`;
   </div>`;
   }
   function placementCard(c) {
-    const m = measured(c);
+    const m2 = measured(c);
     return `<div class="card stack">
     <div class="eyebrow">The maths check</div>
-    <p class="small muted">${m ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(RUNGS[c.maths.reached - 1] || {}).can ? esc(RUNGS[c.maths.reached - 1].can.toLowerCase()) : "the first rung"}</b>. The town uses that to decide what it may put on screen \u2014 a screen that needs arithmetic not met yet waits, or shows the same truth another way.` : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
+    <p class="small muted">${m2 ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(RUNGS[c.maths.reached - 1] || {}).can ? esc(RUNGS[c.maths.reached - 1].can.toLowerCase()) : "the first rung"}</b>. The town uses that to decide what it may put on screen \u2014 a screen that needs arithmetic not met yet waits, or shows the same truth another way.` : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
     <div class="row" style="gap:8px"><span class="grow"></span>
-      <button class="btn ${m ? "ghost" : ""} sm" data-act="placement">${m ? "Sit it again" : "Start the check"}</button></div>
+      <button class="btn ${m2 ? "ghost" : ""} sm" data-act="placement">${m2 ? "Sit it again" : "Start the check"}</button></div>
   </div>`;
   }
   function backupCard(s) {
@@ -18772,13 +18983,13 @@ ${drawerHTML(o)}`;
   var list2 = (c) => c.mistakes || (c.mistakes = []);
   function record2(c, card3, qi, now2 = Date.now()) {
     const k = key(card3, qi), L = list2(c);
-    const m = L.find((x) => x.k === k);
-    if (m) {
-      m.box = Math.max(0, m.box - 1);
-      m.due = now2 + GAPS[m.box] * DAY3;
-      m.misses++;
-      m.cleared = false;
-      return m;
+    const m2 = L.find((x) => x.k === k);
+    if (m2) {
+      m2.box = Math.max(0, m2.box - 1);
+      m2.due = now2 + GAPS[m2.box] * DAY3;
+      m2.misses++;
+      m2.cleared = false;
+      return m2;
     }
     const n = { k, card: card3, qi: qi || 0, t: now2, due: now2 + GAPS[0] * DAY3, box: 0, misses: 1, rights: 0, cleared: false };
     L.push(n);
@@ -18786,37 +18997,37 @@ ${drawerHTML(o)}`;
     return n;
   }
   function open(c) {
-    return list2(c).filter((m) => !m.cleared);
+    return list2(c).filter((m2) => !m2.cleared);
   }
   function due2(c, now2 = Date.now()) {
-    return open(c).filter((m) => m.due <= now2).sort((a, b) => a.due - b.due);
+    return open(c).filter((m2) => m2.due <= now2).sort((a, b) => a.due - b.due);
   }
   function waiting(c, now2 = Date.now()) {
-    return open(c).filter((m) => m.due > now2).sort((a, b) => a.due - b.due);
+    return open(c).filter((m2) => m2.due > now2).sort((a, b) => a.due - b.due);
   }
   function cleared(c) {
-    return list2(c).filter((m) => m.cleared);
+    return list2(c).filter((m2) => m2.cleared);
   }
   function answer4(c, k, right, now2 = Date.now()) {
-    const m = list2(c).find((x) => x.k === k && !x.cleared);
-    if (!m) return null;
+    const m2 = list2(c).find((x) => x.k === k && !x.cleared);
+    if (!m2) return null;
     if (!right) {
-      m.box = Math.max(0, m.box - 1);
-      m.due = now2 + GAPS[m.box] * DAY3;
-      m.misses++;
-      m.rights = 0;
-      return { moved: "down", m };
+      m2.box = Math.max(0, m2.box - 1);
+      m2.due = now2 + GAPS[m2.box] * DAY3;
+      m2.misses++;
+      m2.rights = 0;
+      return { moved: "down", m: m2 };
     }
-    if (m.due > now2) return { moved: "early", m };
-    m.rights++;
-    if (m.rights >= CLEAR_AT) {
-      m.cleared = true;
-      m.clearedAt = now2;
-      return { moved: "cleared", m };
+    if (m2.due > now2) return { moved: "early", m: m2 };
+    m2.rights++;
+    if (m2.rights >= CLEAR_AT) {
+      m2.cleared = true;
+      m2.clearedAt = now2;
+      return { moved: "cleared", m: m2 };
     }
-    m.box = Math.min(GAPS.length - 1, m.box + 1);
-    m.due = now2 + GAPS[m.box] * DAY3;
-    return { moved: "up", m };
+    m2.box = Math.min(GAPS.length - 1, m2.box + 1);
+    m2.due = now2 + GAPS[m2.box] * DAY3;
+    return { moved: "up", m: m2 };
   }
 
   // src/familyviews.js
@@ -18953,15 +19164,15 @@ ${drawerHTML(o)}`;
   }
   function viewMistakes() {
     const c = K7(), now2 = Date.now(), due4 = due2(c, now2), wait = waiting(c, now2), done = cleared(c);
-    const cur3 = R.mk && due4.find((m2) => m2.k === R.mk.k) ? R.mk : due4[0] ? { k: due4[0].k, pick: null, tries: 0 } : null;
+    const cur3 = R.mk && due4.find((m3) => m3.k === R.mk.k) ? R.mk : due4[0] ? { k: due4[0].k, pick: null, tries: 0 } : null;
     R.mk = cur3;
-    const m = cur3 && due4.find((x) => x.k === cur3.k);
-    const card3 = m && ALL_CARDS.find((x) => x.id === m.card);
+    const m2 = cur3 && due4.find((x) => x.k === cur3.k);
+    const card3 = m2 && ALL_CARDS.find((x) => x.id === m2.card);
     let q = "";
-    if (m && card3) {
-      const d = shuffledDrill(card3, m.qi), held2 = cur3.pick != null && cur3.pick !== d.answer && cur3.tries === 1, settled2 = cur3.pick === d.answer || cur3.tries >= 2;
+    if (m2 && card3) {
+      const d = shuffledDrill(card3, m2.qi), held2 = cur3.pick != null && cur3.pick !== d.answer && cur3.tries === 1, settled2 = cur3.pick === d.answer || cur3.tries >= 2;
       q = `<div class="card stack">
-      <div class="eyebrow">From \u201C${esc(card3.title)}\u201D \xB7 missed ${m.misses === 1 ? "once" : nWord(m.misses) + " times"}</div>
+      <div class="eyebrow">From \u201C${esc(card3.title)}\u201D \xB7 missed ${m2.misses === 1 ? "once" : nWord(m2.misses) + " times"}</div>
       <h3 style="font-size:18px">${esc(d.q)}</h3>
       <div class="stack" style="gap:8px">${d.opts.map((o, i) => {
         let k = "";
@@ -18969,7 +19180,7 @@ ${drawerHTML(o)}`;
         else if (held2 && i === cur3.pick) k = " no";
         return `<button class="opt${k}" data-act="mkPick" data-arg="${i}" ${settled2 || held2 && i === cur3.pick ? "disabled" : ""}><span class="k">${"ABCD"[i]}</span>${esc(o)}</button>`;
       }).join("")}</div>
-      ${held2 ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card3, m.qi))}<div style="margin-top:6px;font-weight:700">One more try.</div></div>` : ""}
+      ${held2 ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card3, m2.qi))}<div style="margin-top:6px;font-weight:700">One more try.</div></div>` : ""}
       ${settled2 ? `<div class="fb ${cur3.pick === d.answer && cur3.tries === 1 ? "yes" : "no"}" role="status"><b>${cur3.pick === d.answer && cur3.tries === 1 ? "Yours again." : "That one is " + esc(d.opts[d.answer]) + "."}</b> ${esc(d.why)}</div>
         <button class="btn wide" data-act="mkNext">Next one \u2192</button>` : ""}
     </div>`;
@@ -19121,7 +19332,7 @@ ${drawerHTML(o)}`;
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
   }
-  function size() {
+  function size2() {
     if (!cv || !el2) return;
     const r = el2.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.max(1, Math.round(r.width * dpr));
@@ -19139,7 +19350,7 @@ ${drawerHTML(o)}`;
       el2.className = "frieze";
       el2.setAttribute("aria-hidden", "true");
       document.body.insertBefore(el2, document.body.firstChild);
-      addEventListener("resize", size);
+      addEventListener("resize", size2);
       addEventListener("scroll", () => {
         if (el2) el2.style.setProperty("--sy", String(Math.min(400, scrollY)));
       }, { passive: true });
@@ -19157,7 +19368,7 @@ ${drawerHTML(o)}`;
     <div class="fz-scrim"></div>`;
     cv = el2.querySelector("canvas");
     ctx2 = cv.getContext("2d");
-    size();
+    size2();
     startLoop();
   }
   function refreshMotion() {
@@ -19183,7 +19394,7 @@ ${drawerHTML(o)}`;
       out.push({ kind: "Lesson", title: c.title, sub: `Stop ${i + 1} \xB7 ${ch ? ch.title : ""}`, body: plain(c.teach) + " " + plain(c.eg), act: "card", arg: c.id, icon: "lesson" });
     });
     NEW_CARD_LIST.forEach((c) => out.push({ kind: "Lesson", title: c.title, sub: "A lesson from the Atlas", body: plain(c.teach) + " " + plain(c.eg), act: "card", arg: c.id, icon: "lesson" }));
-    GLOSSARY.forEach(([t, m, e]) => out.push({ kind: "Money Word", title: t, sub: m, body: e, act: "word", arg: t, icon: "page" }));
+    GLOSSARY.forEach(([t, m2, e]) => out.push({ kind: "Money Word", title: t, sub: m2, body: e, act: "word", arg: t, icon: "page" }));
     GAMES.forEach((g) => out.push({ kind: "Game", title: g.name, sub: g.blurb, body: g.blurb, act: "game", arg: g.id, icon: "arcade" }));
     out.push({ kind: "Game", title: "The Market Game", sub: "Forty companies, forty years", body: "companies annual reports invest shares market", act: "nav", arg: "market40", icon: "chartUp" });
     PLACES.forEach((p) => out.push({ kind: "Place", title: p.name, sub: p.blurb, body: p.blurb, act: "town", arg: p.key, icon: "town" }));
@@ -19298,27 +19509,27 @@ ${drawerHTML(o)}`;
     scored.sort((a, b) => b.s - a.s);
     const out = [], kinds = {}, whys = {}, tiers = { now: 0, review: 0, next: 0, any: 0 };
     let plays = 0;
-    const cap = { review: Math.floor(limit * 0.25), next: 2, any: Math.floor(limit * 0.25) };
+    const cap2 = { review: Math.floor(limit * 0.25), next: 2, any: Math.floor(limit * 0.25) };
     const pool = scored.slice(), maxPlay = o.maxPlay ?? MAX_PLAY, maxKind = o.maxKind ?? MAX_KIND, maxWhy = o.maxWhy ?? MAX_WHY;
     while (out.length < limit && pool.length) {
-      let pick3 = -1, bestS = -Infinity;
+      let pick4 = -1, bestS = -Infinity;
       for (let i = 0; i < pool.length; i++) {
         const k = pool[i].it.kind, n = out.length;
         if (n >= 2 && out[n - 1].kind === k && out[n - 2].kind === k) continue;
         if (pool[i].it.play && plays >= maxPlay) continue;
         const tr = pool[i].tier;
-        if (cap[tr] != null && tiers[tr] >= cap[tr]) continue;
+        if (cap2[tr] != null && tiers[tr] >= cap2[tr]) continue;
         if ((kinds[k] || 0) >= maxKind) continue;
         const wn = pool[i].why ? whys[pool[i].why] || 0 : 0;
         if (wn >= maxWhy) continue;
         const eff = pool[i].s - SPREAD * (kinds[k] || 0) - WHY_COST * wn;
         if (eff > bestS) {
           bestS = eff;
-          pick3 = i;
+          pick4 = i;
         }
       }
-      if (pick3 < 0) break;
-      const p = pool.splice(pick3, 1)[0];
+      if (pick4 < 0) break;
+      const p = pool.splice(pick4, 1)[0];
       kinds[p.it.kind] = (kinds[p.it.kind] || 0) + 1;
       if (p.it.play) plays++;
       if (p.why) whys[p.why] = (whys[p.why] || 0) + 1;
@@ -19390,8 +19601,8 @@ ${drawerHTML(o)}`;
   var plate = (w) => w && (ART["world-" + w.id] || null);
   var topicVal = (it, k) => ((it.topics || []).find((t) => t.startsWith(k + ":")) || "").slice(k.length + 1);
   function artFor(it) {
-    const m = /^#\/play\/(\w+)/.exec(it.route || "");
-    if (it.kind === "game" && m && COVERS[m[1]]) return COVERS[m[1]].src;
+    const m2 = /^#\/play\/(\w+)/.exec(it.route || "");
+    if (it.kind === "game" && m2 && COVERS[m2[1]]) return COVERS[m2[1]].src;
     if (["chapter", "lesson", "tryit", "yourturn"].includes(it.kind) && it.level) return plate(worldOfChapter(it.level));
     if (["place", "fix", "fixed", "job"].includes(it.kind)) return plate(WORLDS.find((w) => w.id === topicVal(it, "world")));
     if (it.kind === "home") {
@@ -19435,9 +19646,9 @@ ${drawerHTML(o)}`;
   var groupsLoaded = /* @__PURE__ */ new Set();
   function load5() {
     if (ITEMS2) return Promise.resolve(ITEMS2);
-    if (!loading) loading = Promise.resolve().then(() => (init_feed(), feed_exports)).then((m) => {
-      ITEMS2 = m.INDEX;
-      LOAD2 = m.LOAD;
+    if (!loading) loading = Promise.resolve().then(() => (init_feed(), feed_exports)).then((m2) => {
+      ITEMS2 = m2.INDEX;
+      LOAD2 = m2.LOAD;
       BY_ID3 = Object.fromEntries(ITEMS2.map((x) => [x.id, x]));
       return ITEMS2;
     });
@@ -19445,8 +19656,8 @@ ${drawerHTML(o)}`;
   }
   function loadGroups(ids) {
     const need = [...new Set(ids.map((id) => BY_ID3[id] && BY_ID3[id].g).filter((g) => g != null && !groupsLoaded.has(g)))];
-    return Promise.all(need.map((g) => LOAD2[g]().then((m) => {
-      Object.assign(BODY, m.default);
+    return Promise.all(need.map((g) => LOAD2[g]().then((m2) => {
+      Object.assign(BODY, m2.default);
       groupsLoaded.add(g);
     })));
   }
@@ -19473,14 +19684,14 @@ ${drawerHTML(o)}`;
     if (last2 && !last2.scam) out.push({ topic: "letter:" + last2.id, w: 6, why: "Because you answered a letter in the postbox" });
     const w = WORLDS[c.world || 0];
     if (w) out.push({ topic: "world:" + w.id, w: 2, why: `You live in ${w.name}` });
-    due2(c).forEach((m) => out.push({ topic: "card:" + m.card, w: 8, why: "A question that tripped you \u2014 its gap is over" }));
+    due2(c).forEach((m2) => out.push({ topic: "card:" + m2.card, w: 8, why: "A question that tripped you \u2014 its gap is over" }));
     if (has2(c)) out.push({ topic: "companion", w: 2, why: `Because ${get(c).name || "your companion"} lives with you` });
     return out;
   }
   function due3(c, now2 = Date.now()) {
     const d = {};
-    due2(c, now2).forEach((m) => {
-      d[m.k] = "A question that tripped you \u2014 its gap is over";
+    due2(c, now2).forEach((m2) => {
+      d[m2.k] = "A question that tripped you \u2014 its gap is over";
     });
     due(c, now2).forEach((o) => {
       if (o.teach && !d["card:" + o.teach]) d["card:" + o.teach] = `Due for a second look: ${o.short}`;
@@ -19604,8 +19815,8 @@ ${drawerHTML(o)}`;
   }
   var kidBadge2 = kidBadge;
   var ALIAS = { arcade: "play", worlds: "town", progress: "me", atlas: "learn" };
-  function focusFor(m) {
-    const [a, b, c2] = m, q = (v) => CSS.escape(decodeURIComponent(v || ""));
+  function focusFor(m2) {
+    const [a, b, c2] = m2, q = (v) => CSS.escape(decodeURIComponent(v || ""));
     if (!b) return null;
     if (a === "play" && GAMES.some((g) => g.id === b)) {
       if (gameOpen(C3(), GAMES.find((g) => g.id === b))) R.gameIntro = b;
@@ -19668,55 +19879,55 @@ ${drawerHTML(o)}`;
     }
   }
   function readHash() {
-    const m = (location.hash || "").replace(/^#\/?/, "").split("/");
-    if (!m[0]) return false;
-    if (m[0] === "continue") {
+    const m2 = (location.hash || "").replace(/^#\/?/, "").split("/");
+    if (!m2[0]) return false;
+    if (m2[0] === "continue") {
       R.continueNow = true;
       return false;
     }
-    if (["settings", "help", "privacy"].includes(m[0])) {
-      R.sheetNow = m[0];
+    if (["settings", "help", "privacy"].includes(m2[0])) {
+      R.sheetNow = m2[0];
       return false;
     }
-    if (m[0] === "letter" && m[1]) {
+    if (m2[0] === "letter" && m2[1]) {
       R.sheetNow = "letterRead";
-      R.sheetArg = decodeURIComponent(m[1]);
+      R.sheetArg = decodeURIComponent(m2[1]);
       return false;
     }
-    if (m[0] === "market40" && ["company", "event"].includes(m[1]) && m[2]) {
+    if (m2[0] === "market40" && ["company", "event"].includes(m2[1]) && m2[2]) {
       R.sheetNow = "mgRead";
-      R.sheetArg = m[1] + ":" + decodeURIComponent(m[2]);
+      R.sheetArg = m2[1] + ":" + decodeURIComponent(m2[2]);
       return false;
     }
-    if (m[0] === "shelter") {
+    if (m2[0] === "shelter") {
       R.sheetNow = "shelterAt";
-      R.sheetArg = m[1] || "";
+      R.sheetArg = m2[1] || "";
       return false;
     }
-    if (m[0] === "wardrobe") {
+    if (m2[0] === "wardrobe") {
       R.sheetNow = "wardrobeAt";
-      R.sheetArg = m[1] || "";
+      R.sheetArg = m2[1] || "";
       return false;
     }
-    if (["sources", "cast"].includes(m[0])) {
-      R.sheetNow = m[0] === "cast" ? "castCard" : "sources";
-      R.sheetArg = decodeURIComponent(m[1] || "");
+    if (["sources", "cast"].includes(m2[0])) {
+      R.sheetNow = m2[0] === "cast" ? "castCard" : "sources";
+      R.sheetArg = decodeURIComponent(m2[1] || "");
       return false;
     }
     const known = ["home", "town", "learn", "atlas", "money", "play", "arcade", "store", "progress", "me", "collection", "medals", "shop", "words", "mistakes", "parents", "worlds", "report", "market40", "feed"];
-    if (known.indexOf(m[0]) < 0) return false;
-    R.s.ui.nav = ALIAS[m[0]] || m[0];
-    if (m[0] === "money" && m[1]) R.s.ui.sub = m[1];
-    if ((m[0] === "learn" || m[0] === "atlas") && m[1] && R.s.kids.length) {
-      const k = cardById(m[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
+    if (known.indexOf(m2[0]) < 0) return false;
+    R.s.ui.nav = ALIAS[m2[0]] || m2[0];
+    if (m2[0] === "money" && m2[1]) R.s.ui.sub = m2[1];
+    if ((m2[0] === "learn" || m2[0] === "atlas") && m2[1] && R.s.kids.length) {
+      const k = cardById2(m2[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
       if (k && !(ch && chapterLocked(C3(), ch))) {
         C3().learn.openCard = k.id;
         C3().learn.drill = null;
         R.shelf = "";
       }
     }
-    if (m[0] === "words") R.query = m[1] ? decodeURIComponent(m[1]) : "";
-    R.focus = focusFor(m);
+    if (m2[0] === "words") R.query = m2[1] ? decodeURIComponent(m2[1]) : "";
+    R.focus = focusFor(m2);
     return true;
   }
   function dressWorld(c) {
@@ -19969,7 +20180,7 @@ ${drawerHTML(o)}`;
       <button class="btn wide" style="margin-top:12px" data-act="closeOv">Out into the market \u2192</button>`);
     }
     if (o.kind === "stopDone") {
-      const n = nextStep(c), k = cardById(o.id), drillN = k ? drillCount(k) : 1;
+      const n = nextStep(c), k = cardById2(o.id), drillN = k ? drillCount(k) : 1;
       return box(`<div class="celebrate stopdone" style="text-align:center">
       <div class="endfig">${pipPose("cheer", 110)}<span class="endav">${kidBadge2(c, 56)}</span></div>
       ${o.firstEver ? `<div class="coinjar" aria-hidden="true"><i class="dropcoin"></i><span class="jarb"></span></div>` : ""}
@@ -20447,15 +20658,15 @@ ${drawerHTML(o)}`;
     render();
   });
   on("mkPick", (i) => {
-    const c = C3(), m = due2(c).find((x) => R.mk && x.k === R.mk.k);
-    if (!m) return;
-    const card3 = cardById(m.card), d = shuffledDrill(card3, m.qi), cur3 = R.mk;
+    const c = C3(), m2 = due2(c).find((x) => R.mk && x.k === R.mk.k);
+    if (!m2) return;
+    const card3 = cardById2(m2.card), d = shuffledDrill(card3, m2.qi), cur3 = R.mk;
     if (cur3.pick === d.answer || cur3.tries >= 2) return;
     cur3.pick = +i;
     cur3.tries++;
     const right = +i === d.answer;
     if (right || cur3.tries >= 2) {
-      const r = answer4(c, m.k, right && cur3.tries === 1);
+      const r = answer4(c, m2.k, right && cur3.tries === 1);
       if (right && cur3.tries === 1) {
         sfx.good();
         coins(c.name, "answer");
@@ -20675,8 +20886,8 @@ ${drawerHTML(o)}`;
     applyDevice();
     if (R.s) render();
   });
-  on("mode", (m) => {
-    R.mode = m === "system" ? null : m || (R.mode === "dark" ? "light" : "dark");
+  on("mode", (m2) => {
+    R.mode = m2 === "system" ? null : m2 || (R.mode === "dark" ? "light" : "dark");
     Store.saveDevice("mode", R.mode);
     applyDevice();
     render();
@@ -20736,7 +20947,7 @@ ${drawerHTML(o)}`;
   }
   on("tryStep", (arg) => {
     const [id, k, d] = String(arg).split(":");
-    R.tryit = step2(R.tryit || {}, id, k, +d);
+    R.tryit = step3(R.tryit || {}, id, k, +d);
     sfx.click();
     render();
   });
@@ -20749,10 +20960,10 @@ ${drawerHTML(o)}`;
     const c = C3();
     let text = "";
     if (key2.startsWith("q:")) {
-      const [id, qi] = key2.slice(2).split("#"), card3 = cardById(id);
+      const k = key2.slice(2), cut = k.lastIndexOf("#"), id = k.slice(0, cut), qi = k.slice(cut + 1), card3 = cardById2(id);
       if (card3) {
         const d = shuffledDrill(card3, +qi || 0);
-        text = `${d.q} ${d.opts.map((o, i) => `${"ABCD"[i]}: ${o}.`).join(" ")}`;
+        text = d.num ? `${d.q} Type the amount.` : `${d.q} ${d.opts.map((o, i) => `${"ABCD"[i]}: ${o}.`).join(" ")}`;
       }
     }
     if (key2 === "word") {
@@ -20898,31 +21109,19 @@ ${drawerHTML(o)}`;
     render();
     window.scrollTo(0, 0);
   });
-  function cardById(id) {
-    if (!id) return null;
-    const chapter2 = ALL_CARDS.find((x) => x.id === id);
-    if (chapter2) return chapter2;
-    const extra = NEW_CARD_LIST.find((x) => x.id === id);
-    if (extra) return extra;
-    const m = /^(.+)#(\d+)$/.exec(id);
-    if (m) {
-      const o = objective(m[1]);
-      if (o) return assessCard(o, +m[2]);
-    }
-    return null;
-  }
+  var cardById2 = (id) => cardById(id, C3());
   on("closeCard", () => {
     C3().learn.openCard = null;
     C3().learn.drill = null;
     render();
   });
   on("answer", (i) => {
-    const c = C3(), card3 = cardById(c.learn.openCard);
+    const c = C3(), card3 = cardById2(c.learn.openCard);
     if (!card3) return;
     let st = c.learn.drill;
     if (!st || st.card !== card3.id || !st.picks) st = c.learn.drill = { card: card3.id, qi: 0, picks: [] };
     if (settled(st.picks[st.qi])) return;
-    const p = pick2(st, st.qi, +i, shuffledDrill(card3, st.qi).answer);
+    const p = pick3(st, st.qi, +i, shuffledDrill(card3, st.qi).answer);
     const t = tally(st, drillCount(card3));
     st.done = t.done;
     st.right = t.right;
@@ -20935,6 +21134,31 @@ ${drawerHTML(o)}`;
     }
     render();
   });
+  on("answerNum", () => {
+    const c = C3(), card3 = cardById2(c.learn.openCard);
+    if (!card3) return;
+    const el3 = document.getElementById("numAns"), raw = el3 ? el3.value : "";
+    const n = Number(String(raw).replace(/[^\d.-]/g, ""));
+    if (!String(raw).trim() || !Number.isFinite(n)) {
+      toast("Type the amount first");
+      return;
+    }
+    let st = c.learn.drill;
+    if (!st || st.card !== card3.id || !st.picks) st = c.learn.drill = { card: card3.id, qi: 0, picks: [] };
+    const cur3 = st.picks[st.qi];
+    if (settled(cur3)) return;
+    const dq = shuffledDrill(card3, st.qi), right = n === dq.value;
+    const p = pick3(st, st.qi, right ? 0 : cur3 ? 2 : 1, 0);
+    p.typed = n;
+    const t = tally(st, drillCount(card3));
+    st.done = t.done;
+    st.right = t.right;
+    if (p.right) {
+      sfx.good();
+      if (p.first) coins(c.name, "answer");
+    } else sfx.bad();
+    render();
+  });
   on("nextQ", () => {
     const c = C3(), st = c.learn.drill;
     if (!st || !st.picks || !settled(st.picks[st.qi])) return;
@@ -20943,7 +21167,7 @@ ${drawerHTML(o)}`;
     render();
   });
   on("cardDone", (id) => {
-    const c = C3(), card3 = cardById(id);
+    const c = C3(), card3 = cardById2(id);
     if (!card3) return;
     const right = !!(c.learn.drill && c.learn.drill.right);
     const first = !c.learn.done[id];
@@ -20960,6 +21184,20 @@ ${drawerHTML(o)}`;
       }
     }
     const ch = card3.ch ? CHAPTERS.find((x) => x.id === card3.ch) : null;
+    if (!isLesson(card3)) {
+      addXP(c, cardXP(false, right));
+      if (bt && bt.shape === "retrieve" && bt.cardId === id && stateOf2(c, bt.obj) === "retained") milestone(c.name, "mastery", objective(bt.obj).short);
+      c.learn.openCard = null;
+      c.learn.drill = null;
+      c.lastDone = { id, title: card3.title, right, t: Date.now() };
+      sfx[right ? "good" : "click"]();
+      toast(right ? "Still yours." : "It will come back, in a few days.");
+      R.s.ui.nav = "home";
+      save2(R.s);
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     c.learn.done[id] = true;
     if (first && ch) questTick(c, "lesson", 1);
     const res = addXP(c, cardXP(first, right));
@@ -21182,7 +21420,7 @@ ${drawerHTML(o)}`;
       sfx.coin();
       toast("+" + money(a));
       transfer(c, "EARN-1", "wallet", "worked " + row2.name + " for " + money(a));
-      const best2 = jobsToday(c).filter((j) => !j.done).reduce((m, j) => Math.max(m, j.amt || 0), 0);
+      const best2 = jobsToday(c).filter((j) => !j.done).reduce((m2, j) => Math.max(m2, j.amt || 0), 0);
       if (a >= best2) transfer(c, "EARN-4", "wallet", "took the best-paying shift on the board");
     }
     render();
@@ -21361,8 +21599,8 @@ So it costs ${money(offer.cost)}.`);
     window.scrollTo(0, 0);
   });
   on("mgAssess", (arg) => {
-    const [id, pick3] = arg.split(":");
-    const r = assess(G2(), id, pick3);
+    const [id, pick4] = arg.split(":");
+    const r = assess(G2(), id, pick4);
     if (r.right) sfx.good();
     else sfx.bad();
     render();
@@ -21591,11 +21829,11 @@ So it costs ${money(offer.cost)}.`);
     render();
   });
   on("allow", (d) => {
-    const c = C3(), step3 = price(5);
-    if (c.family.allowance == null) c.family.allowance = +d > 0 ? step3 : null;
+    const c = C3(), step4 = price(5);
+    if (c.family.allowance == null) c.family.allowance = +d > 0 ? step4 : null;
     else {
-      const v = c.family.allowance + step3 * +d;
-      c.family.allowance = v < step3 ? null : v;
+      const v = c.family.allowance + step4 * +d;
+      c.family.allowance = v < step4 ? null : v;
     }
     sfx.click();
     render();
@@ -21762,6 +22000,11 @@ So it costs ${money(offer.cost)}.`);
   });
   document.addEventListener("keydown", (e) => {
     if (e.defaultPrevented) return;
+    if (e.key === "Enter" && e.target && e.target.dataset && e.target.dataset.enter) {
+      e.preventDefault();
+      fire(e.target.dataset.enter);
+      return;
+    }
     if (R.game && R.game.key && !R.overlay) {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "].includes(e.key) && document.activeElement && document.activeElement.tagName !== "INPUT") e.preventDefault();
       R.game.key(e);
@@ -21960,11 +22203,15 @@ So it costs ${money(offer.cost)}.`);
     validateAvatars: () => validate(CATALOGUE),
     search,
     mistakes: mistakes_exports,
-    cardById,
+    cardById: cardById2,
+    genValue: (id) => {
+      const k = cardById2(id);
+      return k && k.drill && k.drill.value;
+    },
     allCards: ALL_CARDS,
     fire,
     confetti,
-    key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer
+    key: (id, qi) => shuffledDrill(cardById2(id), qi || 0).answer
   };
   function quizView(o) {
     const ch = chapter(o.ch), c = C3();
