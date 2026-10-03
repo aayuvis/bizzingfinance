@@ -37,7 +37,9 @@ export function card(c, feed, now = Date.now()) {
   return {
     time: { minutes: minutesThisWeek(feed, c.name, now) },
     progress: { stops: pr.done, of: pr.total, world: pr.world.name, worldDone: pr.worldDone, worldOf: pr.worldTotal,
-      level: c.learn.level, rank: rankObj(c.learn.level).name },
+      level: c.learn.level, rank: rankObj(c.learn.level).name,
+      /* stops answered cold: walked, but without reading the lesson — said, never hidden */
+      cold: Object.keys(c.learn.cold || {}).filter((id) => c.learn.done[id]).length },
     mastery: {
       held: held.map((x) => x.o.short), lapsed: lapsed.map((x) => x.o.short), practising: practising.length,
       of: OBJECTIVES.length, movedThisWeek: Array.isArray(moved) ? moved.length : 0,

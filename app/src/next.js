@@ -35,6 +35,13 @@ export function progress(c) {
     worldDone: inWorld.filter((s) => s.done).length, worldTotal: inWorld.length };
 }
 
+/* The next unwalked, open stop on the road — what a stop answered cold leads straight on
+   to. Not Continue (a due revision may outrank it there); just the road. */
+export function nextStop(c) {
+  const s = path(c).find((x) => !x.done && !x.locked);
+  return s ? s.card : null;
+}
+
 export function nextStep(c, now) {
   const bt = ledger.beat(c, ALL_CARDS, { mathsMet: ledger.mathsMet(c), now });
   const answered = c.learn.beat && bt && c.learn.beat.cardId === bt.card.id && c.learn.beat.answered;

@@ -649,6 +649,26 @@ async function demo() {
     return { btn: true, practice: /Practice/.test(eyebrow), right, fresh: first !== second && /~/.test(first) && /~/.test(second), untouched: JSON.stringify(c.mastery.rec) === rec, done: !!c.learn.done[id] };
   });
   ok('a lesson stop offers practice asked fresh: a new question each time, recorded nowhere but XP', prac.btn && prac.practice && prac.right && prac.fresh && prac.untouched && prac.done, JSON.stringify(prac));
+  /* per-stop skipping (owner, 3 Oct 2026): answer cold — three right and it is walked, a miss opens the lesson */
+  const coldRun = await page.evaluate(async () => {
+    const B = window.BZF, { R } = B, c = R.s.kids[0], id = 'c3c', next = 'c3d';
+    B.fire('closeOv'); B.fire('nav', 'learn'); B.fire('card', id); await new Promise((r) => setTimeout(r, 50));
+    const offer = !!document.querySelector('[data-act="coldStart"]');
+    B.fire('coldStart', id);
+    const hidden = !document.querySelector('main .reading') && !!document.querySelector('.coldnote');
+    for (let q = 0; q < 3; q++) { B.fire('answer', B.key(id, q)); const nx = document.querySelector('[data-act="nextQ"]'); if (nx) nx.click(); }
+    const skip = document.querySelector('[data-act="cardDone"]'); const label = skip ? skip.textContent : '';
+    if (skip) skip.click(); await new Promise((r) => setTimeout(r, 50));
+    const walked = !!c.learn.done[id] && !!(c.learn.cold || {})[id], onNext = c.learn.openCard === next, atSkip = c.learn.openCard, ovSkip = R.overlay && R.overlay.kind;
+    /* the miss path, on the next stop */
+    B.fire('closeOv'); B.fire('coldStart', next);
+    const k = B.key(next, 0); B.fire('answer', (k + 1) % 4);
+    const opened = !R.cold && !!document.querySelector('main .reading') && !!document.querySelector('.fb.hold');
+    const report = window.BZF.reportcard.card(c).progress.cold;
+    B.fire('closeCard');
+    return { offer, hidden, label: /Skip ahead/.test(label), walked, onNext, opened, report, atSkip, ovSkip };
+  });
+  ok('a stop answered cold: lesson hidden, three right walks it and opens the next stop; a miss opens the lesson', coldRun.offer && coldRun.hidden && coldRun.label && coldRun.walked && coldRun.onNext && coldRun.opened && coldRun.report === 1, JSON.stringify(coldRun));
   /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
   await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
   const town = await page.evaluate(() => {

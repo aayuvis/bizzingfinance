@@ -26,13 +26,14 @@ import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
 import * as reportmod from './report.js';
+import * as reportcard from './reportcard.js';
 import { startJobGame, hasJobGame } from './jobgames.js';
 import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { cardById as resolveCard, isLesson, practiceCard, genReady, whenGenReady } from './cards.js';
 import { R } from './runtime.js';
-import { nextStep } from './next.js';
+import { nextStep, nextStop } from './next.js';
 import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
 import { ALL as MG_EVENTS } from '../content/events.js';
 import { demoState } from './demo.js';
@@ -940,7 +941,7 @@ on('card', (id) => {
    resolver so every caller stops caring which. */
 const cardById = (id) => resolveCard(id, C());
 
-on('closeCard', () => { R.practice = null; C().learn.openCard = null; C().learn.drill = null; render(); });
+on('closeCard', () => { R.practice = null; R.cold = null; C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
   const c = C(), card = cardById(c.learn.openCard);
   if (!card || card.pending) return;
@@ -953,7 +954,8 @@ on('answer', (i) => {
   const t = drill.tally(st, drillCount(card));
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); }
-  else { sfx.bad(); if (p.tries === 1 && isLesson(card)) mistakes.record(c, card.id, st.qi); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
+  else { sfx.bad(); if (p.tries === 1 && isLesson(card)) mistakes.record(c, card.id, st.qi); }
+  if (!p.right && R.cold === card.id) { R.cold = null; toast('Here is the lesson — then have another go'); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
   render();
 });
 /* A typed amount (generate.js). It goes through the same hold-then-retry rules as a tap:
@@ -995,6 +997,10 @@ on('practiceDone', () => {
   R.practice = null; c.learn.openCard = null; c.learn.drill = null; R.s.ui.nav = 'learn';
   sim.save(R.s); render(); window.scrollTo(0, 0);
 });
+/* Answering a stop cold (owner, 3 Oct 2026: "add per-stop skipping"). Runtime only until
+   it succeeds; what is kept is c.learn.cold[id], so a report can say "answered cold". */
+on('coldStart', (id) => { const c = C(); if (c.learn.done[id]) return; R.cold = id; c.learn.drill = null; sfx.click(); render(); window.scrollTo(0, 0); });
+on('coldStop', () => { R.cold = null; render(); });
 on('nextQ', () => {
   const c = C(), st = c.learn.drill;
   if (!st || !st.picks || !drill.settled(st.picks[st.qi])) return;   /* a held question waits for its second go */
@@ -1036,6 +1042,8 @@ on('cardDone', (id) => {
     R.s.ui.nav = 'home'; sim.save(R.s); render(); window.scrollTo(0, 0);
     return;
   }
+  const cold = R.cold === id && right; R.cold = null;
+  if (cold) { c.learn.cold = c.learn.cold || {}; c.learn.cold[id] = true; }
   c.learn.done[id] = true;
   if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, sim.cardXP(first, right));
@@ -1050,12 +1058,17 @@ on('cardDone', (id) => {
   c.lastDone = { id, title: card.title, right, t: Date.now() };
   /* J1: finishing a chapter is a moment, and it names what was done — the
      four lessons, what it opens — never how anyone else did. */
-  if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
+  /* answered cold: straight on to the next stop on the road (next.js), no finish card;
+     a level gained on the way still gets its moment, over the next stop */
+  const onward = cold && !finished ? nextStop(c) : null;
+  if (onward) { sfx.good(); toast('“' + card.title + '” — yours already'); fire('card', onward.id); if (res.leveled) levelUp(res); }
+  else if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
   else if (res.leveled) levelUp(res);
   else {
     /* F4 · every stop ends on a finish card: what was learned, what was earned, what
        is next. The very first stop is a moment of its own (A8): a coin drops into the
        Save jar on the street. */
+    /* answered cold: straight on to whatever is next (nextStep decides), no finish card */
     const allStops = ALL_CARDS.filter((k) => c.learn.done[k.id]).length;
     R.overlay = { kind: 'stopDone', id, title: card.title, right, firstEver: first && allStops === 1, first, xp: res.gained };
     if (first) { sfx.level(); confetti(allStops === 1 ? 60 : 24); } else sfx.good();
@@ -1689,7 +1702,7 @@ on('install', async () => { const e = R.install; if (!e) return; R.install = nul
 on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
-window.BZF = { R, sim, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+window.BZF = { R, sim, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 

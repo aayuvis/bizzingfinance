@@ -762,7 +762,13 @@ function viewCard(card) {
     ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
       : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
       : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
-    ${card.assess && R.practice && R.practice.id === card.id ? '' : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>` : `
+    ${card.assess && R.practice && R.practice.id === card.id ? '' : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
+      /* per-stop skipping (owner, 3 Oct 2026): answer a stop cold, lesson hidden; three right
+         first time and it is walked; one miss and the lesson opens where the child is */
+      : R.cold === card.id ? `<div class="card coldnote" role="status"><b>Answering cold.</b> Get all three right first time and this stop is yours without the lesson. Miss one and the lesson opens — no harm done.
+          <button class="btn ghost sm" data-act="coldStop" style="margin-top:8px">Show me the lesson instead</button></div>`
+      : `
+    ${!c.learn.done[card.id] && !(st && st.card === card.id && st.picks && st.picks.length) ? `<button class="btn ghost wide coldgo" data-act="coldStart" data-arg="${card.id}">${ico('next', '', 16)} Know this already? Answer it cold</button>` : ''}
     ${lessonBlock(card.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
@@ -804,6 +810,7 @@ function viewCard(card) {
           <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : dq.num ? 'It is ' + esc(String(dq.value)) + '.' : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
       ${done && last && R.practice && R.practice.id === card.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one →</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>`
+        : done && last && R.cold === card.id && st.right ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Skip ahead — it’s yours →</button>`
         : done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>
           ${!card.assess && practiceFor(card) ? `<button class="btn ghost wide" data-act="practise" data-arg="${card.id}">${ico('repeat', '', 16)} One more on this, asked fresh</button>` : ''}` : ''}
     </div>`; })()}
@@ -1691,7 +1698,7 @@ function reportCard(c) {
     <h2 id="rc-h" style="font-size:19px">${esc(c.name)} this week, at a glance</h2>
     <div class="rc-row">
       ${tile('Time', r.time.minutes ? `${r.time.minutes} min` : '—', r.time.minutes ? 'active minutes, from the family feed' : 'no active minutes logged yet')}
-      ${tile('Progress', `${r.progress.stops} / ${r.progress.of}`, `stops · ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} · ${esc(r.progress.rank)} L${r.progress.level}`)}
+      ${tile('Progress', `${r.progress.stops} / ${r.progress.of}`, `stops${r.progress.cold ? ` (${r.progress.cold} answered cold, lesson skipped)` : ''} · ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} · ${esc(r.progress.rank)} L${r.progress.level}`)}
       ${tile('Mastery', `${r.mastery.held.length} / ${r.mastery.of}`, `skills shown again after a gap · ${r.mastery.practising} being practised`)}
     </div>
     ${r.mastery.held.length ? `<p class="small" style="margin-top:10px"><b>Can now do:</b> ${r.mastery.held.slice(0, 4).map(esc).join(' · ')}</p>` : '<p class="small muted" style="margin-top:10px">Nothing is counted as learned until it is shown again after a gap of a week. The first ones arrive in week two.</p>'}

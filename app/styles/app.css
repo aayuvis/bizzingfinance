@@ -1016,3 +1016,6 @@ html[data-bz-dark] .mgoal{background:linear-gradient(160deg,#1C2A3E,#162030)}
 @keyframes rise{from{transform:scaleY(0)}}
 @media (prefers-reduced-motion:reduce){.wk-row i::after,.worthline .wl,.ss-col{animation:none !important;stroke-dashoffset:0}}
 :root[data-motion="reduced"] .wk-row i::after,:root[data-motion="reduced"] .worthline .wl,:root[data-motion="reduced"] .ss-col{animation:none !important;stroke-dashoffset:0}
+/* per-stop skipping: the offer, and the note while answering cold */
+.coldgo{justify-content:center;border-style:dashed}
+.coldnote{background:linear-gradient(135deg,var(--save-tint),var(--surface));border-left:4px solid var(--save)}
