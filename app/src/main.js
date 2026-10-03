@@ -46,6 +46,7 @@ import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
 import * as shell from './shell.js';
+import { BLD } from './buildings-gen.js';
 import { shell as bzShell, bindShell } from './family/bizzing-shell.js';
 import { avatarSrc } from './avatars.js';
 import { viewShop, viewCollection as viewFaces, viewMistakes, viewTown, profileCard, EXTRA_BY } from './familyviews.js';
@@ -133,7 +134,9 @@ function focusNow() {
   /* an element that names itself (data-focus) is the thing; otherwise its row or card */
   const box = el.matches('[data-focus]') ? el : (el.closest('.qrow, .poster, .cover, .stop, .acc, .jbeat, .t3card, .pcard, .card, section') || el);
   box.classList.add('focus-pulse');
-  requestAnimationFrame(() => box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  /* a short way glides; a long way jumps (a second of scrolling past the town is not a link) */
+  requestAnimationFrame(() => { const far = Math.abs(box.getBoundingClientRect().top) > innerHeight * 1.5;
+    box.scrollIntoView({ block: 'center', behavior: far || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
   R.focus = null; R.focusTries = 0;
 }
 
@@ -321,13 +324,23 @@ function overlay() {
   if (o.kind === 'letter') {
     const L = o.letter;
     const from = L.from === 'scam' ? null : CAST[L.from];
+    /* A letter that looks like one: it slides out of its envelope onto ruled paper, stamped
+       and postmarked. Every letter wears the SAME envelope, stamp and postmark — a scam looks
+       exactly like the rest, which is the lesson (docs/02 §3). */
+    const pm = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     return box(`
-      <div class="row" style="gap:11px;margin-bottom:12px">
-        <span style="width:46px;height:46px;flex:0 0 auto;border-radius:50%;overflow:hidden;border:1px solid var(--line);display:block;background:var(--surface2)">
-          ${from ? from.svg : '<div style="display:grid;place-items:center;height:100%;font-size:22px">✉️</div>'}</span>
-        <div class="grow"><div class="eyebrow">${from ? esc(from.name) : 'Sender unknown'}</div>
-        <h3 style="font-size:19px">${esc(L.title)}</h3></div></div>
-      <p style="font-size:15px;line-height:1.6;background:var(--tint);border-radius:var(--r-md);padding:13px 15px">${esc(L.body)}</p>
+      <div class="letter${o.result ? ' answered' : ''}">
+        <div class="envelope" aria-hidden="true"><i class="flap"></i></div>
+        <article class="paper">
+          <span class="stamp" aria-hidden="true">${BLD.postbox ? `<img src="${BLD.postbox.src}" alt="">` : ''}</span>
+          <span class="postmark" aria-hidden="true">BIZZINGTON<br><b>${esc(pm)}</b></span>
+          <div class="row" style="gap:11px;margin-bottom:10px">
+            <span class="sender">${from ? from.svg : '<span class="sender-q">?</span>'}</span>
+            <div class="grow"><div class="eyebrow">${from ? esc(from.name) : 'Sender unknown'}</div>
+            <h3 style="font-size:19px">${esc(L.title)}</h3></div></div>
+          <p class="lines">${esc(L.body)}</p>
+          ${o.result ? '<span class="answered-stamp" aria-hidden="true">ANSWERED</span>' : ''}
+        </article></div>
       ${canSay() ? `<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="say" data-arg="letter:${L.id}">${ico('sound', '🔊', 14)} Read it to me</button></div>` : ''}
       ${o.result
         ? `<div style="margin-top:12px;background:${o.result.good ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:13px 15px;font-size:14px">${esc(o.result.note)}</div>

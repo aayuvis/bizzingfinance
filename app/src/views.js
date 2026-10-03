@@ -425,24 +425,20 @@ export function townParts() {
         <div class="row"><div class="grow"><div class="eyebrow">Put it right · ${esc(world.name)}</div>
           <p class="small muted">Money spent on something useful keeps paying you back.</p></div>
           <span class="pill ${tp.done === tp.all ? 'grow' : ''}">${tp.done}/${tp.all} mended</span></div>
-        <div class="rows" style="margin-top:6px">
-          ${fx.map((f) => `<div class="qrow block${f.done ? ' done' : ''}" data-focus="fix:${f.id}">
-            <div class="row" style="gap:10px">
-              <span class="iw" style="${f.done ? '' : 'filter:grayscale(.7) opacity(.75)'}">${ico(f.em, f.em, 20)}</span>
-              <span class="grow" style="min-width:0">
-                <b style="font-size:14px">${esc(f.name)}</b>
-                <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div></span>
-              ${f.done ? '<span class="pill grow">mended</span>'
-                : `<span class="small muted tabnum">${money(f.put)} / ${money(f.cost)}</span>`}
-            </div>
-            ${f.done ? `<p class="small" style="color:var(--grow);font-weight:700;margin-top:6px">${ico('check', '', 14)} ${esc(f.gives)}</p>`
-              : `<div class="bar" style="height:6px;margin-top:7px"><i style="width:${f.pct * 100}%;background:var(--treasure)"></i></div>
-                 <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
-                   <span class="small muted grow">${esc(f.gives)}</span>
-                   <button class="btn ghost sm" data-act="putRight" data-arg="${f.id}" ${c.money.wallet <= 0 ? 'disabled' : ''}>
-                     Put in ${money(Math.min(price(10), Math.max(0, c.money.wallet), f.left))}</button>
-                 </div>`}
-          </div>`).join('')}
+        <div class="fixgrid" style="margin-top:10px">
+          ${fx.map((f) => { const C0 = 2 * Math.PI * 28, pct = f.done ? 1 : f.pct;
+            return `<div class="fixcard${f.done ? ' done' : ''}" data-focus="fix:${f.id}">
+            <span class="fixring" role="img" aria-label="${Math.round(pct * 100)} percent mended">
+              <svg viewBox="0 0 68 68"><circle cx="34" cy="34" r="28" fill="none" stroke="var(--line)" stroke-width="7"/>
+                <circle class="arc" cx="34" cy="34" r="28" fill="none" stroke="${f.done ? 'var(--grow)' : 'var(--treasure)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C0.toFixed(1)}" stroke-dashoffset="${(C0 * (1 - pct)).toFixed(1)}"/></svg>
+              <span class="ic">${ico(f.em, f.em, 26)}</span></span>
+            <span style="min-width:0"><b>${esc(f.name)}</b>
+              <div class="small muted">${esc(f.done ? f.fixed : f.broken)}</div>
+              ${f.done ? '' : `<div class="small tabnum" style="margin-top:3px">${money(f.put)} / ${money(f.cost)}</div>
+                <button class="btn ghost sm fixbtn" data-act="putRight" data-arg="${f.id}" ${c.money.wallet <= 0 ? 'disabled' : ''}>Put in ${money(Math.min(price(10), Math.max(0, c.money.wallet), f.left))}</button>`}</span>
+            ${f.done ? '<span class="mended">MENDED</span>' : ''}
+            <span class="gives">${f.done ? ico('check', '', 13) + ' ' : 'Mended, it gives: '}${esc(f.gives)}</span>
+          </div>`; }).join('')}
         </div></div>`;
   const posters = viewWorlds().replace(/^<div class="stack">\s*<header class="shero[\s\S]*?<\/header>/, '<div class="stack">');
   return {

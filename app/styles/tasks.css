@@ -1,0 +1,43 @@
+/* tasks.css — the town's small jobs, drawn (owner, 3 Oct 2026: "sub games/tasks are not
+   functional or boring... make them super kool"). The postbox letter and the repairs. */
+
+/* ── a letter, out of its envelope ── */
+.letter{position:relative;padding-top:34px}
+.envelope{position:absolute;left:8%;right:8%;top:0;height:64px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#E9C98E,#D9AE66);box-shadow:0 6px 14px rgb(90 60 20 / .18);overflow:hidden}
+.envelope .flap{position:absolute;left:0;right:0;top:0;height:100%;background:linear-gradient(160deg,#F2D7A4,#E2BB78);clip-path:polygon(0 0,100% 0,50% 70%);transform-origin:top;animation:flapopen .55s .1s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes flapopen{from{transform:scaleY(1)}to{transform:scaleY(-1);opacity:.65}}
+.paper{position:relative;z-index:1;background:#FFFDF6;color:#2A2016;border-radius:6px;padding:18px 18px 16px;box-shadow:0 1px 0 #EDE3CF,0 12px 28px rgb(60 40 10 / .18);
+  background-image:repeating-linear-gradient(180deg,transparent 0 27px,rgb(61 125 240 / .12) 27px 28px);background-position:0 70px;animation:letterup .6s .25s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes letterup{from{transform:translateY(40px) rotate(-1.5deg);opacity:0}to{transform:none;opacity:1}}
+html[data-bz-dark] .paper{background-color:#2A2620;color:#F4EEE4;background-image:repeating-linear-gradient(180deg,transparent 0 27px,rgb(140 180 255 / .12) 27px 28px)}
+.paper .eyebrow{color:#9A4A1C}
+.paper .lines{font-size:15.5px;line-height:28px;margin:0}
+.sender{width:46px;height:46px;flex:0 0 auto;border-radius:50%;overflow:hidden;border:2px solid #E9C98E;display:block;background:#FFF6DA}
+.sender-q{display:grid;place-items:center;height:100%;font:800 22px var(--display);color:#8A6A3E}
+.stamp{position:absolute;top:10px;right:12px;width:44px;height:52px;background:#fff;padding:3px;box-shadow:0 1px 3px rgb(0 0 0 / .2);
+  -webkit-mask:radial-gradient(circle 3px at 3px 3px,transparent 98%,#000) -3px -3px / 8px 8px;mask:radial-gradient(circle 3px at 3px 3px,transparent 98%,#000) -3px -3px / 8px 8px;transform:rotate(4deg)}
+.stamp img{width:100%;height:100%;object-fit:contain;background:#E8F2FF}
+.postmark{position:absolute;top:14px;right:52px;width:62px;height:62px;border:2px solid rgb(154 74 28 / .45);border-radius:50%;display:grid;place-items:center;text-align:center;
+  font:800 8.5px/1.25 var(--ui);letter-spacing:.06em;color:rgb(154 74 28 / .55);transform:rotate(-14deg);pointer-events:none}
+.postmark b{font-size:10px}
+.paper .row{padding-right:104px}
+.answered-stamp{position:absolute;right:16px;bottom:14px;padding:4px 12px;border:3px solid rgb(22 149 107 / .7);border-radius:8px;color:rgb(22 149 107 / .8);font:800 18px var(--display);letter-spacing:.08em;transform:rotate(-8deg);animation:stampin .35s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stampin{from{transform:rotate(-8deg) scale(2.2);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
+.letter.answered .flap,.letter.answered .paper{animation:none}
+
+/* ── the repairs, as cards that fill and stamp ── */
+.fixgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.fixcard{position:relative;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:14px;border-radius:var(--r-xl);background:var(--surface);box-shadow:0 1px 2px rgb(40 25 5 / .06),0 10px 24px rgb(90 60 20 / .08)}
+.fixring{position:relative;width:68px;height:68px}
+.fixring > svg{width:68px;height:68px;transform:rotate(-90deg)}
+.fixring .ic svg{width:26px;height:26px}
+.fixring .arc{transition:stroke-dashoffset .8s cubic-bezier(.2,1,.3,1)}
+.fixring .ic{position:absolute;inset:0;display:grid;place-items:center}
+.fixcard.done .fixring .ic{color:var(--grow)}
+.fixcard:not(.done) .fixring .ic{filter:grayscale(.7);opacity:.8}
+.fixcard b{font:800 15px var(--display)}
+.fixcard .fixbtn{margin-top:6px}
+.fixcard .mended{position:absolute;top:10px;right:10px;padding:2px 8px;border:2.5px solid var(--grow);border-radius:6px;color:var(--grow);font:800 11px var(--ui);letter-spacing:.08em;transform:rotate(6deg)}
+.fixcard .gives{grid-column:1 / -1;font-size:12.5px;color:var(--ink);opacity:.8}
+@media (prefers-reduced-motion:reduce){.envelope .flap,.paper,.answered-stamp{animation:none !important}}
+:root[data-motion="reduced"] .envelope .flap,:root[data-motion="reduced"] .paper,:root[data-motion="reduced"] .answered-stamp{animation:none !important}
