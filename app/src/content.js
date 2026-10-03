@@ -386,6 +386,8 @@ export function drillCount(card) { return 1 + ((card.qs && card.qs.length) || 0)
 export function drillAt(card, qi) { return qi ? card.qs[qi - 1] : card.drill; }
 export function shuffledDrill(card, qi = 0) {
   const d = drillAt(card, qi);
+  /* a typed answer has no options to permute: the answer is a number (generate.js) */
+  if (d.kind === 'num') return { num: true, order: [], opts: [], answer: 0, value: d.value, q: d.q, why: d.why };
   const seed = card.id + '#' + qi;   /* each question permutes independently */
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -409,6 +411,7 @@ export function shuffledDrill(card, qi = 0) {
 const STOP = new Set('that this with from your what when they them their there then than have will would could should about which into only just more most some been were does done doing because before after every other these those thing things money'.split(' '));
 const words = (x) => (String(x || '').replace(/<[^>]+>/g, '').toLowerCase().match(/[a-z\u00c0-\u024f']{4,}/g) || []).map((w) => w.replace(/'s$/, '')).filter((w) => !STOP.has(w));
 const stemOf = (w) => w.replace(/(ing|ed|es|s)$/, '');
+const numbersInText = (t) => (String(t).match(/\d[\d,]*/g) || []).map((x) => Number(x.replace(/,/g, '')));
 export function tellingWords(d) {
   const shared = new Set([...words(d.q), ...d.opts.filter((_, i) => i !== d.a).flatMap(words)].map(stemOf));
   return [...new Set(words(d.opts[d.a]).map(stemOf))].filter((w) => !shared.has(w));
@@ -422,6 +425,12 @@ export function leaks(text, d) {
 }
 export function hintFor(card, qi = 0) {
   const d = drillAt(card, qi);
+  /* a typed amount: the hint is the method, never a number (generate.js writes it) */
+  if (d.kind === 'num') return d.hint && !numbersInText(d.hint).includes(d.value) ? d.hint : 'Work it out step by step, then type the amount again.';
+  if (card.assess && !d.hint) {
+    return [`Think back to “${card.title}”, then try a different answer.`, 'Think back to the lesson, then try a different answer.', 'Go back over it in your head, then pick again.', 'Have another go.']
+      .find((x) => !leaks(x, d)) || 'Have another go.';
+  }
   if (d.hint && !leaks(d.hint, d)) return d.hint;
   const plain = (x) => String(x || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   const sentences = [...plain(card.teach).split(/(?<=[.!?])\s+/), plain(card.eg)].filter((x) => x.length > 12);

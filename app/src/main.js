@@ -30,6 +30,7 @@ import { startJobGame, hasJobGame } from './jobgames.js';
 import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
+import { cardById as resolveCard, isLesson } from './cards.js';
 import { R } from './runtime.js';
 import { nextStep } from './next.js';
 import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
@@ -874,8 +875,8 @@ on('sayEl', (_, ev) => {
 on('say', (key) => {
   const c = C(); let text = '';
   if (key.startsWith('q:')) {
-    const [id, qi] = key.slice(2).split('#'), card = cardById(id);
-    if (card) { const d = shuffledDrill(card, +qi || 0); text = `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
+    const k = key.slice(2), cut = k.lastIndexOf('#'), id = k.slice(0, cut), qi = k.slice(cut + 1), card = cardById(id);   /* EARN-1#0#0: the last # is the question */
+    if (card) { const d = shuffledDrill(card, +qi || 0); text = d.num ? `${d.q} Type the amount.` : `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
   }
   if (key === 'word') { const w = daily.wordOfDay(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
   else if (key === 'ask') text = daily.askOfWeek();
@@ -937,16 +938,7 @@ on('card', (id) => {
 /* Cards now come from three places: the chapters, the objectives file's own
    teaching cards, and generated retrieval items (id "CHOOSE-4#1"). One
    resolver so every caller stops caring which. */
-function cardById(id) {
-  if (!id) return null;
-  const chapter = ALL_CARDS.find((x) => x.id === id);
-  if (chapter) return chapter;
-  const extra = NEW_CARD_LIST.find((x) => x.id === id);
-  if (extra) return extra;
-  const m = /^(.+)#(\d+)$/.exec(id);
-  if (m) { const o = objective(m[1]); if (o) return assessCard(o, +m[2]); }
-  return null;
-}
+const cardById = (id) => resolveCard(id, C());
 
 on('closeCard', () => { C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
@@ -962,6 +954,26 @@ on('answer', (i) => {
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); }
   else { sfx.bad(); if (p.tries === 1) mistakes.record(c, card.id, st.qi); }   /* F3: a wrong FIRST answer goes in the deck */
+  render();
+});
+/* A typed amount (generate.js). It goes through the same hold-then-retry rules as a tap:
+   right is pick 0; a wrong first try holds (pick 1) and the second go settles (pick 2). */
+on('answerNum', () => {
+  const c = C(), card = cardById(c.learn.openCard);
+  if (!card) return;
+  const el = document.getElementById('numAns'), raw = el ? el.value : '';
+  const n = Number(String(raw).replace(/[^\d.-]/g, ''));
+  if (!String(raw).trim() || !Number.isFinite(n)) { toast('Type the amount first'); return; }
+  let st = c.learn.drill;
+  if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
+  const cur = st.picks[st.qi];
+  if (drill.settled(cur)) return;
+  const dq = shuffledDrill(card, st.qi), right = n === dq.value;
+  const p = drill.pick(st, st.qi, right ? 0 : (cur ? 2 : 1), 0);
+  p.typed = n;
+  const t = drill.tally(st, drillCount(card));
+  st.done = t.done; st.right = t.right;
+  if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); } else sfx.bad();
   render();
 });
 on('nextQ', () => {
@@ -995,6 +1007,16 @@ on('cardDone', (id) => {
 
   /* Chapter progress only exists for chapter cards. */
   const ch = card.ch ? CHAPTERS.find((x) => x.id === card.ch) : null;
+  /* a question asked again later is not a stop on the road: no stop, no stop coins */
+  if (!isLesson(card)) {
+    sim.addXP(c, sim.cardXP(false, right));
+    if (bt && bt.shape === 'retrieve' && bt.cardId === id && mastery.stateOf(c, bt.obj) === 'retained') family.milestone(c.name, 'mastery', objective(bt.obj).short);
+    c.learn.openCard = null; c.learn.drill = null;
+    c.lastDone = { id, title: card.title, right, t: Date.now() };
+    sfx[right ? 'good' : 'click'](); toast(right ? 'Still yours.' : 'It will come back, in a few days.');
+    R.s.ui.nav = 'home'; sim.save(R.s); render(); window.scrollTo(0, 0);
+    return;
+  }
   c.learn.done[id] = true;
   if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, sim.cardXP(first, right));
@@ -1536,6 +1558,8 @@ document.addEventListener('keyup', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.defaultPrevented) return;          /* the family ☰ drawer handled it (Esc, Tab) */
+  /* a typed answer submits on Enter, the same as its Check button (keyboard and touch) */
+  if (e.key === 'Enter' && e.target && e.target.dataset && e.target.dataset.enter) { e.preventDefault(); fire(e.target.dataset.enter); return; }
   if (R.game && R.game.key && !R.overlay) {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)
       && document.activeElement && document.activeElement.tagName !== 'INPUT') e.preventDefault();
@@ -1646,7 +1670,7 @@ window.addEventListener('appinstalled', () => { R.install = null; toast('Install
 
 window.BZF = { R, sim, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
-  cardById, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
+  cardById, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 
 /* ── six questions, one chapter (quiz.js) ─────────────────────────────── */

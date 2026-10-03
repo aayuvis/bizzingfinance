@@ -17,6 +17,7 @@
 
 import { OBJECTIVES, objective, teachCard, assessCard } from './objectives.js';
 import * as mastery from './mastery.js';
+import { genCard, hasGen } from './generate.js';
 
 /* The maths gate (docs/03 §1) — the real one. A surface may not open to a
    child who has not met the arithmetic it demands, so an objective needing
@@ -45,7 +46,17 @@ export function mathsMet(c) {
 /* Which retrieval item to ask. Rotate through the three contexts by how many
    times this objective has been asked, so the second sighting is never the
    same question in the same words. */
-function pickItem(o, r) { return assessCard(o, (r.hist.length) % o.assess.length); }
+/* Once the three authored items have each been met, every other sighting is generated
+   (generate.js): the same idea in fresh numbers, sized to the maths the child has met, so a
+   year of revision is not the same three questions on a loop. */
+function pickItem(o, r, c) {
+  const n = r.hist.length;
+  if (hasGen(o.id) && n >= o.assess.length && n % 2 === 1) return genCard(o, 1 + n * 31 + (r.box || 0), { ceil: mathsCeiling(c) });
+  return assessCard(o, n % o.assess.length);
+}
+
+/* the item the next retrieval of this objective would ask (tests, and nothing else) */
+export function itemFor(c, o) { return pickItem(o, mastery.record(c, o.id), c); }
 
 /* An objective is available when its prerequisites are met and the maths it
    demands has been met. Maths is the real gate (docs/03 §1): a surface may not
@@ -75,7 +86,7 @@ export function beat(c, allCards, opts) {
   if (dueList.length && !preferTeach) {
     const ob = dueList[0];
     const r = mastery.record(c, ob.id);
-    return { shape: 'retrieve', objective: ob, card: pickItem(ob, r),
+    return { shape: 'retrieve', objective: ob, card: pickItem(ob, r, c),
       overdue: Math.max(0, Math.round((now - r.due) / 86400000)) };
   }
   if (next) {
@@ -84,7 +95,7 @@ export function beat(c, allCards, opts) {
   }
   if (dueList.length) {
     const ob = dueList[0];
-    return { shape: 'retrieve', objective: ob, card: pickItem(ob, mastery.record(c, ob.id)) };
+    return { shape: 'retrieve', objective: ob, card: pickItem(ob, mastery.record(c, ob.id), c) };
   }
   return null;
 }

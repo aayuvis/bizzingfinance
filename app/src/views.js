@@ -2,6 +2,7 @@
    Nothing here computes money; sim.js owns that and these render it. */
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
+import { cardById as resolveCard } from './cards.js';
 import { PLAN, priceFor as planPrice, contents as planContents } from './plan.js';
 import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
@@ -630,7 +631,7 @@ export function viewWorlds() {
 export function viewLearn() {
   const c = K();
   if (c.learn.openCard) {
-    const card = ALL_CARDS.find((x) => x.id === c.learn.openCard);
+    const card = resolveCard(c.learn.openCard, c);
     if (card) return viewCard(card);
   }
   if (R.shelf === 'words') return viewGlossary();
@@ -692,8 +693,10 @@ function viewCard(card) {
   const c = K(), st = c.learn.drill;
   const who = CAST[card.who] || CAST.pip;
   return `<div class="stack">
-    <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} All chapters</button>
-    ${hero({ eyebrow: esc(CHAPTERS.find((x) => x.id === card.ch).title), title: esc(card.title) })}
+    <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} ${card.assess ? 'Not now' : 'All chapters'}</button>
+    ${card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
+      : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
+    ${card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>` : `
     ${lessonBlock(card.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
@@ -701,7 +704,7 @@ function viewCard(card) {
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico('sound', '🔊', 15)} Read it to me</button></div>` : ''}
     </div>
     ${tryBlock(card)}
-    ${itemBlock(card)}
+    ${itemBlock(card)}`}
     ${(() => {
       /* One question at a time, permuted independently, the verdict at the
          end. A stale drill from the one-question era just starts over. */
@@ -716,6 +719,10 @@ function viewCard(card) {
       <div class="eyebrow">${total > 1 ? `Question ${qi + 1} of ${total}` : 'One question'}</div>
       <div class="row" style="align-items:flex-start;gap:8px"><h3 class="grow" style="font-size:18px">${esc(dq.q)}</h3>
         <button class="btn ghost sm sayq" data-act="say" data-arg="q:${card.id}#${qi}" aria-label="Read the question and the answers to me">${ico('sound', '', 18)}</button></div>
+      ${dq.num ? `<div class="numrow">
+        <label class="yamt"><span class="sr">Your answer</span><input id="numAns" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" data-enter="answerNum"
+          value="${done ? dq.value : hold ? esc(String(p.typed)) : ''}" ${done ? 'disabled' : ''} aria-label="Your answer — type the amount"></label>
+        ${done ? '' : '<button class="btn" data-act="answerNum">Check</button>'}</div>` : ''}
       <div class="stack" style="gap:8px">
         ${dq.opts.map((o, i) => {
           let k = '';
@@ -728,7 +735,7 @@ function viewCard(card) {
       ${hold ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, qi))}
           <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">${ico('sound', '', 16)}</button></div>` : ''}
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
-          <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
+          <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : dq.num ? 'It is ' + esc(String(dq.value)) + '.' : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
       ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
     </div>`; })()}

@@ -629,6 +629,31 @@ async function demo() {
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"], .ov .ovx'); if (o) o.click(); });
   }
   ok('demo: every kind of deep link lands on its own thing, on screen', !missed.length, missed.join(' | '));
+  /* A3 · Continue's "still know this?" opens the question (it used to land on the map) */
+  await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('[data-bz=continue]').click()); await page.waitForTimeout(500);
+  const opened = await page.evaluate(() => ({ open: window.BZF.R.s.kids[0].learn.openCard, q: !!document.querySelector('main [data-act="answer"], main #numAns'), atlas: /Money Atlas/.test((document.querySelector('main h1') || {}).textContent || '') }));
+  ok('Continue: a due revision opens its question, not the map', opened.q && !opened.atlas, JSON.stringify(opened));
+  const fin = await page.evaluate(async () => {
+    const { R } = window.BZF, c = R.s.kids[0], id = c.learn.openCard, ob = id.split('#')[0];
+    const h0 = c.mastery.rec[ob].hist.length, stops0 = Object.keys(c.learn.done).length;
+    window.BZF.fire('answer', window.BZF.key(id, 0));
+    const b = document.querySelector('[data-act="cardDone"]'); if (b) b.click();
+    return { evidence: c.mastery.rec[ob].hist.length === h0 + 1, stops: Object.keys(c.learn.done).length === stops0, home: R.s.ui.nav === 'home', done: !!b };
+  });
+  ok('a revision answered is evidence in the record, not a stop on the road, and goes home', fin.evidence && fin.stops && fin.home && fin.done, JSON.stringify(fin));
+  /* a generated item in the child's own numbers: typed, by keyboard and by tap */
+  const typed = [];
+  for (const how of ['key', 'tap']) {
+    const v = await page.evaluate((id) => { const { R } = window.BZF, c = R.s.kids[0]; window.BZF.fire('nav', 'learn');
+      c.learn.openCard = id; c.learn.drill = null; window.BZF.fire('closeOv'); return window.BZF.genValue(id); }, how === 'key' ? 'EARN-2~5' : 'KEEP-1~8');
+    await page.waitForSelector('#numAns');
+    await page.fill('#numAns', String(v));
+    if (how === 'key') await page.press('#numAns', 'Enter'); else await page.tap('[data-act="answerNum"]');
+    await page.waitForTimeout(250);
+    typed.push(await page.evaluate(() => !!document.querySelector('.fb.yes')));
+  }
+  ok('a typed answer in the child\'s own numbers settles on Enter and on a tap', typed.every(Boolean), JSON.stringify(typed));
   /* List B/C (owner, 3 Oct 2026): the sample has coins; Home counts a met quest and takes it */
   ok('demo: the sample shows the coins it earned', +(await page.textContent('.bz-coins span')) > 0, await page.textContent('.bz-coins span'));
   await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(300);

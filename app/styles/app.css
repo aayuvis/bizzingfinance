@@ -919,3 +919,8 @@ html[data-bz-dark] .town.night svg image{filter:none}
 .focus-pulse{animation:focuspulse 2.2s ease 1;border-radius:var(--r-lg)}
 @keyframes focuspulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--action) 70%,transparent)}25%{box-shadow:0 0 0 6px color-mix(in srgb,var(--action) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){ .focus-pulse{animation:none;outline:3px solid var(--action);outline-offset:3px} }
+/* a typed answer (generate.js): the field and its Check button on one row */
+.numrow{display:flex;gap:10px;align-items:stretch}
+.numrow .yamt{flex:1}
+.numrow input{width:100%;font:700 22px var(--mono);padding:10px 14px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:48px}
+.numrow input:focus{outline:none;border-color:var(--action)}
