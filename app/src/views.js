@@ -33,7 +33,7 @@ import { STRANDS } from './objectives.js';
 import * as mastery from './mastery.js';
 import * as report from './report.js';
 import { OBJECTIVES, objective, teachCard } from './objectives.js';
-import { JOB_GAME } from './jobgames.js';
+import { JOB_GAME } from './jobtable.js';
 import { CLASSES } from './assetclasses.js';
 import { CAL } from './world.js';
 import * as biz from './business.js';
@@ -162,7 +162,7 @@ function journeys(c) {
       return j.done
         ? beat('sub', 'wallet', j.em, esc(j.name), 'Done — back tomorrow.', '<span class="pill grow">done</span>')
         : beat('job', j.id, j.em, esc(j.name),
-            `${gm ? esc(KIND[gm.kind]) + ' · ' : ''}for ${esc(j.who)}${sim.jobBest(c, j.id) ? ' · best ' + money(sim.jobBest(c, j.id)) : ''}`,
+            `${gm ? esc(KIND[gm.kind]) + ' · ' : ''}for ${esc(j.who)}${sim.jobBest(c, j.id) ? ' · best ' + sim.jobBest(c, j.id) + ' points' : ''}`,
             '<span class="pill">Work</span>', true);
     }),
     bizOpen ? beat('sub', 'business', 'shop', "Your shop", 'Stock, prices, and what the till took.',
@@ -609,7 +609,7 @@ function todaysWork(c) {
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
             <div class="small muted">${j.done ? 'Back tomorrow.'
-              : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best : ''}`}</div>
+              : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best + ' points' : ''}`}</div>
           </span>
           ${j.done ? '<span class="pill grow">done</span>'
             : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${g ? 'Work' : money(j.amt)}</button>`}

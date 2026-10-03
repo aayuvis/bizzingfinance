@@ -13,5 +13,12 @@ ok(sim.gameWage(c, 'Stall Rush', 10, t).paid > 0, 'the cap is per game, not acro
 ok(sim.gameWage(c, 'Change Rush', 10, t + 864e5).paid > 0, 'a new day pays again — nothing is lost for a day off');
 const w0 = c.money.wallet;
 ok(sim.doJob(c, 'crates', 0) === 0 && c.money.wallet === w0, 'a shift with nothing done pays nothing');
+/* a best from the old scale is not one a child can beat: it reads as none, the first new shift sets it */
+{
+  const k = sim.newChild('Old', 'builder', 'INR'); k.jobs.best = { crates: 900 };
+  ok(sim.jobBest(k, 'crates') === 0, 'a best from the old scoring scale reads as none');
+  ok(sim.setJobBest(k, 'crates', 30) === true && sim.jobBest(k, 'crates') === 30, 'the first shift on the new scale sets the best');
+  ok(sim.setJobBest(k, 'crates', 20) === false && sim.jobBest(k, 'crates') === 30, 'and only a higher score beats it');
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

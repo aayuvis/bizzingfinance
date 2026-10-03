@@ -27,7 +27,7 @@ import * as mastery from './mastery.js';
 import * as decisions from './decisions.js';
 import * as reportmod from './report.js';
 import * as reportcard from './reportcard.js';
-import { startJobGame, hasJobGame } from './jobgames.js';
+import { hasJobGame } from './jobtable.js';   /* the games themselves load when a shift starts */
 import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
@@ -1215,13 +1215,15 @@ on('job', (id) => {
   const row = sim.jobsToday(c).find((x) => x.id === id);
   if (!row || row.done) { toast('Done that one today'); return; }
   if (hasJobGame(id)) {
-    const g = startJobGame(id, () => { quitGame(); render(); });
-    if (g) {
+    sfx.click();
+    import('./jobgames.js').then(({ startJobGame }) => {
+      const g = startJobGame(id, () => { quitGame(); render(); });
+      if (!g) return;
       if (R.game && R.game.stop) R.game.stop();
       R.game = g; R.s.ui.nav = 'arcade';
-      sfx.click(); render(); window.scrollTo(0, 0);
-      return;
-    }
+      render(); window.scrollTo(0, 0);
+    });
+    return;
   }
   const a = sim.doJob(c, id);
   if (a) {
@@ -1715,7 +1717,7 @@ on('install', async () => { const e = R.install; if (!e) return; R.install = nul
 on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
-window.BZF = { R, sim, startJobGame, quitGame, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+window.BZF = { R, sim, quitGame, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 

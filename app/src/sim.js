@@ -358,9 +358,13 @@ export function gameWage(c, label, amt, t = Date.now()) {
 
 /* Your own best at a job, so the thing you are competing with is yourself
    last week and not another child. */
-export function jobBest(c, id) { return (c.jobs && c.jobs.best && c.jobs.best[id]) || 0; }
+/* Bests are points on the job games' scale. The scale changed when the score became the
+   skill (3 Oct 2026); a best on the old scale is not one a child can beat, so it reads as
+   none and the first new shift sets it. */
+const BEST_SCALE = 2;
+export function jobBest(c, id) { return (c.jobs && c.jobs.bestScale === BEST_SCALE && c.jobs.best && c.jobs.best[id]) || 0; }
 export function setJobBest(c, id, score) {
-  if (!c.jobs.best) c.jobs.best = {};
+  if (!c.jobs.best || c.jobs.bestScale !== BEST_SCALE) { c.jobs.best = {}; c.jobs.bestScale = BEST_SCALE; }
   const prev = c.jobs.best[id] || 0;
   if (score > prev) { c.jobs.best[id] = score; return true; }
   return false;

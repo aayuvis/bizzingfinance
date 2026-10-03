@@ -669,6 +669,19 @@ async function demo() {
     return { offer, hidden, label: /Skip ahead/.test(label), walked, onNext, opened, report, atSkip, ovSkip };
   });
   ok('a stop answered cold: lesson hidden, three right walks it and opens the next stop; a miss opens the lesson', coldRun.offer && coldRun.hidden && coldRun.label && coldRun.walked && coldRun.onNext && coldRun.opened && coldRun.report === 1, JSON.stringify(coldRun));
+  /* a shift from the Town opens its game (loaded on demand), on the place's painting */
+  const shift = await page.evaluate(async () => {
+    const B = window.BZF, { R, sim } = B, c = R.s.kids[0]; B.fire('closeOv');
+    const j = sim.jobsToday(c).find((x) => !x.done); if (!j) return { none: true };
+    B.fire('job', j.id); for (let i = 0; i < 40 && !R.game; i++) await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 300));
+    const cv = document.getElementById('jobCanvas'); let painted = false;
+    if (cv) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4 * 101) seen.add((d[i] >> 4) + '-' + (d[i + 1] >> 4) + '-' + (d[i + 2] >> 4)); painted = seen.size > 60; window.__seen = seen.size; }
+    const ok = !!R.game && /^job:/.test(R.game.id) && painted;
+    if (R.game) B.quitGame();
+    return { ok, id: j.id, colours: window.__seen };
+  });
+  ok('a shift from the Town opens its game, drawn (not a flat box)', shift.ok, JSON.stringify(shift));
   /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
   await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
   const town = await page.evaluate(() => {
