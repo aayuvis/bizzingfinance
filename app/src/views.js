@@ -2,7 +2,7 @@
    Nothing here computes money; sim.js owns that and these render it. */
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
-import { cardById as resolveCard } from './cards.js';
+import { cardById as resolveCard, practiceFor, practiceExact } from './cards.js';
 import { PLAN, priceFor as planPrice, contents as planContents } from './plan.js';
 import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
@@ -753,12 +753,16 @@ function opensWhat(id) { return OPENS[id]; }
 
 function viewCard(card) {
   const c = K(), st = c.learn.drill;
+  /* a generated question whose words are still being written (cards.js loads them) */
+  if (card.pending) return `<div class="stack"><button class="backlink" data-act="closeCard">${ico('back', '←', 16)} Not now</button>
+    ${hero({ eyebrow: 'Still know this?', title: esc(card.title) })}<div class="card"><p class="small muted">Writing you a fresh question…</p></div></div>`;
   const who = CAST[card.who] || CAST.pip;
   return `<div class="stack">
     <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} ${card.assess ? 'Not now' : 'All chapters'}</button>
-    ${card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
+    ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
+      : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
       : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
-    ${card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>` : `
+    ${card.assess && R.practice && R.practice.id === card.id ? '' : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>` : `
     ${lessonBlock(card.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
@@ -799,7 +803,9 @@ function viewCard(card) {
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
           <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : dq.num ? 'It is ' + esc(String(dq.value)) + '.' : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
-      ${done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>` : ''}
+      ${done && last && R.practice && R.practice.id === card.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one →</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>`
+        : done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>
+          ${!card.assess && practiceFor(card) ? `<button class="btn ghost wide" data-act="practise" data-arg="${card.id}">${ico('repeat', '', 16)} One more on this, asked fresh</button>` : ''}` : ''}
     </div>`; })()}
   </div>`;
 }

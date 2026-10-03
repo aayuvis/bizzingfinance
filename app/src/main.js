@@ -30,7 +30,7 @@ import { startJobGame, hasJobGame } from './jobgames.js';
 import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
-import { cardById as resolveCard, isLesson } from './cards.js';
+import { cardById as resolveCard, isLesson, practiceCard, genReady, whenGenReady } from './cards.js';
 import { R } from './runtime.js';
 import { nextStep } from './next.js';
 import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
@@ -876,7 +876,7 @@ on('say', (key) => {
   const c = C(); let text = '';
   if (key.startsWith('q:')) {
     const k = key.slice(2), cut = k.lastIndexOf('#'), id = k.slice(0, cut), qi = k.slice(cut + 1), card = cardById(id);   /* EARN-1#0#0: the last # is the question */
-    if (card) { const d = shuffledDrill(card, +qi || 0); text = d.num ? `${d.q} Type the amount.` : `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
+    if (card && !card.pending) { const d = shuffledDrill(card, +qi || 0); text = d.num ? `${d.q} Type the amount.` : `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
   }
   if (key === 'word') { const w = daily.wordOfDay(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
   else if (key === 'ask') text = daily.askOfWeek();
@@ -940,10 +940,10 @@ on('card', (id) => {
    resolver so every caller stops caring which. */
 const cardById = (id) => resolveCard(id, C());
 
-on('closeCard', () => { C().learn.openCard = null; C().learn.drill = null; render(); });
+on('closeCard', () => { R.practice = null; C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
   const c = C(), card = cardById(c.learn.openCard);
-  if (!card) return;
+  if (!card || card.pending) return;
   let st = c.learn.drill;
   if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
   if (drill.settled(st.picks[st.qi])) return;        /* this question is answered */
@@ -953,14 +953,14 @@ on('answer', (i) => {
   const t = drill.tally(st, drillCount(card));
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); }
-  else { sfx.bad(); if (p.tries === 1) mistakes.record(c, card.id, st.qi); }   /* F3: a wrong FIRST answer goes in the deck */
+  else { sfx.bad(); if (p.tries === 1 && isLesson(card)) mistakes.record(c, card.id, st.qi); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
   render();
 });
 /* A typed amount (generate.js). It goes through the same hold-then-retry rules as a tap:
    right is pick 0; a wrong first try holds (pick 1) and the second go settles (pick 2). */
 on('answerNum', () => {
   const c = C(), card = cardById(c.learn.openCard);
-  if (!card) return;
+  if (!card || card.pending) return;
   const el = document.getElementById('numAns'), raw = el ? el.value : '';
   const n = Number(String(raw).replace(/[^\d.-]/g, ''));
   if (!String(raw).trim() || !Number.isFinite(n)) { toast('Type the amount first'); return; }
@@ -975,6 +975,25 @@ on('answerNum', () => {
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); } else sfx.bad();
   render();
+});
+/* Practice on a stop, in fresh numbers (owner, 3 Oct 2026: "finish A3 ... the lesson
+   stops"). Finishing the stop is recorded first, exactly as "Take it back to town" would;
+   practice itself is never evidence — mastery hears nothing, a right answer earns its XP. */
+on('practise', (fromId) => {
+  const c = C(), from = cardById(fromId); if (!from) return;
+  if (!R.practice && c.learn.openCard === fromId && c.learn.drill && c.learn.drill.done) { fire('cardDone', fromId); }
+  if (R.practice && R.practice.from === fromId && c.learn.drill && c.learn.drill.right) sim.addXP(c, sim.cardXP(false, true));
+  const n = R.practice && R.practice.from === fromId ? R.practice.n + 1 : 0;
+  const k = practiceCard(from, n, c); if (!k) return;
+  R.practice = { from: fromId, n, id: k.id };
+  R.s.ui.nav = 'learn'; c.learn.openCard = k.id; c.learn.drill = null;
+  sfx.click(); render(); window.scrollTo(0, 0);
+});
+on('practiceDone', () => {
+  const c = C(), right = !!(c.learn.drill && c.learn.drill.right);
+  if (right) sim.addXP(c, sim.cardXP(false, true));
+  R.practice = null; c.learn.openCard = null; c.learn.drill = null; R.s.ui.nav = 'learn';
+  sim.save(R.s); render(); window.scrollTo(0, 0);
 });
 on('nextQ', () => {
   const c = C(), st = c.learn.drill;
@@ -1606,6 +1625,8 @@ applyDevice(); applyRate();
 R.demo = /[?&]demo\b/.test(location.search);
 R.s = R.demo ? demoState() : sim.load();
 family.setDemo(R.demo, R.demo && R.s && R.s.demoCoins);
+/* a generated question opened before generate.js arrived re-draws when it does */
+whenGenReady(() => { if (R.s && R.s.kids.length) render(); });
 /* the family's 20-coin "mastery" is paid only when mastery.js has the evidence:
    an idea kept after a gap, or used somewhere nobody asked (once each, per idea) */
 mastery.listen((c, id, how) => { if (family.coins(c.name, 'mastery')) toast(how === 'retained' ? '+20 coins — you kept that one after a gap' : '+20 coins — you used it without being asked'); });
@@ -1670,7 +1691,7 @@ window.addEventListener('appinstalled', () => { R.install = null; toast('Install
 
 window.BZF = { R, sim, feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
-  cardById, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
+  cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 
 /* ── six questions, one chapter (quiz.js) ─────────────────────────────── */

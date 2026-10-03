@@ -3,8 +3,14 @@
    ("EARN-2~41"). Continue opened retrieval items by id and the Atlas only knew chapter
    stops, so the day's "still know this?" question landed on the map instead (fixed here). */
 import { ALL_CARDS } from './content.js';
-import { NEW_CARD_LIST, objective, assessCard } from './objectives.js';
-import { genCard } from './generate.js';
+import { NEW_CARD_LIST, OBJECTIVES, objective, assessCard } from './objectives.js';
+import { hasGen, genStub } from './gen-ids.js';
+
+/* generate.js loads when a card first needs it, never on the first screen */
+let G = null, loading = null, onReady = null;
+export function genReady() { return G ? Promise.resolve(G) : (loading = loading || import('./generate.js').then((m) => { G = m; if (onReady) onReady(); return m; })); }
+export function whenGenReady(fn) { onReady = fn; }
+const genCard = (o, seed, cx) => (G ? G.genCard(o, seed, cx) : (genReady(), genStub(o, seed)));
 import { mathsCeiling } from './ledger.js';
 
 export function cardById(id, c) {
@@ -21,3 +27,17 @@ export function cardById(id, c) {
 }
 /* a stop on the road, as opposed to a question asked again later */
 export const isLesson = (card) => !!card && !card.assess;
+
+/* A lesson stop's practice: the objective it teaches, if the town can write that idea in
+   fresh numbers (generate.js). n picks a different question each time; ceil sizes it. */
+export function practiceFor(card) {
+  const own = card && OBJECTIVES.find((x) => x.teach === card.id && hasGen(x.id));
+  if (own) return own;
+  /* a stop that teaches no objective of its own practises its chapter's ideas, and says so */
+  return card && card.ch ? OBJECTIVES.find((x) => hasGen(x.id) && (ALL_CARDS.find((k) => k.id === x.teach) || {}).ch === card.ch) || null : null;
+}
+export const practiceExact = (card) => !!(card && OBJECTIVES.find((x) => x.teach === card.id && hasGen(x.id)));
+export function practiceCard(card, n, c) {
+  const o = practiceFor(card); if (!o) return null;
+  return genCard(o, 5000 + n * 37 + card.id.length, { ceil: c ? mathsCeiling(c) : 6 });
+}

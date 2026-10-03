@@ -17,7 +17,7 @@
 
 import { OBJECTIVES, objective, teachCard, assessCard } from './objectives.js';
 import * as mastery from './mastery.js';
-import { genCard, hasGen } from './generate.js';
+import { hasGen, genStub } from './gen-ids.js';
 
 /* The maths gate (docs/03 §1) — the real one. A surface may not open to a
    child who has not met the arithmetic it demands, so an objective needing
@@ -51,7 +51,7 @@ export function mathsMet(c) {
    year of revision is not the same three questions on a loop. */
 function pickItem(o, r, c) {
   const n = r.hist.length;
-  if (hasGen(o.id) && n >= o.assess.length && n % 2 === 1) return genCard(o, 1 + n * 31 + (r.box || 0), { ceil: mathsCeiling(c) });
+  if (hasGen(o.id) && n >= o.assess.length && n % 2 === 1) return genStub(o, 1 + n * 31 + (r.box || 0));   /* words written on opening (cards.js) */
   return assessCard(o, n % o.assess.length);
 }
 

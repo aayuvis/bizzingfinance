@@ -630,6 +630,25 @@ async function demo() {
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"], .ov .ovx'); if (o) o.click(); });
   }
   ok('demo: every kind of deep link lands on its own thing, on screen', !missed.length, missed.join(' | '));
+  /* A3 · every lesson stop offers practice asked fresh; practice is never evidence */
+  const prac = await page.evaluate(async () => {
+    const B = window.BZF, { R } = B, c = R.s.kids[0], id = 'c2a';
+    await B.genReady();
+    B.fire('nav', 'learn'); B.fire('card', id); await new Promise((r) => setTimeout(r, 50));
+    for (let q = 0; q < 3; q++) { B.fire('answer', B.key(id, q)); const nx = document.querySelector('[data-act="nextQ"]'); if (nx) nx.click(); }
+    const btn = document.querySelector('[data-act="practise"]'); if (!btn) return { btn: false };
+    btn.click(); await new Promise((r) => setTimeout(r, 50));
+    const rec = JSON.stringify(c.mastery.rec);   /* after the stop itself was recorded */
+    const first = c.learn.openCard, eyebrow = (document.querySelector('main .eyebrow') || {}).textContent || '';
+    const k = B.cardById(first);
+    if (k.drill.kind === 'num') { document.getElementById('numAns').value = String(k.drill.value); B.fire('answerNum'); } else B.fire('answer', B.key(first, 0));
+    const right = !!document.querySelector('.fb.yes');
+    document.querySelector('[data-act="practise"]').click(); await new Promise((r) => setTimeout(r, 50));
+    const second = c.learn.openCard;
+    B.fire('practiceDone');
+    return { btn: true, practice: /Practice/.test(eyebrow), right, fresh: first !== second && /~/.test(first) && /~/.test(second), untouched: JSON.stringify(c.mastery.rec) === rec, done: !!c.learn.done[id] };
+  });
+  ok('a lesson stop offers practice asked fresh: a new question each time, recorded nowhere but XP', prac.btn && prac.practice && prac.right && prac.fresh && prac.untouched && prac.done, JSON.stringify(prac));
   /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
   await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
   const town = await page.evaluate(() => {
@@ -658,10 +677,15 @@ async function demo() {
     return { evidence: c.mastery.rec[ob].hist.length === h0 + 1, stops: Object.keys(c.learn.done).length === stops0, home: R.s.ui.nav === 'home', done: !!b };
   });
   ok('a revision answered is evidence in the record, not a stop on the road, and goes home', fin.evidence && fin.stops && fin.home && fin.done, JSON.stringify(fin));
+  /* cold: a generated question opened before its words have loaded fills in when they arrive */
+  await page.goto(URL0 + '?demo'); await page.waitForSelector('[data-bz=next]');
+  const cold = await page.evaluate(async () => { const { R } = window.BZF, c = R.s.kids[0]; window.BZF.fire('nav', 'learn'); c.learn.openCard = 'EARN-2~5'; window.BZF.fire('closeOv');
+    const first = !!document.querySelector('#numAns'); await new Promise((r) => setTimeout(r, 900)); return { first, later: !!document.querySelector('#numAns') }; });
+  ok('a fresh question opened cold is written in a moment, not left blank', cold.later, JSON.stringify(cold));
   /* a generated item in the child's own numbers: typed, by keyboard and by tap */
   const typed = [];
   for (const how of ['key', 'tap']) {
-    const v = await page.evaluate((id) => { const { R } = window.BZF, c = R.s.kids[0]; window.BZF.fire('nav', 'learn');
+    const v = await page.evaluate(async (id) => { await window.BZF.genReady(); const { R } = window.BZF, c = R.s.kids[0]; window.BZF.fire('nav', 'learn');
       c.learn.openCard = id; c.learn.drill = null; window.BZF.fire('closeOv'); return window.BZF.genValue(id); }, how === 'key' ? 'EARN-2~5' : 'KEEP-1~8');
     await page.waitForSelector('#numAns');
     await page.fill('#numAns', String(v));

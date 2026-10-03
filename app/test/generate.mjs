@@ -8,7 +8,9 @@
 import { GEN, genCard, numbersIn } from '../src/generate.js';
 import { OBJECTIVES } from '../src/objectives.js';
 import { setCurrency, CURRENCIES } from '../src/fmt.js';
-import { cardById } from '../src/cards.js';
+import { cardById, genReady } from '../src/cards.js';
+import { GEN_IDS } from '../src/gen-ids.js';
+await genReady();
 import { shuffledDrill, hintFor } from '../src/content.js';
 import * as sim from '../src/sim.js';
 import * as mastery from '../src/mastery.js';
@@ -20,6 +22,7 @@ const ok = (c, label, detail = '') => { if (c) pass++; else fail++; console.log(
 console.log('\nGenerated items · fresh numbers, same idea\n' + '─'.repeat(56));
 
 const ids = Object.keys(GEN);
+ok(ids.length === GEN_IDS.size && ids.every((id) => GEN_IDS.has(id)), 'the first screen\'s list of generated objectives (gen-ids.js) is exactly generate.js\'s', [...GEN_IDS].filter((x) => !ids.includes(x)).concat(ids.filter((x) => !GEN_IDS.has(x))).join(' '));
 ok(ids.every((id) => OBJECTIVES.some((o) => o.id === id)), `every template names a real objective (${ids.length})`);
 const missing = OBJECTIVES.filter((o) => !GEN[o.id]).map((o) => o.id);
 ok(ids.length === OBJECTIVES.length && !missing.length, `every objective has a template (${ids.length}/${OBJECTIVES.length})`, missing.join(' '));
@@ -82,10 +85,19 @@ ok(JSON.stringify(genCard(OBJECTIVES.find((o) => o.id === 'KEEP-1'), 9, { ceil: 
     t += 70 * D;
     const card = ledger.itemFor(c, o);
     seen.push(card.generated ? 'gen' : 'auth');
-    if (card.generated) ok(JSON.stringify(cardById(card.id, c).drill) === JSON.stringify(card.drill), `a generated id opens the same question (${card.id})`);
+    if (card.generated) { const seed = +card.id.split('~')[1]; ok(JSON.stringify(cardById(card.id, c).drill) === JSON.stringify(genCard(o, seed, { ceil: ledger.mathsCeiling(c) }).drill) && card.pending, `the ledger names a generated question without writing it, and its id opens it (${card.id})`); }
     ledger.answer(c, { shape: 'retrieve', objective: o, card }, true, t);
   }
   ok(seen.slice(0, 3).every((x) => x === 'auth') && seen.slice(3).includes('gen') && seen.slice(3).includes('auth'), 'the three authored items first, then generated ones alternate in', seen.join(','));
+}
+
+/* the lesson stops: every one of the forty can be practised, asked fresh */
+{
+  const { practiceFor, practiceCard } = await import('../src/cards.js');
+  const without = ALL_CARDS.filter((k) => !practiceFor(k)).map((k) => k.id);
+  ok(!without.length, `every lesson stop can be practised (${ALL_CARDS.length - without.length}/${ALL_CARDS.length})`, without.join(' '));
+  const k = ALL_CARDS.find((x) => x.id === 'c2a');
+  ok(practiceCard(k, 0).id !== practiceCard(k, 1).id, '"Another one" is another question');
 }
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);
