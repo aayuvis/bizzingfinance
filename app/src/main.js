@@ -241,6 +241,9 @@ function render() {
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  /* a card is dealt once: the same card re-rendered (an answer held, a timer) stays put */
+  const gc = root.querySelector('.gplay .gcard');
+  if (gc) { const k = gc.textContent; if (k === R.lastCard) gc.classList.add('still'); R.lastCard = k; } else R.lastCard = null;
   /* Two things the old bar carried that the family drop-in has no slot for (and must stay
      byte-identical): a child sent here from the Hive gets the way back to their day, and
      tester mode says so on every screen, because a tester-opened town is not a child's town. */

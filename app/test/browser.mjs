@@ -460,12 +460,19 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   {
     const KEY = { cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1' };
     await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
-    const bad = [];
+    const bad = [], painted = [];
     for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
       for (const how of ['key', 'tap']) {
         await page.goto(URL0 + '#/play'); await page.waitForSelector('main');
         await page.evaluate((g) => { window.BZF.fire('game', g); window.BZF.fire('gbegin', g); }, id); await page.waitForTimeout(250);
         const before = await page.evaluate(() => (document.querySelector('.gplay') || {}).innerHTML || '');
+        /* A5 · the stage is the game's painting, at full strength and moving (still under reduced motion) */
+        if (how === 'key') {
+          const st = await page.evaluate(() => { const el = document.querySelector('.gplay .stage'); if (!el) return null; const b = getComputedStyle(el, '::before');
+            return { url: /url\(/.test(b.backgroundImage), op: +b.opacity, anim: b.animationName }; });
+          const still = !!process.env.REDUCED || await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+          if (!st || !st.url || st.op < 0.99 || (still ? st.anim !== 'none' : st.anim === 'none')) painted.push(`${id}:${JSON.stringify(st)}`);
+        }
         const e0 = errors.length;
         if (how === 'key') { await page.keyboard.down(KEY[id]); await page.waitForTimeout(id === 'cc' ? 600 : 80); await page.keyboard.up(KEY[id]); }
         else {
@@ -481,6 +488,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
       }
     }
     ok(`${label}: every game moves on a key and on a ${isMobile ? 'tap' : 'click'}`, !bad.length, bad.join(' '));
+    ok(`${label}: every game plays on its own painting, full strength${process.env.REDUCED ? ', standing still' : ', alive'}`, !painted.length, painted.join(' '));
     await page.evaluate(() => { window.BZF.R.s.settings.tester = false; window.BZF.setTester(false); });
   }
 
