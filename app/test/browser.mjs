@@ -110,6 +110,21 @@ async function run(label, vp, isMobile, scheme) {
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   await shot('1-home');
 
+  /* the avatar menu: the face in the top bar drops the family menu */
+  await page.click('.kidbtn'); await page.waitForTimeout(250);
+  const menu = await page.evaluate(() => ({
+    kids: [...document.querySelectorAll('.kidmenu .km-kid')].map((k) => k.getAttribute('aria-checked') + ':' + k.textContent.trim()),
+    rows: [...document.querySelectorAll('.kidmenu .km-row')].map((r) => r.textContent.replace(/\s+/g, ' ').trim()),
+  }));
+  ok(`${label}: the avatar opens a menu — the child (ticked), My page, Settings, + Add a child`,
+    menu.kids.join() === 'true:Asha' && menu.rows.length === 3 && /^My page/.test(menu.rows[0]) && menu.rows[1] === 'Settings' && /\+ Add a child\s*grown-ups/.test(menu.rows[2]), JSON.stringify(menu));
+  await page.click('[data-act="myPage"]'); await page.waitForTimeout(300);
+  ok(`${label}: My page opens the child's page with their face`, /#\/collection/.test(page.url()) && await page.locator('.mypage img[src*="koi"]').count() === 1);
+  await page.click('.kidbtn'); await page.waitForTimeout(200);
+  await page.click('[data-act="addKidGate"]'); await page.waitForTimeout(300);
+  ok(`${label}: adding a child goes through the grown-ups' PIN`, await page.locator('[data-field="pin"]').count() === 1);
+  await page.goto(URL0 + '#/home'); await page.waitForSelector('.continue');
+
   /* B2 · one Continue: the only filled button on Home is the Continue card's */
   const prim = await page.evaluate(PRIMARY);
   ok(`${label}: Continue is the only filled button on Home`, prim.length === 1 && prim[0] === 'continue', JSON.stringify(prim));
@@ -203,8 +218,7 @@ async function run(label, vp, isMobile, scheme) {
   const opened = await page.evaluate(() => !!document.querySelector('.card.reading, .lstage, .lesson'));
   ok(`${label}: #/continue opens the next step`, opened);
 
-  /* D3 · a wrong answer holds and says why; the second go settles it. The
-     first card is "Needs and wants", whose first answer is the umbrella. */
+  /* D3 · a wrong answer holds and says why; the second go settles it */
   if (await page.locator('.opt').count()) {
     /* K1 · the question and its answers read aloud in the device's own voice */
     await page.evaluate(() => { window.__said = []; Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speak: (u) => window.__said.push(u.text), cancel: () => {}, getVoices: () => [] } }); Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, writable: true, value: function (t) { this.text = t; } }); });
@@ -214,13 +228,16 @@ async function run(label, vp, isMobile, scheme) {
     ok(`${label}: the question and its answers can be read aloud`, said.startsWith(q) && /A: .+ B: .+/.test(said), said.slice(0, 60));
     const opts = page.locator('.opt');
     const texts = await opts.allTextContents();
-    const right = texts.findIndex((t) => /umbrella/i.test(t)), wrong = right === 0 ? 1 : 0;
+    /* whichever lesson is next today — the right answer from the app's own key */
+    const right = await page.evaluate(() => { const c = window.BZF.R.s.kids[window.BZF.R.s.active]; return window.BZF.key(c.learn.openCard, (c.learn.drill && c.learn.drill.qi) || 0); });
+    const wrong = right === 0 ? 1 : 0;
     await opts.nth(wrong).click(); await page.waitForTimeout(150);
     const held = await page.evaluate(() => ({ hold: !!document.querySelector('.fb.hold'), next: !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'), revealed: !!document.querySelector('.opt.ok') }));
     ok(`${label}: a wrong answer holds, says why, and does not reveal or advance`, held.hold && !held.next && !held.revealed, JSON.stringify(held));
     await opts.nth(right).click(); await page.waitForTimeout(150);
-    const settled = await page.evaluate(() => !!document.querySelector('.fb.yes') && !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'));
-    ok(`${label}: the second go settles it and offers Next`, settled);
+    const settledInfo = await page.evaluate(() => ({ yes: !!document.querySelector('.fb.yes'), next: !!document.querySelector('[data-act="nextQ"],[data-act="cardDone"]'), fb: (document.querySelector('.fb') || {}).className || 'none', h: (document.querySelector('.card h3') || {}).textContent }));
+    const settled = settledInfo.yes && settledInfo.next;
+    ok(`${label}: the second go settles it and offers Next`, settled, JSON.stringify(settledInfo));
 
     /* O3 · finish the card (the app's own answer key, window.BZF.key), then
        the family feeds must hold a Finance milestone and only standard coins */

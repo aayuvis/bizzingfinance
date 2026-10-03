@@ -1662,8 +1662,14 @@ export function viewCollection() {
   const c = K();
   const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
   return `<div class="stack">
-    ${hero({ eyebrow: 'Kept, never given', title: 'The Collection', figure: co.has(c) ? companionFigure(c, 110) : '',
+    ${hero({ eyebrow: 'My page', title: `${esc(c.name)}'s collection`, figure: co.has(c) ? companionFigure(c, 110) : '',
       line: 'Badges are for good decisions. Keepsakes are for things you did. Nothing here is for just showing up.' })}
+    <div class="card row mypage" style="gap:14px">
+      <span class="kbadge" style="width:64px;height:64px">${c.avatar && AVATARS[c.avatar] ? `<img src="${AVATARS[c.avatar].src}" alt="" width="64" height="64">` : `<b style="font-size:30px">${esc(c.name.charAt(0).toUpperCase())}</b>`}</span>
+      <div class="grow"><div class="eyebrow">My face</div><b style="font-size:17px">${esc(c.name)}</b>
+        <div class="small muted">${c.badges.length} badges · ${sim.goodDaysThisWeek(c)} good days this week</div></div>
+      <button class="btn ghost sm" data-act="changeAvatar">Change face</button>
+    </div>
     <div class="card">
       <div class="eyebrow">Things you did</div>
       ${(c.deeds || []).length ? `

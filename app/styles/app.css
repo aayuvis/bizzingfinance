@@ -859,3 +859,17 @@ html[data-flash="no"] .stage,html[data-flash="no"] .opt.no,html[data-flash="no"]
 @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 @media (prefers-reduced-motion:reduce){ html[data-flash] .stage,html[data-flash] .opt,html[data-flash] .fb{animation:none !important} }
 :root[data-motion="reduced"] .stage,:root[data-motion="reduced"] .opt,:root[data-motion="reduced"] .fb{animation:none !important}
+
+/* the avatar menu: a dropdown from the child's face, not a dialog */
+.ov.pop{background:transparent;display:block;padding:0}
+.kidmenu{position:fixed;top:58px;right:max(10px,calc((100vw - 940px) / 2 + 10px));width:min(360px,calc(100vw - 20px));
+  background:var(--surface);border-radius:22px;padding:8px;box-shadow:0 0 0 1px var(--line),0 18px 44px rgb(20 20 40 / .22);
+  animation:pop .22s cubic-bezier(.2,1.4,.4,1) both;max-height:calc(100dvh - 80px);overflow:auto}
+.km-kid{display:flex;align-items:center;gap:14px;width:100%;padding:10px 14px;border-radius:16px;text-align:left;font-size:17px}
+.km-kid.on{background:color-mix(in srgb,var(--action-tint) 80%,var(--surface))}
+.km-kid .tick{color:var(--action)}
+.km-kid:hover,.km-row:hover{background:var(--surface2)}
+.km-kid.on:hover{background:color-mix(in srgb,var(--action-tint) 80%,var(--surface))}
+.kidmenu hr{border:0;height:1.5px;background:var(--line);margin:8px 6px}
+.km-row{display:flex;align-items:center;width:100%;padding:13px 16px;border-radius:14px;text-align:left;font-weight:800;font-size:16px}
+.km-tag{font-size:13px;font-weight:700;color:var(--muted)}

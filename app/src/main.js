@@ -426,13 +426,27 @@ function overlay() {
       </div>`);
   }
 
+  /* The avatar menu (FAMILY-STANDARD §3): drops from the child's face in the
+     top bar — who is playing, their own page, settings, and adding a child,
+     which is a grown-up's job and goes through the PIN. */
   if (o.kind === 'kids') {
-    return box(`<div class="eyebrow" style="margin-bottom:6px">Who is playing?</div>
-      <div class="rows" style="margin:0 -22px -10px">
-        ${R.s.kids.map((k, i) => `<button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="switchKid" data-arg="${i}"
-          ${i === R.s.active ? 'aria-current="true"' : ''}>${kidBadge(k, 36)}<b style="font-size:15px" class="grow">${esc(k.name)}</b>${i === R.s.active ? '<span class="pill gold">playing</span>' : ''}</button>`).join('')}
-        <button class="qrow" style="width:100%;text-align:left;padding:12px 22px" data-act="nav" data-arg="parents"><span class="iw">${ico('lock', '🔒', 20)}</span><b style="font-size:15px">Add a child (grown-ups)</b></button>
-      </div>`);
+    const tick = '<svg class="tick" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return `<div class="ov pop" data-act="closeOv"><div class="kidmenu" data-act="noop" role="menu" aria-label="Who is playing">
+      ${R.s.kids.map((k, i) => `<button class="km-kid${i === R.s.active ? ' on' : ''}" role="menuitemradio" aria-checked="${i === R.s.active}" data-act="switchKid" data-arg="${i}">
+        ${kidBadge(k, 44)}<b class="grow">${esc(k.name)}</b>${i === R.s.active ? tick : ''}</button>`).join('')}
+      <hr>
+      <button class="km-row" role="menuitem" data-act="myPage">My page — avatar, badges, collection</button>
+      <button class="km-row" role="menuitem" data-act="settings">Settings</button>
+      <button class="km-row" role="menuitem" data-act="addKidGate"><span class="grow">+ Add a child</span><span class="km-tag">grown-ups</span></button>
+    </div></div>`;
+  }
+  if (o.kind === 'avatarPick') {
+    const k = C();
+    return box(`<div class="eyebrow">My face</div><h2 style="margin:2px 0 10px">Pick a face</h2>
+      <div class="avpick" role="radiogroup" aria-label="Pick a face">
+        ${AVATAR_IDS.map((id) => `<button class="avopt" role="radio" aria-checked="${k.avatar === id}" aria-label="${id}" data-act="setAvatar" data-arg="${id}"><img src="${AVATARS[id].src}" alt="" width="56" height="56"></button>`).join('')}
+      </div>
+      <button class="btn ghost wide" style="margin-top:14px" data-act="closeOv">Done</button>`);
   }
   if (o.kind === 'more') {
     const rest = TABS.filter((t) => !SPROUT.includes(t.k)).concat(EXTRA);
@@ -506,6 +520,15 @@ on('sessionEnd', () => {
   R.overlay = { kind: 'sessionDone', sum }; R.s.ui.nav = 'home'; writeHash(); render();
 });
 
+on('myPage', () => { R.overlay = null; fire('nav', 'collection'); });
+on('changeAvatar', () => { R.overlay = { kind: 'avatarPick' }; sfx.click(); render(); });
+on('setAvatar', (id) => { if (!AVATARS[id]) return; C().avatar = id; sim.save(R.s); sfx.good(); render(); });
+on('addKidGate', () => {
+  R.overlay = null;
+  if (R.s.parent.gate) { fire('addKid'); return; }
+  toast('Adding a child is a grown-up\'s job — PIN first');
+  fire('nav', 'parents');
+});
 on('kids', () => { R.overlay = { kind: 'kids' }; sfx.click(); render(); });
 on('nav', (k) => {
   R.overlay = null; R.shelf = '';
