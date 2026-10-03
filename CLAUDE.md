@@ -164,7 +164,7 @@ is binding where it is not stricter here. What it changed in this repo:
   `integration/` and are the one exception to the Store seam: they own `bizzing.activity` and
   `bizzing.wallet`. Everything reaches them through `src/family.js`, which never writes in `?demo`.
 - **Bizzing coins (owner's decision, option a):** Finance pays family coins only through `earn()` for
-  the standard events (answer 1, lesson 5, test 10, chapter 20) and shows them on the Wallet as
+  the standard events (answer 1, lesson 5, test 10, and 20 for an idea mastered — paid only when `mastery.js` first records it retained or transferred, never for finishing a chapter) and shows them on the Wallet as
   income from the family's apps. They never convert to or from the town's money — rule 4 stands.
 - **The family avatar engine (owner's decision, 2 Oct 2026, overriding docs/11's refusal of
   rarity):** Finance has 96 avatars in 12 packs of 8 (`src/catalogue.js`) through the family's

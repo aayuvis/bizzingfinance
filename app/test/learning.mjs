@@ -93,5 +93,25 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   const jar = m.slice(m.indexOf("on('jarIn'"), m.indexOf("on('jarIn'") + 700), bank = m.slice(m.indexOf("on('bankIn'"), m.indexOf("on('bankIn'") + 700);
   ok(/if \(alt && k !== 'spend'\)[\s\S]*mastery\.transfer\(c, 'KEEP-2'/.test(jar) && /if \(alt\)[\s\S]*mastery\.transfer\(c, 'GROW-1'/.test(bank), 'a jar or bank tap counts as transfer only when something tempting was affordable instead');
 }
+
+/* A6: "mastered" pays only on evidence — kept after a gap, or used unasked — once each per idea */
+{
+  const mastery = await import('../src/mastery.js');
+  const { OBJECTIVES } = await import('../src/objectives.js');
+  const s = sim.newState(); const c = sim.newChild('Asha', 'builder', 'INR'); s.kids.push(c);
+  const heard = []; mastery.listen((k, id, how) => heard.push(id + ':' + how));
+  const o = OBJECTIVES.find((x) => x.transfer && x.transfer.length), D = 864e5, t0 = Date.UTC(2026, 0, 1);
+  mastery.introduce(c, o.id, t0); mastery.check(c, o.id, true, t0);
+  ok(heard.length === 0, 'reading the card and the check straight after pay nothing for mastery');
+  mastery.retrieve(c, o.id, true, t0 + 10 * D);
+  ok(heard.join() === o.id + ':retained', 'kept after a gap: one mastery event', heard.join());
+  mastery.retrieve(c, o.id, false, t0 + 30 * D); mastery.retrieve(c, o.id, true, t0 + 45 * D);
+  ok(heard.length === 1, 'lapsing and recovering does not pay the same idea twice', heard.join());
+  mastery.transfer(c, o.id, o.transfer[0], 'test', t0 + 50 * D); mastery.transfer(c, o.id, o.transfer[0], 'again', t0 + 60 * D);
+  ok(heard.length === 2 && heard[1] === o.id + ':transferred', 'used unasked: one more, once', heard.join());
+  const main = strip(readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'));
+  ok(!/finished\)\s*\{?\s*family\.coins\([^)]*'mastery'/.test(main), 'finishing a chapter is not paid as mastery');
+  mastery.listen(null);
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

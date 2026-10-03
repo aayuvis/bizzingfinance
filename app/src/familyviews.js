@@ -10,6 +10,7 @@ import { R } from './runtime.js';
 import * as sim from './sim.js';
 import { hero } from './hero.js';
 import { money, shortDate } from './fmt.js';
+import { contents as planContents } from './plan.js';
 import { CATALOGUE, PACKS, BY_ID, stateOf, ctxFor, TIERS, MILESTONES, milestonesOf, worldOf } from './catalogue.js';
 import { LOOKS, isOpen as lookOpen, openSay, WORLD_PRICE, plateFor } from './looks.js';
 import { coinBalance as balance, coinLedger as ledger } from './family.js';
@@ -68,6 +69,7 @@ export function viewShop() {
       <button class="btn ghost wide" data-act="nav" data-arg="collection">${ico('frame', '', 18)} See all 96 in the Collection</button>`;
   } else if (tab === 'worlds') {
     body = `<p class="small muted">Worlds 1 and 2 are open to everyone. Worlds 3 to 6 open with the family plan, or one at a time for ${WORLD_PRICE} coins — something worth saving for. Each world brings two packs of faces.</p>
+      <p class="small muted">The family plan is something a grown-up decides about: it opens all four at once, with their ${planContents().faces} faces. Ask a grown-up — they can see it behind the ${ico('lock', '🔒', 13)}.</p>
       <div class="wshop">${LOOKS.map((w) => { const open = lookOpen(w, ctx), short = Math.max(0, WORLD_PRICE - coins);
         return `<div class="wcard${open ? '' : ' locked'}">
           <img src="${R.dark ? w.thumbNight : w.thumbDay}" alt="" width="360" height="154" loading="lazy">

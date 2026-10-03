@@ -42,6 +42,18 @@ export function record(c, id) {
 export function stateOf(c, id) { return (c.mastery && c.mastery.rec[id] || { state: 'unmet' }).state; }
 export function isMet(c, id) { return stateOf(c, id) !== 'unmet'; }
 
+/* Someone (main.js) may want to know the FIRST time an objective is kept after a gap
+   or used unasked — the only two moments this app may call "mastered". Each is reported
+   once per objective, ever (r.reached), so a lapse and a recovery do not pay twice. */
+let listener = null;
+export function listen(fn) { listener = fn; }
+function reached(c, id, r, state, t) {
+  r.reached = r.reached || {};
+  if (r.reached[state]) return;
+  r.reached[state] = t;
+  if (listener) listener(c, id, state);
+}
+
 /* The teaching card was read. */
 export function introduce(c, id, now) {
   const r = record(c, id); const t = now || Date.now();
@@ -78,6 +90,7 @@ export function retrieve(c, id, ok, now) {
     r.box = Math.max(0, r.box - 1);
   }
   r.due = t + BOXES[r.box] * DAY;
+  if (r.state === 'retained') reached(c, id, r, 'retained', t);
   return r;
 }
 
@@ -95,6 +108,7 @@ export function transfer(c, id, surface, detail, now) {
   r.state = 'transferred';
   r.box = Math.min(r.box + 1, BOXES.length - 1);
   r.due = t + BOXES[r.box] * DAY;
+  reached(c, id, r, 'transferred', t);
   return r;
 }
 

@@ -60,5 +60,21 @@ ok(milestonesOf(c).includes('ch-c1'), 'finishing a chapter meets its milestone')
   ok(stateOf(CATALOGUE.find((a) => a.id === 'corg'), ctxFor(s, k2)).state !== 'owned', 'the switcher’s second child sees their own path, not the first child’s');
 }
 
+
+/* A4 · the family plan: a cited price, contents computed, and a device flag that opens nothing */
+{
+  const { PLAN, priceFor, contents } = await import('../src/plan.js');
+  const sim = await import('../src/sim.js');
+  const s = sim.newState(); const k = sim.newChild('Asha', 'builder', 'INR'); s.kids.push(k);
+  s.settings.plan = 'family'; s.settings.tester = false;
+  ok(ctxFor(s, k).plan === 'free', 'a family-plan flag on the device opens nothing without the server (or tester preview)');
+  s.settings.tester = true;
+  ok(ctxFor(s, k).plan === 'family', 'tester mode can preview it');
+  const c = contents();
+  ok(c.worlds.length === 4 && c.packs.length === 8 && c.faces === 64, 'the plan opens worlds 3–6, eight packs, 64 faces — counted from the catalogue', `${c.worlds.length} · ${c.packs.length} · ${c.faces}`);
+  ok(/\$99/.test(priceFor('USD')) && /2,999/.test(priceFor('INR')) && /not set/.test(priceFor('GBP')), 'the price is the family pass, and no currency is invented');
+  ok(PLAN.onSale === false && /docs\/06/.test(PLAN.source), 'it says where the price comes from, and that it is not on sale');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

@@ -25,7 +25,7 @@ for (const [label, vp, mob, scheme] of [['desk', { width: 1280, height: 860 }, f
     await page.locator('[data-act="obBand"]').last().click();
   }
   await page.waitForSelector('main'); await page.waitForTimeout(800);
-  if (process.env.LOOK) await page.evaluate((l) => { window.BZF.R.s.settings.plan = 'family'; window.BZF.fire('look', l); }, process.env.LOOK);
+  if (process.env.LOOK) await page.evaluate((l) => { window.BZF.R.s.settings.plan = 'family'; window.BZF.R.s.settings.tester = true; window.BZF.fire('look', l); }, process.env.LOOK);
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   for (const r of routes) {
     await page.evaluate((x) => { location.hash = '#/' + x; }, r); await page.waitForTimeout(700);

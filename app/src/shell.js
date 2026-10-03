@@ -110,7 +110,7 @@ export function drawer(c) {
 
 /* ── the coin chip's sheet: balance, the last 30 lines in words, what coins are for ── */
 const APPNAME = { bee: 'Bee', maths: 'Maths', geography: 'Geography', india: 'India', finance: 'Finance' };
-const WHY = { answer: 'a right answer', stop: 'a lesson finished', contest: 'a test passed', mastery: 'a chapter mastered', migrated: 'coins brought over' };
+const WHY = { answer: 'a right answer', stop: 'a lesson finished', contest: 'a test passed', mastery: 'an idea mastered', migrated: 'coins brought over' };
 export function walletLine(x) {
   let what;
   if (x.why in WHY) what = WHY[x.why];
@@ -125,7 +125,7 @@ export function walletSheet(c) {
   const led = ledger(c.name).slice(-30).reverse();
   return `<div class="sheet-h"><span class="eyebrow">Bizzing coins</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
     <div class="row" style="gap:12px;margin:6px 0 12px">${coinSvg(40)}<span><b class="big tabnum" style="font-family:var(--mono)">${balance(c.name)}</b><span class="small muted" style="display:block">coins, shared by every Bizzing app</span></span></div>
-    <p class="small">Coins come from learning, in any Bizzing app: a right answer, a lesson finished, a test passed, a chapter mastered. They buy faces, worlds and extras in the Shop — never lessons, and never anything in the town. Your town money is separate: it is the money you are learning to run.</p>
+    <p class="small">Coins come from learning, in any Bizzing app: a right answer, a lesson finished, a test passed, an idea mastered — kept after a gap, or used without being asked. They buy faces, worlds and extras in the Shop — never lessons, and never anything in the town. Your town money is separate: it is the money you are learning to run.</p>
     <div class="sect"><b>The last ${led.length || 'few'} lines</b><i></i></div>
     ${led.length ? `<ol class="ledger">${led.map((x) => `<li class="${x.n > 0 ? 'in' : 'out'}"><span class="when small muted">${new Date(x.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span><span>${esc(walletLine(x))}</span></li>`).join('')}</ol>`
       : `<div class="empty">${pipPose('sleep', 72)}<p class="small">Nothing yet. Your first right answer puts the first coin here.</p></div>`}

@@ -413,7 +413,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   await page.evaluate(() => window.BZF.fire('closeOv'));
 
   /* §7 six worlds: painted, alive, a designed night, AA on every plate */
-  await page.evaluate(() => { window.BZF.R.s.settings.plan = 'family'; });
+  await page.evaluate(() => { window.BZF.R.s.settings.plan = 'family'; window.BZF.R.s.settings.tester = true; });
   const worldRes = [];
   for (const w of await page.evaluate(() => window.BZF.looks.map((x) => x.id))) {
     await page.evaluate((id) => window.BZF.fire('look', id), w); await page.waitForTimeout(250);
@@ -431,7 +431,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: six worlds, each with three layers of life`, worldRes.length === 6 && worldRes.every((x) => x.layers >= 3), JSON.stringify(worldRes.map((x) => x.w + ':' + x.layers)));
   ok(`${label}: every world wears its ${scheme === 'dark' ? 'night' : 'day'} painting`, worldRes.every((x) => x.plateOk), JSON.stringify(worldRes.filter((x) => !x.plateOk)));
   ok(`${label}: text on Home and My Feed meets AA in every world (${scheme})`, worldRes.every((x) => x.aa === 0), JSON.stringify(worldRes.filter((x) => x.aa)));
-  await page.evaluate(() => window.BZF.fire('look', 'market'));
+  await page.evaluate(() => { window.BZF.fire('look', 'market'); window.BZF.R.s.settings.tester = false; window.BZF.R.s.settings.plan = 'free'; });
   /* §7 the ambient life pauses when the page is hidden */
   if (!process.env.REDUCED) {
     const paused = await page.evaluate(async () => {
@@ -644,6 +644,10 @@ async function demo() {
   await page.goto(URL0 + '?demo&from=hive'); await page.waitForSelector('[data-bz=next]');
   const back = await page.evaluate(() => { const a = document.querySelector('.bz-bar [data-bz=hiveback]'); return a ? a.getAttribute('href') : ''; });
   ok('from the Hive: the bar offers the way back to my day', /Bizzing_Schedule/.test(back), back);
+  /* A4 · the plan is a preview only tester mode honours; a stray device flag opens nothing */
+  const planGate = await page.evaluate(() => { const { R } = window.BZF; R.shopTab = 'worlds'; window.BZF.fire('nav', 'shop');
+    const t = document.body.innerText; return { says: t.includes('Ask a grown-up'), price: /\$99|2,999/.test(t) }; });
+  ok('Shop: a child sees what the family plan opens, and never its price', planGate.says && !planGate.price, JSON.stringify(planGate));
   ok('demo: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await ctx.close();
   /* §3 §6 · the chrome and Home match Bee's on a dark desk too (the other three are in run()) */

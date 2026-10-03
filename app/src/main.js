@@ -649,7 +649,7 @@ on('cert', async (id) => {
     document.body.appendChild(a); a.click(); a.remove(); toast('Certificate saved'); sfx.medal();
   } catch (e) { toast('This device could not draw the certificate'); }
 });
-on('planToggle', () => { if (!R.gate) return; R.s.settings.plan = R.s.settings.plan === 'family' ? 'free' : 'family'; sim.save(R.s); toast(R.s.settings.plan === 'family' ? 'Family plan on, on this device' : 'Family plan off'); render(); });
+on('planToggle', () => { if (!R.gate || !R.s.settings.tester) return; R.s.settings.plan = R.s.settings.plan === 'family' ? 'free' : 'family'; sim.save(R.s); toast(R.s.settings.plan === 'family' ? 'Previewing the family plan — tester mode only' : 'Preview off'); render(); });
 on('stopNext', () => { R.overlay = null; goContinue(); });
 on('closeOv', () => {
   /* the adoption letter's "meet them" closes into the shelter, not to Home */
@@ -999,7 +999,8 @@ on('cardDone', (id) => {
   /* the family (O3): a lesson finished is a stop; a chapter finished is a
      mastery milestone; a skill shown again after a gap is one too */
   if (first) { family.coins(c.name, 'stop'); family.milestone(c.name, 'stop', card.title); }
-  if (finished) { family.coins(c.name, 'mastery'); family.milestone(c.name, 'mastery', 'Chapter: ' + ch.title); }
+  /* finishing a chapter is completion, not mastery: the 20 coins wait for the evidence (mastery.listen) */
+  if (finished) family.milestone(c.name, 'stop', 'Chapter: ' + ch.title);
   if (bt && bt.shape === 'retrieve' && bt.cardId === id && mastery.stateOf(c, bt.obj) === 'retained') family.milestone(c.name, 'mastery', objective(bt.obj).short);
   c.learn.openCard = null; c.learn.drill = null;
   c.lastDone = { id, title: card.title, right, t: Date.now() };
@@ -1578,6 +1579,9 @@ applyDevice(); applyRate();
 R.demo = /[?&]demo\b/.test(location.search);
 R.s = R.demo ? demoState() : sim.load();
 family.setDemo(R.demo, R.demo && R.s && R.s.demoCoins);
+/* the family's 20-coin "mastery" is paid only when mastery.js has the evidence:
+   an idea kept after a gap, or used somewhere nobody asked (once each, per idea) */
+mastery.listen((c, id, how) => { if (family.coins(c.name, 'mastery')) toast(how === 'retained' ? '+20 coins — you kept that one after a gap' : '+20 coins — you used it without being asked'); });
 /* active minutes for the Hive (O3): the drop-in counts only a visible tab
    that was touched in the last two minutes, and never in the sample */
 family.startActivity(() => (R.s && R.s.kids.length ? C().name : null));

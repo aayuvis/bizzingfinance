@@ -28,7 +28,7 @@ family.milestone('Asha', 'world', 'The Old Harbour');
 ok(feed().some((x) => x.ev === 'world'), 'reaching a new world is a world milestone');
 
 /* coins: only the standard events, at the standard amounts */
-ok(family.coins('Asha', 'answer') === 1 && family.coins('Asha', 'stop') === 5 && family.coins('Asha', 'contest') === 10 && family.coins('Asha', 'mastery') === 20, 'right answer 1 · lesson 5 · test 10 · chapter 20');
+ok(family.coins('Asha', 'answer') === 1 && family.coins('Asha', 'stop') === 5 && family.coins('Asha', 'contest') === 10 && family.coins('Asha', 'mastery') === 20, 'right answer 1 · lesson 5 · test 10 · an idea mastered 20');
 ok(family.coins('Asha', 'login') === 0 && family.coins('Asha', 'streak') === 0, 'nothing pays for logging in or for days in a row — there is no event for them');
 const led = wallet().kids.asha.ledger;
 ok(led.every((x) => x.a === 'finance' && ['answer', 'stop', 'contest', 'mastery'].includes(x.why)), 'every coin in the ledger came from a standard event', led.map((x) => x.why).join(','));

@@ -82,10 +82,10 @@ export const PACK_OF = (n) => PACKS.find((p) => p.n === n);
 export { validate, stateOf, worldOf, TIERS, WORLD_PRICE };
 
 /* A child's catalogue context for stateOf(): what they own, which worlds they have
-   opened, the plan (a flag the grown-ups' tester mode can set until the family
-   server exists — FIX §5), and the milestones their record shows. */
+   opened, the plan (a PREVIEW that only tester mode honours: an entitlement comes from the
+   family server, which does not exist yet — FIX §5, plan.js), and the milestones their record shows. */
 export function ctxFor(s, c) {
   const f = (c && c.fam) || {};
-  return { owned: f.owned || [], worlds: f.worlds || [], plan: s && s.settings && s.settings.plan === 'family' ? 'family' : 'free',
+  return { owned: f.owned || [], worlds: f.worlds || [], plan: s && s.settings && s.settings.tester && s.settings.plan === 'family' ? 'family' : 'free',
     milestones: c ? milestonesOf(c) : [], who: c && c.name };
 }

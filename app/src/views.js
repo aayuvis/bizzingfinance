@@ -2,6 +2,7 @@
    Nothing here computes money; sim.js owns that and these render it. */
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
+import { PLAN, priceFor as planPrice, contents as planContents } from './plan.js';
 import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
 import { townSVG, PLACES } from './town.js';
@@ -807,6 +808,20 @@ function viewGlossary() {
   </div>`;
 }
 
+/* The family plan, for a grown-up: its price (cited), what it opens (computed), and the
+   plain fact that it is not on sale yet. Only ever behind the PIN (rule 8). */
+function planCard(c) {
+  const k = planContents();
+  return `<section class="card stack" aria-labelledby="plan-h" data-focus="plan">
+    <div class="eyebrow">The family plan</div>
+    <h2 id="plan-h" style="font-size:20px">${esc(PLAN.name)} · ${esc(planPrice(c.currency))}</h2>
+    <p class="small">One pass for the household across the Bizzing apps. In Finance it opens <b>worlds ${k.worlds.map((w) => w.n).join(', ')}</b> — ${k.worlds.map((w) => esc(w.name)).join(', ')} — and their <b>${k.packs.length} packs, ${k.faces} faces</b>.</p>
+    <p class="small muted">Free for every child today: worlds ${k.free.map((w) => esc(w.name)).join(' and ')}, every lesson, every game, the Bank, the Exchange and the shop. A child can also open any one world with ${k.eachWorld} coins earned by learning — never with money.</p>
+    <p class="small"><b>Not on sale yet.</b> When it is, it is bought here, behind the PIN, and opens on every device in the family — that needs the family server, which is not built. Until then nothing in this app takes money.</p>
+    <p class="small muted">Price from ${esc(PLAN.source)}.</p>
+  </section>`;
+}
+
 /* ══ MONEY ════════════════════════════════════════════════════════════ */
 export function viewMoney() {
   const c = K();
@@ -1592,7 +1607,7 @@ export function viewParents() {
       ${(() => { const e = CERT.earned(c); return e.length
         ? `<p class="small muted" style="margin:4px 0 8px">Made on this device as a picture, for you to save and share as you choose. Nothing is uploaded.</p>
            <div class="row" style="gap:8px;flex-wrap:wrap">${e.map((x) => `<button class="btn ghost sm" data-act="cert" data-arg="${x.id}">${ico('medal', '', 16)} ${esc(x.name)}</button>`).join('')}</div>`
-        : `<p class="small muted" style="margin-top:4px">When ${esc(c.name)} finishes every stop in a place — Market Row first — a certificate with their name, their avatar and what they mastered can be made here.</p>`; })()}
+        : `<p class="small muted" style="margin-top:4px">When ${esc(c.name)} finishes every stop in a place — Market Row first — a certificate with their name, their avatar and the chapters they finished can be made here.</p>`; })()}
     </div>
 
     <div class="card">
@@ -1686,6 +1701,7 @@ export function viewParents() {
         <button class="btn ${s.settings.feedOff ? 'ghost' : ''} sm" role="switch" aria-checked="${!s.settings.feedOff}" data-act="feedToggle">${s.settings.feedOff ? 'Off' : 'On'}</button></div>
     </div>
 
+    ${planCard(c)}
     ${placementCard(c)}
     ${answersCard(c)}
     ${backupCard(s)}
@@ -1695,9 +1711,9 @@ export function viewParents() {
       <p class="small muted">For trying the app, not for a child. With it on, every gate opens — all eight chapters, the five worlds, the Jar Shed, the Build Yard, the Bank, the Exchange, the shop and every game — while ${esc(c.name)}'s learning record stays exactly what it is. A red TESTER pill sits in the bar the whole time it is on.</p>
       <div class="row"><span class="small grow">Unlock everything</span>
         <button class="btn ${s.settings.tester ? '' : 'ghost'} sm" data-act="tester">${s.settings.tester ? 'On' : 'Off'}</button></div>
-      <div class="row"><span class="small grow">Family plan <span class="muted">— a flag until the family server exists; it opens worlds 3–6 on this device and never sells coins</span></span>
-        <button class="btn ghost sm" data-act="planToggle" aria-pressed="${s.settings.plan === 'family'}">${s.settings.plan === 'family' ? 'On' : 'Off'}</button></div>
       ${s.settings.tester ? `
+      <div class="row"><span class="small grow">Preview the family plan <span class="muted">— on this device, while tester mode is on. It is not the plan: nothing is bought and it ends with tester mode.</span></span>
+        <button class="btn ghost sm" data-act="planToggle" aria-pressed="${s.settings.plan === 'family'}">${s.settings.plan === 'family' ? 'On' : 'Off'}</button></div>
       <div class="rows" style="margin-top:4px">
         <div class="qrow"><span class="grow"><b style="font-size:14px">Jump the ladder</b><div class="small muted">Sets the level; XP follows. Level ${c.learn.level} now.</div></span>
           <span class="row" style="gap:6px"><button class="btn ghost sm" data-act="tJump" data-arg="1">1</button><button class="btn ghost sm" data-act="tJump" data-arg="12">12</button><button class="btn ghost sm" data-act="tJump" data-arg="30">30</button></span></div>

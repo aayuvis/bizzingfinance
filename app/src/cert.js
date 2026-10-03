@@ -1,7 +1,7 @@
 /* cert.js — a certificate for a world finished (FAMILY-STANDARD §13, T9).
 
    What triggers one: a place on the journey whose chapters are all finished.
-   What it shows: the child's first name, their avatar, Pip, and what was mastered.
+   What it shows: the child's first name, their avatar, Pip, and the chapters finished (finished, not mastered — mastery.js alone says that).
    How it is shared: as a PNG drawn ON THE DEVICE, from the grown-ups' area only. It is
    never uploaded; the grown-up saves it and decides what happens next. */
 import { WORLDS, CHAPTERS, chapterDone } from './content.js';
