@@ -1124,10 +1124,11 @@ function stallRush() {
           ${st.msg ? `<p class="small srmsg" style="color:var(--spend);font-weight:650;text-align:center">${esc(st.msg)}</p>` : ''}
           <div class="choices srstock" style="grid-template-columns:repeat(4,1fr)">
             ${STOCK.map((x, i) => `<button class="btn ${st.stock[x.id] ? '' : 'ghost'}" data-act="srServe" data-arg="${x.id}"
-              style="flex-direction:column;gap:1px;padding:8px 3px;font-size:11px;line-height:1.15">
+              style="position:relative;flex-direction:column;gap:1px;padding:10px 4px 8px;font-size:11px;line-height:1.15;border-radius:16px;min-width:0">
+              <span class="srkey" aria-hidden="true">${i + 1}</span>
               ${ico(x.em, x.em, 18)}
-              <span style="font-weight:800">${esc(x.name)}</span>
-              <span style="opacity:.75;font-family:var(--mono);font-size:10.5px">${i + 1} · ${st.stock[x.id] || 0} left</span></button>`).join('')}
+              <span style="font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span>
+              <span style="opacity:.8;font-family:var(--mono);font-size:10.5px">${st.stock[x.id] || 0} left</span></button>`).join('')}
           </div>
           <button class="btn ghost wide${st.restock > 0 ? ' srbusy' : ''}" data-act="srStock" ${st.restock > 0 ? 'disabled' : ''}>
             ${st.restock > 0 ? 'Restocking…' : 'R · Restock everything'}</button>

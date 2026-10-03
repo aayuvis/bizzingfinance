@@ -41,3 +41,5 @@ html[data-bz-dark] .paper{background-color:#2A2620;color:#F4EEE4;background-imag
 .fixcard .gives{grid-column:1 / -1;font-size:12.5px;color:var(--ink);opacity:.8}
 @media (prefers-reduced-motion:reduce){.envelope .flap,.paper,.answered-stamp{animation:none !important}}
 :root[data-motion="reduced"] .envelope .flap,:root[data-motion="reduced"] .paper,:root[data-motion="reduced"] .answered-stamp{animation:none !important}
+/* Stall Rush: the key for each stock button, as a corner badge */
+.srkey{position:absolute;top:4px;left:6px;font:600 9.5px var(--mono);opacity:.7}
