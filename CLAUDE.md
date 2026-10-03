@@ -185,8 +185,9 @@ is binding where it is not stricter here. What it changed in this repo:
   reload asks again. Reports name the child or say "they" — never "she" or "he".
 - **Setup asks a first name, a face and an age band**, nothing else. `?demo` is a sample household
   the Store refuses to save.
-- **`deploy.sh` runs `test/browser.mjs`** on the built app (desktop, phone, phone-dark, demo) and
-  refuses to publish if it fails. Prove every new check by breaking it once.
+- **One chat deploys** (the owner's decision, Oct 2026): two sessions publishing different branches
+  to the same gh-pages overwrote each other once. Deploy fast with `./deploy.sh`; add `--check` to
+  run `test/browser.mjs` first for anything touching the shell, Home, a lesson or a game.
 
 ## Architecture (planned)
 

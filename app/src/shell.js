@@ -136,7 +136,23 @@ export function pipPose(pose, size = 96, alt = '') {
   return `<img class="pip pip-${pose}" src="./mascot/pip-${pose}.webp" alt="${esc(alt)}" width="${size}" height="${size}">`;
 }
 
-/* ── the child switcher: every child, one tap, and a grown-ups-only + ── */
+/* ── the avatar menu: drops from the child's face in the top bar ─────────
+   Who is playing (ticked), their own page, settings, and adding a child —
+   a grown-up's job, so it goes through the PIN. A dropdown, not a dialog:
+   it is a menu, and it opens where the finger already is. */
+export function kidMenu() {
+  const tick = '<svg class="tick" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return `<div class="ov pop" data-act="closeOv"><div class="kidmenu" data-act="noop" role="menu" aria-label="Who is playing">
+    ${R.s.kids.map((k, i) => `<button class="km-kid${i === R.s.active ? ' on' : ''}" role="menuitemradio" aria-checked="${i === R.s.active}" data-act="switchKid" data-arg="${i}">
+      ${kidBadge(k, 44)}<b class="grow">${esc(k.name)}</b>${i === R.s.active ? tick : ''}</button>`).join('')}
+    <hr>
+    <button class="km-row" role="menuitem" data-act="nav" data-arg="me">My page — avatar, badges, collection</button>
+    <button class="km-row" role="menuitem" data-act="settings">Settings</button>
+    <button class="km-row" role="menuitem" data-act="addKidGate"><span class="grow">+ Add a child</span><span class="km-tag">grown-ups</span></button>
+  </div></div>`;
+}
+
+/* ── the child switcher sheet (kept for the grown-ups' page) ── */
 export function kidsSheet() {
   return `<div class="sheet-h"><span class="eyebrow">Who is playing?</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
     <div class="kids">${R.s.kids.map((k, i) => `<button class="kidcard${i === R.s.active ? ' on' : ''}" data-act="switchKid" data-arg="${i}" ${i === R.s.active ? 'aria-current="true"' : ''}>

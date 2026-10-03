@@ -186,6 +186,9 @@ function render() {
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
   if (R.game && R.game.mount) R.game.mount();
+  /* the avatar menu hangs from the avatar itself, wherever the bar puts it */
+  const km = document.querySelector('.kidmenu'), kb = document.querySelector('.bz-kid');
+  if (km && kb) { const r = kb.getBoundingClientRect(); km.style.top = Math.round(r.bottom + 8) + 'px'; km.style.right = Math.max(10, Math.round(innerWidth - r.right)) + 'px'; }
   /* a freshly opened dialog takes focus on its first control */
   if (R.overlay && R.focusedOv !== R.overlay) { R.focusedOv = R.overlay; const f = root.querySelector('.drawer .dr-item, .drawer button, .ovbox input, .ovbox button'); if (f && !/search/.test(R.overlay.kind)) f.focus({ preventScroll: true }); }
   if (!R.overlay) R.focusedOv = null;
@@ -515,7 +518,7 @@ function overlay() {
       </div>`);
   }
 
-  if (o.kind === 'kids') return box(shell.kidsSheet(), true);
+  if (o.kind === 'kids') return shell.kidMenu();
   return '';
 }
 

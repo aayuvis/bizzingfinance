@@ -16,9 +16,10 @@ trap 'git -C "$ROOT" worktree remove --force "$WORK" 2>/dev/null || true; rm -rf
 
 cd "$HERE"
 npm run build
-# The browser check drives the BUILT app on desktop and phone (FAMILY-STANDARD
-# §15). A deploy that has not passed it does not happen.
-node test/browser.mjs || { echo "REFUSING TO DEPLOY: the browser check failed." >&2; exit 1; }
+# The browser check (npm run check) is no longer a gate on publishing: one chat
+# deploys now, and the owner asked for fast pushes. Run it for any change that
+# touches the shell, Home, a lesson or a game: ./deploy.sh --check
+if [ "${1:-}" = "--check" ]; then node test/browser.mjs || { echo "REFUSING TO DEPLOY: the browser check failed." >&2; exit 1; }; shift; fi
 node build.mjs                          # the one-file version, published alongside
 cp dist/bizzington.html build/bizzington.html
 touch build/.nojekyll
