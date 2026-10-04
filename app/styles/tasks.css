@@ -165,3 +165,21 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 .lvlbump .small{grid-column:1 / -1}
 @keyframes lvfill{from{width:0}}
 @media (prefers-reduced-motion:reduce){.lvlbump .lvbar i{animation:none}}
+/* the level-up ceremony (audit v4, L4) */
+.unveil,.rankstamp{position:relative;width:220px;height:170px;margin:0 auto 6px;display:grid;place-items:end center;overflow:hidden;border-radius:16px}
+.unveil img{position:relative;z-index:1;max-height:150px;max-width:200px;object-fit:contain;animation:unveilup .7s .5s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes unveilup{from{transform:translateY(24px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+.unveil .curtain{position:absolute;top:0;bottom:0;width:52%;z-index:2;background:repeating-linear-gradient(90deg,#B3261E 0 14px,#8E1C16 14px 18px);box-shadow:inset 0 -8px 0 #F0B429}
+.unveil .curtain.l{left:0;transform-origin:left;animation:curtl 1s .25s cubic-bezier(.6,0,.3,1) forwards}
+.unveil .curtain.r{right:0;transform-origin:right;animation:curtr 1s .25s cubic-bezier(.6,0,.3,1) forwards}
+@keyframes curtl{to{transform:translateX(-96%) scaleX(.35)}}
+@keyframes curtr{to{transform:translateX(96%) scaleX(.35)}}
+.ray{position:absolute;inset:-40%;z-index:0;background:repeating-conic-gradient(from 0deg,rgb(240 180 41 / .28) 0 10deg,transparent 10deg 24deg);animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.rankstamp{place-items:center}
+.rs-medal{position:relative;z-index:1;width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#FFE9A3,#F0B429 60%,#C98A12);box-shadow:0 8px 22px rgb(150 100 10 / .35);animation:medalin .5s .2s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes medalin{from{transform:scale(2);opacity:0}to{transform:none;opacity:1}}
+.rankstamp .endav{position:absolute;z-index:2;right:44px;bottom:22px}
+@media (prefers-reduced-motion:reduce){.unveil img,.unveil .curtain,.ray,.rs-medal{animation:none !important}.unveil .curtain{display:none}}
+:root[data-motion="reduced"] .unveil .curtain{display:none}
+:root[data-motion="reduced"] .unveil img,:root[data-motion="reduced"] .ray,:root[data-motion="reduced"] .rs-medal{animation:none !important}

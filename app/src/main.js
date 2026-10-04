@@ -543,7 +543,12 @@ function overlay() {
     const rank = rankObj(o.level);
     return box(`
       <div style="text-align:center">
-        <div class="endfig">${shell.pipPose('cheer', 104)}<span class="endav">${kidBadge(c, 52)}</span></div>
+        ${(() => { /* the ceremony (audit v4, L4): the place the level opens, unveiled behind
+             parting curtains; otherwise the rank's medal stamps in */
+          const ART_OF = { place: 'home-0', wallet: 'stall', jars: 'jars', goals: 'yard', bank: 'bank', exchange: 'exchange', shop: 'shop' };
+          const b = place && BLD[ART_OF[place.key]];
+          return b ? `<div class="unveil" aria-hidden="true"><span class="ray"></span><img src="${b.src}" alt=""><i class="curtain l"></i><i class="curtain r"></i></div>`
+            : `<div class="rankstamp" aria-hidden="true"><span class="ray"></span><span class="rs-medal">${ico(rank.em, rank.em, 54)}</span><span class="endav">${kidBadge(c, 44)}</span></div>`; })()}
         <div class="eyebrow">Level ${o.level} · ${rank.em} ${rank.name}</div>
         <h2 style="margin:4px 0 8px;font-size:28px">${place ? esc(place.name) + ' is open' : 'Level ' + o.level}</h2>
         <p class="muted">${place ? esc(place.blurb) : 'Learning ' + esc(rank.of) + '.'}</p>
