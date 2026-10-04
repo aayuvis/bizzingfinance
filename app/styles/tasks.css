@@ -242,3 +242,10 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 :root[data-motion="reduced"] .tclock i,:root[data-calm] .tclock i{animation-timing-function:steps(6,end)}
 /* a game's header stays on one line on a phone, the level chip included (audit v4 follow-up) */
 @media (max-width:480px){.hud{flex-wrap:nowrap;gap:5px}.hud .box{padding:4px 6px;font-size:12px;white-space:nowrap}.hud .btn.sm{padding-inline:10px;flex:0 0 auto}}
+/* the games draw their things instead of showing emoji (audit v4, N4/G5) */
+.gcard .em .ico,.gcard .em .ico-em{display:block;margin:0 auto}
+.endico{display:flex;justify-content:center;margin-bottom:4px}
+.sqico{display:flex;justify-content:center;line-height:1}
+.hearts{display:inline-flex;gap:1px;align-items:center}
+.hearts .ico{vertical-align:middle}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

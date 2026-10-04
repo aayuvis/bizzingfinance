@@ -5,7 +5,7 @@
 
 import { esc, sfx, rng, clamp } from './ui.js';
 import { money, price } from './fmt.js';
-import { say, CAST } from './art.js';
+import { say, CAST, ico } from './art.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { plateFor } from './looks.js';
@@ -304,7 +304,7 @@ export function mainStreet(opts = {}) {
           <div class="hud"><span class="box">Main Street</span>${chip()}<span class="grow"></span>
             <button class="btn ghost sm" data-act="gquit">Leave</button></div>
           <div class="stage" style="justify-content:center;text-align:center">
-            <div style="font-size:44px">${g.winner === me ? '🏆' : '🎗️'}</div>
+            <div class="endico">${g.winner === me ? ico('trophy', '🏆', 48) : ico('rosette', '🎗️', 48)}</div>
             <h2>${g.winner === me ? 'Your street pays for your life' : g.winner.name + ' got there first'}</h2>
             <p class="muted">${Math.round(g.mine * 100)}% of your expenses covered by what you own.</p>
             <div class="lead">
@@ -332,7 +332,7 @@ export function mainStreet(opts = {}) {
           border-radius:7px;padding:4px 3px;font-size:9.5px;line-height:1.15;text-align:center;overflow:hidden;
           background:${active ? 'var(--action-tint)' : own ? (own.human ? 'var(--grow-tint)' : 'var(--tint)') : 'var(--surface)'};
           ${own ? `box-shadow:inset 0 -3px 0 ${own.human ? 'var(--grow)' : own.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}` : ''}">
-          <div style="font-size:14px">${sq.em}</div>
+          <div class="sqico">${ico(sq.em, sq.em, 20)}</div>
           <div style="font-weight:700">${esc(sq.n)}</div>
           ${sq.cost ? `<div class="mono" style="opacity:.65">${sq.cost}</div>` : ''}
           ${here.length ? `<div style="position:absolute;top:2px;right:2px;display:flex;gap:1px">
@@ -356,7 +356,7 @@ export function mainStreet(opts = {}) {
         ${g.phase === 'decide' ? (() => {
           const sq = SQUARES[g.sq];
           return `<div style="background:var(--surface);border-radius:9px;padding:10px;text-align:center">
-            <div style="font-size:22px">${sq.em}</div>
+            <div class="sqico">${ico(sq.em, sq.em, 26)}</div>
             <b style="font-size:13px">${esc(sq.n)}</b>
             <p class="small muted" style="margin:3px 0 7px">${sq.cost} now · ${sq.inc} every lap, forever</p>
             <div class="row" style="gap:6px">
@@ -364,7 +364,7 @@ export function mainStreet(opts = {}) {
               <button class="btn ghost sm grow" data-act="mnPass">Pass · N</button></div></div>`;
         })() : ''}
         ${g.phase === 'card' && g.card ? `<div style="background:var(--surface);border-radius:9px;padding:10px">
-          <div style="font-size:20px;text-align:center">${g.card.em}</div>
+          <div class="sqico" style="text-align:center">${ico(g.card.em, g.card.em, 26)}</div>
           <b style="font-size:12.5px">${esc(g.card.t)}</b>
           <p class="small muted" style="margin:3px 0 7px">${esc(g.card.body)}</p>
           <div class="stack" style="gap:5px">
@@ -372,7 +372,7 @@ export function mainStreet(opts = {}) {
           </div><p class="small muted" style="margin-top:5px">Press ${g.card.choices.map((_, i) => i + 1).join(' or ')}, or tap.</p></div>` : ''}
         ${g.phase === 'roll' ? `<button class="btn wide" data-act="mnRoll" ${p.human ? '' : 'disabled'}>
           ${p.human ? 'Roll · ⏎' : p.name + ' is thinking…'}</button>` : ''}
-        ${g.phase === 'moving' ? `<div style="text-align:center;font-family:var(--display);font-weight:800;font-size:28px">🎲 ${g.die}</div>` : ''}
+        ${g.phase === 'moving' ? `<div style="text-align:center;font-family:var(--display);font-weight:800;font-size:28px">${ico('dice', '🎲', 26)} ${g.die}</div>` : ''}
         <div class="stack" style="gap:3px;margin-top:auto">
           ${g.log.slice(0, 3).map((l) => `<p class="small muted" style="font-size:11px;line-height:1.35">${esc(l)}</p>`).join('')}
         </div>

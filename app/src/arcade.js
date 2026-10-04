@@ -349,6 +349,7 @@ export function payout(n, label) {
   return r.paid;
 }
 let lastCapped = false;
+const PIP_POSES = ['wave', 'think', 'point', 'cheer', 'oops', 'sleep'];
 export function endCard(em, title, sub, wage, line, who) {
   /* §14 · a finish screen names what was practised and the child's own best — never
      anyone else's. Pip cheers a good round and thinks about a hard one; the child's
@@ -361,9 +362,12 @@ export function endCard(em, title, sub, wage, line, who) {
     if (prev == null || +n > prev) { isNew = prev != null; c.bests[current] = +n; }
     best = c.bests[current];
   }
-  const glum = ['😬', '💀', '👍', '📉'].includes(em);
+  /* the first argument is the mood: one of Pip's poses, or a drawn thing for a
+     good round (🏅 🎯 🪙 …). Never a face and never a skull (audit v4, N4) —
+     a hard round is Pip thinking, a ruinous one is Pip's 'oops'. */
+  const pose = PIP_POSES.includes(em) ? em : em === '📉' ? 'think' : 'cheer';
   return `<div class="stage endcard" style="justify-content:center;text-align:center">
-    <div class="endfig">${pipPose(glum ? 'think' : 'cheer', 104)}<span class="endav">${kidBadge(c, 56)}</span></div>
+    <div class="endfig">${pipPose(pose, 104)}<span class="endav">${kidBadge(c, 56)}</span></div>
     <h2>${esc(title)}</h2>
     <p class="muted">${sub}</p>
     ${best != null ? `<p class="endbest">${isNew ? 'A new best for you' : 'Your best'}: <b class="tabnum">${best}</b></p>` : ''}
@@ -429,7 +433,7 @@ function twoChoice(cfg) {
     act(n) { if (n === cfg.left.act) pick(cfg.left.side); else if (n === cfg.right.act) pick(cfg.right.side); },
     view() {
       if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
-        ${endCard(st.right >= items.length - 1 ? '🏅' : '👍', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
+        ${endCard(st.right >= items.length - 1 ? '🏅' : 'think', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
       const it = items[st.i];
       /* the clock is a bar that drains; a re-render picks it up where it was */
       const clock = kn.clock ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, Date.now() - st.shown)}ms"></i></div>` : '';
@@ -470,7 +474,7 @@ function needsWants() {
     hint: 'Arrow keys, or tap. Some are both — either answer counts.',
     left: { side: 'need', act: 'nwNeed', label: 'Need', color: 'var(--save)' },
     right: { side: 'want', act: 'nwWant', label: 'Want', color: 'var(--give)' },
-    card: (it) => `<div class="gcard"><span class="em">${it.em}</span><span class="nm">${esc(it.t)}</span></div>`,
+    card: (it) => `<div class="gcard"><span class="em">${ico(it.em, it.em, 44)}</span><span class="nm">${esc(it.t)}</span></div>`,
     wrongNote: (it) => it.a === 'need' ? 'That one you would be in trouble without.' : 'Lovely, but you would survive the week.',
     outro: () => 'The ones that were <b>both</b> are the point. A list of needs that never changes is a list somebody else wrote for you.',
   });
@@ -507,7 +511,7 @@ function scamSpotter() {
     hint: 'Arrow keys, or tap. Half of these are perfectly ordinary.',
     left: { side: 'safe', act: 'ssSafe', label: 'Looks fine', color: 'var(--grow)' },
     right: { side: 'scam', act: 'ssScam', label: 'It\'s a trap', color: 'var(--spend)' },
-    card: (it) => `<div class="gcard" style="text-align:left"><span class="em" style="display:block;text-align:center">📱</span>
+    card: (it) => `<div class="gcard" style="text-align:left"><span class="em" style="display:block;text-align:center">${ico('phone', '📱', 44)}</span>
       <p style="font-size:15px;line-height:1.5;font-weight:650">${esc(it.t)}</p></div>`,
     wrongNote: (it) => it.a === 'scam' ? 'That one was a trap.' : 'That one was real. Suspecting everything is its own kind of expensive.',
     outro: (r, n) => r === n
@@ -554,7 +558,7 @@ function budgetBlitz() {
     act(n) { if (n === 'bbPay') decide(true); else if (n === 'bbSkip') decide(false); },
     view() {
       if (st.done) return `<div class="stack">${hud(['Month over', tierChip()])}
-        ${endCard(st.mustMissed === 0 ? '🎯' : '😬', money(st.left) + ' left over',
+        ${endCard(st.mustMissed === 0 ? '🎯' : 'think', money(st.left) + ' left over',
           st.mustMissed === 0 ? 'Everything you actually needed got paid.'
             : st.mustMissed + ' thing' + (st.mustMissed > 1 ? 's' : '') + ' you needed went unpaid. Those do not disappear — they move to next month.',
           st.won, 'Leftover money is not a prize. It is the part of the month you get to choose about.', 'nana')}</div>`;
@@ -562,7 +566,7 @@ function budgetBlitz() {
       return `<div class="stack">
         ${hud([tierChip(), `Left ${money(st.left)}`, `${st.i + 1} / ${order.length}`])}
         <div class="stage">
-          <div class="gcard"><span class="em">🧾</span><span class="nm">${esc(b.n)}</span>
+          <div class="gcard"><span class="em">${ico('receipt', '🧾', 44)}</span><span class="nm">${esc(b.n)}</span>
             <div class="big" style="margin-top:6px">${money(amt)}</div></div>
           <div class="bar"><i style="width:${clamp(st.left / pot * 100, 0, 100)}%;background:${st.left > pot * 0.25 ? 'var(--grow)' : 'var(--spend)'}"></i></div>
           <div class="grow"></div>
@@ -613,12 +617,12 @@ function quizGame(cfg) {
     act(n, arg) { if (n === cfg.pickAct) choose(+arg); else if (n === cfg.nextAct) next(); },
     view() {
       if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
-        ${endCard(st.right >= qs.length - 1 ? '🏅' : '👍', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
+        ${endCard(st.right >= qs.length - 1 ? '🏅' : 'think', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
       const q = qs[st.i];
       return `<div class="stack">
         ${hud([tierChip(), `${st.i + 1} / ${qs.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}${st.pop && st.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
         <div class="stage">
-          <div class="gcard"><span class="em">${cfg.em}</span>
+          <div class="gcard"><span class="em">${ico(cfg.em, cfg.em, 44)}</span>
             <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>
           <div class="stack" style="gap:8px">
             ${q.opts.map((o, i) => {
@@ -852,7 +856,7 @@ function marketCup() {
         const sc = st.score;
         return `<div class="stack">${hud(['Cup over', tierChip()])}
           <div class="stage">
-            <div style="text-align:center"><div style="font-size:42px">${st.place === 1 ? '🏆' : '🎗️'}</div>
+            <div style="text-align:center"><div class="endico">${st.place === 1 ? ico('trophy', '🏆', 48) : ico('rosette', '🎗️', 48)}</div>
             <h2>${st.place === 1 ? 'You won the Cup' : st.place + ' of 4'}</h2>
             <p class="muted">Cup score ${sc.total} · ended on ${st.me} from ${START}.</p></div>
             <div class="lead">
@@ -890,7 +894,7 @@ function marketCup() {
           <p class="small muted">Split 100% across what you fancy. What you leave in cash is safe and grows by nothing.</p>
           <div class="alloc">
             ${ASSETS.map((a, i) => `<div class="alrow ${i === st.sel ? 'sel' : ''}" data-act="mcSel" data-arg="${a.id}" role="button" tabindex="0">
-              <div><b style="font-size:14px">${a.em} ${esc(a.name)}</b>
+              <div><b class="row" style="font-size:14px;gap:6px">${ico(a.em, a.em, 18)} ${esc(a.name)}</b>
                 <div class="small muted">${a.kind === 'fund' ? 'a slice of every shop' : a.kind === 'steady' ? 'slow and dull' : a.kind === 'growth' ? 'growing, bumpy' : 'anybody’s guess'}</div></div>
               <div class="stepper">
                 <button data-act="mcAdj" data-arg="${a.id}:-10" aria-label="less ${esc(a.name)}">−</button>
@@ -1242,7 +1246,7 @@ function compoundClimb(seed = 8821) {
       if (st.done) {
         const reached = st.money >= TARGET;
         return `<div class="stack">${hud(['Fifteen years', tierChip()])}
-          ${endCard(st.ruined ? '💀' : reached ? '🗼' : '📈',
+          ${endCard(st.ruined ? 'oops' : reached ? '🗼' : '📈',
             st.ruined ? 'Wiped out in year ' + st.year : Math.round(st.money) + ' from ' + START,
             st.ruined ? 'Nothing left to compound. That is the half of "high return" nobody puts on the poster.'
               : reached ? 'Over the line.'
@@ -1395,7 +1399,7 @@ function stallRush() {
       if (st.done) {
         return `<div class="stack">${hud(['Closed', tierChip()])}
           <div class="stage" style="justify-content:center;text-align:center">
-            <div style="font-size:44px">${st.profit > 0 ? '💹' : '📉'}</div>
+            <div class="endico">${st.profit > 0 ? ico('chartUp', '💹', 48) : ico('chartDown', '📉', 48)}</div>
             <h2>${st.profit >= 0 ? '+' : '−'}${money(Math.abs(st.profit))} profit</h2>
             <div class="card" style="box-shadow:none">
               <div class="grid3">
@@ -1898,7 +1902,7 @@ function marketStorm() {
       if (st.done) {
         return `<div class="stack">${hud(['Storm over', tierChip()])}
           <div class="stage" style="text-align:center;justify-content:center">
-            <div style="font-size:44px">${st.sold ? '📉' : '⛰️'}</div>
+            <div class="endico">${st.sold ? ico('chartDown', '📉', 48) : ico('mountain', '⛰️', 48)}</div>
             <h2>${st.sold ? 'You sold' : 'You held'}</h2>
             <p class="muted">${st.sold
               ? 'Locked in ' + st.soldAt + ' from ' + START + '. The fall became a loss the moment you sold.'

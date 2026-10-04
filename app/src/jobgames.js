@@ -29,6 +29,10 @@
    decide what arrives, never what it is worth. */
 
 import { esc, sfx, clamp } from './ui.js';
+import { ico } from './art.js';
+/* lives in the HUD, drawn — with the count in words for a screen reader, which
+   is also what keeps the chip from reading as empty */
+const hearts = (n) => n > 0 ? `<span class="hearts">${ico('heart', '❤️', 14).repeat(n)}<span class="sr-only">${n} ${n === 1 ? 'life' : 'lives'}</span></span>` : '';
 import { JOBS } from './content.js';
 import { hud, endCard, tierPicker, goalList } from './arcade.js';
 import * as sim from './sim.js';
@@ -290,10 +294,11 @@ function shell(spec) {
     view() {
       const chip = `<span class="tierchip" data-tier="${st.tier}">${TIER_NAME[st.tier]}</span>`;
       if (st.done) {
+        /* the grade's mood is Pip's pose, never a face (audit v4, N4) */
         const grade = st.quality >= 1.45 ? ['🏅', 'A cracking shift']
-          : st.quality >= 1 ? ['👍', 'A good shift']
-          : st.quality >= 0.7 ? ['🙂', 'Got it done']
-          : ['😅', 'Hard going'];
+          : st.quality >= 1 ? ['cheer', 'A good shift']
+          : st.quality >= 0.7 ? ['point', 'Got it done']
+          : ['think', 'Hard going'];
         return `<div class="stack">${hud([esc(job.name), chip])}
           ${endCard(grade[0], grade[1], `${st.score} ${spec.unit} · par ${par()} on ${TIER_NAME[st.tier]}${st.best ? ' · <b>new personal best</b>' : ''}`,
             st.won, finishLine(st), job.whoArt || 'pip')}
@@ -564,7 +569,7 @@ function stackGame(jobId, quit, lvl) {
     onAct(n) { if (n === 'jgDrop') drop(); },
     controls: () => `<button class="btn wide" data-act="jgDrop" style="margin-top:8px">Drop it</button>`,
     hint: 'Space, or tap anywhere. Square pays 4, close pays 2, rough pays 1 — and what hangs over falls off. A wobble costs 3; three and the shift is over.',
-    boxes: () => [`${st.landed}/${SHIFT} ${look === 'sack' ? 'sacks' : look === 'carton' ? 'boxes' : 'crates'}`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
+    boxes: () => [`${st.landed}/${SHIFT} ${look === 'sack' ? 'sacks' : look === 'carton' ? 'boxes' : 'crates'}`, hearts(st.lives), st.msg || ' '],
     finishLine: (s) => s.quality >= 1.4
       ? 'Nobody stacks that square by accident. That is a skill, and it is worth more per hour than the sweeping.'
       : 'Every one you land square makes the next one easier. That is most jobs, really.',
@@ -794,7 +799,7 @@ function trimGame(jobId, quit, lvl) {
       <button class="btn" data-act="jgPort">← Port</button>
       <button class="btn" data-act="jgStar">Starboard →</button></div>`,
     hint: 'Arrows, the two buttons, or tap a side of the boat. The side that brings her back towards level pays 2, the other costs 2 — and a lurch costs 3.',
-    boxes: () => [`${st.loads}/${SHIFT} aboard`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
+    boxes: () => [`${st.loads}/${SHIFT} aboard`, hearts(st.lives), st.msg || ' '],
     finishLine: (s) => s.quality >= 1.4
       ? 'That is the whole job, and it is the same shape as a budget: it is not what you take on, it is whether it balances.'
       : 'Weight is easy. Weight on one side is the problem — and you can feel it coming before it goes.',
@@ -1277,7 +1282,7 @@ function runnerGame(jobId, quit, lvl) {
       ${[0, 1, 2].map((i) => `<button class="btn ${st.lane === i ? '' : 'ghost'}" data-act="jgLane" data-arg="${i}"
         aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}</div>`,
     hint: 'Up and down, or tap a lane. Every drop-off pays 1 and every fifth in a row pays 2; a missed one costs 1 and the dog costs 3.',
-    boxes: () => [`${st.score} done`, '❤️'.repeat(Math.max(0, st.lives)), st.msg || ' '],
+    boxes: () => [`${st.score} done`, hearts(st.lives), st.msg || ' '],
     finishLine: (s) => s.quality >= 1.4
       ? 'You can move. That is worth actual money on the Row — the fast runner gets asked back.'
       : 'The doors come in a rhythm once you stop chasing every one of them.',

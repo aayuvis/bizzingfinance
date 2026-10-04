@@ -91,5 +91,20 @@ console.log('\nFamily · one next step, no streaks\n' + '─'.repeat(56));
   const em = Object.entries(BADGES).filter(([, b]) => /__F__/.test(ico(b.em, '__F__', 16))).map(([k]) => k);
   ok(!em.length, `every medal has a drawn icon (${Object.keys(BADGES).length})`, em.join(' '));
 }
+
+/* the games draw their things: every emoji the arcade, the board, the content and
+   the job table carry resolves to a drawn icon, never the raw glyph (audit v4, N4/G5) */
+{
+  const { ico } = await import('../src/art.js');
+  const seen = new Set(), raw = [];
+  for (const f of ['arcade.js', 'board.js', 'content.js', 'jobtable.js']) {
+    for (const [e] of src(f).matchAll(/\p{Extended_Pictographic}️?/gu)) {
+      if (seen.has(e)) continue;
+      seen.add(e);
+      if (/__F__/.test(ico(e, '__F__', 16))) raw.push(f + ' ' + e);
+    }
+  }
+  ok(seen.size > 100 && !raw.length, `every game and content emoji has a drawn icon (${seen.size})`, raw.join(' '));
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);
