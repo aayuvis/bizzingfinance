@@ -13,10 +13,11 @@
 
    LEVELS are Finance's eight chapters (the owner's update 2: the main progress unit). A card
    belongs to a chapter only when the corpus says so: it was cut from that chapter's lesson,
-   its narration or its questions; a money word is first used there; a game or quest opens
-   with it (`needs`); a figure is the dial that chapter's tool runs on. Everything else —
-   the cast, the postbox, the town's places and jobs, the Market Game's register — has no
-   `level` and is level-agnostic. Nothing is moved into a chapter to make up its number.
+   its narration, its questions or its objective's retrieval items; a money word is first
+   used there; a game, quest or place opens with it (`needs`, WORLDS[].chapters); a
+   figure is the dial that chapter's tool runs on. Everything else — the cast,
+   the postbox, the town's jobs, the Market Game's register — has no `level` and is
+   level-agnostic. Nothing is moved into a chapter to make up its number.
 
    THE MONEY RULES this holds (CONCEPT §6):
      · figures come ONLY from src/sources.js (kind 'figure'); nothing else is a figure card;
@@ -30,6 +31,8 @@
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadCorpus, plain } from './feed-corpus.mjs';
+import { genCard, hasGen } from '../src/generate.js';
+import { CURRENCIES, setCurrency, currency } from '../src/fmt.js';
 
 const C = await loadCorpus();
 const { CHAPTERS, ALL_CARDS, GLOSSARY, LETTERS, BADGES, QUESTS, JOBS, HOMES, FIXES, SHOP, RANKS, WORLDS, ASSETS, STOCK,
@@ -101,6 +104,63 @@ function add(c) {
 }
 const learnRoute = (id) => '#/atlas/' + id;
 
+/* ── narration, in passages (audit V3) ─────────────────────────────────────
+   One narrated line on its own is often half a thought — "The price is what the seller
+   asks" is the first half of a sentence about value. So the narration is cut into
+   PASSAGES: consecutive lines of one lesson, at least two of them and at least
+   PASSAGE_WORDS words, so every line card says a whole idea in the narrator's own words.
+   A line that restates a card already cut (its teaching, its example) is let go as before
+   and breaks the run; a run's short tail joins the passage before it; a run too short to
+   make a passage at all is a shard, and is let go (listed in the manifest). */
+export const PASSAGE_WORDS = 22;
+/* …or one line, when it is a long whole sentence that neither leans on the line before it
+   ("But…", "So…", "That…") nor is answered by the line after it ("The price is…" / "The
+   value is…": two lines that open the same way are one thought in two halves). */
+export const LINE_WORDS = 16;
+const LEANS = /^(but|and|so|or|then|now|not|same|here|hear|that|this|those|these|it|its|they|which|because|if|both|one|two|three|usually)\b/i;
+const opener = (t) => plain(t).split(/\s+/).slice(0, 2).join(' ').toLowerCase();
+const leansOnNext = (L, i) => !!L.beats[i + 1] && (LEANS.test(plain(L.beats[i + 1].line)) || opener(L.beats[i + 1].line) === opener(L.beats[i].line));
+const nWords = (t) => plain(t).split(/\s+/).filter(Boolean).length;
+const shards = [];
+function passagesOf(cardId, L) {
+  const runs = [[]];
+  L.beats.forEach((b, i) => {
+    const bw = wordsOf(b.line);
+    const twin = bw.size >= 4 && bodies.find((x) => overlap(bw, x.w) >= 0.8);
+    if (twin) { dropped.push(`lesson:${cardId}#beat${i} ≈ ${twin.src}`); runs.push([]); return; }
+    runs[runs.length - 1].push(i);
+  });
+  const out = [];
+  for (const run of runs) {
+    const ps = []; let cur = [];
+    for (const i of run) {
+      cur.push(i);
+      const w = nWords(cur.map((j) => L.beats[j].line).join(' '));
+      const whole = cur.length >= 2 ? w >= PASSAGE_WORDS : w >= LINE_WORDS && !LEANS.test(plain(L.beats[i].line)) && !leansOnNext(L, i);
+      if (whole) { ps.push(cur); cur = []; }
+    }
+    if (cur.length) { if (ps.length) ps[ps.length - 1].push(...cur); else if (nWords(cur.map((j) => L.beats[j].line).join(' ')) >= PASSAGE_WORDS) ps.push(cur); else cur.forEach((j) => shards.push(`lesson:${cardId}#beat${j}`)); }
+    ps.forEach((p) => out.push([p[0], p[p.length - 1], p.map((j) => L.beats[j].line)]));
+  }
+  return out;
+}
+
+/* ── money with no currency (audit V1) ─────────────────────────────────────
+   The feed is built once for every child, and currency is a setting, never an assumption.
+   So a retrieval item cut here shows its amounts as bare numbers — the way the lessons
+   themselves write them ("Rent 240 a month") — and nothing new carries a currency sign.
+   Generated items are drawn with one unit to the coin (no rounding to tens) and the sign
+   is then taken off; an authored item's sign is taken off the same way. test/feed.mjs
+   draws them again the same way and finds every word. */
+export const SIGNS = Object.values(CURRENCIES).map((c) => c.sign);
+export const neutral = (t) => SIGNS.reduce((s, g) => s.split(g).join(''), String(t ?? ''));
+export const UNIT_CURRENCY = 'AED';                          /* RATE 1: one unit is one coin */
+export const GEN_CX = { ceil: 6 };                           /* small numbers: every child can read them */
+export function genNeutral(o, seed) {
+  const was = currency(); setCurrency(UNIT_CURRENCY);
+  try { const g = genCard(o, seed, GEN_CX); return g && JSON.parse(neutral(JSON.stringify(g))); } finally { setCurrency(was); }
+}
+
 /* ── where a card leads, and where it comes from ───────────────────────────
    Owner, 3 Oct 2026: a card's button goes to THAT thing, never the generic
    tool — the medal, not the medals page; the letter, not the town; the game's
@@ -151,6 +211,9 @@ function sourceOf(c) {
   const parts = {
     card: lessonBits, lesson: lessonBits, item: lessonBits, tryit: lessonBits,
     goal: () => [chapterLine(c.level), 'what the lesson is for'],
+    /* retrieval: never the lesson's title (it can hint), only the chapter */
+    assess: () => [chapterLine(c.level), c.play ? 'a question to come back to' : 'why, said again'],
+    gen: () => [chapterLine(c.level), c.play ? 'the same idea in a new story' : 'why, said again'],
     chapter: () => [`Chapter ${c.level} of ${CHAPTERS.length}`, `${(CHAPTERS[c.level - 1] || { cards: [] }).cards.length} lessons on the Money Atlas`],
     word: () => ['Money Words', c.level ? 'first used in ' + chapterLine(c.level) : null],
     figure: () => ['How we know'],
@@ -160,7 +223,8 @@ function sourceOf(c) {
     asset: () => ['The Exchange', chapterLine(chLevel('c7'))], class: () => ['The Exchange', chapterLine(chLevel('c7'))],
     stock: () => ['Bizz & Co', chapterLine(chLevel('c8'))],
     cast: () => [CAST[who] ? CAST[who] + ' of Bizzington' : 'Bizzington'],
-    letter: () => [L && L.from !== 'scam' && CAST[L.from] ? 'A letter from ' + CAST[L.from] : 'The postbox', /#choice/.test(c.src) ? 'what one answer meant' : null],
+    /* the letter itself never names its sender: a scam's card must read exactly like Pip's */
+    letter: () => (/#choice/.test(c.src) ? [L && L.from !== 'scam' && CAST[L.from] ? 'A letter from ' + CAST[L.from] : 'The postbox', 'what one answer meant'] : ['The postbox', 'a letter']),
     deed: () => ['Do one', 'one a day, out in the real world'], ask: () => ['Ask at home', "this week's question"],
     world: () => { const i = WORLDS.findIndex((w) => w.id === id); return [`Place ${i + 1} of ${WORLDS.length} in Bizzington`]; },
     fix: () => { const f = FIXES.find((x) => x.id === id); const w = f && WORLDS.find((x) => x.id === f.world); return ['Put it right', w ? w.name : null]; },
@@ -183,7 +247,7 @@ for (const k of allCards) {
   add({ kind: 'lesson', src: `card:${k.id}#teach`, level, topics, title: k.title, body: [k.teach], route: learnRoute(k.id), cta: 'Open the lesson', maths: m, card: k.id });
   add({ kind: 'example', src: `card:${k.id}#eg`, level, topics, title: k.title, body: [k.eg], route: learnRoute(k.id), cta: 'Open the lesson', maths: m });
   const L = LESSONS[k.id];
-  if (L) L.beats.forEach((b, i) => add({ kind: 'line', src: `lesson:${k.id}#beat${i}`, level, topics, title: L.title, body: [b.line], route: learnRoute(k.id), cta: 'Watch the lesson', maths: m }));
+  if (L) passagesOf(k.id, L).forEach(([a, b, lines]) => add({ kind: 'line', src: a === b ? `lesson:${k.id}#beat${a}` : `lesson:${k.id}#beats${a}-${b}`, level, topics, title: L.title, body: lines, route: learnRoute(k.id), cta: 'Watch the lesson', maths: m }));
   /* 2 · its questions. The right answer is written first (the drop-in's order() spreads it);
      the wrong ones follow in shuffledDrill's order, so no written order is the authored one. */
   for (let qi = 0; qi < drillCount(k); qi++) {
@@ -269,26 +333,38 @@ for (const [who, l] of Object.entries(LORE)) {
    back only for a letter the child has already answered. */
 /* A scam letter, or a consequence that only arrives because of an earlier choice, comes back
    only once it has reached her postbox — the scam then shown for what it was, with its note. */
+/* EVERY LETTER LOOKS THE SAME (audit): one kind, one frame, one source line ("The postbox"),
+   its title and the opening of its body, and a button to that letter. A scam letter is
+   cut exactly like a letter from Pip — no kind, gate, topic, picture or line on the card
+   says which it is. What each choice meant (where a scam is named for what it was) comes
+   back only once the letter has reached her postbox and been answered. A consequence that
+   only arrives because of an earlier choice waits until it has arrived. */
+export const LETTER_CHARS = 160;
+const opening = (t) => {                              /* whole sentences, about LETTER_CHARS of them */
+  const s = plain(t).split(/(?<=[.!?…])\s+/); let out = '';
+  for (const x of s) { if (out && (out + ' ' + x).length > LETTER_CHARS) break; out = out ? out + ' ' + x : x; }
+  return out;
+};
 for (const L of LETTERS) {
-  if (L.from !== 'scam' && !L.fuseOnly) continue;
-  add({ kind: L.scam ? 'scamletter' : 'letter', src: `letter:${L.id}`, topics: ['letter', 'letter:' + L.id], gate: { letter: L.id }, title: L.title, body: [L.body], route: '#/town', cta: 'The postbox' });
-  L.choices.forEach((ch, i) => add({ kind: L.scam ? 'scamnote' : 'castline', src: `letter:${L.id}#choice${i}`, topics: ['letter:' + L.id], gate: { letter: L.id },
-    title: L.title, body: [ch.label, ch.note], route: '#/town', cta: 'The postbox' }));
+  const gate = L.fuseOnly ? { letter: L.id } : L.needsCompanion ? { companion: true } : undefined;
+  add({ kind: 'letter', src: `letter:${L.id}`, topics: ['letter', 'letter:' + L.id], gate, title: L.title, body: [opening(L.body)], route: '#/town', cta: 'Read the letter' });
 }
 for (const L of LETTERS) {
-  if (L.from === 'scam' || L.fuseOnly) continue;
-  const gate = L.needsCompanion ? { companion: true } : undefined;
-  add({ kind: 'letter', src: `letter:${L.id}`, topics: ['who:' + L.from, 'letter'], gate, title: L.title, body: [L.body], route: '#/town', cta: 'The postbox' });
-  L.choices.forEach((ch, i) => add({ kind: 'castline', src: `letter:${L.id}#choice${i}`, topics: ['who:' + L.from, 'letter:' + L.id], gate: { letter: L.id },
+  L.choices.forEach((ch, i) => add({ kind: L.from === 'scam' ? 'scamnote' : 'castline', src: `letter:${L.id}#choice${i}`, topics: [...(L.from !== 'scam' ? ['who:' + L.from] : []), 'letter:' + L.id], gate: { letter: L.id },
     title: L.title, body: [ch.label, ch.note], route: '#/town', cta: 'The postbox' }));
 }
 DEEDS.forEach((d) => add({ kind: 'deed', src: `deed:${d.id}`, topics: ['deed'], title: 'Do one', body: [d.text], route: '#/home', cta: 'Home' }));
 ASKS.forEach((a, i) => add({ kind: 'ask', src: `ask:${i}`, topics: ['ask'], title: 'Ask at home', body: [a], route: '#/home', cta: 'Home' }));
 const worldIx = (id) => WORLDS.findIndex((w) => w.id === id);
-WORLDS.forEach((w, i) => add({ kind: 'place', src: `world:${w.id}`, topics: ['world:' + w.id], gate: { world: i }, title: w.name, body: [w.blurb, w.opens], route: '#/town', cta: 'The town' }));
+/* A place, and what is broken in it, open with the world's first chapter — the same rule a
+   game or a quest follows ("it belongs to the chapter it opens with"): the corpus says so in
+   WORLDS[].chapters. Jobs stay level-agnostic, because one job is worked in several worlds. */
+const worldLevel = (i) => chLevel(WORLDS[i].chapters[0]);
+WORLDS.forEach((w, i) => add({ kind: 'place', src: `world:${w.id}`, level: worldLevel(i), topics: ['world:' + w.id, 'ch:' + w.chapters[0]], gate: { world: i }, title: w.name, body: [w.blurb, w.opens], route: '#/town', cta: 'The town' }));
 FIXES.forEach((f) => {
-  add({ kind: 'fix', src: `fix:${f.id}`, topics: ['world:' + f.world, 'fix'], gate: { world: worldIx(f.world) }, title: f.name, body: [f.broken], route: '#/town', cta: 'Put it right' });
-  add({ kind: 'fixed', src: `fix:${f.id}#fixed`, topics: ['world:' + f.world, 'fix'], gate: { world: worldIx(f.world) }, title: f.name, body: [f.fixed, f.gives], route: '#/town', cta: 'Put it right' });
+  const wi = worldIx(f.world), topics = ['world:' + f.world, 'fix', 'ch:' + WORLDS[wi].chapters[0]];
+  add({ kind: 'fix', src: `fix:${f.id}`, level: worldLevel(wi), topics, gate: { world: wi }, title: f.name, body: [f.broken], route: '#/town', cta: 'Put it right' });
+  add({ kind: 'fixed', src: `fix:${f.id}#fixed`, level: worldLevel(wi), topics, gate: { world: wi }, title: f.name, body: [f.fixed, f.gives], route: '#/town', cta: 'Put it right' });
 });
 JOBS.forEach((j) => { const wi = WORLDS.findIndex((w) => w.jobs.includes(j.id)); add({ kind: 'job', src: `job:${j.id}`, topics: ['job', ...(wi >= 0 ? ['world:' + WORLDS[wi].id] : [])], gate: wi > 0 ? { world: wi } : undefined, title: j.name, body: [j.who], route: '#/town', cta: 'Jobs going' }); });
 HOMES.forEach((h) => add({ kind: 'home', src: `home:${h.id}`, topics: ['home'], title: h.name, body: [h.blurb], route: '#/money/place', cta: 'Your place' }));
@@ -310,31 +386,100 @@ COMPANIES.forEach((co) => {
 });
 EVENTS.forEach((ev) => add({ kind: 'event', src: `event:${ev.id}`, topics: ['market40'], gate: { market: true }, bands: BUILDER, title: ev.head, body: [ev.body], route: '#/market40', cta: 'The Market Game', badge: { id: 'fiction', label: 'Fictional' } }));
 
+/* 9 · retrieval (audit V1), cut last so it never displaces a card the app already had: each objective's own authored retrieval items, then its
+   generated ones (src/generate.js), each placed with the chapter that teaches it
+   (OBJECTIVES[].teach). Same rules as a lesson's questions: the right answer written first
+   and the wrong ones in a permuted order, no title that leaks it, the reason shown only
+   after the lesson is read. Only four-option items: a typed amount has nothing to tap.
+   NO NEAR-DUPLICATE QUESTIONS: a question 80% the same words as one already cut (a
+   generated story with only the name swapped) is let go, so every one is a new situation.
+   A question too short to stand on its own ("Why keep the two apart?" leans on the one
+   before it) is let go too. */
+export const GEN_SEEDS = 120, GEN_MAX = 16, STANDALONE_WORDS = 6;
+const qWords = [];
+for (const k of allCards) for (let qi = 0; qi < drillCount(k); qi++) qWords.push(wordsOf(drillAt(k, qi).q));
+const permuted = (seed, d) => {                     /* the wrong options, in an order taken from the seed */
+  let h = 2166136261; for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const w = d.opts.map((_, i) => i).filter((i) => i !== d.a);
+  for (let j = w.length - 1; j > 0; j--) { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; const r = h % (j + 1); [w[j], w[r]] = [w[r], w[j]]; }
+  return w.map((i) => d.opts[i]);
+};
+const retrievalLog = [];
+function addRetrieval(o, k, src, cardId, d) {
+  if (d.kind === 'num' || !Array.isArray(d.opts)) return false;
+  const qw = wordsOf(d.q);
+  if (nWords(d.q) < STANDALONE_WORDS) { retrievalLog.push(`${src}: too short to stand alone`); return false; }
+  if (qWords.some((w) => overlap(qw, w) >= 0.8)) { retrievalLog.push(`${src}: the same question as one already cut`); return false; }
+  const ch = chapterOf(k), level = chLevel(ch);
+  const title = !leaks(o.short, d) ? o.short : CHAPTERS[level - 1].title;
+  if (leaks(title, d)) return false;
+  qWords.push(qw);
+  const topics = ['card:' + k.id, 'ch:' + ch, 'goal:' + o.id, 'who:' + k.who];
+  const m = maxM(mathsOfCard(k), ...o.needs_maths);
+  add({ kind: 'question', src, level, topics, key: cardId + '#0', title, route: learnRoute(k.id), cta: 'Open the lesson', maths: m,
+    play: { q: plain(d.q), opts: [plain(d.opts[d.a]), ...permuted(src, d).map(plain)], after: plain(d.why) } });
+  add({ kind: 'why', src: src + (src.includes('#') ? 'why' : '#why'), level, topics, card: k.id, title: o.short, body: [d.why], route: learnRoute(k.id), cta: 'Open the lesson', maths: m });
+  return true;
+}
+for (const o of OBJECTIVES) {
+  const k = o.teach && C.card(o.teach); if (!k) continue;
+  (o.assess || []).forEach((d0, i) => addRetrieval(o, k, `assess:${o.id}#${i}`, `${o.id}#${i}`, JSON.parse(neutral(JSON.stringify(d0)))));
+  if (!hasGen(o.id)) continue;
+  let n = 0;
+  for (let seed = 1; seed <= GEN_SEEDS && n < GEN_MAX; seed++) {
+    const g = genNeutral(o, seed);
+    if (g && addRetrieval(o, k, `gen:${g.id}`, g.id, g.drill)) n++;
+  }
+}
+
 /* ── the honest shortfall ─────────────────────────────────────────────────
    The owner asks for 100 cards a chapter. The corpus does not hold that many yet, and the
    feed does not invent them or borrow them from another chapter. Each short chapter is
    declared here with the count it holds today (test/feed.mjs fails if it falls below it, and
    fails if it reaches 100 while still declared) and with what would honestly close the gap.
-   A narrated lesson yields about twelve cards: its teaching, its example, its narrated lines
-   (those that do not restate the example), three questions and their three reasons. */
+   Chapters one to seven pass it on what the app already held: each objective's authored
+   retrieval items and its generated four-option ones, placed with the chapter that teaches
+   it, and the places (and what is broken in them) that open with a chapter. Chapter eight cannot yet: the
+   one objective it teaches (EARN-7) generates only typed amounts, which have nothing to
+   tap, and its last four lessons have no narration. */
 export const SHORT = {
-  1: { floor: 85, close: 'about two more lessons in "What money even is", with three questions each (narration adds a few cards more)' },
-  2: { floor: 83, close: 'about two more lessons in "Earning it", with three questions each (narration adds a few cards more)' },
-  4: { floor: 89, close: 'one more lesson in "Sellers and their tricks", narrated, with three questions each' },
-  5: { floor: 86, close: 'one or two more lessons in "Keeping it safe", with three questions each' },
-  6: { floor: 92, close: 'one more lesson in "Borrowing", with three questions each' },
 };
 
 /* ── write ───────────────────────────────────────────────────────────── */
 const byKind = {}, byLevel = {};
 items.forEach((x) => { byKind[x.kind] = (byKind[x.kind] || 0) + 1; const k = x.level == null ? 'any' : 'chapter ' + x.level; byLevel[k] = (byLevel[k] || 0) + 1; });
-export const manifest = { total: items.length, byKind, byLevel, levels: CHAPTERS.map((c, i) => ({ level: i + 1, chapter: c.id, title: c.title, n: byLevel['chapter ' + (i + 1)] || 0, short: SHORT[i + 1] ? SHORT[i + 1].close : undefined })), nearDuplicatesLetGo: dropped };
+export const manifest = { total: items.length, byKind, byLevel, levels: CHAPTERS.map((c, i) => ({ level: i + 1, chapter: c.id, title: c.title, n: byLevel['chapter ' + (i + 1)] || 0, short: SHORT[i + 1] ? SHORT[i + 1].close : undefined })), nearDuplicatesLetGo: dropped, shardsLetGo: shards, questionsLetGo: { tooShortToStandAlone: retrievalLog.filter((x) => /too short/.test(x)).map((x) => x.split(':').slice(0, -1).join(':')), sameAsOneAlreadyCut: retrievalLog.filter((x) => /same question/.test(x)).length } };
 export { items };
 /* lazy groups, by level: group n is chapter n's cards, group 0 the level-agnostic ones */
 export const groupOf = (x) => x.level ?? 0;
 export const GROUPS = [...new Set(items.map(groupOf))].sort((a, b) => a - b);
-const INDEX_KEYS = ['id', 'kind', 'level', 'bands', 'topics', 'maths', 'gate', 'key', 'card', 'badgeId'];
-export const index = items.map((x) => { const o = {}; INDEX_KEYS.forEach((k) => { if (x[k] != null) o[k] = x[k]; }); if (x.play) o.play = 1; o.g = groupOf(x); return o; });
+/* grp: the one source object a card was cut from — its lesson for anything cut from a lesson
+   or its objective's questions, else the object its src names. feed.js holds a session to
+   two cards of any one grp (audit V4). */
+/* because: a card's reason when nothing about the child names one — true of every child the
+   card can reach (its gate already holds what it claims: a Market Game card is only shown
+   from level 16). feed.js says the reasons that depend on the child (audit V5). */
+const BECAUSE = {
+  company: 'The Market Game opened for you at level 16', risk: 'The Market Game opened for you at level 16',
+  event: 'The Market Game opened for you at level 16', market: 'The Market Game opened for you at level 16',
+  medal: 'A medal you have not earned yet', deed: 'Something to do out in the real world', ask: 'A question to take home this week',
+  rank: 'A rank on your way up', quest: 'One of today’s three, on the town page',
+};
+function becauseOf(x) {
+  const who = ((x.topics || []).find((t) => t.startsWith('who:')) || '').slice(4);
+  if (['cast', 'castline'].includes(x.kind) && CAST[who] && !(x.topics || []).some((t) => t.startsWith('letter:'))) return `${CAST[who]}, who you meet on the Money Atlas`;
+  if (['word', 'wordmore'].includes(x.kind) && x.level) return `A money word first used in ${chapterLine(x.level)}`;
+  if (x.kind === 'figure' && x.level) return `A number ${chapterLine(x.level)} runs on, and how we know it`;
+  if (['exchange', 'shopstock'].includes(x.kind) && x.level) return `Opened by ${chapterLine(x.level)}`;
+  return BECAUSE[x.kind];
+}
+items.forEach((x) => { const b = becauseOf(x); if (b) x.because = b; });
+items.forEach((x) => { x.grp = (x.topics || []).find((t) => t.startsWith('card:')) || x.src.split('#')[0]; if (['store', 'home', 'companion'].includes(x.kind)) x.ref = idOfSrc(x.src); });
+/* the kinds whose picture is read off the route (feed.js artFor), so a session can cap a
+   picture from the index alone */
+const ART_ROUTE = ['game', 'needwant', 'scamspot', 'chance', 'home', 'companion'];
+const INDEX_KEYS = ['id', 'kind', 'level', 'bands', 'topics', 'maths', 'gate', 'key', 'card', 'badgeId', 'grp', 'ref', 'because'];
+export const index = items.map((x) => { const o = {}; INDEX_KEYS.forEach((k) => { if (x[k] != null) o[k] = x[k]; }); if (x.play) o.play = 1; if (ART_ROUTE.includes(x.kind) && x.route) o.route = x.route; o.g = groupOf(x); return o; });
 const MAIN = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (MAIN) {
 rmSync(new URL('../src/feed/', import.meta.url), { recursive: true, force: true });

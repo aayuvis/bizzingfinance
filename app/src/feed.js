@@ -20,8 +20,8 @@
    Scrolling earns nothing. Only a right answer to a card's question pays — FAMILY coins,
    once, through earn('answer') (family.coins). Never town money, never XP, never mastery:
    the feed is not a surface the ledger listens to. */
-import { feedFor, feedCard, feedEnd, feedHead } from './family/bizzing-feed.js';
-import { CHAPTERS, WORLDS, chapterDone, worldOpen, levelAtLeast, tester, ALL_CARDS } from './content.js';
+import { feedFor, feedCard, feedEnd, feedHead, hash } from './family/bizzing-feed.js';
+import { CHAPTERS, WORLDS, chapterDone, worldOpen, levelAtLeast, tester, ALL_CARDS, LETTERS } from './content.js';
 import { NEW_CARD_LIST, objective } from './objectives.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
@@ -33,6 +33,8 @@ import { R } from './runtime.js';
 import { ART } from './art-gen.js';
 import { COVERS } from './covers-gen.js';
 import { BLD } from './buildings-gen.js';
+import { WALKS } from './walks-gen.js';
+import { CO } from './companions-gen.js';
 import { HOMES, gameOpen } from './content.js';
 import { GAMES as GAME_DEFS } from './arcade.js';
 
@@ -40,21 +42,28 @@ import { GAMES as GAME_DEFS } from './arcade.js';
    The builder gives every card its provenance line (source) and an exact route.
    Here, at render, Bizzington adds what only the child's own record knows — a
    short status (read it, earned it, mended it, your next stop) — and a picture
-   for the kinds that have one: the chapter's painted world for a chapter or a
-   lesson's opening card, a game's cover, a place's plate, a home or a shop.
-   Questions, reasons and words stay plain so a session is never a wall of
-   pictures. Nothing here changes a card's words or what it pays. */
+   of the card's own thing when one exists (artFor, below). Questions, reasons
+   and words stay plain so a session is never a wall of pictures. Nothing here
+   changes a card's words or what it pays. */
 const worldOfChapter = (n) => { const ch = CHAPTERS[n - 1]; return ch && WORLDS.find((w) => w.chapters.includes(ch.id)); };
-const plate = (w) => w && (ART['world-' + w.id] || null);
 const topicVal = (it, k) => ((it.topics || []).find((t) => t.startsWith(k + ':')) || '').slice(k.length + 1);
-function artFor(it) {
-  const m = /^#\/play\/(\w+)/.exec(it.route || '');
-  if (it.kind === 'game' && m && COVERS[m[1]]) return COVERS[m[1]].src;
-  if (['chapter', 'lesson', 'tryit', 'yourturn'].includes(it.kind) && it.level) return plate(worldOfChapter(it.level));
-  if (['place', 'fix', 'fixed', 'job'].includes(it.kind)) return plate(WORLDS.find((w) => w.id === topicVal(it, 'world')));
-  if (it.kind === 'home') { const i = HOMES.findIndex((h) => it.route.endsWith('/' + h.id)); return BLD['home-' + Math.min(4, Math.max(0, i))] && BLD['home-' + Math.min(4, Math.max(0, i))].src; }
-  if (it.kind === 'shopstock') return BLD.shop && BLD.shop.src;
-  if (it.kind === 'exchange') return BLD.exchange && BLD.exchange.src;
+/* ITS OWN PICTURE (audit V8). Every art card used to wear the same painted sky (the
+   world plates are backdrops, drawn empty on purpose for the town to stand in), at full
+   width. Now a card shows only a picture of the thing it is about — the narrator's face on
+   a lesson, the game's own cover, a building's sprite, the place's own street, the
+   companion itself — and when nothing specific exists it shows none. Never a plate. */
+const src = (o) => (o && o.src) || null;
+export function artFor(it) {
+  const k = it.kind, m = /^#\/play\/(\w+)/.exec(it.route || '');
+  if (m && COVERS[m[1]] && ['game', 'needwant', 'scamspot', 'chance'].includes(k)) return src(COVERS[m[1]]);
+  if (['lesson', 'tryit', 'yourturn'].includes(k)) return ART['cast-' + topicVal(it, 'who')] || null;
+  if (['cast', 'castline'].includes(k) && !topicVal(it, 'letter')) return ART['cast-' + topicVal(it, 'who')] || null;
+  if (k === 'chapter') { const w = worldOfChapter(it.level); return w ? src(WALKS[w.id]) : null; }
+  if (k === 'place') return src(WALKS[topicVal(it, 'world')]);
+  if (k === 'home') { const i = HOMES.findIndex((h) => it.route.endsWith('/' + h.id)); return i < 0 ? null : src(BLD['home-' + Math.min(4, i)]); }
+  if (k === 'shopstock') return src(BLD.shop);
+  if (k === 'exchange') return src(BLD.exchange);
+  if (k === 'companion') { const id = decodeURIComponent((it.route || '').split('/').pop()); return src(CO[id + '-young-happy']); }
   return null;
 }
 function statusFor(it, c, nextId) {
@@ -108,8 +117,8 @@ export function signals(c) {
   const out = [];
   if (c.lastDone && c.lastDone.id) {
     out.push({ topic: 'card:' + c.lastDone.id, w: 6, why: `Because you finished “${c.lastDone.title || cardTitle(c.lastDone.id)}”` });
-    const k = ALL_CARDS.find((x) => x.id === c.lastDone.id);
-    if (k) out.push({ topic: 'ch:' + k.ch, w: 3, why: `Because you are reading ${levelName(CHAPTERS.findIndex((x) => x.id === k.ch) + 1)}` });
+    /* (no chapter-wide signal: "Because you are reading Chapter 3" said the same thing on six
+       cards and crowded the session; each card now names its own lesson — extraFor, audit V5) */
   }
   const log = (c.postbox && c.postbox.log) || [], last = log[log.length - 1];
   if (last && !last.scam) out.push({ topic: 'letter:' + last.id, w: 6, why: 'Because you answered a letter in the postbox' });
@@ -146,6 +155,64 @@ export function state(c) {
   return F;
 }
 
+export const PER_GRP = 2;
+const grpOf = (id) => (BY_ID && BY_ID[id] && BY_ID[id].grp) || id;
+export function capGroups(list) {
+  const n = {};
+  return list.filter((x) => { const g = grpOf(x.id); n[g] = (n[g] || 0) + 1; return n[g] <= PER_GRP; });
+}
+/* THREE OF ONE PICTURE AT MOST (audit V8): the same face or building on a fourth card
+   reads as one picture for everything, so a fourth gives way like a third of a lesson does */
+const PER_ART = 3;
+const artOf = (id) => (BY_ID && BY_ID[id] ? artFor(BY_ID[id]) : null);
+
+/* The level-fit rule, and the reason in plain words (audit V2, V5).
+     · her next stop's cards fit best, and say which stop;
+     · a card with no level fits every chapter, so it may season any session (the engine
+       holds it to a quarter);
+     · REVIEW: once she is past a chapter, its questions and reasons come back for a second
+       look, labelled with the lesson and the chapter they are from (the engine holds the
+       review tier to a quarter, and what has slipped — mistakes, mastery — still comes first);
+     · every other card cut from a lesson names that lesson, and says whether she has read it.
+   A why only ever names something true of this card and this child. */
+/* today's second-look lesson stands level with the chapter she is on: the engine sinks a card
+   the further back its chapter is (at most 4), and this gives that back, so it interleaves */
+const LOOK_S = 8;
+const Q_S = 1.6;                                   /* a question on the chapter she is on: the one card that asks something of her */
+const lessonOf = (it) => topicVal(it, 'card');
+/* where a question sits, without its lesson's title (which can hint): "stop 3 of Chapter 1 · …" */
+const stopOf = (card, n) => { const i = (CHAPTERS[n - 1] || { cards: [] }).cards.findIndex((k) => k.id === card); return (i < 0 ? '' : `stop ${i + 1} of `) + levelName(n); };
+function extraFor(it, c, level, nextId, look) {
+  const card = lessonOf(it);
+  /* a question never names its lesson anywhere on the card: a lesson's title can hint at the answer */
+  const t = card && !it.play ? `“${cardTitle(card)}”` : null;
+  if (nextId && card === nextId) return { s: 2, why: t ? `Your next stop on the Money Atlas: ${t}` : 'A question from your next stop on the Money Atlas' };
+  if (it.level == null) return { s: 5, why: whyOf(it, c) || undefined };
+  if (it.level < level && card) return { s: card === look ? LOOK_S + Math.min(4, level - it.level) : 0.01, why: t ? `A second look at ${t}, from ${levelName(it.level)}` : `A second look: a question from ${stopOf(card, it.level)}` };
+  if (it.level === level && card) return { s: it.play ? Q_S : 0.01, why: t ? (c.learn.done[card] ? `From ${t}, which you have read` : `From ${t}, in the chapter you are on`) : `A question from ${stopOf(card, level)}, the chapter you are on` };
+  if (it.level < level) return { s: 0.01, why: `A second look, from ${levelName(it.level)}` };
+  const w = whyOf(it, c);
+  return w ? { s: 0.01, why: w } : null;
+}
+/* the reason for a card that is not cut from a lesson: what about THIS child makes it fit —
+   where she lives, what she has answered, what has opened for her — never a guess */
+function whyOf(it, c) {
+  const k = it.kind, game = GAME_DEFS.find((x) => x.id === topicVal(it, 'game'));
+  const L = topicVal(it, 'letter') && LETTERS.find((x) => x.id === topicVal(it, 'letter'));
+  const answered = (lid) => ((c.postbox || {}).log || []).some((x) => x.id === lid);
+  const w = topicVal(it, 'world') && WORLDS.find((x) => x.id === topicVal(it, 'world'));
+  if (L && k !== 'letter' && it.gate && it.gate.letter) return `Because you answered “${L.title}”`;
+  if (k === 'letter') return L && answered(L.id) ? 'A letter you have answered' : 'A letter that can come to your postbox';
+  if (['place', 'fix', 'fixed', 'job'].includes(k) && w) return w.id === (WORLDS[c.world || 0] || {}).id ? `You live in ${w.name}` : worldOpen(c, WORLDS.indexOf(w)) ? `${w.name} is open to you` : null;
+  if (k === 'game') return game && gameOpen(c, game) ? 'A game that is open to you now' : null;
+  if (['needwant', 'scamspot', 'chance', 'castline'].includes(k) && game && gameOpen(c, game)) return `From ${game.name}, which is open to you`;
+  if (k === 'store') return ((c.shop || {}).owned || []).includes(it.ref) ? 'You own this' : 'On the shelf at Mags’ General Store';
+  if (k === 'home') { const i = HOMES.findIndex((h) => h.id === it.ref), at = (c.home && c.home.tier) || 0; return i === at ? 'Where you live now' : i > at ? 'A rung above where you live' : 'A rung you have passed'; }
+  if (k === 'companion') return co.has(c) ? `For ${co.get(c).name || 'your companion'}` : 'At the shelter behind the Jar Shed';
+  if (k === 'chapter') return it.level === levelOf(c) ? 'The chapter you are on' : it.level < levelOf(c) ? 'A chapter you have finished' : null;
+  return it.because || null;                       /* the builder's reason, true of every child it reaches */
+}
+
 /* Today's session: kept for the day, drawn again when she has done something new. */
 export function session(c, now = Date.now()) {
   const F = state(c), day = Math.floor(now / DAY), level = levelOf(c);
@@ -153,16 +220,39 @@ export function session(c, now = Date.now()) {
   const sig = JSON.stringify([c.band, level, c.lastDone && c.lastDone.t, ((c.postbox || {}).log || []).length, Object.keys(dueNow).length, (c.badges || []).length, c.world, tester()]);
   if (F.day === day && F.sig === sig && F.ids && F.ids.length) return F.ids;
   const nx = nextStep(c, now), nextId = nx && nx.card && nx.card.id;
-  const list = feedFor({
+  const base = (it) => (it.kind === 'lesson' && c.learn.done[it.card]) || (it.kind === 'why' && !c.learn.done[it.card]) || (it.kind === 'medal' && (c.badges || []).includes(it.badgeId)) || (!!it.play && !!F.paid[it.id]);
+  const over = new Set(), unlocked = gateFor(c);
+  /* REVIEW (audit V2): past chapter one, one lesson from a finished chapter is today's second
+     look — chosen by the day from those with a question or a reason she can still be shown —
+     and its cards come back labelled with where they are from */
+  const back = level > 1 ? ITEMS.filter((it) => it.level < level && (it.kind === 'question' || it.kind === 'why') && lessonOf(it) && (!it.bands || it.bands.includes(c.band)) && unlocked(it) && !base(it)) : [];
+  const lessons = [...new Set(back.map(lessonOf))].sort();
+  const look = lessons.length ? lessons[hash(lessons.join() + ':' + day) % lessons.length] : null;
+  const draw = () => feedFor({
     items: ITEMS, band: c.band, now, level, levelName, signals: signals(c), due: dueNow, seen: F.seen,
-    unlocked: gateFor(c),
+    unlocked,
     /* a question's reason is a reminder after its lesson, never the answer before the question */
-    skip: (it) => (it.kind === 'lesson' && c.learn.done[it.card]) || (it.kind === 'why' && !c.learn.done[it.card]) || (it.kind === 'medal' && (c.badges || []).includes(it.badgeId)) || (!!it.play && !!F.paid[it.id]),
-    /* the level-fit rule: her next stop's cards fit best; a card with no level fits every
-       chapter, so it may season any session (the engine holds it to a quarter) */
-    extra: (it) => (nextId && it.topics && it.topics.includes('card:' + nextId) ? { s: 2, why: 'Your next stop on the Money Atlas' }
-      : it.level == null ? { s: 5 } : null),
+    skip: (it) => base(it) || over.has(it.id),
+    extra: (it) => extraFor(it, c, level, nextId, look),
   });
+  /* TWO OF A LESSON AT MOST (audit V4): one lesson — or one letter, one company, one source
+     object of any kind (the card's `grp`) — fills at most PER_GRP of a session, however
+     strongly a signal pulls it. A third is set aside and the draw runs again, so the place
+     goes to something else rather than the session getting shorter; the last pass only
+     filters, so the cap holds even if the engine changes. */
+  let list = draw();
+  for (let round = 0; round < 6; round++) {
+    const n = {}; let more = false;
+    const na = {};
+    for (const x of list) {
+      const g = grpOf(x.id); n[g] = (n[g] || 0) + 1; if (n[g] > PER_GRP) { over.add(x.id); more = true; }
+      const a = artOf(x.id); if (a) { na[a] = (na[a] || 0) + 1; if (na[a] > PER_ART) { over.add(x.id); more = true; } }
+    }
+    if (!more) break;
+    list = draw();
+  }
+  list = capGroups(list);
+  { const na = {}; list = list.filter((x) => { const a = artOf(x.id); if (!a) return true; na[a] = (na[a] || 0) + 1; return na[a] <= PER_ART; }); }
   F.day = day; F.sig = sig; F.ids = list.map((x) => ({ id: x.id, why: x.why, tier: x.tier }));
   list.forEach((x) => { F.seen[x.id] = day; });
   Object.keys(F.seen).forEach((k) => { if (day - F.seen[k] > 30) delete F.seen[k]; });
