@@ -18,7 +18,7 @@ import * as puz from './dailypuzzle.js';
 import * as placement from './placement.js';
 import * as answers from './answers.js';
 import * as backup from './backup.js';
-import { GAMES } from './arcade.js';
+import { GAMES } from './gamelist.js';
 import { canSay } from './ui.js';
 import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';

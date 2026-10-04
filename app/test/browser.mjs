@@ -1050,6 +1050,7 @@ async function a6Checks(label, vp, isMobile) {
   await page.goto(URL0); await page.waitForSelector('[data-act="obStart"]');
   await page.click('[data-act="obStart"]'); await page.fill('#nm', 'Asha');
   await page.click('[data-act="obNext"]'); await page.locator('[data-act="obBand"]').last().click();
+  await page.waitForFunction(() => /^#\/atlas\//.test(location.hash)); await page.evaluate(() => { location.hash = '#/home'; });   /* A3: setup opens the first stop */
   await page.waitForSelector('[data-bz=next]'); await page.waitForTimeout(3600);
   await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); }); await page.waitForTimeout(200);
 

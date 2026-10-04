@@ -80,7 +80,8 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
 {
   globalThis.window = globalThis.window || globalThis;
   const src = readFileSync(new URL('../src/arcade.js', import.meta.url), 'utf8');
-  const ids = [...src.matchAll(/\{ id: '([a-z]{2})', em:/g)].map((m) => m[1]);
+  const list = readFileSync(new URL('../src/gamelist.js', import.meta.url), 'utf8');   /* the catalogue lives apart from the games */
+  const ids = [...list.matchAll(/\{ id: '([a-z]{2})', em:/g)].map((m) => m[1]);
   const how = Object.fromEntries([...src.matchAll(/^  ([a-z]{2}): \[('[^\n]+)\],$/gm)].map((m) => [m[1], m[2].split(/', '/).length]));
   const pr = new Set([...src.matchAll(/([a-z]{2}): '[^']+'/g)].map((m) => m[1]));
   const missing = ids.filter((id) => how[id] !== 3 || !pr.has(id));

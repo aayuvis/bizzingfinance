@@ -49,7 +49,12 @@ import * as drill from './drill.js';
 import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
-import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
+import { GAME_ACTS, GAMES } from './gamelist.js';
+/* the arcade (with Main Street and the canvas kit) loads when Play first needs it */
+let ARC = null;
+const arcadeMod = () => (ARC ? Promise.resolve(ARC) : import('./arcade.js').then((m) => (ARC = m)));
+const viewArcade = () => ARC ? ARC.viewArcade() : (arcadeMod().then(() => render()), '<div class="card"><p class="small muted">Opening the arcade…</p></div>');
+const quitGame = () => { if (ARC) ARC.quitGame(); else { if (R.game && R.game.stop) R.game.stop(); R.game = null; } };
 import { verdict } from './gamefx.js';
 import * as shell from './shell.js';
 import { BLD } from './buildings-gen.js';
@@ -1716,7 +1721,7 @@ on('game', (id) => {
   /* the title card first (F3); Start begins the game */
   R.gameIntro = id; R.s.ui.nav = 'arcade'; sfx.click(); render(); window.scrollTo(0, 0);
 });
-on('gbegin', (id) => { R.gameIntro = null; startGame(id); render(); });
+on('gbegin', (id) => { R.gameIntro = null; arcadeMod().then((m) => { m.startGame(id); render(); }); });
 on('gback', () => { R.gameIntro = null; render(); });
 /* Leaving a game is when a child is most willing to read one card — so the
    lesson is offered here rather than filed in a tab they have to remember. */
@@ -1894,7 +1899,7 @@ on('install', async () => { const e = R.install; if (!e) return; R.install = nul
 on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
-window.BZF = { R, sim, quitGame, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+window.BZF = { R, sim, quitGame, arcadeReady: arcadeMod, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   placement, cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 

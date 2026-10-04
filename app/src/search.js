@@ -9,7 +9,7 @@
 import { ALL_CARDS, CHAPTERS, GLOSSARY, WORD_ICON, WORLDS, LETTERS, SHOP } from './content.js';
 import { NEW_CARD_LIST } from './objectives.js';
 import { PLACES } from './town.js';
-import { GAMES } from './arcade.js';
+import { GAMES } from './gamelist.js';
 
 const plain = (s) => String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 let INDEX = null;

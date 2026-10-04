@@ -37,7 +37,7 @@ import { BLD } from './buildings-gen.js';
 import { WALKS } from './walks-gen.js';
 import { CO } from './companions-gen.js';
 import { HOMES, gameOpen } from './content.js';
-import { GAMES as GAME_DEFS } from './arcade.js';
+import { GAMES as GAME_DEFS } from './gamelist.js';
 
 /* ── more on each card (owner, 3 Oct 2026) ─────────────────────────────────
    The builder gives every card its provenance line (source) and an exact route.
