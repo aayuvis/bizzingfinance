@@ -50,6 +50,7 @@ import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
 import { viewArcade, startGame, quitGame, GAME_ACTS, GAMES } from './arcade.js';
+import { verdict } from './gamefx.js';
 import * as shell from './shell.js';
 import { BLD } from './buildings-gen.js';
 import { shell as bzShell, bindShell } from './family/bizzing-shell.js';
@@ -1045,6 +1046,10 @@ on('answer', (i) => {
   else { sfx.bad(); if (p.tries === 1 && isLesson(card)) mistakes.record(c, card.id, st.qi); }
   if (!p.right && R.cold === card.id) { R.cold = null; toast('Here is the lesson — then have another go'); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
   render();
+  /* G2 · the kit's feedback, from the option the child chose and only after the verdict is
+     drawn: coins out of a right one, a small shake of a wrong one. It touches nothing the
+     drill records, and it never marks an option the child did not pick. */
+  verdict(document.querySelector(`.opt[data-act="answer"][data-arg="${+i}"]`), p.right);
 });
 /* A typed amount (generate.js). It goes through the same hold-then-retry rules as a tap:
    right is pick 0; a wrong first try holds (pick 1) and the second go settles (pick 2). */
@@ -1065,6 +1070,7 @@ on('answerNum', () => {
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); } else sfx.bad();
   render();
+  verdict(document.querySelector('.numrow'), p.right);
 });
 /* Practice on a stop, in fresh numbers (owner, 3 Oct 2026: "finish A3 ... the lesson
    stops"). Finishing the stop is recorded first, exactly as "Take it back to town" would;

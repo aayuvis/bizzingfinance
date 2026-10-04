@@ -9,6 +9,7 @@ import { say, CAST, ico } from './art.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { plateFor } from './looks.js';
+import { fx as makeFx, still, rr, shadow, ease, plateCss } from './gamefx.js';
 const BOARD_SKIN = { 'board-harbour': 'harbour', 'board-clock': 'clock', 'board-festival': 'festival' };
 
 const K = () => sim.kid(R.s);
@@ -109,8 +110,20 @@ export function mainStreet(opts = {}) {
   const g = {
     players: [mk('You', 'pip', true), mk('Mags', 'mags', false), mk('Bo', 'bo', false)],
     turn: 0, phase: 'roll', die: 0, log: [], card: null, sq: null, done: false, winner: null, moves: 0,
+    trail: [], walk: null, rolled: '',
   };
-  let anim = 0;
+  let anim = 0, raf = 0;
+
+  /* G2 · the kit's life on a DOM board. The die tumbles, then the token walks the
+     squares one at a time — on the wall's clock, so a slow phone walks the same
+     speed in fewer frames. Headless, or under reduced motion, it is instant: the
+     same squares, the same pay day, the same landing, no pictures in between. */
+  const ROLLMS = 460, STEPMS = 180, SETTLEMS = 200, HOPMS = 150;
+  const instant = () => still() || typeof requestAnimationFrame !== 'function' || typeof document === 'undefined';
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const FX = makeFx();
+  const look = { cv: null, ctx: null, W: 0, H: 0, cells: [], die: null, col: {}, tok: [], stamps: [], prev: 0, at: [] };
+  g.look = look;
 
   const cur = () => g.players[g.turn];
   const income = (p) => p.own.reduce((t, i) => t + SQUARES[i].inc, 0);
@@ -118,7 +131,10 @@ export function mainStreet(opts = {}) {
   const ownerOf = (i) => g.players.find((p) => p.own.includes(i));
   const note = (s) => { g.log.unshift(s); if (g.log.length > 5) g.log.length = 5; };
 
-  const stop = () => { if (anim) { clearTimeout(anim); anim = 0; } };
+  const stop = () => {
+    if (anim) { clearTimeout(anim); anim = 0; }
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  };
 
   const checkWin = () => {
     const won = g.players.filter((p) => indep(p) >= 1);
@@ -227,23 +243,142 @@ export function mainStreet(opts = {}) {
     if (!cur().human) anim = setTimeout(roll, 520);
   };
 
+  /* one square forward; passing Start is pay day, exactly as before */
+  const stepOne = (p) => {
+    p.pos = (p.pos + 1) % SQUARES.length;
+    g.trail.push(p.pos);
+    if (p.pos === 0) payDay(p);
+    g.moves--;
+  };
   const roll = () => {
-    if (g.done) return;
+    if (g.done || g.phase !== 'roll') return;
     const p = cur();
     g.die = 1 + Math.floor(r() * 6);
     g.phase = 'moving';
-    g.moves = g.die;
+    g.moves = g.die; g.trail = [p.pos]; g.rolled = p.name;
     sfx.click();
+    if (instant()) { while (g.moves > 0) stepOne(p); land(p); return; }
+    g.walk = { p, t0: now() };
     R.render();
-    const stepOne = () => {
-      p.pos = (p.pos + 1) % SQUARES.length;
-      if (p.pos === 0) payDay(p);
-      g.moves--;
-      R.render();
-      if (g.moves > 0) anim = setTimeout(stepOne, 125);
-      else anim = setTimeout(() => land(p), 190);
-    };
-    anim = setTimeout(stepOne, 190);
+  };
+  /* step k of the walk falls due at ROLLMS + (k−1)·STEPMS after the roll, by the clock —
+     a frame that arrives late takes every step that fell due while it was away */
+  const walkTo = (ts) => {
+    const w = g.walk; if (!w) return false;
+    const t = Math.max(0, ts - w.t0);   /* a frame stamped just before the roll is not a step back in time */
+    const due = t < ROLLMS ? 0 : Math.min(g.die, 1 + Math.floor((t - ROLLMS) / STEPMS));
+    let moved = false;
+    while (g.die - g.moves < due) { stepOne(w.p); moved = true; }
+    if (!g.moves && t >= ROLLMS + (g.die - 1) * STEPMS + SETTLEMS) { g.walk = null; land(w.p); return false; }
+    return moved;
+  };
+
+  /* ── the picture: one canvas over the squares, re-found after every render ── */
+  const colOf = (p) => look.col[p.who] || '#0E6B78';
+  /* corners of the square, so the name and the price stay readable under a token */
+  const OFF = [[0.3, 0.3], [-0.31, -0.3], [0.31, -0.3]];
+  const tokOf = (i, ts) => {
+    const p = g.players[i];
+    return look.tok[i] || (look.tok[i] = { at: p.pos, from: p.pos, t0: ts - 1e6, cash: p.cash, own: p.own.slice() });
+  };
+  const tokXY = (i, ts) => {
+    const v = tokOf(i, ts), a = look.cells[v.from], b = look.cells[v.at], o = OFF[i] || OFF[0];
+    if (!b) return { x: -99, y: -99, gy: -99, k: 1, sq: v.at };
+    const k = still() || !a ? 1 : Math.max(0, Math.min(1, (ts - v.t0) / HOPMS)), e = ease.inOut(k);
+    const ax = (a || b).x + o[0] * (a || b).w, ay = (a || b).y + o[1] * (a || b).h;
+    const bx = b.x + o[0] * b.w, by = b.y + o[1] * b.h;
+    const gy = ay + (by - ay) * e;
+    return { x: ax + (bx - ax) * e, y: gy - Math.sin(Math.PI * k) * b.h * 0.42, gy, k, sq: v.at };
+  };
+  /* what changed since the last frame becomes something you can see: money in or out
+     rises off the token, a square bought gets stamped, a square sold says so */
+  const watch = (ts) => {
+    g.players.forEach((p, i) => {
+      const v = tokOf(i, ts);
+      if (v.at !== p.pos) { v.from = v.at; v.at = p.pos; v.t0 = ts; }
+      const at = tokXY(i, ts);
+      if (p.cash !== v.cash) {
+        const d = p.cash - v.cash; v.cash = p.cash;
+        FX.pop(Math.max(30, Math.min(look.W - 30, at.x)), Math.max(40, at.y - 16), (d > 0 ? '+' : '−') + Math.abs(d), { color: d > 0 ? '#11663A' : '#A3291F', size: p.human ? 16 : 13, key: 'c' + i, life: 1000 });
+        if (d > 0) FX.coins(at.x, at.y - 8, Math.min(8, 3 + Math.round(d / 15)));
+      }
+      p.own.filter((x) => !v.own.includes(x)).forEach((sq) => {
+        look.stamps.push({ sq, t0: ts, p });
+        const c = look.cells[sq]; if (c) FX.burst(c.x, c.y, { n: 18, colors: [colOf(p), '#F0B429', '#FFF3C4'] });
+      });
+      v.own.filter((x) => !p.own.includes(x)).forEach((sq) => { const c = look.cells[sq]; if (c) FX.pop(c.x, c.y, 'sold', { color: '#A3291F', size: 12 }); });
+      v.own = p.own.slice();
+    });
+  };
+  const drawStamp = (ctx, s, ts) => {
+    const c = look.cells[s.sq]; if (!c) return;
+    const t = Math.max(0, ts - s.t0), k = still() ? 1 : Math.min(1, t / 220);
+    const sc = still() ? 1 : 1.9 - 0.9 * ease.out(k);
+    ctx.save();
+    ctx.globalAlpha = t > 900 ? Math.max(0, 1 - (t - 900) / 300) : Math.min(1, 0.2 + k);
+    ctx.translate(c.x, c.y); ctx.rotate(-0.21); ctx.scale(sc, sc);
+    const w = c.w * 0.94, h = Math.max(15, c.h * 0.3), col = s.p.human ? '#178A4C' : colOf(s.p);
+    ctx.fillStyle = 'rgba(255,252,245,.94)'; rr(ctx, -w / 2, -h / 2, w, h, 4); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4; rr(ctx, -w / 2, -h / 2, w, h, 4); ctx.stroke();
+    ctx.lineWidth = 0.9; rr(ctx, -w / 2 + 3, -h / 2 + 3, w - 6, h - 6, 2.5); ctx.stroke();
+    const word = s.p.human ? 'YOURS' : 'BOUGHT';
+    let fs = h * 0.56; ctx.font = `800 ${fs}px "Hanken Grotesk", system-ui, sans-serif`;
+    const mw = ctx.measureText(word).width; if (mw > w - 10) { fs *= (w - 10) / mw; ctx.font = `800 ${fs}px "Hanken Grotesk", system-ui, sans-serif`; }
+    ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(word, 0, 1);
+    ctx.restore();
+  };
+  const drawTok = (ctx, i, ts) => {
+    const p = g.players[i], at = tokXY(i, ts);
+    look.at[i] = at;
+    const cw = (look.cells[0] || { w: 60 }).w, s = Math.max(6, Math.min(12, cw * 0.14)) * (p.human ? 1.15 : 1);
+    shadow(ctx, at.x, at.gy + s * 0.75, s * 1.9 * Math.max(0.5, 1 - (at.gy - at.y) / (cw * 1.2)), 0.28);
+    if (p === cur() && !g.done) {
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.strokeStyle = '#F0B429'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(at.x, at.gy + s * 0.75, s * 1.25, s * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+    ctx.fillStyle = colOf(p); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.6;
+    rr(ctx, at.x - s * 0.8, at.y - s * 0.05, s * 1.6, s * 0.8, s * 0.32); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(at.x, at.y - s * 0.45, s * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(at.x - s * 0.2, at.y - s * 0.65, s * 0.17, 0, Math.PI * 2); ctx.fill();
+  };
+  const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+    5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+  const drawDie = (ctx, ts) => {
+    if (!g.walk || !look.die) return;
+    const t = Math.max(0, ts - g.walk.t0), s = 38, rolling = t < ROLLMS && !still();
+    const face = rolling ? 1 + ((Math.floor(t / 70) * 5 + 2) % 6) : g.die;
+    const rot = rolling ? (1 - t / ROLLMS) * Math.PI * 2.2 : 0;
+    const sc = rolling ? 1 + Math.sin((t / ROLLMS) * Math.PI) * 0.22 : still() ? 1 : 0.88 + 0.12 * ease.back(Math.min(1, (t - ROLLMS) / 220));
+    const hop = rolling ? Math.sin((t / ROLLMS) * Math.PI) * 10 : 0;
+    shadow(ctx, look.die.x, look.die.y + s * 0.6, s * (1.1 - hop / 40), 0.22);
+    ctx.save(); ctx.translate(look.die.x, look.die.y - hop); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = '#FFFDF6'; rr(ctx, -s / 2, -s / 2, s, s, s * 0.22); ctx.fill();
+    ctx.strokeStyle = 'rgba(42,26,8,.55)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1C2A2E';
+    PIPS[face].forEach(([px, py]) => { ctx.beginPath(); ctx.arc(px * s * 0.27, py * s * 0.27, s * 0.085, 0, Math.PI * 2); ctx.fill(); });
+    ctx.restore();
+  };
+  const draw = (ts) => {
+    const { ctx, W, H } = look; if (!ctx || !look.cv || !look.cv.isConnected) return;
+    ctx.clearRect(0, 0, W, H);
+    const done = FX.begin(ctx);
+    look.stamps = look.stamps.filter((s) => ts - s.t0 < 1200);
+    look.stamps.forEach((s) => drawStamp(ctx, s, ts));
+    /* the one whose turn it is walks on top */
+    g.players.map((_, i) => i).sort((a, b) => (a === g.turn) - (b === g.turn)).forEach((i) => drawTok(ctx, i, ts));
+    drawDie(ctx, ts);
+    FX.draw(ctx, W, H);
+    done();
+  };
+  const tick = (ts) => {
+    raf = 0;
+    const dt = Math.min(100, ts - (look.prev || ts)); look.prev = ts;
+    if (walkTo(ts)) R.render();
+    if (g.done) return;
+    watch(ts);
+    FX.step(dt);
+    draw(ts);
+    if (!g.done && !raf) raf = requestAnimationFrame(tick);
   };
 
   const buy = (yes) => {
@@ -279,7 +414,30 @@ export function mainStreet(opts = {}) {
 
   return {
     id: 'mn', g, EXP0,
-    mount() {},
+    mount() {
+      if (typeof document === 'undefined' || g.done) return;
+      const box = document.getElementById('msBoard'), cv = document.getElementById('msCanvas');
+      if (!box || !cv) return;
+      const ctx = cv.getContext && cv.getContext('2d'); if (!ctx) return;
+      const br = box.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      look.W = br.width; look.H = br.height;
+      cv.width = Math.round(br.width * dpr); cv.height = Math.round(br.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      look.cv = cv; look.ctx = ctx;
+      /* every square's centre, measured from the board as drawn — never typed in */
+      look.cells = [];
+      box.querySelectorAll('[data-sq]').forEach((el) => {
+        const q = el.getBoundingClientRect();
+        look.cells[+el.dataset.sq] = { x: q.left - br.left + q.width / 2, y: q.top - br.top + q.height / 2, w: q.width, h: q.height };
+      });
+      const d = box.querySelector('.msdie');
+      look.die = d ? (() => { const q = d.getBoundingClientRect(); return { x: q.left - br.left + q.width / 2, y: q.top - br.top + q.height / 2 }; })() : null;
+      const cs = getComputedStyle(document.documentElement), v = (n, f) => cs.getPropertyValue(n).trim() || f;
+      look.col = { pip: v('--action', '#0E6B78'), mags: v('--give', '#8A5BD6'), bo: v('--treasure', '#C98A10') };
+      box.classList.add('live');
+      const t = now(); watch(t); draw(t);
+      if (!raf) { look.prev = 0; raf = requestAnimationFrame(tick); }
+    },
     stop,
     key(e) {
       if (g.done) { if (e.key === 'Enter') { R.game = null; R.render(); } return; }
@@ -291,7 +449,7 @@ export function mainStreet(opts = {}) {
       }
     },
     act(n, arg) {
-      if (n === 'mnRoll') roll();
+      if (n === 'mnRoll') { if (cur().human) roll(); }
       else if (n === 'mnBuy') buy(true);
       else if (n === 'mnPass') buy(false);
       else if (n === 'mnCard') pickCard(arg);
@@ -328,25 +486,26 @@ export function mainStreet(opts = {}) {
         const own = ownerOf(i);
         const here = g.players.filter((x) => x.pos === i);
         const active = g.sq === i && g.phase !== 'roll';
-        return `<div style="grid-row:${rw};grid-column:${c};position:relative;border:1px solid var(--line);
-          border-radius:7px;padding:4px 3px;font-size:9.5px;line-height:1.15;text-align:center;overflow:hidden;
+        /* the dots are the board's truth in the DOM; the canvas draws the walking tokens over them */
+        return `<div class="mssq" data-sq="${i}" style="grid-row:${rw};grid-column:${c};
           background:${active ? 'var(--action-tint)' : own ? (own.human ? 'var(--grow-tint)' : 'var(--tint)') : 'var(--surface)'};
           ${own ? `box-shadow:inset 0 -3px 0 ${own.human ? 'var(--grow)' : own.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}` : ''}">
           <div class="sqico">${ico(sq.em, sq.em, 20)}</div>
           <div style="font-weight:700">${esc(sq.n)}</div>
           ${sq.cost ? `<div class="mono" style="opacity:.65">${sq.cost}</div>` : ''}
-          ${here.length ? `<div style="position:absolute;top:2px;right:2px;display:flex;gap:1px">
-            ${here.map((x) => `<span style="width:8px;height:8px;border-radius:50%;display:block;background:${x.human ? 'var(--action)' : x.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}"></span>`).join('')}</div>` : ''}
+          ${here.length ? `<div class="mstoks">
+            ${here.map((x) => `<span class="mstok" data-who="${x.who}" style="background:${x.human ? 'var(--action)' : x.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}"></span>`).join('')}</div>` : ''}
         </div>`;
       }).join('');
 
       /* a board bought in the Shop (familyviews.js EXTRAS) paints the middle as its world */
       const skin = BOARD_SKIN[((sim.kid(R.s) || {}).fam || {}).board];
       const middle = `<div class="msmid${skin ? ' skinned' : ''}" style="grid-row:2/6;grid-column:2/6;display:flex;flex-direction:column;gap:8px;
-        padding:10px;background:${skin ? `linear-gradient(color-mix(in srgb,var(--surface) 78%,transparent),color-mix(in srgb,var(--surface) 78%,transparent)),url(${plateFor(skin, !!R.dark)}) center/cover` : 'var(--tint)'};border-radius:10px;overflow:auto">
+        padding:10px;background:${skin ? `linear-gradient(color-mix(in srgb,var(--surface) 78%,transparent),color-mix(in srgb,var(--surface) 78%,transparent)),url(${plateFor(skin, !!R.dark)}) center/cover` : 'color-mix(in srgb,var(--surface) 86%,transparent)'};border-radius:10px;overflow:auto">
         <div class="row" style="gap:8px;flex-wrap:wrap">
           ${g.players.map((x) => `<span class="pill ${x === p ? 'gold' : ''}" style="font-size:10px">
             ${esc(x.name)} ${x.cash}</span>`).join('')}
+          ${g.die && g.phase !== 'moving' ? `<span class="pill" style="font-size:10px">${esc(g.rolled)} rolled ${g.die}</span>` : ''}
         </div>
         <div>
           <div class="row"><span class="eyebrow grow">Your street pays</span>
@@ -372,7 +531,7 @@ export function mainStreet(opts = {}) {
           </div><p class="small muted" style="margin-top:5px">Press ${g.card.choices.map((_, i) => i + 1).join(' or ')}, or tap.</p></div>` : ''}
         ${g.phase === 'roll' ? `<button class="btn wide" data-act="mnRoll" ${p.human ? '' : 'disabled'}>
           ${p.human ? 'Roll · ⏎' : p.name + ' is thinking…'}</button>` : ''}
-        ${g.phase === 'moving' ? `<div style="text-align:center;font-family:var(--display);font-weight:800;font-size:28px">${ico('dice', '🎲', 26)} ${g.die}</div>` : ''}
+        ${g.phase === 'moving' ? `<div class="msdie" role="status"><span>${ico('dice', '🎲', 26)} ${esc(g.rolled)} rolled ${g.die}</span></div>` : ''}
         <div class="stack" style="gap:3px;margin-top:auto">
           ${g.log.slice(0, 3).map((l) => `<p class="small muted" style="font-size:11px;line-height:1.35">${esc(l)}</p>`).join('')}
         </div>
@@ -383,9 +542,8 @@ export function mainStreet(opts = {}) {
           <span class="box">You ${p === g.players[0] ? '· your turn' : ''} ${g.players[0].cash}</span>
           <span class="grow"></span><button class="btn ghost sm" data-act="gquit">Leave</button></div>
         <div class="stage" style="padding:10px">
-          <div style="display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);
-            gap:4px;aspect-ratio:1;max-width:520px;width:100%;margin:0 auto">
-            ${board}${middle}
+          <div id="msBoard" class="msboard" style="background:${plateCss((K() || {}).world || 0, R.dark ? 0.34 : 0.26)}">
+            ${board}${middle}<canvas id="msCanvas" class="mscv" aria-hidden="true"></canvas>
           </div>
           <p class="hint">Enter to roll, Y/N to buy. You win when what you own pays for what you spend — nobody has to go bankrupt.</p>
         </div></div>`;

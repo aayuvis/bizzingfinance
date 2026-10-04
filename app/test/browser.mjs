@@ -929,12 +929,116 @@ async function demo() {
   await rctx.close();
 }
 
+/* ══ G2 · the canvas kit on Main Street and the drills ═══════════════════
+   Measured from the DOM and the game's own state, never from a fixed wait for an
+   animation: every wait below is on a condition. Each was watched failing first. */
+const FXWATCH = () => {
+  window.__fx = 0;
+  new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.classList && n.classList.contains('fxlayer')) window.__fx++; })
+    .observe(document.body, { childList: true });
+};
+/* every frame: which square holds your dot in the DOM, and whether the drawn token is mid-hop */
+const MSWATCH = () => {
+  const S = window.__ms = { sq: [], mid: 0 };
+  const f = () => {
+    const g = window.BZF.R.game && window.BZF.R.game.g;
+    if (g) {
+      const d = document.querySelector('#msBoard .mstok[data-who="pip"]');
+      const sq = d ? +d.closest('[data-sq]').dataset.sq : -1;
+      if (S.sq[S.sq.length - 1] !== sq) S.sq.push(sq);
+      const a = g.look && g.look.at && g.look.at[0];
+      if (a && a.k > 0.05 && a.k < 0.95) S.mid++;
+    }
+    if (!S.stop) requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
+};
+const openBoard = async (p) => {
+  await p.goto(URL0 + '?demo'); await p.waitForSelector('[data-bz=next]');
+  await p.evaluate(FXWATCH);
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); B.fire('game', 'mn'); B.fire('gbegin', 'mn'); });
+  await p.waitForSelector('#msBoard [data-sq]');
+};
+async function kitChecks() {
+  const kctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const kp = await kctx.newPage();
+  const errors = []; kp.on('pageerror', (e) => errors.push(e.message));
+  await openBoard(kp);
+  await kp.evaluate(MSWATCH);
+  await kp.keyboard.press('Enter');
+  await kp.waitForFunction(() => { const g = window.BZF.R.game.g; return g.phase !== 'moving' || g.turn !== 0; }, null, { timeout: 10000 });
+  const walk = await kp.evaluate(() => { const g = window.BZF.R.game.g; window.__ms.stop = true; return { die: g.die, trail: g.trail, seen: window.__ms.sq, mid: window.__ms.mid }; });
+  const want = Array.from({ length: walk.die + 1 }, (_, k) => (walk.trail[0] + k) % 20);
+  ok('Main Street: a roll walks your token through every square in between, one at a time', walk.die > 1 && JSON.stringify(walk.seen) === JSON.stringify(want), JSON.stringify(walk));
+  ok('Main Street: the drawn token is seen between squares (it hops, it does not teleport)', walk.mid > 0, 'mid-hop frames ' + walk.mid);
+  /* play on until you land somewhere you can buy, then buy it: the square is stamped */
+  let bought = null;
+  for (let k = 0; k < 30 && !bought; k++) {
+    await kp.waitForFunction(() => { const g = window.BZF.R.game && window.BZF.R.game.g; return !g || g.done || g.turn === 0 && (g.phase === 'roll' || g.phase === 'decide' || g.phase === 'card'); }, null, { timeout: 15000 });
+    const ph = await kp.evaluate(() => { const g = window.BZF.R.game && window.BZF.R.game.g; return !g || g.done ? 'done' : g.phase; });
+    if (ph === 'done') break;
+    if (ph === 'decide' && await kp.evaluate(() => !document.querySelector('[data-act="mnBuy"]').disabled)) {
+      await kp.keyboard.press('y');
+      bought = await kp.evaluate(() => { const g = window.BZF.R.game.g; return { stamped: g.look.stamps.some((s) => s.p.human), owns: g.players[0].own.length }; });
+    } else if (ph === 'decide') await kp.keyboard.press('n');
+    else if (ph === 'card') await kp.keyboard.press('1');
+    else await kp.keyboard.press('Enter');
+  }
+  ok('Main Street: buying a square stamps it on the board', !!bought && bought.stamped && bought.owns > 0, JSON.stringify(bought));
+  await kp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); });
+
+  /* the drills: nothing before an answer, a shake for a wrong one, coins for a right one */
+  await kp.evaluate(() => { window.__fx = 0; window.BZF.fire('card', 'c1b'); });
+  await kp.waitForSelector('.opt[data-act="answer"]');
+  const before = await kp.evaluate(() => window.__fx);
+  const right = await kp.evaluate(() => window.BZF.key('c1b', 0));
+  await kp.locator('.opt[data-act="answer"]').nth(right === 0 ? 1 : 0).tap();
+  const wrong = await kp.evaluate(() => ({ fx: window.__fx, shook: !!document.querySelector('.opt.fxshake'), revealed: !!document.querySelector('.opt.ok') }));
+  ok('drill: no fx layer before an answer, and none for a wrong one — the wrong pick shakes and nothing is revealed', before === 0 && wrong.fx === 0 && wrong.shook && !wrong.revealed, JSON.stringify({ before, ...wrong }));
+  await kp.locator('.opt[data-act="answer"]').nth(right).tap();
+  await kp.waitForFunction(() => window.__fx > 0, null, { timeout: 3000 }).catch(() => {});
+  ok('drill: a right answer bursts coins from the option chosen (the fx layer appears)', await kp.evaluate(() => window.__fx) > 0);
+  await kp.waitForFunction(() => !document.querySelector('.fxlayer'), null, { timeout: 5000 }).catch(() => {});
+  ok('drill: the fx layer clears itself when it has nothing left to draw', await kp.evaluate(() => !document.querySelector('.fxlayer')));
+  /* the drill games share it: Times Twelve, right by its own key */
+  /* settle on Play first: a hash change that lands after a game starts quits it */
+  await kp.evaluate(() => { window.BZF.fire('closeCard'); location.hash = '#/play'; });
+  await kp.waitForSelector('.cover[data-arg="tt"]');
+  await kp.evaluate(() => { window.__fx = 0; const B = window.BZF; B.fire('game', 'tt'); B.fire('gbegin', 'tt'); });
+  await kp.waitForSelector('.gplay [data-act="ttPick"]');
+  const tt0 = await kp.evaluate(() => window.__fx);
+  await kp.keyboard.press(String(await kp.evaluate(() => window.BZF.R.game.qs[0].a + 1)));
+  await kp.waitForFunction(() => window.__fx > 0, null, { timeout: 3000 }).catch(() => {});
+  ok('drill game: Times Twelve bursts on a right answer and not before', tt0 === 0 && await kp.evaluate(() => window.__fx) > 0, `${tt0} → ${await kp.evaluate(() => window.__fx)}`);
+  await kp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); });
+  ok('kit: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+  await kctx.close();
+
+  /* reduced motion: the token goes straight to its square, and no fx layer is ever made */
+  const rctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  const rp = await rctx.newPage();
+  await openBoard(rp);
+  await rp.evaluate(MSWATCH);
+  await rp.keyboard.press('Enter');
+  const now = await rp.evaluate(() => { const g = window.BZF.R.game.g; return { phase: g.phase, die: g.die, trail: g.trail.length }; });
+  await rp.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const seen = await rp.evaluate(() => { window.__ms.stop = true; return window.__ms.sq; });
+  ok('reduced motion: Main Street skips the walk — the token lands at once, no square in between', now.phase !== 'moving' && now.trail === now.die + 1 && seen.length <= 2, JSON.stringify({ ...now, seen }));
+  await rp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); window.BZF.fire('card', 'c1b'); });
+  await rp.waitForSelector('.opt[data-act="answer"]');
+  await rp.locator('.opt[data-act="answer"]').nth(await rp.evaluate(() => window.BZF.key('c1b', 0))).click();
+  await rp.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  ok('reduced motion: a right answer makes no fx layer', await rp.evaluate(() => window.__fx) === 0);
+  await rctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
 await safely('phone', () => run('phone', { width: 390, height: 844 }, true, 'light'));
 await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, true, 'dark'));
 await safely('demo', demo);
+await safely('kit', kitChecks);
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

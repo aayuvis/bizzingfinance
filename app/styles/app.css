@@ -1107,3 +1107,23 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
 .wc-m{font-size:15px;font-weight:650;line-height:1.4}
 .wc-e{font-size:13.5px;color:var(--muted);line-height:1.45}
 .wc-e .eyebrow{display:block;font-size:10.5px;margin-bottom:1px}
+/* G2 · the canvas kit off the canvas: the drills' fx layer and their gentle shake (gamefx.js) */
+.fxlayer{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:85}
+.fxshake{animation:fxshake .42s ease !important}
+@keyframes fxshake{0%,100%{transform:none}20%{transform:translateX(-5px)}45%{transform:translateX(4px)}70%{transform:translateX(-2px)}}
+@media (prefers-reduced-motion:reduce){.fxshake{animation:none !important}}
+:root[data-motion="reduced"] .fxshake{animation:none !important}
+
+/* G2 · Main Street on the kit: the board sits on the painted place, the squares are
+   paper over it, and one canvas above them carries the tokens, the die and the fx */
+.msboard{position:relative;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);gap:4px;
+  aspect-ratio:1;max-width:520px;width:100%;margin:0 auto;padding:6px;border-radius:14px;box-sizing:border-box;
+  box-shadow:0 10px 26px rgb(40 25 5 / .22)}
+.msboard .mssq{position:relative;border:1px solid var(--line);border-radius:7px;padding:4px 3px;font-size:9.5px;line-height:1.15;
+  text-align:center;overflow:hidden;box-shadow:0 1px 0 rgb(40 25 5 / .12)}
+.msboard .mstoks{position:absolute;top:2px;right:2px;display:flex;gap:1px}
+.msboard .mstok{width:8px;height:8px;border-radius:50%;display:block}
+.msboard.live .mstoks{visibility:hidden}
+.msboard .mscv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.msdie{height:58px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:28px}
+.msboard.live .msdie > *{opacity:0}

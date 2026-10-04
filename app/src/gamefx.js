@@ -5,7 +5,9 @@
    particles and coin bursts, floating score pops, screen shake, a 3-2-1-GO countdown,
    easing, a painted backdrop from the town's own plates, and a few drawing helpers
    (rounded boxes, soft shadows, coins). Everything respects reduced motion: particles,
-   shake and pops are skipped, the game itself is unchanged.
+   shake and pops are skipped, the game itself is unchanged. Calm mode drops the
+   particles too. Screens that are DOM rather than canvas (Main Street's board, the
+   drills) use the same kit through plateCss, fxAt, shakeEl and verdict at the end.
 
    Pure canvas 2D, no images except the town's plates, no generated lettering. */
 import { R } from './runtime.js';
@@ -15,6 +17,10 @@ import { WORLDS } from './content.js';
 export const still = () => {
   try { return document.documentElement.dataset.motion === 'reduced' || matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
 };
+/* Calm mode is "no confetti" (shell.js Settings): the sparkle goes, the information stays —
+   a pop that says "+12" still rises, the coins that hop out of it do not. */
+export const calm = () => { try { return document.documentElement.hasAttribute('data-calm'); } catch (e) { return false; } };
+export const quiet = () => still() || calm();
 
 export const ease = {
   out: (t) => 1 - Math.pow(1 - t, 3),
@@ -29,7 +35,7 @@ export function fx() {
   return {
     /* a burst of n particles at x,y in colour(s) */
     burst(x, y, { n = 14, colors = ['#F0B429', '#FFF3C4', '#E8962C'], speed = 0.22, life = 700, size = 4, gravity = 0.0006 } = {}) {
-      if (still()) return;
+      if (quiet()) return;
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2, v = speed * (0.4 + Math.random());
         parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.6, t: 0, life: life * (0.6 + Math.random() * 0.6),
@@ -38,7 +44,7 @@ export function fx() {
     },
     /* little gold coins that hop out and fall — for money earned */
     coins(x, y, n = 6) {
-      if (still()) return;
+      if (quiet()) return;
       for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 0.25, vy: -0.28 - Math.random() * 0.18, t: 0, life: 900, c: '#F0B429', s: 6, g: 0.0009, coin: true });
     },
     /* a word or number that rises and fades: "+12", "Perfect!", "×3" */
@@ -48,7 +54,7 @@ export function fx() {
       pops.push({ key, x, y, text: String(text), color, size, t: 0, life: still() ? life * 0.6 : life });
     },
     shake(amount = 6, ms = 260) { if (!still()) { shakeA = amount; shakeT = ms; } },
-    flash(color = '#fff', ms = 160) { if (!still()) { flashC = color; flashT = ms; } },
+    flash(color = '#fff', ms = 160) { if (!quiet()) { flashC = color; flashT = ms; } },
     step(dt) {
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i]; p.t += dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
@@ -111,9 +117,18 @@ export function countdown(ms = 2400) {
 
 /* ── the backdrop: the child's current place, painted, veiled so the game reads ── */
 const IMG = {};
-export function plate(worldIndex) {
+export function plateSrc(worldIndex) {
   const w = WORLDS[worldIndex || 0] || WORLDS[0];
-  const src = plateFor(w.id, !!R.dark);
+  return plateFor(w.id, !!R.dark);
+}
+/* the same painted place as a CSS background, for a game whose board is DOM (Main Street) */
+export function plateCss(worldIndex, veil = 0.3) {
+  const src = plateSrc(worldIndex);
+  const v = R.dark ? `rgba(12,16,28,${veil})` : `rgba(255,248,236,${veil})`;
+  return `linear-gradient(${v},${v})${src ? `,url(${src}) center/cover no-repeat` : ''}`;
+}
+export function plate(worldIndex) {
+  const src = plateSrc(worldIndex);
   if (!src) return null;
   if (!IMG[src]) { const im = new Image(); im.src = src; IMG[src] = im; }
   return IMG[src];
@@ -156,4 +171,60 @@ export function crate(ctx, x, y, w, h, tint = '#C98A46') {
   ctx.beginPath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + w - 4, y + h - 4); ctx.stroke();
   ctx.fillStyle = 'rgba(255,240,200,.45)'; ctx.fillRect(x + 2, y + 1.5, w - 4, 2);
 }
+
+/* ── the kit off the canvas ──────────────────────────────────────────────
+   A drill is DOM, not a canvas, so it borrows a page-wide layer: one fixed canvas
+   over everything, pointer-events off, stepped on the wall's clock (rAF timestamps,
+   as the arcade loops are) and taken away the moment it has nothing left to draw.
+   Only something that has already happened makes it — a committed right answer —
+   so it can never point at an answer before the child has chosen. */
+let layer = null;
+function ensureLayer() {
+  if (layer && layer.cv.isConnected) return layer;
+  const cv = document.createElement('canvas');
+  cv.className = 'fxlayer'; cv.setAttribute('aria-hidden', 'true');
+  const ctx = cv.getContext && cv.getContext('2d');
+  if (!ctx) return null;
+  document.body.appendChild(cv);
+  const L = layer = { cv, ctx, f: fx(), raf: 0, prev: 0, W: 0, H: 0 };
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  L.W = innerWidth; L.H = innerHeight;
+  cv.width = L.W * dpr; cv.height = L.H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const step = (ts) => {
+    const dt = Math.min(100, ts - (L.prev || ts)); L.prev = ts;
+    L.f.step(dt);
+    ctx.clearRect(0, 0, L.W, L.H); L.f.draw(ctx, L.W, L.H);
+    if (!L.f.busy) { L.raf = 0; cv.remove(); if (layer === L) layer = null; return; }
+    L.raf = requestAnimationFrame(step);
+  };
+  L.kick = () => { if (!L.raf) { L.prev = 0; L.raf = requestAnimationFrame(step); } };
+  return L;
+}
+const elOf = (a) => (typeof a === 'string' ? document.querySelector(a) : a);
+/* coins and a gold burst out of an element (a chosen option, a Buy button). Returns
+   whether anything was drawn: nothing is, under reduced motion or in Calm mode. */
+export function fxAt(target, { coins: n = 7, burst = true, text = null, color = '#11663A' } = {}) {
+  if (typeof document === 'undefined' || typeof requestAnimationFrame !== 'function' || quiet()) return false;
+  const a = elOf(target); if (!a || !a.getBoundingClientRect) return false;
+  const b = a.getBoundingClientRect();
+  if (!b.width && !b.height) return false;
+  const L = ensureLayer(); if (!L) return false;
+  const x = b.left + Math.min(b.width / 2, 70), y = b.top + b.height / 2;
+  if (burst) L.f.burst(x, y, { n: 16, speed: 0.26 });
+  if (n) L.f.coins(x, y, n);
+  if (text) L.f.pop(x, y - 6, text, { color, size: 17 });
+  L.kick();
+  return true;
+}
+/* a gentle shake for a wrong answer: the chosen thing says "not that" and nothing else
+   moves. CSS keyframes keep the wall's time by themselves. Skipped under reduced motion. */
+export function shakeEl(target) {
+  if (typeof document === 'undefined' || still()) return false;
+  const a = elOf(target); if (!a || !a.classList) return false;
+  a.classList.remove('fxshake'); void a.offsetWidth; a.classList.add('fxshake');
+  a.addEventListener('animationend', () => a.classList.remove('fxshake'), { once: true });
+  return true;
+}
+/* a drill's verdict, called after the render that shows it: right → fxAt, wrong → shakeEl */
+export function verdict(target, right) { return right ? fxAt(target) : shakeEl(target); }
 

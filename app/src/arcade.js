@@ -17,7 +17,7 @@ import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { pipPose, kidBadge } from './shell.js';
-import { fx as makeFx, countdown, plate, backdrop, rr, shadow, coin, crate, still } from './gamefx.js';
+import { fx as makeFx, countdown, plate, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 
 const K = () => sim.kid(R.s);
 
@@ -421,6 +421,8 @@ function twoChoice(cfg) {
         scamWrong: st.wrong.scam || 0, safeWrong: st.wrong.safe || 0 });
     } else arm();
     R.render();
+    /* G2 · the kit's verdict from the button pressed (none when the bell rang) */
+    if (side != null && !st.done) verdict(`.gplay [data-act="${side === cfg.left.side ? cfg.left.act : cfg.right.act}"]`, ok);
   };
   arm();
   return {
@@ -591,6 +593,8 @@ function quizGame(cfg) {
     if (n === qs[st.i].a) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
     st.pop = n === qs[st.i].a ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
     R.render();
+    /* G2 · coins out of the option chosen, or a small shake of it — after the verdict is drawn */
+    verdict(`.gplay [data-act="${cfg.pickAct}"][data-arg="${n}"]`, n === qs[st.i].a);
   };
   const next = () => {
     if (st.pick == null) return;
