@@ -95,10 +95,17 @@ export const BOTS = [
 
 const START_CASH = 220, WAGE = 60, BASE_EXP = 24, MAX_LAPS = 8;
 
-export function mainStreet() {
+/* G8 · a level is the life everyone at the table has to pay for: `baseExp` is the
+   starting expenses a lap (Standard 24, today's). The wage scales by Standard's over
+   the level's, so the same independence earns the same pay on every level.
+   opts.onFinish(run) hands the run's summary back for the goals (G9); opts.chip and
+   opts.goals are the arcade's level chip and goal list, drawn into this screen. */
+export function mainStreet(opts = {}) {
   const r = rng(60607);
+  const EXP0 = opts.baseExp > 0 ? opts.baseExp : BASE_EXP;
+  const chip = () => (opts.chip ? `<span class="box">${opts.chip()}</span>` : '');
   const mk = (name, who, human) => ({ name, who, human, pos: 0, cash: START_CASH,
-    own: [], expenses: BASE_EXP, insured: false, laps: 0, owed: 0 });
+    own: [], expenses: EXP0, insured: false, laps: 0, owed: 0, sold: 0 });
   const g = {
     players: [mk('You', 'pip', true), mk('Mags', 'mags', false), mk('Bo', 'bo', false)],
     turn: 0, phase: 'roll', die: 0, log: [], card: null, sq: null, done: false, winner: null, moves: 0,
@@ -132,11 +139,12 @@ export function mainStreet() {
     const me = g.players[0];
     g.mine = indep(me);
     const c = K();
-    const wage = Math.max(4, Math.round(income(me) / 2) + (g.winner === me ? 14 : 0));
+    const wage = Math.max(4, Math.round((income(me) / 2) * (BASE_EXP / EXP0)) + (g.winner === me ? 14 : 0));
     g.won = price(wage);
     sim.earn(c, g.won, 'Main Street', 'wage');
     sim.stamp(c);
     if (g.winner === me) sim.badge(c, 'main-street');
+    if (opts.onFinish) opts.onFinish({ won: g.winner === me, owned: me.own.length, sold: me.sold, cash: me.cash, indep: g.mine });
     sfx.level();
     R.render();
   };
@@ -149,7 +157,7 @@ export function mainStreet() {
       const i = p.own.slice().sort((a, b) => SQUARES[a].cost - SQUARES[b].cost)[0];
       p.own.splice(p.own.indexOf(i), 1);
       const got = Math.round(SQUARES[i].cost / 2);
-      p.cash += got;
+      p.cash += got; p.sold++;
       note(`${p.name} had to sell ${SQUARES[i].n} for ${got} — half what it cost.`);
       if (p.human) sfx.bad();
     }
@@ -270,7 +278,7 @@ export function mainStreet() {
   };
 
   return {
-    id: 'mn',
+    id: 'mn', g, EXP0,
     mount() {},
     stop,
     key(e) {
@@ -293,7 +301,7 @@ export function mainStreet() {
       if (g.done) {
         const me = g.players[0];
         return `<div class="stack">
-          <div class="hud"><span class="box">Main Street</span><span class="grow"></span>
+          <div class="hud"><span class="box">Main Street</span>${chip()}<span class="grow"></span>
             <button class="btn ghost sm" data-act="gquit">Leave</button></div>
           <div class="stage" style="justify-content:center;text-align:center">
             <div style="font-size:44px">${g.winner === me ? '🏆' : '🎗️'}</div>
@@ -308,6 +316,7 @@ export function mainStreet() {
                   <span class="p" style="font-size:17px">${Math.round(indep(p) * 100)}%</span></div>`).join('')}
             </div>
             ${say('nana', 'Nobody went bankrupt and nobody had to. You win this one when the things you own pay for the life you lead — that is the only definition of rich worth chasing.')}
+            ${opts.goals ? opts.goals() : ''}
             <p class="small muted">Earned ${money(g.won)}.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
@@ -370,7 +379,7 @@ export function mainStreet() {
       </div>`;
 
       return `<div class="stack">
-        <div class="hud"><span class="box">Lap ${g.players[0].laps + 1} / ${MAX_LAPS}</span>
+        <div class="hud">${chip()}<span class="box">Lap ${g.players[0].laps + 1} / ${MAX_LAPS}</span>
           <span class="box">You ${p === g.players[0] ? '· your turn' : ''} ${g.players[0].cash}</span>
           <span class="grow"></span><button class="btn ghost sm" data-act="gquit">Leave</button></div>
         <div class="stage" style="padding:10px">

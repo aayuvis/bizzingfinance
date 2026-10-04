@@ -117,8 +117,7 @@ export const PRACTISED = {
    Standard is every game exactly as it was. For a game scored as a share of a
    fixed set (the two-choice cards, the drills, Budget Blitz, Market Storm) the
    par is that set, and the pay is the share of it you got right.
-
-   Main Street (board.js) has no levels yet: its knobs live in board.js. */
+ */
 export const ARCADE_TIERS = {
   /* fall: coin speed · spawn: time between coins · coins: how many coin sizes · min/max: coins in an amount ·
      help: how often a coin that fits is sent · par: a careful round's score */
@@ -188,7 +187,14 @@ ARCADE_TIERS.ss.easy.par = 6; ARCADE_TIERS.ss.standard.par = 10; ARCADE_TIERS.ss
 ARCADE_TIERS.cc.easy.par = 420; ARCADE_TIERS.cc.standard.par = 420; ARCADE_TIERS.cc.tricky.par = 420;
 ARCADE_TIERS.tt.easy.par = 8; ARCADE_TIERS.tt.standard.par = 8; ARCADE_TIERS.tt.tricky.par = 8;
 ARCADE_TIERS.sn.easy.par = 6; ARCADE_TIERS.sn.standard.par = 6; ARCADE_TIERS.sn.tricky.par = 6;
-export const TIERLESS = { mn: 'Main Street\'s rules live in board.js; its levels are not built yet.' };
+/* Main Street: baseExp is everyone's starting expenses a lap (board.js); its pay is scaled by
+   Standard's over the level's, so its par is the life it has to pay for */
+ARCADE_TIERS.mn = {
+  easy:     { baseExp: 18, par: 18, says: 'A cheaper life to pay for: your street covers it sooner.' },
+  standard: { baseExp: 24, par: 24, says: 'The board as it comes.' },
+  tricky:   { baseExp: 30, par: 30, says: 'A dearer life: it takes a bigger street to pay for it.' },
+};
+export const TIERLESS = {};
 
 /* Three goals per game, each a decision you can choose to make. They read the run's
    summary when it ends, tick a record on the child, and pay nothing at all. */
@@ -237,6 +243,11 @@ export const ARCADE_GOALS = {
     { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
     { id: 'weekly', name: 'Every weekly one right', check: (r) => r.weeklyWrong === 0 },
     { id: 'yearly', name: 'Saw through the yearly price', check: (r) => r.compareRight },
+  ],
+  mn: [
+    { id: 'win', name: 'Your street paid for your life', check: (r) => r.won },
+    { id: 'four', name: 'Owned four businesses at the end', check: (r) => r.owned >= 4 },
+    { id: 'nosell', name: 'Kept a buffer: never had to sell at half price', check: (r) => r.sold === 0 && r.owned >= 1 },
   ],
   sn: [
     { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
@@ -318,7 +329,7 @@ export function startGame(id, seed, tier) {
   curTier = TIER_IDS.includes(tier) ? tier : (ARCADE_TIERS[id] ? tierOf(K(), id) : 'standard');
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
-    mc: marketCup, mn: mainStreet }[id];
+    mc: marketCup, mn: () => mainStreet({ baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, onFinish: (run) => goalsFor('mn', run) }) }[id];
   if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = seed != null ? f(seed) : f(); sfx.click(); }
 }
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; }
@@ -914,13 +925,24 @@ function warmFonts() {
   fontsWarm = true;
   try { ['600 18px Sono', '800 18px "Hanken Grotesk"', '800 24px Fraunces'].forEach((f) => document.fonts.load(f)); } catch (e) { /* the fallbacks still read */ }
 }
-function compoundClimb() {
+/* Compound Climb's year, as a pure function of the charge (0–1) and one draw in [−1, 1].
+   Rule 3: the game rewards the decision, not the gamble. The expected return rises with
+   the charge and PEAKS in the middle (≈60%), then falls; the swing grows much faster
+   (charge^3.2), so a high charge brings down years and, at full charge, a real chance of
+   being wiped out. A steady middle charge has the best expected tower and the best chance
+   of clearing the line — test/tiers.mjs replays it over hundreds of seeds. */
+export function ccYear(ch, draw) {
+  const mean = 0.36 * ch - 0.30 * ch * ch;      // 0 → 10.8% at 60% → 6% at full
+  const vol = 0.7 * Math.pow(ch, 3.2);          // 1% at 25%, 10% at 55%, 41% at 85%, 70% at full
+  return mean + draw * vol;
+}
+function compoundClimb(seed = 8821) {
   const kn = knobs('cc');
   const YEARS = 15, START = 100, TARGET = kn.target, W = 360, H = 350;
   const st = { year: 0, money: START, charge: 0, holding: false, done: false,
     hist: [START], last: null, ruined: false, peak: START, falls: 0, maxCharge: 0 };
   let raf = 0, prev = 0, ctx = null, cv = null;
-  const r = rng(8821);
+  const r = rng(seed);
   /* everything below is drawing — the money is decided in release() and nowhere else */
   const fxl = makeFx();
   let cd = countdown();
@@ -949,9 +971,7 @@ function compoundClimb() {
     st.holding = false;
     st.maxCharge = Math.max(st.maxCharge, st.charge);
     const ch = st.charge / 100;
-    const mean = ch * 0.22;                     // 0 % → 22 % expected
-    const vol = ch * ch * 0.34;                 // and the swing grows faster than the return
-    const actual = mean + (r() + r() - 1) * vol;
+    const actual = ccYear(ch, r() + r() - 1);
     const before = st.money;
     st.money = Math.max(0, st.money * (1 + actual));
     st.hist.push(Math.round(st.money));

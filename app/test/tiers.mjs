@@ -33,7 +33,7 @@ ok(T.join() === 'easy,standard,tricky' && T.every((t) => JT.TIER_NAME[t]), 'the 
 
 /* ── the tables ─────────────────────────────────────────────────────────── */
 const arcadeIds = AR.GAMES.map((g) => g.id).filter((id) => !AR.TIERLESS[id]);
-ok(Object.keys(AR.TIERLESS).join() === 'mn', 'only Main Street is without levels, and it says why', JSON.stringify(AR.TIERLESS));
+ok(Object.keys(AR.TIERLESS).length === 0 && arcadeIds.length === AR.GAMES.length && arcadeIds.includes('mn'), 'every arcade game has levels — Main Street too, none is left out', JSON.stringify(AR.TIERLESS));
 {
   const bad = arcadeIds.filter((id) => {
     const t = AR.ARCADE_TIERS[id];
@@ -57,7 +57,7 @@ ok(same(JT.JOB_TIERS.stack.standard, { speed: 1, snap: 5 }) && same(JT.JOB_TIERS
 const S = (id) => AR.ARCADE_TIERS[id].standard;
 ok(same(S('cr'), { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55 }) && same(S('nw'), { n: 0, clock: 0 }) && same(S('ss'), { n: 0, clock: 0 })
   && same(S('bb'), { pot: 1, first: null }) && same(S('cc'), { charge: 1, target: 420 }) && same(S('sr'), { spawn: 1, patience: 9000 })
-  && same(S('st'), { every: 3400, shout: 11, drift: 0.0022 }) && same(S('mc'), { shock: 1, crash: 1 }) && S('tt').set === 'standard' && S('sn').set === 'standard',
+  && same(S('st'), { every: 3400, shout: 11, drift: 0.0022 }) && same(S('mc'), { shock: 1, crash: 1 }) && S('tt').set === 'standard' && S('sn').set === 'standard' && S('mn').baseExp === 24,
   'the arcade\'s Standard knobs are today\'s numbers');
 ok(JSON.stringify(AR.TT_SETS.standard) === JSON.stringify({ monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] })
   && AR.SN_SETS.standard.map((r) => `${r.p}/${r.r}/${r.y}`).join() === '100/0.1/10,100/0.07/20,500/0.05/10,1000/0.1/20,200/0.08/30,100/0.1/30',
@@ -151,6 +151,67 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   ok(!faults.length, 'every job paints without a fault at every level — on the picker, mid-shift and on SHIFT DONE', faults.slice(0, 3).join(' | '));
 }
 
+/* ── Main Street: a level is the life everyone pays for, and the wage scales back ── */
+{
+  /* the board's turns run on timers; run them in order, at once, and play the human's turns */
+  const realST = globalThis.setTimeout, realCT = globalThis.clearTimeout, q = [];
+  globalThis.setTimeout = (f) => { q.push(f); return q.length; }; globalThis.clearTimeout = () => {};
+  const res = {};
+  try {
+    for (const t of T) {
+      K().goals = {}; const w0 = K().money.wallet;
+      AR.startGame('mn', null, t); const g = R.game;
+      const exp0 = g.g.players.map((p) => p.expenses);
+      for (let i = 0; i < 20000 && !g.g.done; i++) {
+        if (q.length) { q.shift()(); continue; }
+        const ph = g.g.phase, me = g.g.players[g.g.turn];
+        if (!me.human) break;
+        if (ph === 'roll') g.act('mnRoll');
+        else if (ph === 'decide') g.act(me.cash >= 120 ? 'mnBuy' : 'mnPass');
+        else if (ph === 'card') g.act('mnCard', 0);
+        else g.act('mnEnd');
+      }
+      const me = g.g.players[0];
+      res[t] = { exp0, done: g.g.done, won: g.g.won, paid: K().money.wallet - w0, mine: g.g.mine, goals: Object.keys(JT.goalsMet(K(), 'mn')), chip: g.view().includes(`class="tierchip" data-tier="${t}"`), list: /data-goal="win"/.test(g.view()), same: R.game === g };
+      AR.quitGame();
+    }
+  } finally { globalThis.setTimeout = realST; globalThis.clearTimeout = realCT; }
+  ok(T.every((t) => res[t].exp0.every((e) => e === AR.ARCADE_TIERS.mn[t].baseExp)), 'Main Street: everyone at the table starts on the level\'s expenses (18 / 24 / 30)', T.map((t) => res[t].exp0.join(',')).join(' | '));
+  ok(T.every((t) => res[t].done && res[t].won > 0 && res[t].chip && res[t].list), 'Main Street plays to the end on every level, pays a wage, and shows its level chip and goals', JSON.stringify(T.map((t) => [res[t].done, res[t].won, res[t].chip, res[t].list, res[t].same])));
+  ok(T.some((t) => res[t].goals.length > 0), 'Main Street ticks goals from the run itself', JSON.stringify(T.map((t) => res[t].goals)));
+  /* the same street pays the same on every level: wage ∝ income × (24 / level's expenses) */
+  const { mainStreet } = await import('../src/board.js');
+  const scale = T.map((t) => { const b = mainStreet({ baseExp: AR.ARCADE_TIERS.mn[t].baseExp }); return 24 / b.EXP0; });
+  ok(scale[0] > 1 && scale[1] === 1 && scale[2] < 1 && mainStreet().EXP0 === 24, 'Main Street: a cheaper life (Easy) needs less income, so each unit of it pays more; Tricky the reverse; Standard untouched', scale.map((x) => x.toFixed(2)).join(' / '));
+}
+
+/* ── Compound Climb rewards the steady middle, not the gamble (rule 3) ──────
+   Over 240 seeds a steady 45–65% charge must beat a high 80–100% charge on the expected
+   tower AND on the chance of clearing the line, while the high charge still brings down
+   years and can wipe you out. */
+{
+  let s2 = 5; const rnd = () => { s2 = (s2 * 1664525 + 1013904223) % 4294967296; return s2 / 4294967296; };
+  const band = (lo, hi, seeds) => {
+    let sum = 0, tgt = 0, down = 0, ruin = 0;
+    for (const sd of seeds) {
+      AR.startGame('cc', sd, 'standard'); const g = R.game; let d = false;
+      while (!g.st.done) { g.st.holding = true; g.st.charge = lo + rnd() * (hi - lo); g.release(); if (g.st.last && g.st.last.pct < 0) d = true; }
+      sum += g.st.money; if (g.st.money >= 420) tgt++; if (d) down++; if (g.st.ruined) ruin++;
+      AR.quitGame();
+    }
+    const n = seeds.length; return { mean: sum / n, tgt: tgt / n, down: down / n, ruin: ruin / n };
+  };
+  const seeds = Array.from({ length: 240 }, (_, k) => 1 + k * 7919);
+  const mid = band(45, 65, seeds), high = band(80, 100, seeds), low = band(10, 30, seeds), full = band(95, 100, seeds);
+  const f = (b) => `mean ${b.mean.toFixed(0)}, P(line) ${b.tgt.toFixed(2)}, P(down year) ${b.down.toFixed(2)}, P(wiped) ${b.ruin.toFixed(3)}`;
+  ok(mid.mean > high.mean && mid.mean > low.mean, 'Compound Climb: a steady middle charge has the best expected tower (240 seeds)', `middle ${f(mid)} | high ${f(high)} | low ${f(low)}`);
+  ok(mid.tgt > high.tgt && mid.tgt > low.tgt && mid.tgt >= 0.5, 'Compound Climb: …and the best chance of clearing the line');
+  ok(high.down >= 0.9 && full.ruin > 0, 'Compound Climb: past a point it goes backwards — and at full charge you can be wiped out', `high: ${f(high)} | full: ${f(full)}`);
+  const fixed = (lo, hi) => { let sum = 0; for (let k = 0; k < 40; k++) sum += band(lo, hi, [8821]).mean; return sum / 40; };
+  const fm = fixed(45, 65), fh = fixed(80, 100);
+  ok(fm > fh, 'Compound Climb: on the game\'s own seed (8821) the middle beats the high charge too', `${fm.toFixed(0)} vs ${fh.toFixed(0)}`);
+}
+
 /* ── pay is measured against the level's own par ────────────────────────── */
 {
   for (const t of T) {
@@ -205,7 +266,7 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   const nothing = { right: 0, n: 8, exact: 0, overpays: 0, firstRun: 0, finished: false, needWrong: 8, wantWrong: 8, scamWrong: 5, safeWrong: 5,
     mustMissed: 5, left: 0, pot: 100, reached: false, years: 3, falls: 2, maxCharge: 100, profit: 0, lost: 4, wrong: 0, served: 0, held: false, maxPanic: 100,
     spreadWeeks: 0, weeks: 6, churn: 400, beatBella: false, weeklyWrong: 3, compareRight: false, simple: 2, longWrong: 2,
-    bestCombo: 0, squares: 0, misses: 3, lurches: 3, bestChain: 0, caught: 0, dogs: 3, missed: 20, posted: 0 };
+    bestCombo: 0, squares: 0, misses: 3, lurches: 3, bestChain: 0, caught: 0, dogs: 3, missed: 20, posted: 0, won: false, owned: 0, sold: 3 };
   const free = tables.flatMap(([id, t]) => t.filter((g) => g.check(nothing)).map((g) => id + '.' + g.id));
   ok(!free.length, 'no goal is ticked by a run where nothing went right', free.join(','));
   const c = K(), wallet = c.money.wallet, xp = c.learn.xp;
