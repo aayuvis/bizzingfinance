@@ -197,3 +197,15 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 @keyframes routein{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){#main.route-in{animation:none}}
 :root[data-motion="reduced"] #main.route-in{animation:none}
+/* a medal to show a grown-up (audit v4, L7) */
+.badge .showgu{margin-top:6px}
+.showcard-ov{display:grid;place-items:center;padding:16px}
+.showcard{position:relative;overflow:hidden;width:min(420px,100%);border-radius:28px;padding:36px 24px 22px;text-align:center;
+  background:radial-gradient(120% 90% at 50% 0%,#FFF3C4,#FFE29A 55%,#F6C454);color:#3A2400;box-shadow:0 24px 60px rgb(60 40 0 / .35);animation:medalin .45s cubic-bezier(.2,1.5,.4,1) both}
+.showcard .ray{inset:-30%}
+.showcard > *:not(.ray){position:relative}
+.sc-medal{width:132px;height:132px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#FFFBEA,#F0B429 60%,#B57E10);box-shadow:0 10px 24px rgb(120 80 0 / .35),inset 0 -6px 0 rgb(0 0 0 / .08)}
+.showcard .eyebrow{color:#7A4A00}
+.showcard h2{font-size:30px;margin:4px 0 6px}
+.sc-foot{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px}
+@media (prefers-reduced-motion:reduce){.showcard,.showcard .ray{animation:none}}

@@ -1943,7 +1943,8 @@ export function viewCollection() {
           return `<div data-focus="badge:${k}" class="badge${has ? ' got' : ''}">
             <div class="bic">${ico(has ? b.em : 'lock', has ? b.em : '🔒', 24)}</div>
             <div class="bnm">${esc(b.name)}</div>
-            <div class="small muted bds">${has || hint ? esc(b.desc) : 'Not yet'}</div></div>`; };
+            <div class="small muted bds">${has || hint ? esc(b.desc) : 'Not yet'}</div>
+            ${has ? `<button class="btn ghost sm showgu" data-act="showMedal" data-arg="${k}">Show a grown-up</button>` : ''}</div>`; };
         return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile).join('')}</div>` : ''}
           ${ahead.length ? `<div class="eyebrow" style="margin-top:14px">Next to earn</div>
             <div class="grid3" style="margin-top:8px">${ahead.slice(0, 6).map((k) => tile(k, true)).join('')}</div>` : ''}

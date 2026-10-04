@@ -399,6 +399,18 @@ function overlay() {
       ${done ? `<div class="fb ${right ? 'yes' : 'no'}" role="status" style="margin-top:10px"><b>${right ? 'That’s it.' : 'It means: ' + esc(q.opts[q.answer])}</b> ${esc(q.eg)}</div>
         <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-act="closeOv">Done</button><button class="btn ghost" data-act="goto" data-arg="#/words/${encodeURIComponent(q.term)}">Every Money Word</button></div>` : ''}`);
   }
+  /* a medal to hold up and show (audit v4, L7): drawn on screen, never saved, sent or uploaded */
+  if (o.kind === 'showMedal') {
+    const b = BADGES[o.id];
+    return `<div class="ov showcard-ov" data-act="closeOv"><div class="showcard" data-act="noop" role="dialog" aria-modal="true" aria-label="${esc(b.name)}">
+      <button class="ovx" data-act="closeOv" aria-label="Close">${ico('close', '', 18)}</button>
+      <span class="ray"></span>
+      <div class="sc-medal">${ico(b.em, b.em, 72)}</div>
+      <div class="eyebrow">${esc(c.name)} earned a medal in Bizzington</div>
+      <h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p>
+      <div class="sc-foot">${kidBadge(c, 44)}<span class="small">Bizzing Finance · no real money, ever</span></div>
+    </div></div>`;
+  }
   if (o.kind === 'drawer') return shell.drawer(c);
   if (o.kind === 'settings') return box(shell.settingsSheet(c, o.focus), 'sheet');
   if (o.kind === 'walletSheet') return box(shell.walletSheet(c), true);
@@ -1078,6 +1090,7 @@ on('coldStop', () => { R.cold = null; render(); });
 /* the word of the hour, checked in ten seconds: one go, the meaning shown either way, nothing paid */
 on('wordCheck', (term) => { const q = daily.wordCheck(term); if (!q) return; R.overlay = { kind: 'wordCheck', q, pick: null }; render(); });
 on('wcPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'wordCheck' || o.pick != null) return; o.pick = +i; if (o.pick === o.q.answer) sfx.good(); else sfx.bad(); render(); });
+on('showMedal', (k) => { if (!BADGES[k] || !C().badges.includes(k)) return; R.overlay = { kind: 'showMedal', id: k }; sfx.medal(); render(); });
 on('nextQ', () => {
   const c = C(), st = c.learn.drill;
   if (!st || !st.picks || !drill.settled(st.picks[st.qi])) return;   /* a held question waits for its second go */
