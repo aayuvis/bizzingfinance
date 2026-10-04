@@ -8908,7 +8908,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       who: c && c.name
     };
   }
-  var A2, T, MILESTONES, ms, PACKS2, RAW, CATALOGUE, BY_ID2, COMMONS;
+  var A2, T, MILESTONES, ms, PACKS2, RAW, CATALOGUE, BY_ID2, COMMONS, PACK_OF;
   var init_catalogue = __esm({
     "src/catalogue.js"() {
       init_bizzing_avatars();
@@ -8971,6 +8971,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       })));
       BY_ID2 = Object.fromEntries(CATALOGUE.map((a) => [a.id, a]));
       COMMONS = CATALOGUE.filter((a) => a.tier === "common");
+      PACK_OF = (n) => PACKS2.find((p) => p.n === n);
     }
   });
 
@@ -14820,7 +14821,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   });
 
   // src/gamemarket.js
-  function pick3(list3, r) {
+  function pick4(list3, r) {
     const total = list3.reduce((t, e) => t + e.w, 0);
     let x = r() * total;
     for (const e of list3) {
@@ -14839,15 +14840,15 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       ["macro", "country"].forEach((lvl) => {
         let n = M2.eventsPerYear[lvl];
         while (n > 0) {
-          if (r() < Math.min(1, n)) add(y, pick3(byLevel[lvl], r), { kind: lvl });
+          if (r() < Math.min(1, n)) add(y, pick4(byLevel[lvl], r), { kind: lvl });
           n -= 1;
         }
       });
       SECTORS.forEach((s) => {
-        if (r() < M2.eventsPerYear.sector) add(y, pick3(byLevel.sector, r), { kind: "sector", sector: s.id });
+        if (r() < M2.eventsPerYear.sector) add(y, pick4(byLevel.sector, r), { kind: "sector", sector: s.id });
       });
       COMPANIES2.forEach((c) => {
-        if (r() < M2.eventsPerYear.company) add(y, pick3(byLevel.company, r), { kind: "company", company: c.id });
+        if (r() < M2.eventsPerYear.company) add(y, pick4(byLevel.company, r), { kind: "company", company: c.id });
       });
     }
     return cal;
@@ -15043,10 +15044,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const revUp = p ? r.revenue / p.revenue - 1 : 0;
     const netUp = p ? r.net / Math.max(1, Math.abs(p.net)) - 1 : 0;
     const marginDown = p ? r.margin < p.margin : false;
-    const pick4 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
+    const pick5 = (a) => a[(y * 7 + c.id.length * 3) % a.length];
     const good = netUp > 0.08 && revUp > 0.04;
     const bad = netUp < -0.1 || r.net < 0;
-    const open2 = good ? pick4(OPEN_GOOD) : bad ? pick4(OPEN_BAD) : pick4(OPEN_MIXED);
+    const open2 = good ? pick5(OPEN_GOOD) : bad ? pick5(OPEN_BAD) : pick5(OPEN_MIXED);
     const body = [];
     body.push(!p ? `In our first year, revenue was ${inr(r.revenue)}.` : revUp >= 0 ? `Revenue grew ${pc(revUp)} to ${inr(r.revenue)}.` : `Revenue fell ${pc(-revUp)} to ${inr(r.revenue)}, which is not where we wanted to be.`);
     if (marginDown) {
@@ -15193,10 +15194,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   function study(g, id) {
     if (!g.studied.includes(id)) g.studied.push(id);
   }
-  function assess(g, id, pick4) {
+  function assess(g, id, pick5) {
     const c = byId3[id], a = assessOptions(c);
-    const right = pick4 === a.answer;
-    g.assessed[id] = { pick: pick4, right, answer: a.answer };
+    const right = pick5 === a.answer;
+    g.assessed[id] = { pick: pick5, right, answer: a.answer };
     g.score.asked++;
     if (right) g.score.right++;
     return { right, answer: a.answer, why: a.why, label: a.options.find((o) => o.id === a.answer).t };
@@ -15639,8 +15640,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           R.render();
           return;
         }
-        const pick4 = card3.choices ? card3.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card3;
-        const res = pick4.run(g, p);
+        const pick5 = card3.choices ? card3.choices[BOTS.find((b) => b.name === p.name) && BOTS.find((b) => b.name === p.name).insure ? 0 : 1] : card3;
+        const res = pick5.run(g, p);
         p.cash += res.cash || 0;
         note3(`${p.name} \u2014 ${card3.t}. ${res.note}`);
         settle(p);
@@ -16435,10 +16436,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       st2.shown = Date.now();
       if (kn.clock && !st2.done) timer2 = setTimeout(() => {
         timer2 = 0;
-        pick4(null);
+        pick5(null);
       }, kn.clock);
     };
-    const pick4 = (side) => {
+    const pick5 = (side) => {
       if (st2.done) return;
       stop3();
       const it = items2[st2.i];
@@ -16486,12 +16487,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           }
           return;
         }
-        if (e.key === "ArrowLeft") pick4(cfg2.left.side);
-        else if (e.key === "ArrowRight") pick4(cfg2.right.side);
+        if (e.key === "ArrowLeft") pick5(cfg2.left.side);
+        else if (e.key === "ArrowRight") pick5(cfg2.right.side);
       },
       act(n) {
-        if (n === cfg2.left.act) pick4(cfg2.left.side);
-        else if (n === cfg2.right.act) pick4(cfg2.right.side);
+        if (n === cfg2.left.act) pick5(cfg2.left.side);
+        else if (n === cfg2.right.act) pick5(cfg2.right.side);
       },
       view() {
         if (st2.done) return `<div class="stack">${hud(["Done", tierChip()])}
@@ -19321,7 +19322,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       sfx.level();
     };
     st2.end = finish5;
-    const pick4 = (t) => {
+    const pick5 = (t) => {
       if (!st2.picking || !TIER_IDS.includes(t)) return;
       retier(t);
       setTier(K9(), jobId, t);
@@ -19480,9 +19481,9 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         }
         if (st2.picking) {
           const i = TIER_IDS.indexOf(st2.tier);
-          if (e.key >= "1" && e.key <= "3" && e.key.length === 1) pick4(TIER_IDS[+e.key - 1]);
-          else if (e.key === "ArrowLeft") pick4(TIER_IDS[Math.max(0, i - 1)]);
-          else if (e.key === "ArrowRight") pick4(TIER_IDS[Math.min(2, i + 1)]);
+          if (e.key >= "1" && e.key <= "3" && e.key.length === 1) pick5(TIER_IDS[+e.key - 1]);
+          else if (e.key === "ArrowLeft") pick5(TIER_IDS[Math.max(0, i - 1)]);
+          else if (e.key === "ArrowRight") pick5(TIER_IDS[Math.min(2, i + 1)]);
           else if (e.key === "Enter" || e.key === " ") {
             if (e.preventDefault) e.preventDefault();
             begin2();
@@ -19494,7 +19495,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       },
       act(n, arg) {
         if (n === "jgTier") {
-          pick4(arg);
+          pick5(arg);
           return;
         }
         if (n === "jgStart") {
@@ -20897,7 +20898,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     });
   }
   function house(ctx3, x, i, lit) {
-    const w = 76 + Math.floor(hash2(i) * 22), h = 64 + Math.floor(hash2(i + 9) * 22), y = 112 - h;
+    const w = 76 + Math.floor(hash3(i) * 22), h = 64 + Math.floor(hash3(i + 9) * 22), y = 112 - h;
     ctx3.fillStyle = HOUSES[i % HOUSES.length];
     ctx3.fillRect(x, y, w, h);
     ctx3.fillStyle = "rgba(0,0,0,.08)";
@@ -20905,7 +20906,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     ctx3.fillStyle = ["#8A4B2A", "#5B3C22", "#6E2E28"][i % 3];
     ctx3.beginPath();
     ctx3.moveTo(x - 4, y);
-    ctx3.lineTo(x + w / 2, y - 18 - hash2(i + 3) * 8);
+    ctx3.lineTo(x + w / 2, y - 18 - hash3(i + 3) * 8);
     ctx3.lineTo(x + w + 4, y);
     ctx3.closePath();
     ctx3.fill();
@@ -21254,12 +21255,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         houseAt = [];
         let x, i = 0, acc = 0;
         while (acc < hs - 200) {
-          acc += 76 + Math.floor(hash2(i) * 22) + 6;
+          acc += 76 + Math.floor(hash3(i) * 22) + 6;
           i++;
         }
         x = acc - hs - 100;
         while (x < W2 + 10) {
-          const w = 76 + Math.floor(hash2(i) * 22) + 6;
+          const w = 76 + Math.floor(hash3(i) * 22) + 6;
           houseAt.push({ dx: x + (w - 6) / 2, i });
           house(ctx3, x, i, st2.doorGlow[i] || 0);
           x += w;
@@ -21355,7 +21356,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const lvl = opts && TIER_IDS.includes(opts.tier) ? opts.tier : void 0;
     return f ? f(id, quit, lvl) : null;
   }
-  var hearts, K9, W2, H2, dark2, hash2, STACK_LOOK, STACK_TINT, TRIM_LOOKS, SWEEP_LOOK, RUN_DROP, HOUSES;
+  var hearts, K9, W2, H2, dark2, hash3, STACK_LOOK, STACK_TINT, TRIM_LOOKS, SWEEP_LOOK, RUN_DROP, HOUSES;
   var init_jobgames = __esm({
     "src/jobgames.js"() {
       init_ui();
@@ -21372,7 +21373,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       W2 = 360;
       H2 = 300;
       dark2 = () => !!R.dark;
-      hash2 = (i) => {
+      hash3 = (i) => {
         const s = Math.sin(i * 127.1 + 311.7) * 43758.5453;
         return s - Math.floor(s);
       };
@@ -22010,7 +22011,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
   }
   function shelterView(o) {
     const kinds = Object.keys(KINDS);
-    const pick4 = o.pick;
+    const pick5 = o.pick;
     return `
     <div class="eyebrow">The shelter behind the Jar Shed</div>
     <h2 style="margin:4px 0 6px">Five who need homes</h2>
@@ -22018,14 +22019,14 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     <div class="shelter">
       ${kinds.map((k) => {
       const sp = CO[`${k}-baby-happy`] || CO[`${k}-baby-okay`];
-      return `<button class="shelf${pick4 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
+      return `<button class="shelf${pick5 === k ? " on" : ""}" data-act="shelterPick" data-arg="${k}">
           ${sp ? `<img src="${sp.src}" alt="" style="width:76px;height:${Math.round(76 * sp.h / sp.w)}px">` : `<div style="height:76px;display:grid;place-items:center">${ico(KIND_ICON[k] || "quest", "\u{1F43E}", 34)}</div>`}
           <b>${esc(KINDS[k].name)}</b></button>`;
     }).join("")}
     </div>
-    ${pick4 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick4].line)}</p>
+    ${pick5 ? `<p class="small" style="margin-top:12px">${esc(KINDS[pick5].line)}</p>
       <label class="small muted" style="display:block;margin-top:12px">What will you call them?</label>
-      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick4].name)}" value="${esc(o.name || "")}">
+      <input class="field" data-field="petname" maxlength="16" placeholder="${esc(KINDS[pick5].name)}" value="${esc(o.name || "")}">
       <button class="btn wide" style="margin-top:12px" data-act="adopt">Take ${esc(o.name || "them")} home \xB7 ${money(price(C.adopt))}</button>` : ""}
     <button class="btn ghost wide" style="margin-top:10px" data-act="closeOv">Not today</button>`;
   }
@@ -22325,10 +22326,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const d2 = day2 == null ? dayNo() : day2;
     const r = rng2(d2 + 1);
     const n = 3 + Math.floor(r() * 2);
-    const pick4 = [];
+    const pick5 = [];
     const pool2 = GOODS.slice();
-    for (let i = 0; i < n; i++) pick4.push(pool2.splice(Math.floor(r() * pool2.length), 1)[0]);
-    const lines = pick4.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
+    for (let i = 0; i < n; i++) pick5.push(pool2.splice(Math.floor(r() * pool2.length), 1)[0]);
+    const lines = pick5.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
     const multi = r() < 0.5;
     const hidden = Math.floor(r() * lines.length);
     if (multi) lines[hidden].qty = 2 + Math.floor(r() * 3);
@@ -23215,8 +23216,8 @@ ${marks}`;
     return { when: day2, text, reversed: d2.reversed };
   }
   function conversation(c, moved) {
-    const pick4 = moved.find((m2) => m2.to === "retained" || m2.to === "transferred") || moved[moved.length - 1];
-    const o = pick4 ? objective(pick4.id) : null;
+    const pick5 = moved.find((m2) => m2.to === "retained" || m2.to === "transferred") || moved[moved.length - 1];
+    const o = pick5 ? objective(pick5.id) : null;
     if (!o) return null;
     return {
       objective: o.id,
@@ -24063,7 +24064,7 @@ ${marks}`;
   }
   function viewRevise(c) {
     const rows = reviseList(c);
-    const cardOf = (id) => {
+    const cardOf2 = (id) => {
       for (const ch of CHAPTERS) {
         const k = ch.cards.find((x) => x.id === id);
         if (k) return { k, ch };
@@ -24074,7 +24075,7 @@ ${marks}`;
     <button class="backlink" data-act="shelf" data-arg="">${ico("back", "\u2190", 16)} The map</button>
     <div><h1 style="font-size:26px">Revise</h1><p class="small muted">Things due for another look, and things missed more than once. Read from your record \u2014 nothing here is a guess.</p></div>
     ${rows.length ? `<div class="card pad0"><div class="rows" style="margin:0">${rows.map(({ o, why }) => {
-      const t = cardOf(o.teach);
+      const t = cardOf2(o.teach);
       return `<button class="qrow" style="width:100%;text-align:left" data-act="card" data-arg="${o.teach}">
         <span class="iw">${ico(why === "due for a look" ? "moon" : "quest", "\u{1F501}", 20)}</span>
         <span class="grow" style="min-width:0"><b style="font-size:14.5px">${esc(o.short || o.objective)}</b><div class="small muted">${t ? esc(t.k.title) + " \xB7 " + esc(t.ch.title) + " \xB7 " : ""}${why}</div></span></button>`;
@@ -24865,6 +24866,170 @@ ${drawerHTML(o)}`;
 
   // src/views.js
   init_avatars();
+
+  // src/avcards.js
+  init_catalogue();
+  init_ui();
+  init_art();
+  function hash(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  var pick3 = (arr, key2) => arr[hash(key2) % arr.length];
+  var TIER_STAT = { common: [52, 16], rare: [62, 18], epic: [72, 18], legendary: [84, 14] };
+  var STATS = [["patience", "clock", "Patience"], ["smarts", "learn", "Smarts"], ["hustle", "run", "Hustle"], ["heart", "heart", "Heart"]];
+  function statsFor(id, tier2) {
+    const [base, spread2] = TIER_STAT[tier2] || TIER_STAT.common, out = {};
+    STATS.forEach(([k], i) => {
+      const u = hash(id + ":" + k + i) % 10007 / 10006;
+      out[k] = Math.max(28, Math.min(99, base + Math.round((u * 2 - 1) * spread2)));
+    });
+    return out;
+  }
+  var RANKWORD = { common: "Rookie", rare: "Trusty", epic: "Star", legendary: "Legend" };
+  var PACK_TITLE = {
+    1: "of the Critter Crew",
+    2: "of Market Row",
+    3: "of the Old Harbour",
+    4: "with the Vibe",
+    5: "of Clocktower Square",
+    6: "of the Post Office",
+    7: "of the Savings Shelf",
+    8: "of the Exchange",
+    9: "of the Builders\u2019 Yard",
+    10: "of the Makers\u2019 Lane",
+    11: "of the Bandstand",
+    12: "of Festival Night"
+  };
+  var LORE2 = {
+    1: ["{n} hops in from Bizzing Bee\u2019s meadow and keeps a jar of shiny buttons \u201Cfor later\u201D.", "{n} came over from the Bee\u2019s meadow and still counts change out loud."],
+    2: ["{n} is up before the first awning on Market Row, chalking the day\u2019s prices.", "{n} knows which stall on Market Row sells the fairest bunch, and why."],
+    3: ["{n} watches the boats come in at the Old Harbour and knows every cargo.", "{n} keeps a weather eye on the harbour \u2014 a calm sea is never promised."],
+    4: ["{n} brought the Vibe over from Bizzing Bee and never rushes a decision.", "{n} has opinions about everything, and checks the price first anyway."],
+    5: ["{n} winds the square\u2019s clock that tells Bizzington when pay day comes.", "{n} believes the best money trick of all is waiting."],
+    6: ["{n} sorts the town\u2019s letters and can spot a scam envelope at a glance.", "{n} delivers the postbox\u2019s letters and reads the small print first."],
+    7: ["{n} keeps the Savings Shelf tidy: a jar for each thing worth waiting for.", "{n} has never once spent the Save jar on a whim, and is a little proud of it."],
+    8: ["{n} watches the Exchange board go up and down and does not panic.", "{n} likes boring, steady and spread-out \u2014 and is usually right."],
+    9: ["{n} helps build the town\u2019s new homes, one brick and one budget at a time.", "{n} measures twice, buys once, and keeps every receipt."],
+    10: ["{n} makes things to sell in the Makers\u2019 Lane and works out the cost of each.", "{n} can tell you exactly what one jug costs to make \u2014 clay, time and all."],
+    11: ["{n} plays the bandstand on Saturdays and splits the tips four ways.", "{n} puts on a show and still sets the ticket price with a pencil."],
+    12: ["{n} lights the lanterns on Festival Night and gives a share to the lake fund.", "{n} saved all year for Festival Night, and it shows."]
+  };
+  var POWERS = {
+    patience: [["Slow Burn", "waits for the price to come down"], ["Long Game", "lets savings snowball"], ["Steady Hand", "never sells in a storm"]],
+    smarts: [["Small Print", "reads the bit nobody reads"], ["Unit Sense", "finds the cheaper pack every time"], ["Sum Sight", "sees the whole sum at once"]],
+    hustle: [["Early Bird", "first to the stall with the best stock"], ["Quick Count", "gives the right change in a blink"], ["Second Shift", "turns spare time into pay"]],
+    heart: [["Fair Share", "splits it so nobody minds"], ["Give Jar", "keeps a little for someone else"], ["Good Word", "pays back exactly when promised"]]
+  };
+  var FACTS = [
+    "The first coins we know of were made in Lydia, in what is now Turkey.",
+    "China was the first place to use paper money.",
+    "Cowrie shells were used as money across parts of Africa and Asia long before coins reached them.",
+    "The word \u201Cbank\u201D comes from the Italian \u201Cbanca\u201D \u2014 the bench money-changers worked at.",
+    "\u201CBudget\u201D comes from an old French word for a small leather bag.",
+    "The rupee\u2019s name comes from the Sanskrit \u201Cr\u016Bpya\u201D, meaning shaped silver.",
+    "The dollar is named after the thaler, a silver coin first struck in Bohemia.",
+    "The Penny Black, from Britain, was the first stamp with glue on the back.",
+    "Lloyd\u2019s of London began as a coffee house where ship owners met to share the risk of a voyage.",
+    "Coins got ridged edges so anyone could see if silver had been shaved off them.",
+    "On the island of Yap, huge stone discs were money \u2014 and one could change owner without moving.",
+    "Rules about lending at interest were carved into Babylon\u2019s Code of Hammurabi.",
+    "Writing every amount twice, once in and once out, was set down by Luca Pacioli in Renaissance Italy.",
+    "\u201CExchequer\u201D comes from the chequered cloth English officials counted money on.",
+    "\u201CMoney\u201D and \u201Cmint\u201D both come from Moneta, a title of the Roman goddess whose temple held Rome\u2019s mint.",
+    "Swapping things only works when each person wants what the other has \u2014 that is the problem money solved.",
+    "Banknotes carry watermarks and threads you can see against the light, so they are hard to copy.",
+    "\u201CReceipt\u201D comes from the Latin for \u201Creceived\u201D.",
+    "The Dutch East India Company sold shares that people could trade, and Amsterdam grew the first stock exchange around them.",
+    "Fireworks were first made in China.",
+    "\u201CSalary\u201D and \u201Csalt\u201D share an old Latin root.",
+    "Many old towns grew up around a weekly market day."
+  ];
+  function cardOf(id) {
+    const a = BY_ID2[id];
+    if (!a) return null;
+    const stats = statsFor(id, a.tier), overall = Math.round(STATS.reduce((t, [k]) => t + stats[k], 0) / STATS.length);
+    const top = STATS.map(([k]) => k).reduce((b, k) => stats[k] > stats[b] ? k : b, "patience");
+    const [pw, pwLine] = pick3(POWERS[top], id + "pw");
+    return {
+      id,
+      name: a.name,
+      tier: a.tier,
+      tierLabel: TIERS[a.tier].label,
+      colour: TIERS[a.tier].colour,
+      pack: PACK_OF(a.pack),
+      art: a.art,
+      stats,
+      overall,
+      rank: RANKING().indexOf(id) + 1,
+      title: `${RANKWORD[a.tier]} ${PACK_TITLE[a.pack] || ""}`.trim(),
+      lore: pick3(LORE2[a.pack] || LORE2[1], id + "lore").replace("{n}", a.name),
+      power: pw,
+      powerLine: pwLine,
+      fact: pick3(FACTS, id + "fact")
+    };
+  }
+  var TORD = { legendary: 0, epic: 1, rare: 2, common: 3 };
+  var rankCache = null;
+  function RANKING() {
+    if (!rankCache) {
+      const ov = (a) => {
+        const s = statsFor(a.id, a.tier);
+        return STATS.reduce((t, [k]) => t + s[k], 0) / STATS.length;
+      };
+      rankCache = [...CATALOGUE].sort((x, y) => ov(y) - ov(x) || TORD[x.tier] - TORD[y.tier] || x.name.localeCompare(y.name)).map((a) => a.id);
+    }
+    return rankCache;
+  }
+  function deckIds(s, c) {
+    const ctx3 = ctxFor(s, c);
+    return CATALOGUE.filter((a) => a.id === c.avatar || stateOf3(a, ctx3).state === "owned").map((a) => a.id);
+  }
+  function cardHTML(id, { wearing = false, owned = true } = {}) {
+    const d2 = cardOf(id);
+    if (!d2) return "";
+    const bars = STATS.map(([k, icon2, label3]) => {
+      const v = d2.stats[k];
+      const col = v >= 85 ? "var(--grow)" : v >= 68 ? "var(--save)" : v >= 50 ? "var(--give)" : "var(--muted)";
+      return `<div class="avc-stat"><span>${ico(icon2, "", 14)} ${label3}</span><span class="avc-bar"><i style="width:${Math.round(v / 99 * 100)}%;background:${col}"></i></span><b>${v}</b></div>`;
+    }).join("");
+    return `<article class="avc avc-${d2.tier}" style="--tc:${d2.colour}" aria-label="${esc(d2.name)}, ${esc(d2.tierLabel)}, overall ${d2.overall}, ranked ${d2.rank} of ${CATALOGUE.length}">
+    <div class="avc-top"><span class="avc-ovr"><b>${d2.overall}</b><i>OVR</i></span>
+      <span class="avc-rank" title="Ranked by overall among all ${CATALOGUE.length}">#${d2.rank} <small>of ${CATALOGUE.length}</small></span>
+      <span class="avc-tier">${esc(d2.tierLabel)}</span></div>
+    <div class="avc-art"><img src="${d2.art}" alt="" width="150" height="150"></div>
+    <h3 class="avc-name">${esc(d2.name)}</h3>
+    <p class="avc-title">${esc(d2.title)}</p>
+    <p class="avc-lore">${esc(d2.lore)}</p>
+    <div class="avc-stats">${bars}</div>
+    <p class="avc-power"><b>${ico("sparkle", "", 13)} ${esc(d2.power)}</b> \u2014 ${esc(d2.powerLine)}</p>
+    <div class="avc-fact"><span class="eyebrow">From the history of money</span>${esc(d2.fact)}</div>
+    <p class="avc-foot"><span>${esc(d2.pack ? d2.pack.name : "")}</span><span>${wearing ? "Wearing" : owned ? d2.tier === "common" ? "Free for everyone" : "Yours" : ""}</span></p>
+  </article>`;
+  }
+  function deckView(s, c, i) {
+    const ids = deckIds(s, c);
+    if (!ids.length) return "";
+    const k = (i % ids.length + ids.length) % ids.length, id = ids[k], wearing = c.avatar === id, multi = ids.length > 1;
+    return `<div class="avdeck" data-avdeck="${k}">
+    <div class="sheet-h"><span class="eyebrow">Your avatar cards</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
+    <div class="avd-stage">
+      ${multi ? '<span class="avd-ghost g2" aria-hidden="true"></span><span class="avd-ghost g1" aria-hidden="true"></span>' : ""}
+      ${cardHTML(id, { wearing })}
+      ${multi ? `<button class="avd-nav prev" data-act="avdGo" data-arg="-1" aria-label="Previous card">${ico("back", "\u2039", 22)}</button>
+      <button class="avd-nav next" data-act="avdGo" data-arg="1" aria-label="Next card">${ico("forward", "\u203A", 22)}</button>` : ""}
+    </div>
+    <div class="avd-bar"><span class="avd-count" role="status">${k + 1} of ${ids.length} yours</span>
+      ${wearing ? '<span class="avd-worn">Wearing</span>' : `<button class="btn" data-act="avdWear" data-arg="${id}">Wear this one</button>`}</div>
+    <p class="small muted" style="text-align:center;margin:8px 0 0">\u2190 \u2192 or swipe to flip \xB7 <a href="#/collection" data-act="closeOv">See all ${CATALOGUE.length} in the Collection</a></p>
+  </div>`;
+  }
+
+  // src/views.js
   init_sprout();
   var dayIndexOf = (t) => Math.floor((t - new Date(t).getTimezoneOffset() * 6e4) / 864e5);
   var K2 = () => kid2(R.s);
@@ -25099,7 +25264,8 @@ ${drawerHTML(o)}`;
     const jobs = jobsToday(c), jdone = jobs.filter((j) => j.done).length;
     const cast = CAST_LINES[(/* @__PURE__ */ new Date()).getHours() % CAST_LINES.length];
     const body = home({
-      greet: { mascot: "./mascot/sm/pip-wave.webp", hello, name: c.name, line: line2 },
+      /* the child's own face, as in Bizzing Bee; a tap opens their avatar cards (avcards.js) */
+      greet: { mascot: avatarSrc(c.avatar), hello, name: c.name, line: line2 },
       /* how far to the next level, not only its name (audit v4, B3) */
       ring: { html: ring2, foot: { kicker: `Your level \xB7 ${xb.need} XP to level ${c.learn.level + 1}`, title: `${rank.name} \xB7 level ${c.learn.level}`, href: "#/me/rank" } },
       /* a tap is a 10-second check on the word, not a trip to the glossary (audit v4, B8) */
@@ -25136,6 +25302,8 @@ ${drawerHTML(o)}`;
       quote: { kicker: "Overheard in Bizzington", text: cast[1], who: cast[0], href: "#/cast/" + ({ "Nana Bizz": "nana", Pip: "pip", Mags: "mags", Bea: "bea", Bo: "bo" }[cast[0]] || "pip") },
       foot: '<a href="#/privacy">Privacy</a> \xB7 Bizzing Finance \u2014 no real money, ever'
     });
+    const deckN = deckIds(R.s, c).length;
+    const homeBody = body.replace(/(data-bz="greet">)(<img [^>]*>)/, `$1<button class="bz-avbtn" data-act="avDeck" aria-label="Your avatar cards \u2014 ${deckN} yours" title="Flip through your avatar cards">$2<span class="bz-avcount" aria-hidden="true">${deckN}</span></button>`);
     const first = !Object.keys(c.learn.done || {}).length;
     const day1 = first ? `<section class="card firstday" aria-label="Your first day"><span class="eyebrow">Your first day in Bizzington</span>
     <ol><li><a href="#/continue">Walk your first stop \u2014 \u201C${esc(ALL_CARDS[0].title)}\u201D</a></li><li><a href="#/town">Take a shift on Market Row</a></li><li><a href="#/town">Open the postbox \u2014 one letter a day</a></li></ol>
@@ -25143,7 +25311,7 @@ ${drawerHTML(o)}`;
       <a class="fd-link" href="#/coldplace/0">${ico("forward", "", 18)}<span><b>Already know ${esc(WORLDS[0].name)}?</b> Answer it cold \u2014 every stop you get right is yours without the lesson.</span></a>
       ${measured(c) ? "" : `<a class="fd-link" href="#/pipcount">${ico("abacus", "", 18)}<span><b>Help Pip count the stall\u2019s takings</b> \u2014 a few quick sums, no clock, no score.</span></a>`}
     </div></section>` : "";
-    return `<h1 class="sr">Home \u2014 ${esc(c.name)}</h1>${body}${day1}`;
+    return `<h1 class="sr">Home \u2014 ${esc(c.name)}</h1>${homeBody}${day1}`;
   }
   function townDay() {
     const c = K2(), quests = questList(c);
@@ -27237,7 +27405,7 @@ ${drawerHTML(o)}`;
   var SPREAD = 1.5;
   var WHY_COST = 1.6;
   var DAY4 = 864e5;
-  function hash(s) {
+  function hash2(s) {
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) {
       h ^= s.charCodeAt(i);
@@ -27288,7 +27456,7 @@ ${drawerHTML(o)}`;
         s += 1;
         why = "Coming up on " + nm(it.level);
       }
-      s += hash(it.id + ":" + today2) % 1e3 / 600;
+      s += hash2(it.id + ":" + today2) % 1e3 / 600;
       scored.push({ it, s, why, tier: tier2 });
     }
     scored.sort((a, b) => b.s - a.s);
@@ -27297,7 +27465,7 @@ ${drawerHTML(o)}`;
     const cap2 = { review: Math.floor(limit * 0.25), next: 2, any: Math.floor(limit * 0.25) };
     const pool2 = scored.slice(), maxPlay = o.maxPlay ?? MAX_PLAY, maxKind = o.maxKind ?? MAX_KIND, maxWhy = o.maxWhy ?? MAX_WHY;
     while (out.length < limit && pool2.length) {
-      let pick4 = -1, bestS = -Infinity;
+      let pick5 = -1, bestS = -Infinity;
       for (let i = 0; i < pool2.length; i++) {
         const k = pool2[i].it.kind, n = out.length;
         if (n >= 2 && out[n - 1].kind === k && out[n - 2].kind === k) continue;
@@ -27310,11 +27478,11 @@ ${drawerHTML(o)}`;
         const eff = pool2[i].s - SPREAD * (kinds[k] || 0) - WHY_COST * wn;
         if (eff > bestS) {
           bestS = eff;
-          pick4 = i;
+          pick5 = i;
         }
       }
-      if (pick4 < 0) break;
-      const p = pool2.splice(pick4, 1)[0];
+      if (pick5 < 0) break;
+      const p = pool2.splice(pick5, 1)[0];
       kinds[p.it.kind] = (kinds[p.it.kind] || 0) + 1;
       if (p.it.play) plays++;
       if (p.why) whys[p.why] = (whys[p.why] || 0) + 1;
@@ -27325,7 +27493,7 @@ ${drawerHTML(o)}`;
   }
   function order(id, n) {
     const idx = [...Array(n).keys()];
-    let h = hash(id);
+    let h = hash2(id);
     for (let j = n - 1; j > 0; j--) {
       const r = h % (j + 1);
       h = Math.floor(h / (j + 1)) + 7919 * j;
@@ -27588,7 +27756,7 @@ ${drawerHTML(o)}`;
     const over = /* @__PURE__ */ new Set(), unlocked = gateFor(c);
     const back = level > 1 ? ITEMS2.filter((it) => it.level < level && (it.kind === "question" || it.kind === "why") && lessonOf(it) && (!it.bands || it.bands.includes(c.band)) && unlocked(it) && !base(it)) : [];
     const lessons = [...new Set(back.map(lessonOf))].sort();
-    const look = lessons.length ? lessons[hash(lessons.join() + ":" + day2) % lessons.length] : null;
+    const look = lessons.length ? lessons[hash2(lessons.join() + ":" + day2) % lessons.length] : null;
     const draw3 = () => feedFor({
       items: ITEMS2,
       band: c.band,
@@ -28105,6 +28273,7 @@ ${drawerHTML(o)}`;
     if (o.kind === "search") return box(searchSheet(R.sq || "", search(R.sq || "")), true);
     if (o.kind === "privacy") return box(privacySheet(), true);
     if (o.kind === "help") return box(helpSheet(), true);
+    if (o.kind === "avDeck") return box(deckView(R.s, c, o.i), true);
     if (o.kind === "avInfo") {
       const a = BY_ID2[o.id], st2 = stateOf3(a, ctxFor(R.s, c));
       return box(`<div class="sheet-h"><span class="eyebrow">${esc(a.name)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
@@ -28630,6 +28799,31 @@ ${drawerHTML(o)}`;
     save2(R.s);
     sfx.click();
     toast("Wearing " + BY_ID2[id].name);
+    render();
+  });
+  on("avDeck", () => {
+    const c = C3(), ids = deckIds(R.s, c);
+    R.overlay = { kind: "avDeck", i: Math.max(0, ids.indexOf(c.avatar)) };
+    sfx.click();
+    render();
+    const f = document.querySelector('.avd-nav.next, .avdeck [data-act="closeOv"]');
+    if (f) f.focus();
+  });
+  on("avdGo", (d2) => {
+    if (!R.overlay || R.overlay.kind !== "avDeck") return;
+    R.overlay.i += +d2 || 0;
+    sfx.click();
+    render();
+    const f = document.querySelector(+d2 < 0 ? ".avd-nav.prev" : ".avd-nav.next");
+    if (f) f.focus();
+  });
+  on("avdWear", (id) => {
+    if (!BY_ID2[id]) return;
+    C3().avatar = id;
+    save2(R.s);
+    sfx.good();
+    confetti(30);
+    if (R.overlay && R.overlay.kind === "avDeck") R.overlay.i = Math.max(0, deckIds(R.s, C3()).indexOf(id));
     render();
   });
   on("avInfo", (id) => {
@@ -29839,8 +30033,8 @@ So it costs ${money(offer.cost)}.`);
     window.scrollTo(0, 0);
   }));
   on("mgAssess", mg((arg) => {
-    const [id, pick4] = arg.split(":");
-    const r = MG.assess(G3(), id, pick4);
+    const [id, pick5] = arg.split(":");
+    const r = MG.assess(G3(), id, pick5);
     if (r.right) sfx.good();
     else sfx.bad();
     render();
@@ -30290,6 +30484,11 @@ So it costs ${money(offer.cost)}.`);
         }
       }
     }
+    if (R.overlay && R.overlay.kind === "avDeck" && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      e.preventDefault();
+      fire("avdGo", e.key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
     if (e.key === "Escape") {
       if (R.overlay) {
         const k = R.overlay.kind;
@@ -30303,6 +30502,18 @@ So it costs ${money(offer.cost)}.`);
       else if (R.shelf) fire("shelf", "");
     }
   });
+  {
+    let sx = null;
+    document.addEventListener("touchstart", (e) => {
+      sx = e.target.closest && e.target.closest(".avdeck") ? e.touches[0].clientX : null;
+    }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (sx == null) return;
+      const dx = e.changedTouches[0].clientX - sx;
+      sx = null;
+      if (Math.abs(dx) > 45 && R.overlay && R.overlay.kind === "avDeck") fire("avdGo", dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
   window.addEventListener("hashchange", () => {
     if (!R.s || !R.s.kids.length) return;
     if (selfHash !== null && location.hash === selfHash) {
