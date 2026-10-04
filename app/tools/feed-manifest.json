@@ -1,12 +1,12 @@
 {
-  "total": 1119,
+  "total": 1263,
   "byKind": {
-    "lesson": 44,
-    "example": 45,
+    "lesson": 60,
+    "example": 61,
     "line": 140,
-    "question": 125,
-    "why": 117,
-    "yourturn": 35,
+    "question": 173,
+    "why": 165,
+    "yourturn": 51,
     "tryit": 7,
     "chapter": 8,
     "goal": 48,
@@ -42,14 +42,14 @@
     "event": 54
   },
   "byLevel": {
-    "chapter 1": 67,
-    "chapter 2": 65,
-    "chapter 3": 87,
-    "chapter 4": 71,
-    "chapter 5": 68,
-    "chapter 6": 76,
-    "chapter 7": 114,
-    "chapter 8": 102,
+    "chapter 1": 85,
+    "chapter 2": 83,
+    "chapter 3": 107,
+    "chapter 4": 89,
+    "chapter 5": 86,
+    "chapter 6": 92,
+    "chapter 7": 134,
+    "chapter 8": 118,
     "any": 469
   },
   "levels": [
@@ -57,55 +57,54 @@
       "level": 1,
       "chapter": "c1",
       "title": "What money even is",
-      "n": 67,
-      "short": "about four more lessons in \"What money even is\", narrated, with three questions each"
+      "n": 85,
+      "short": "about two more lessons in \"What money even is\", with three questions each (narration adds a few cards more)"
     },
     {
       "level": 2,
       "chapter": "c2",
       "title": "Earning it",
-      "n": 65,
-      "short": "about four more lessons in \"Earning it\", narrated, with three questions each"
+      "n": 83,
+      "short": "about two more lessons in \"Earning it\", with three questions each (narration adds a few cards more)"
     },
     {
       "level": 3,
       "chapter": "c3",
       "title": "Making a plan",
-      "n": 87,
-      "short": "one or two more lessons in \"Making a plan\", narrated, with three questions each"
+      "n": 107
     },
     {
       "level": 4,
       "chapter": "c4",
       "title": "Sellers and their tricks",
-      "n": 71,
-      "short": "about three more lessons in \"Sellers and their tricks\", narrated, with three questions each"
+      "n": 89,
+      "short": "one more lesson in \"Sellers and their tricks\", narrated, with three questions each"
     },
     {
       "level": 5,
       "chapter": "c5",
       "title": "Keeping it safe",
-      "n": 68,
-      "short": "about four more lessons in \"Keeping it safe\", narrated, with three questions each"
+      "n": 86,
+      "short": "one or two more lessons in \"Keeping it safe\", with three questions each"
     },
     {
       "level": 6,
       "chapter": "c6",
       "title": "Borrowing",
-      "n": 76,
-      "short": "about three more lessons in \"Borrowing\", narrated, with three questions each"
+      "n": 92,
+      "short": "one more lesson in \"Borrowing\", with three questions each"
     },
     {
       "level": 7,
       "chapter": "c7",
       "title": "Money that grows",
-      "n": 114
+      "n": 134
     },
     {
       "level": 8,
       "chapter": "c8",
       "title": "Running something",
-      "n": 102
+      "n": 118
     }
   ],
   "nearDuplicatesLetGo": [

@@ -73,6 +73,21 @@ export const CHAPTERS = [
         drill: { q: 'Two shops sell the same water bottle at very different prices. What must be true?', opts: ['The dearer one is always better made', 'Price does not only depend on the thing itself', 'The cheaper one is broken', 'One of them is breaking the law'], a: 1,
           why: 'Place, timing and who\'s buying all move a price. The bottle is the same bottle.' },
       },
+      /* ── two more stops (audit D7/E1): the chapter's start, and its first arithmetic ── */
+      {
+        id: 'c1e', title: 'Before there was money', who: 'nana',
+        teach: 'Before money, people <b>swapped</b>: fish for bread. But a swap only works if <i>each</i> of you wants what the other has. Money fixes that. Everyone takes it, it keeps, and it comes in small amounts.',
+        eg: 'Pip has fish and wants shoes. The shoemaker wants rice, not fish. With money, Pip sells the fish to anyone and pays for the shoes.',
+        drill: { q: 'Without money, what made swapping fish for shoes so hard?', opts: ['Fish are worth nothing at all', 'The shoemaker had to want fish too', 'Shoes had not been invented', 'Swapping was against the rules'], a: 1,
+          why: 'A swap needs two people who each want what the other has. With money, only one of you has to want the thing.' },
+      },
+      {
+        id: 'c1f', title: 'Counting the change', who: 'pip',
+        teach: 'Pay with more than the price and the seller hands back <b>change</b>: what you gave, take away the price. Count it before you walk off. Mistakes happen both ways.',
+        eg: 'A pencil costs 35. You hand over 50. Count up from 35: 5 makes 40, then 10 more makes 50. 5 + 10 = 15 change.',
+        drill: { q: 'A snack costs 26. You pay with a 50. How much change should you get?', opts: ['24', '26', '34', '76'], a: 0,
+          why: 'Count up from 26: 4 makes 30, then 20 makes 50. 4 + 20 = 24.' },
+      },
     ],
   },
   {
@@ -106,6 +121,21 @@ export const CHAPTERS = [
         eg: 'Mags sells buttons, mends umbrellas and finds things. Two go badly most months. She\'s never broke.',
         drill: { q: 'Why does having more than one source of income help?', opts: ['It earns more in total', 'One of them stopping no longer means nothing arrives', 'It is easier work', 'It avoids tax'], a: 1,
           why: 'That\'s spreading out — the same idea you\'ll meet later with investing.' },
+      },
+      /* ── two more stops (audit D7/E1): what makes an hour worth more, and uneven pay ── */
+      {
+        id: 'c2e', title: 'Getting better pays', who: 'nana', deepens: 'EARN-6',
+        teach: 'When you get <b>better at a job</b>, each hour gets more done, so each hour is worth more to whoever is paying. Practice is how an hour grows.',
+        eg: 'Pip mended 2 umbrellas an hour at 5 each: 10 an hour. After a month of practice he mends 3, and 3 × 5 = 15 an hour.',
+        drill: { q: 'Pip is paid for each umbrella he mends. After lots of practice, what happens to what his hour earns?', opts: ['It stays exactly the same', 'It goes up, because he mends more in it', 'It goes down, because he rushes', 'It depends on the weather'], a: 1,
+          why: 'Paid by the piece, a faster hour is a bigger hour. Practice raised what his time is worth.' },
+      },
+      {
+        id: 'c2f', title: 'Plan on the slow week', who: 'pip', deepens: 'EARN-8',
+        teach: 'Some work pays a different amount each week. Plan your spending on the <b>slowest</b> week you have had, not the best. Then a good week is a bonus, not a hole you fall into later.',
+        eg: 'Pip earned 30, 45, 25 and 40. He plans on 25. In the week he earned 45, the extra 20 went straight into Save.',
+        drill: { q: 'Your last four weeks paid 30, 50, 20 and 40. Which number is safest to plan your spending on?', opts: ['50, the best week', '20, the slowest week', '35, somewhere in the middle', '140, all of it together'], a: 1,
+          why: 'Plan on the slow week and every other week leaves something over. Plan on the best and most weeks come up short.' },
       },
     ],
   },
@@ -141,6 +171,21 @@ export const CHAPTERS = [
         drill: { q: 'It costs 800. You put away 50 a week. Roughly how long?', opts: ['4 weeks', '8 weeks', '16 weeks', '40 weeks'], a: 2,
           why: '800 ÷ 50 = 16. Dividing turns a wish into a date.' },
       },
+      /* ── two more stops (audit D7/E1): the costs in your own week, and the record of it ── */
+      {
+        id: 'c3e', title: 'Costs that stay, costs that move', who: 'nana', deepens: 'KEEP-6',
+        teach: 'Some costs come <b>every week whatever you do</b>: a bus pass, a club fee. Others <b>follow what you choose</b>: snacks, comics. When less money comes in, cut the ones that follow your choices first.',
+        eg: 'Pip earned less this week. His bus pass still cost 20. His snacks went from 15 down to 5. That was the part he could move.',
+        drill: { q: 'Less money came in this week. Which cost is easiest to cut first?', opts: ['The weekly bus pass', 'Snacks on the way home', 'The club fee you agreed to', 'Rent for your room'], a: 1,
+          why: 'Snacks follow your choices, so you can change them today. The others arrive whatever you decide.' },
+      },
+      {
+        id: 'c3f', title: 'Write it down', who: 'pip', deepens: 'KEEP-7',
+        teach: 'Memory is a poor bookkeeper. It forgets small spends and remembers big ones. <b>Writing each spend down</b>, or reading your wallet’s list, shows where the money really went.',
+        eg: 'Pip was sure snacks cost him about 20 a week. His notebook said 6, 9, 7 and 12. That is 34.',
+        drill: { q: 'Pip thinks he spent “about 20” on snacks. His notebook says 34. Which should he trust?', opts: ['His memory, he was there', 'The notebook, written at the time', 'Neither, so pick a middle number', 'Whichever number is smaller'], a: 1,
+          why: 'Small spends slip out of memory. A record written as it happened does not forget.' },
+      },
     ],
   },
   {
@@ -174,6 +219,21 @@ export const CHAPTERS = [
         eg: 'You walked past eleven things to reach the bread. That was the plan.',
         drill: { q: 'Why is milk usually at the back of the shop?', opts: ['It stays cooler there', 'So you walk past everything else', 'It is heavy', 'Nobody buys it'], a: 1,
           why: 'Shops and websites are designed. Noticing the design is most of the defence.' },
+      },
+      /* ── two more stops (audit D7/E1): the "was" price, and the deal you did not need ── */
+      {
+        id: 'c4e', title: 'Was, now — compared with what?', who: 'mags', deepens: 'CHOOSE-3',
+        teach: 'A crossed-out “was” price is <b>the seller’s own number</b>. It tells you nothing about other shops. Compare the “now” price with what the same thing costs elsewhere, and with what it is worth to you.',
+        eg: 'Was 90, now 65! It looks like 25 off. The stall next door sells the same kite for 55 every day.',
+        drill: { q: 'A sign says “Was 80, now 60”. What is the most useful thing to check?', opts: ['How big the sign is', 'What other stalls charge for it', 'How much was taken off', 'Whether the sale ends soon'], a: 1,
+          why: 'The “was” price is set by the seller. Other stalls tell you what the thing actually goes for.' },
+      },
+      {
+        id: 'c4f', title: 'Buy more, save more?', who: 'mags', deepens: 'CHOOSE-4',
+        teach: '“3 for 12” sounds cheaper than 5 each, and <b>per pen</b> it is. But if you only needed one, you paid 12 instead of 5. A multi-buy saves money only on things you would have used anyway.',
+        eg: 'Pens are 5 each, or 3 for 12. Need three? 12 instead of 15 saves 3. Need one? 12 instead of 5 costs 7 more than you needed.',
+        drill: { q: 'Rubbers are 3 each, or 4 for 10. You need just one. What costs you least?', opts: ['The 4 for 10 deal', 'One rubber on its own', 'Two deals, for 20', 'They cost the same'], a: 1,
+          why: 'Per rubber the deal is cheaper, but you would hand over 10 for something that costs you 3.' },
       },
     ],
   },
@@ -209,6 +269,21 @@ export const CHAPTERS = [
         drill: { q: 'You already sent money and feel silly. What is the best next step?', opts: ['Say nothing and hope', 'Tell a grown-up straight away', 'Send more to fix it', 'Block and forget it'], a: 1,
           why: 'Telling fast limits the damage — and saying it out loud is a skill worth more than the money.' },
       },
+      /* ── two more stops (audit D7/E1): money for surprises, and reading what went out ── */
+      {
+        id: 'c5e', title: 'A tin for surprises', who: 'nana', deepens: 'KEEP-8',
+        teach: 'Some money is for a thing you have chosen. Some is for <b>things nobody can plan</b>: a snapped bike chain, a lost bus pass. Keep a small surprise tin, and a surprise is a nuisance instead of a crisis.',
+        eg: 'Pip puts 5 a week in his surprise tin. When his chain snapped, 30 was already there. No loan, no panic.',
+        drill: { q: 'What is a surprise tin for?', opts: ['A thing you have wanted for months', 'Costs nobody could see coming', 'Treats after a good week', 'Lending to your friends'], a: 1,
+          why: 'It is not saving for a thing. It is for the thing you did not know about yet.' },
+      },
+      {
+        id: 'c5f', title: 'Check what went out', who: 'pip',
+        teach: 'Your bank keeps a <b>list of every payment</b>. Read it now and then. Every line should be one you recognise. One you do not is a reason to tell a grown-up and the bank, quickly.',
+        eg: 'Pip’s list: bus 12, club 25, and 7 to a name he had never seen. He showed Nana that evening, and the bank looked into it.',
+        drill: { q: 'Your bank list shows a payment you do not recognise. What is the best move?', opts: ['Ignore it, because it is small', 'Tell a grown-up and the bank soon', 'Wait and see if it happens again', 'Pay the same again to be safe'], a: 1,
+          why: 'A payment you did not make is easier to sort out when it is spotted early, and you are the only one who knows it was not you.' },
+      },
     ],
   },
   {
@@ -243,6 +318,21 @@ export const CHAPTERS = [
         drill: { q: 'What does a lender’s record of you actually describe?', opts: ['How much money you have', 'Whether past borrowing was repaid', 'How hard you work', 'Whether you deserve help'], a: 1,
           why: 'Good people can have bad records after a bad year. Records can be added to.' },
       },
+      /* ── two more stops (audit D7/E1): whether a payment fits, and lending to a friend ── */
+      {
+        id: 'c6e', title: 'Can the payment fit?', who: 'nana', deepens: 'OWE-4',
+        teach: 'Before you borrow, ask a better question than “will they lend to me?” Ask <b>“does the payment fit in what is left each week — even a slow one?”</b> A payment you promised comes before a want.',
+        eg: 'Bea has 50 in and 30 of costs each week, so 20 is left. A payment of 12 fits, with 8 to spare. A payment of 25 does not.',
+        drill: { q: 'Each week you have 40 in and 34 of costs. A loan wants 10 a week. What is true?', opts: ['It fits easily', 'It does not fit, as only 6 is left', 'It fits if you skip some costs', 'Payments do not count as costs'], a: 1,
+          why: '40 take away 34 leaves 6, and the payment is 10. Borrowing would mean missing payments from the first week.' },
+      },
+      {
+        id: 'c6f', title: 'Lending to a friend', who: 'pip',
+        teach: 'Lending to a friend is kind, and it goes best with <b>three plain steps</b>: lend only what you could manage without, agree out loud when it comes back, and write it down where you both can see.',
+        eg: 'Chhoti borrowed 20 from Pip for a book. They wrote “20, back by Friday” in his notebook. Friday came, and so did the 20.',
+        drill: { q: 'Why lend a friend only what you could manage without?', opts: ['So you can ask for more back', 'So a late payback hurts nobody', 'Because friends never pay back', 'Because lending is wrong'], a: 1,
+          why: 'If it comes back late, you are fine and so is the friendship. Lending what you cannot spare turns a delay into a quarrel.' },
+      },
     ],
   },
   {
@@ -264,6 +354,13 @@ export const CHAPTERS = [
           why: 'High return with no risk is the oldest scam there is.' },
       },
       {
+        id: 'c7i', title: 'What a share is', who: 'bea',
+        teach: 'A business can be split into many equal pieces called <b>shares</b>. Own one and you own a small slice: a slice of its profits, and a slice of its bad years too. Its price moves with what people think it will earn.',
+        eg: 'A bakery split into 100 shares makes 300 profit and pays it all out. Each share gets 300 ÷ 100 = 3.',
+        drill: { q: 'You own one share of a bakery. What do you actually own?', opts: ['A loaf of bread every week', 'A small slice of the whole business', 'A loan you made to the baker', 'The right to run the shop'], a: 1,
+          why: 'A share is part-ownership. Good years and bad years both land on you, in a small slice.' },
+      },
+      {
         id: 'c7c', title: 'Never just one', who: 'bea',
         teach: 'Own a slice of <b>many</b> things and no single bad news can wreck you. Own one thing and your week depends on someone else\'s Tuesday.',
         eg: 'A basket of the whole market is dull — and dull wins more often than exciting.',
@@ -276,6 +373,13 @@ export const CHAPTERS = [
         eg: 'Bus fare and a far-off fund are different money, and they live in different places.',
         drill: { q: 'You need the money in three weeks. Where does it belong?', opts: ['Whatever grew most last year', 'Somewhere safe and boring', 'Split across four companies', 'The one your friend likes'], a: 1,
           why: 'When you need it decides where it goes — before asking what grows fastest.' },
+      },
+      {
+        id: 'c7j', title: 'Little and often, started early', who: 'nana', deepens: 'GROW-7',
+        teach: 'A small amount put away <b>every week</b> becomes a big amount, given time. And starting sooner beats putting in more later: the first coins have the longest to grow.',
+        eg: 'Asha puts away 20 a month from January. Ravi starts in July. By December, before any growth, Asha has put in 240 and Ravi 120.',
+        drill: { q: 'Asha and Ravi both put away 20 a month. Asha starts a year earlier. Who ends up with more?', opts: ['Ravi, because he waited', 'Asha: more months in, and longer to grow', 'The same, as they save the same', 'Whoever picks the luckier month'], a: 1,
+          why: 'Same amount each month, more months of it, and every early coin had longer to grow.' },
       },
       /* ── stretch stops (C3): the second half of the chapter goes further ── */
       {
@@ -327,6 +431,13 @@ export const CHAPTERS = [
           why: 'What counts is total profit, not how many you sold.' },
       },
       {
+        id: 'c8j', title: 'Try a small batch first', who: 'mags',
+        teach: 'Before you make a hundred of something, <b>make a few</b>. Sell them, watch what happens, change what did not work, then make more. A small test costs little. A big mistake costs a lot.',
+        eg: 'Mags made 5 painted umbrellas, not 50. The blue ones sold in a day; the yellow ones sat. Her next batch was mostly blue.',
+        drill: { q: 'You have an idea for a new thing to sell. What is the wisest first step?', opts: ['Make as many as you can afford', 'Make a few and see if they sell', 'Borrow to make a big batch', 'Wait until it is perfect'], a: 1,
+          why: 'A few tell you what people want before much money is stuck on a shelf.' },
+      },
+      {
         id: 'c8c', title: 'Cash is not profit', who: 'pip',
         teach: 'You can be <b>profitable and broke at the same time</b>. Profit is a month on paper. Cash is what\'s in your hand when the stock bill is due.',
         eg: 'Nana\'s best month nearly closed the shop: the restock bill came before the sales did.',
@@ -339,6 +450,13 @@ export const CHAPTERS = [
         eg: '200 rent a month is about seven a day, before you sell a thing.',
         drill: { q: 'Which cost still arrives in a week you sell nothing?', opts: ['Stock', 'Rent', 'Wrapping paper', 'Nothing does'], a: 1,
           why: 'Your fixed costs tell you the smallest week you can survive.' },
+      },
+      {
+        id: 'c8i', title: 'Your time is a cost too', who: 'nana', deepens: 'EARN-2',
+        teach: 'Profit after materials is not the whole story. <b>Your own hours</b> went in too. Share the profit across the hours and you see what each hour really earned. Then compare it with a job.',
+        eg: 'Pip sold 10 bracelets at 9, and the beads cost 3 each. Profit 60, after 5 hours: 60 ÷ 5 = 12 an hour.',
+        drill: { q: 'Two stalls each make 60 profit. One took 3 hours, the other 10. Which earned more for each hour?', opts: ['The one that took 10 hours', 'The one that took 3 hours', 'They earned the same', 'You cannot tell'], a: 1,
+          why: '60 ÷ 3 = 20 an hour against 60 ÷ 10 = 6. Same profit, very different hours.' },
       },
       /* ── stretch stops (C3) ── */
       {
@@ -520,6 +638,12 @@ export function chapterDone(c, id) {
   const ch = CHAPTERS.find((x) => x.id === id);
   return !!ch && ch.cards.every((k) => c.learn.done[k.id]);
 }
+/* What a chapter OPENS (a building, a game, a quest, the next world) stays open for a child
+   who finished it before it grew two more stops — store.js v13 records those in
+   `learn.kept`. Done still means every stop read; this is only the gate. */
+export function chapterOpened(c, id) {
+  return chapterDone(c, id) || !!(c.learn.kept || {})[id];
+}
 /* ── tester mode ──────────────────────────────────────────────────────────
    For trying the app, not for a child: every GATE passes — chapters, worlds,
    the Bank, the Exchange, the shop, every game — while the child's learn
@@ -532,12 +656,12 @@ export function setTester(on) { TESTER = !!on; }
 export function tester() { return TESTER; }
 export function chapterLocked(c, ch) { return !TESTER && c.learn.level < ch.lv && !((c.learn.testedOut || {})[ch.id]); }
 export function levelAtLeast(c, lv) { return TESTER || c.learn.level >= lv; }
-export function gameOpen(c, g) { return TESTER || !g.needs || chapterDone(c, g.needs); }
+export function gameOpen(c, g) { return TESTER || !g.needs || chapterOpened(c, g.needs); }
 
 export function isOpen(c, key) {
   if (TESTER) return true;
   const need = UNLOCKS[key];
-  return !need || chapterDone(c, need);
+  return !need || chapterOpened(c, need);
 }
 export function needFor(key) {
   const id = UNLOCKS[key];
@@ -546,7 +670,7 @@ export function needFor(key) {
 }
 export function worldOpen(c, i) {
   if (TESTER || i <= 0) return true;
-  return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterDone(c, ch)));
+  return WORLDS.slice(0, i).every((w) => w.chapters.every((ch) => chapterOpened(c, ch)));
 }
 
 /* ── daily quests ────────────────────────────────────────────────────────

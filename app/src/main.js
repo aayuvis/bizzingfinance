@@ -28,14 +28,18 @@ import * as decisions from './decisions.js';
 import * as reportmod from './report.js';
 import * as reportcard from './reportcard.js';
 import { hasJobGame } from './jobtable.js';   /* the games themselves load when a shift starts */
-import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
+/* the Market Game and its register (forty companies, their years) load when it is opened,
+   not on the first screen — the same way the stories do */
+let MG = null, MG_COMPANIES = [], MG_EVENTS = [], mgLoading = null;
+const mgReady = () => mgLoading || (mgLoading = Promise.all([import('./marketgame.js'), import('../content/companies.js'), import('../content/events.js')])
+  .then(([m, co, ev]) => { MG = m; MG_COMPANIES = co.COMPANIES; MG_EVENTS = ev.ALL; render(); return m; }));
+const mgView = () => MG ? MG.viewMarketGame() : (mgReady(), '<h1>The Market Game</h1><div class="card"><p class="small muted">Opening the Market Game…</p></div>');
+const mg = (fn) => (...a) => { if (MG) fn(...a); else mgReady(); };
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
 import { R } from './runtime.js';
 import { nextStep, nextStop } from './next.js';
-import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
-import { ALL as MG_EVENTS } from '../content/events.js';
 import { demoState } from './demo.js';
 import * as SESSION from './session.js';
 import * as family from './family.js';
@@ -227,7 +231,7 @@ function render() {
     nav === 'mistakes' ? viewMistakes() :
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
-    nav === 'market40' ? viewMarketGame() :
+    nav === 'market40' ? mgView() :
     nav === 'story' ? storyView() :
     nav === 'library' ? viewLibrary() :
     nav === 'sprint' ? sprintView() :
@@ -434,6 +438,7 @@ function overlay() {
   /* a Market Game company or event, read — the register's own words, labelled
      fictional, and nothing on it can be bought */
   if (o.kind === 'mgRead') {
+    if (!MG) { mgReady(); return box('<p class="small muted">Opening the register…</p>'); }
     const it = o.what === 'company' ? MG_COMPANIES.find((x) => x.id === o.id) : MG_EVENTS.find((x) => x.id === o.id);
     if (!it) return '';
     const p = (t, h) => t ? `<div class="sect"><b>${h}</b><i></i></div><p class="small">${esc(t)}</p>` : '';
@@ -1429,26 +1434,26 @@ on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
 
 /* bizz & co */
 /* the Market Game (marketgame.js) */
-const G = () => { const c = C(); if (!c.game) c.game = newGame((c.market && c.market.seed) || 1); return c.game; };
-on('mgAct', (a) => { startAct(G(), +a); sfx.level(); render(); window.scrollTo(0, 0); });
-on('mgOpen', (id) => { const g = G(); study(g, id); g.opened = { co: id }; sfx.click(); render(); window.scrollTo(0, 0); });
-on('mgClose', () => { G().opened = {}; render(); window.scrollTo(0, 0); });
-on('mgAssess', (arg) => {
+const G = () => { const c = C(); if (!c.game) c.game = MG.newGame((c.market && c.market.seed) || 1); return c.game; };
+on('mgAct', mg((a) => { MG.startAct(G(), +a); sfx.level(); render(); window.scrollTo(0, 0); }));
+on('mgOpen', mg((id) => { const g = G(); MG.study(g, id); g.opened = { co: id }; sfx.click(); render(); window.scrollTo(0, 0); }));
+on('mgClose', mg(() => { G().opened = {}; render(); window.scrollTo(0, 0); }));
+on('mgAssess', mg((arg) => {
   const [id, pick] = arg.split(':');
-  const r = assess(G(), id, pick);
+  const r = MG.assess(G(), id, pick);
   if (r.right) sfx.good(); else sfx.bad();
   render();
-});
-on('mgToInvest', () => { const g = G(); g.phase = 'invest'; g.opened = {}; sfx.click(); render(); window.scrollTo(0, 0); });
-on('mgBuy', (arg) => { const [id, amt] = arg.split(':'); const a = buy(G(), id, +amt); if (a) sfx.coin(); render(); });
-on('mgSell', (id) => { const v = sell(G(), id); if (v) { sfx.coin(); toast('Sold for ' + money(v)); } render(); });
-on('mgPlay', () => { G().phase = 'play'; sfx.level(); render(); window.scrollTo(0, 0); });
-on('mgNext', () => {
-  const r = advance(G());
+}));
+on('mgToInvest', mg(() => { const g = G(); g.phase = 'invest'; g.opened = {}; sfx.click(); render(); window.scrollTo(0, 0); }));
+on('mgBuy', mg((arg) => { const [id, amt] = arg.split(':'); const a = MG.buy(G(), id, +amt); if (a) sfx.coin(); render(); }));
+on('mgSell', mg((id) => { const v = MG.sell(G(), id); if (v) { sfx.coin(); toast('Sold for ' + money(v)); } render(); }));
+on('mgPlay', mg(() => { G().phase = 'play'; sfx.level(); render(); window.scrollTo(0, 0); }));
+on('mgNext', mg(() => {
+  const r = MG.advance(G());
   if (!r) { sfx.level(); confetti(40); } else if (r.after >= r.before) sfx.coin(); else sfx.bad();
   render(); window.scrollTo(0, 0);
-});
-on('mgPick', () => { const g = G(); g.phase = 'pick'; g.act = null; g.opened = {}; render(); window.scrollTo(0, 0); });
+}));
+on('mgPick', mg(() => { const g = G(); g.phase = 'pick'; g.act = null; g.opened = {}; render(); window.scrollTo(0, 0); }));
 
 /* years 6 and 7 — the venture (business.js via sim) */
 on('openVenture', () => { sim.openVenture(C(), "Your stall"); sfx.level(); confetti(30); render(); });

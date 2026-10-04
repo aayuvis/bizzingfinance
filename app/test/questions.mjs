@@ -1,7 +1,7 @@
 /* questions.mjs — every question a child can be asked, tested (FAMILY-
    STANDARD §6, D8), and every stated sum checked (D7).
 
-   Questions: the 32 chapter cards (each with its follow-ups), the objective
+   Questions: the 56 chapter cards (each with its follow-ups), the objective
    file's own teaching cards, and the 144 retrieval items. Each must have
    exactly one right answer, distinct options, an answer that is not printed
    in its own stem, and — across the whole bank — the right answer must land

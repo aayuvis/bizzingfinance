@@ -46,7 +46,7 @@ ok(!bad.length, 'every item has exactly one right result, no pre-solved order, n
 
 /* E4 · coverage: every stop on the Atlas has something to DO, not only to pick */
 const missing = ALL_CARDS.filter((c) => !ITEMS[c.id]).map((c) => c.id);
-ok(ALL_CARDS.length === 40 && !missing.length, 'all 40 lesson stops have a Your-turn item', missing.length ? 'missing: ' + missing.join(',') : `${ALL_CARDS.length} stops`);
+ok(ALL_CARDS.length === 56 && !missing.length, 'all 56 lesson stops have a Your-turn item', missing.length ? 'missing: ' + missing.join(',') : `${ALL_CARDS.length} stops`);
 
 /* every item has the fields its shape needs, in the house voice */
 const shape = [];

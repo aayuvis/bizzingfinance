@@ -33,6 +33,10 @@ export const isLesson = (card) => !!card && !card.assess;
 export function practiceFor(card) {
   const own = card && OBJECTIVES.find((x) => x.teach === card.id && hasGen(x.id));
   if (own) return own;
+  /* a stop written to deepen an objective whose own teaching stop is thin (audit D7/E1)
+     practises that objective, before falling back to its chapter's */
+  const deep = card && card.deepens && OBJECTIVES.find((x) => x.id === card.deepens && hasGen(x.id));
+  if (deep) return deep;
   /* a stop that teaches no objective of its own practises its chapter's ideas, and says so */
   return card && card.ch ? OBJECTIVES.find((x) => hasGen(x.id) && (ALL_CARDS.find((k) => k.id === x.teach) || {}).ch === card.ch) || null : null;
 }

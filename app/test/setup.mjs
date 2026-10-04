@@ -51,7 +51,7 @@ console.log('\nSetup, demo, the grown-ups\' card, the session\n' + '─'.repeat(
 {
   const s = sim.newState(); const c = sim.newChild('Kabir', 'builder', 'INR'); s.kids.push(c);
   const r = RC.card(c, null);
-  ok(r.time && r.progress && r.mastery && r.progress.of === 40, 'the card carries Time, Progress and Mastery', JSON.stringify({ t: r.time.minutes, p: r.progress.stops }));
+  ok(r.time && r.progress && r.mastery && r.progress.of === 56, 'the card carries Time, Progress and Mastery', JSON.stringify({ t: r.time.minutes, p: r.progress.stops }));
   ok(r.decisions.length === 0, "a new child's card claims no decision — Nana's default is not theirs");
   const feed = { s: [{ a: 'finance', d: new Date().toISOString().slice(0, 10), m: 12, who: 'Kabir' }, { a: 'bee', d: new Date().toISOString().slice(0, 10), m: 30, who: 'Kabir' }, { a: 'finance', d: new Date().toISOString().slice(0, 10), m: 9, who: 'Riya' }] };
   ok(RC.card(c, feed).time.minutes === 12, "Time counts this app's minutes for this child only", String(RC.card(c, feed).time.minutes));

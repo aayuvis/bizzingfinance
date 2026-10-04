@@ -14,7 +14,7 @@
    A wrong first try holds with a hint about the idea — never the answer — and the
    second go settles it, exactly like the questions underneath (drill.js).
 
-   Every stop on the Atlas has one (all 40), and every amount carries `how` (E6): a worked
+   Every stop on the Atlas has one (all 56), and every amount carries `how` (E6): a worked
    method with different numbers, which the child may open before the first try. It shows
    the way to the answer, never this item's answer — test/items.mjs checks both. */
 export const ITEMS = {
@@ -135,6 +135,54 @@ export const ITEMS = {
   c8h: { kind: 'amount', title: 'Half stays in the shop', q: 'Your stall made 180 profit this week. Like Nana, you keep half in the shop tin. How much do you take home?', calc: () => 180 / 2,
     hint: 'Half means two equal piles: one for the tin, one for home.',
     how: ['Say the profit was 60 and you keep half.', 'Split 60 into two equal piles: 30 and 30.', 'One pile stays in the tin, one goes home. Now split your stall’s profit.'] },
+
+  /* the sixteen stops added two a chapter (audit D7/E1), each with its own thing to do */
+  c1e: { kind: 'sort', title: 'Good as money?', bins: ['Works well as money', 'Works badly as money'],
+    things: [['Coins that last for years', 0], ['A basket of ripe mangoes', 1], ['Notes that come in small amounts', 0], ['A cow you cannot split in half', 1], ['Something everyone in town accepts', 0], ['Pebbles anyone can pick up on the beach', 1]],
+    hint: 'Good money keeps, splits into small amounts, and everybody takes it.' },
+  c1f: { kind: 'amount', title: 'Change from a 50', q: 'A notebook costs 32. You pay with a 50 note. How much change should you get back?', calc: () => 50 - 32,
+    hint: 'Take the price away from what you handed over — or count up from the price.',
+    how: ['Say a cup costs 27 and you pay with 40.', 'Count up from 27: 3 makes 30, then 10 more makes 40.', '3 + 10 = 13 change. Now try the notebook.'] },
+  c2e: { kind: 'amount', title: 'An hour that grew', q: 'Pip is paid 4 for each umbrella he mends. He used to mend 3 in an hour. With practice he now mends 5. How much more does an hour earn him now?', calc: () => 5 * 4 - 3 * 4,
+    hint: 'Work out what an hour earned before and what it earns now, then find the gap.',
+    how: ['Say each bowl pays 3, and you went from 2 bowls an hour to 4.', 'Before: 2 × 3 = 6 an hour. Now: 4 × 3 = 12 an hour.', 'The gap: 12 − 6 = 6 more an hour. Now try Pip’s umbrellas.'] },
+  c2f: { kind: 'amount', title: 'A good week, planned low', q: 'Pip earned 36, 22, 48 and 30 in four weeks. He plans every week on his slowest one. In a week he earns 48, how much is left over beyond his plan?', calc: () => 48 - Math.min(36, 22, 48, 30),
+    hint: 'Find the slowest week first: that is the plan. Whatever comes in above it is extra.',
+    how: ['Say four weeks paid 15, 10, 20 and 12.', 'The slowest is 10, so the plan is 10 a week.', 'A 20 week leaves 20 − 10 = 10 over the plan. Now try Pip’s weeks.'] },
+  c3e: { kind: 'sort', title: 'Stays, or moves?', bins: ['Arrives every week anyway', 'Follows what you choose'],
+    things: [['The bus pass to work', 0], ['Snacks after school', 1], ['The club fee you signed up for', 0], ['A new comic', 1], ['Rent for your room', 0], ['A film with friends', 1]],
+    hint: 'Ask of each one: if I chose to spend nothing extra this week, would it still arrive?' },
+  c3f: { kind: 'amount', title: 'What the notebook says', q: 'Pip’s notebook for snacks this week says: Monday 5, Wednesday 8, Friday 6, Saturday 11. How much did snacks cost him in all?', calc: () => 5 + 8 + 6 + 11,
+    hint: 'Add every line in the list, one at a time.',
+    how: ['Say the list says 3, 4 and 7.', 'Add them one at a time: 3 + 4 = 7, then 7 + 7 = 14.', 'So that list adds up to 14. Now add up Pip’s.'] },
+  c4e: { kind: 'sort', title: 'Worth comparing?', bins: ['Compare with it', 'Ignore it'],
+    things: [['The price at the next stall', 0], ['The crossed-out “was” price', 1], ['What it is worth to you', 0], ['How big the SALE sign is', 1], ['What you planned to spend', 0], ['How many people are queuing', 1]],
+    hint: 'The useful ones come from outside the seller’s sign: other shops, your plan, your own judgement.' },
+  c4f: { kind: 'amount', title: 'The deal you did not need', q: 'Pens cost 4 each, or 3 for 10. You only need one pen, but you take the deal. How much more did you spend than you needed to?', calc: () => 10 - 4,
+    hint: 'Compare what you handed over with what one pen on its own would have cost.',
+    how: ['Say a cake is 7, or 4 for 20, and you need one.', 'With the deal you pay 20. On its own, one cake is 7.', '20 − 7 = 13 more than you needed. Now try the pens.'] },
+  c5e: { kind: 'sort', title: 'Surprise tin, or goal?', bins: ['The surprise tin', 'Saving for a goal'],
+    things: [['The bike chain snaps', 0], ['A new bike you have wanted for months', 1], ['You lose your bus pass', 0], ['A present for a birthday in March', 1], ['Your shoes split in the rain', 0], ['A trip with the club next term', 1]],
+    hint: 'Could you have written it on a calendar in advance? If not, it is what the tin is for.' },
+  c5f: { kind: 'amount', title: 'The line that does not fit', q: 'Your list started the week at 120. You know you paid 15 for the bus and 30 for the club. The week ends at 66. How much went out that you cannot explain?', calc: () => 120 - 15 - 30 - 66,
+    hint: 'Take what you know you paid away from the start. Whatever still does not match the end is the mystery.',
+    how: ['Say the list starts at 50, you paid 10 you know of, and it ends at 35.', 'Start, take away what you know: 50 − 10 = 40.', '40 should be left but it says 35, so 5 is unexplained. Now try your list.'] },
+  c6e: { kind: 'amount', title: 'What is left after the payment', q: 'Each week Bea has 55 coming in and 31 of costs. A loan payment would be 14 a week. If she takes the loan, how much is left each week for her to choose about?', calc: () => 55 - 31 - 14,
+    hint: 'Take the costs away first, then the payment. What remains is the part she chooses about.',
+    how: ['Say 30 comes in, costs are 18, and a payment would be 5.', 'After costs: 30 − 18 = 12.', 'After the payment: 12 − 5 = 7 left to choose about. Now try Bea’s week.'] },
+  c6f: { kind: 'order', title: 'Lending it the friendly way', steps: ['Decide how much you could manage without', 'Agree out loud when it comes back', 'Write it down where you both can see', 'Remind them kindly if the day passes'],
+    hint: 'Work out what you can spare before anything changes hands. The reminder comes last.' },
+  c7i: { kind: 'amount', title: 'Your slice of the profit', q: 'A bakery is split into 100 equal shares. This year it makes 400 profit and pays all of it out to its owners. You own 6 shares. How much is yours?', calc: () => (400 / 100) * 6,
+    hint: 'Find what one share gets first, then count your shares.',
+    how: ['Say a stall is split into 10 shares and pays out 50.', 'One share gets 50 ÷ 10 = 5.', 'Own 3 shares and you get 3 × 5 = 15. Now try the bakery.'] },
+  c7j: { kind: 'amount', title: 'Starting sooner', q: 'Asha puts away 15 a month for 12 months. Ravi puts away 15 a month too, but starts 4 months later, so he pays in for 8. Before any growth, how much more has Asha put in?', calc: () => 15 * 12 - 15 * 8,
+    hint: 'Work out what each one put in — months times the amount — then find the gap.',
+    how: ['Say Mo puts away 5 a month for 10 months, and Lu for 6.', 'Mo: 10 × 5 = 50. Lu: 6 × 5 = 30.', 'The gap: 50 − 30 = 20. Now try Asha and Ravi.'] },
+  c8i: { kind: 'amount', title: 'What each hour earned', q: 'You sell 18 bracelets at 7 each. The beads cost 3 a bracelet. Making and selling them took 8 hours. How much did each hour earn?', calc: () => (18 * 7 - 18 * 3) / 8,
+    hint: 'Find the profit first — what came in, take away the beads — then share it across the hours.',
+    how: ['Say you sell 8 cards at 5 each, the paper costs 2 a card, and it took 4 hours.', 'In: 8 × 5 = 40. Paper: 8 × 2 = 16. Profit: 40 − 16 = 24.', 'For each hour: 24 ÷ 4 = 6. Now try the bracelets.'] },
+  c8j: { kind: 'order', title: 'Testing an idea', steps: ['Make a few', 'Sell them and watch what happens', 'Change what did not work', 'Make a bigger batch'],
+    hint: 'Small and cheap comes before big. Learn before you grow.' },
 };
 export const hasItem = (id) => !!ITEMS[id];
 

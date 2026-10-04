@@ -91,13 +91,17 @@ ok(JSON.stringify(genCard(OBJECTIVES.find((o) => o.id === 'KEEP-1'), 9, { ceil: 
   ok(seen.slice(0, 3).every((x) => x === 'auth') && seen.slice(3).includes('gen') && seen.slice(3).includes('auth'), 'the three authored items first, then generated ones alternate in', seen.join(','));
 }
 
-/* the lesson stops: every one of the forty can be practised, asked fresh */
+/* the lesson stops: every one of the fifty-six can be practised, asked fresh */
 {
   const { practiceFor, practiceCard } = await import('../src/cards.js');
   const without = ALL_CARDS.filter((k) => !practiceFor(k)).map((k) => k.id);
   ok(!without.length, `every lesson stop can be practised (${ALL_CARDS.length - without.length}/${ALL_CARDS.length})`, without.join(' '));
   const k = ALL_CARDS.find((x) => x.id === 'c2a');
   ok(practiceCard(k, 0).id !== practiceCard(k, 1).id, '"Another one" is another question');
+  /* a stop's `deepens` names a real objective, and has an effect: its practice is that objective */
+  const deep = ALL_CARDS.filter((x) => x.deepens);
+  const wrongDeep = deep.filter((x) => !OBJECTIVES.some((o) => o.id === x.deepens) || practiceFor(x).id !== x.deepens).map((x) => `${x.id}→${x.deepens}`);
+  ok(deep.length >= 8 && !wrongDeep.length, 'every stop that deepens an objective names a real one and practises it', wrongDeep.join(' ') || `${deep.length} stops`);
 }
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

@@ -26,13 +26,14 @@ export function demoState(now = Date.now()) {
   c.created = start;
   s.kids.push(c);
 
-  /* three weeks of lessons: the first three chapters (twelve stops), most right first time,
-     so the Jar Shed is open before any money goes into a jar (audit v4: the sample's jars
-     were locked yet held money) */
-  const read = ALL_CARDS.slice(0, 12);
+  /* three weeks of lessons: the first three chapters, whole (eighteen stops, one a day),
+     most right first time, so the Jar Shed is open before any money goes into a jar (audit
+     v4: the sample's jars were locked yet held money). Whole chapters by id, never a count,
+     so a stop added to a chapter cannot leave the sample half-way through one. */
+  const read = ALL_CARDS.filter((k) => ['c1', 'c2', 'c3'].includes(k.ch));
   const coins = [];
   read.forEach((card, i) => {
-    const t = start + (i * 2 + 1) * DAY;
+    const t = start + (i + 1) * DAY;
     /* the family's standard amounts, as the wallet would have paid them (answer 1, stop 5) */
     if (i % 4 !== 3) coins.push({ a: 'finance', t, n: 1, why: 'answer' });
     coins.push({ a: 'finance', t: t + 6e4, n: 5, why: 'stop' });

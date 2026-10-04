@@ -38,7 +38,8 @@ export const MILESTONES = {
   'atlas': { label: 'Walk every stop on the Money Atlas', test: (c) => ALL_CARDS.every((k) => c.learn && c.learn.done[k.id]) },
   'transfer-5': { label: 'Use 5 things somewhere new, without being asked', test: (c) => (mastery.counts(c).transferred || 0) >= 5 },
 };
-function chDone(c, id) { const ch = CHAPTERS.find((x) => x.id === id); return !!ch && ch.cards.every((k) => c.learn && c.learn.done[k.id]); }
+/* a chapter finished before it grew two stops (store.js v13, learn.kept) was finished */
+function chDone(c, id) { const ch = CHAPTERS.find((x) => x.id === id); return !!ch && !!c.learn && (ch.cards.every((k) => c.learn.done[k.id]) || !!(c.learn.kept || {})[id]); }
 function held(c) { const n = mastery.counts(c); return (n.retained || 0) + (n.transferred || 0); }
 export function milestonesOf(c) { return Object.keys(MILESTONES).filter((k) => { try { return MILESTONES[k].test(c); } catch (e) { return false; } }); }
 const ms = (id) => ({ id, label: MILESTONES[id].label });

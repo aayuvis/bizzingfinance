@@ -48,7 +48,10 @@ ok(!/money\.wallet|sim\.earn|sim\.spend|Math\.random/.test(src.replace(/\/\*[\s\
 
 /* milestones move only on learning */
 ok(milestonesOf(c).length === 0, 'a new child has no milestones');
-['c1a', 'c1b', 'c1c', 'c1d'].forEach((id) => { c.learn.done[id] = true; });
+const { CHAPTERS } = await import('../src/content.js');
+CHAPTERS[0].cards.slice(0, -1).forEach((k) => { c.learn.done[k.id] = true; });
+ok(!milestonesOf(c).includes('ch-c1'), 'a chapter with one stop unread has not met its milestone');
+c.learn.done[CHAPTERS[0].cards.at(-1).id] = true;
 ok(milestonesOf(c).includes('ch-c1'), 'finishing a chapter meets its milestone');
 
 /* C3 · a second child never inherits the first's faces, worlds or coins */

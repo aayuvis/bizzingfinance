@@ -49,7 +49,7 @@ build rides along at `/bizzington.html`.
 | **Drawn artwork** | Five character portraits and five painted world backdrops, generated and embedded as WebP data URIs — 96 kB for the lot. `tools/art/` regenerates them. |
 | **Your place** | The housing ladder: room → room with a window → flat → flat with a kitchen → a house you buy. Rent, bills and food derive from where you live; moving shows the new weekly total *before* you commit. A kitchen costs more rent and less overall, because it halves the food line. |
 | **Independence** | "Rich" as a ratio, not a number: what your money earns each week ÷ what your life costs. At 100% you work because you choose to. Milestones at 10/25/50/100. |
-| **Learn** | 8 chapters · 32 cards · 30 levels · 5 ranks. Every card is a lesson, an example and one drill. |
+| **Learn** | 8 chapters · 56 stops · 30 levels · 5 ranks. Every stop is a lesson, a worked example, three questions and a Your-turn task. |
 | **Money Words** | A searchable 44-term glossary in plain English. |
 | **Wallet** | Jobs on Market Row (one a day each), every movement dated, printable statement. |
 | **Jars** | Spend / Save / Grow / Give, with a pay-day rule that fires by itself. |

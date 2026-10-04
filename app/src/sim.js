@@ -11,7 +11,7 @@ import * as biz from './business.js';
 import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
 import { price, money, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { tester, levelAtLeast, levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
-  WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, worldOpen, isOpen } from './content.js';
+  WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, chapterOpened, worldOpen, isOpen } from './content.js';
 
 export const MARKET_STEPS = 60;
 /* Seven years of weeks — the whole journey (docs/08), so a child's market
@@ -378,7 +378,7 @@ export function canTravel(c, i) {
   if (i === (c.world || 0)) return { ok: false, why: 'You are already here' };
   if (worldOpen(c, i)) return { ok: true };
   const prev = WORLDS[i - 1];
-  const left = prev.chapters.filter((ch) => !chapterDone(c, ch));
+  const left = prev.chapters.filter((ch) => !chapterOpened(c, ch));
   return { ok: false, why: left.length ? 'Finish what you are learning in ' + prev.name : 'Not yet', need: left };
 }
 export function travel(c, i) {
@@ -399,7 +399,7 @@ export function fixState(c, f) {
   const cost = price(f.units);
   const put = (c.fix.prog[f.id] || 0);
   return { cost, put, done: c.fix.done.includes(f.id), left: Math.max(0, cost - put),
-    pct: Math.min(1, put / cost), locked: !tester() && !!(f.needs && !chapterDone(c, f.needs)) };
+    pct: Math.min(1, put / cost), locked: !tester() && !!(f.needs && !chapterOpened(c, f.needs)) };
 }
 export function townFixes(c, worldId) {
   return fixesIn(worldId || WORLDS[c.world || 0].id).map((f) => ({ ...f, ...fixState(c, f) }));
@@ -442,7 +442,7 @@ export function townProgress(c) {
 export function rollQuests(c) {
   const d = dayIndex(Date.now());
   if (c.quests && c.quests.day === d && c.quests.list.length) return c.quests;
-  const pool = QUESTS.filter((q) => !q.needs || tester() || chapterDone(c, q.needs));
+  const pool = QUESTS.filter((q) => !q.needs || tester() || chapterOpened(c, q.needs));
   /* the town can only ask for help with something once it has something broken
      you are allowed to touch */
   if (!townFixes(c).some((f) => !f.done && !f.locked)) {

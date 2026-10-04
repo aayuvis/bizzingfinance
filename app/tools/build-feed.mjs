@@ -318,12 +318,11 @@ EVENTS.forEach((ev) => add({ kind: 'event', src: `event:${ev.id}`, topics: ['mar
    A narrated lesson yields about twelve cards: its teaching, its example, its narrated lines
    (those that do not restate the example), three questions and their three reasons. */
 export const SHORT = {
-  1: { floor: 65, close: 'about four more lessons in "What money even is", narrated, with three questions each' },
-  2: { floor: 63, close: 'about four more lessons in "Earning it", narrated, with three questions each' },
-  3: { floor: 85, close: 'one or two more lessons in "Making a plan", narrated, with three questions each' },
-  4: { floor: 69, close: 'about three more lessons in "Sellers and their tricks", narrated, with three questions each' },
-  5: { floor: 66, close: 'about four more lessons in "Keeping it safe", narrated, with three questions each' },
-  6: { floor: 74, close: 'about three more lessons in "Borrowing", narrated, with three questions each' },
+  1: { floor: 85, close: 'about two more lessons in "What money even is", with three questions each (narration adds a few cards more)' },
+  2: { floor: 83, close: 'about two more lessons in "Earning it", with three questions each (narration adds a few cards more)' },
+  4: { floor: 89, close: 'one more lesson in "Sellers and their tricks", narrated, with three questions each' },
+  5: { floor: 86, close: 'one or two more lessons in "Keeping it safe", with three questions each' },
+  6: { floor: 92, close: 'one more lesson in "Borrowing", with three questions each' },
 };
 
 /* ── write ───────────────────────────────────────────────────────────── */

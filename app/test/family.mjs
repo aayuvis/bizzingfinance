@@ -55,6 +55,22 @@ console.log('\nFamily · one next step, no streaks\n' + '─'.repeat(56));
     'migration turns the run into good days and drops the streak', JSON.stringify({ g: m.kids[0].goodDays.length, last: m.kids[0].lastDay === d }));
 }
 
+/* v12 -> v13: a chapter that grew two stops keeps open what a child had already earned,
+   and claims nothing read that was not */
+{
+  const { isOpen, worldOpen, chapterDone, CHAPTERS } = await import('../src/content.js');
+  const k = sim.newChild('A', 'builder', 'INR');
+  ['c1', 'c2', 'c3'].forEach((id) => CHAPTERS.find((x) => x.id === id).cards.filter((x) => !/[ef]$/.test(x.id)).forEach((x) => { k.learn.done[x.id] = true; }));
+  delete k.learn.kept;
+  const before = { jars: isOpen(k, 'jars'), world: worldOpen(k, 1) };
+  const m = migrate({ v: 12, kids: [k], active: 0 }).kids[0];
+  ok(!before.jars && !before.world && isOpen(m, 'jars') && worldOpen(m, 1) && !isOpen(m, 'bank'),
+    'a child who finished a chapter before its new stops keeps the Jar Shed and the road', JSON.stringify(m.learn.kept));
+  const { nextStop } = await import('../src/next.js');
+  ok(!chapterDone(m, 'c3') && !m.learn.done.c3e && nextStop(m).id === 'c1e',
+    'the new stops are still unread and next on the road: kept opens the gate, it marks nothing done', nextStop(m).id);
+}
+
 /* no streak copy in any string a child could read */
 {
   const hits = [];

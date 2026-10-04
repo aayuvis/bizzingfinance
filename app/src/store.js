@@ -8,7 +8,7 @@ import { hashPin } from './pin.js';
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 12;
+export const SCHEMA = 13;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -61,6 +61,7 @@ export function migrate(blob) {
     else if (blob.v === 9) blob = v9_to_v10(blob);
     else if (blob.v === 10) blob = v10_to_v11(blob);
     else if (blob.v === 11) blob = v11_to_v12(blob);
+    else if (blob.v === 12) blob = v12_to_v13(blob);
     else break;
   }
   return blob;
@@ -211,6 +212,30 @@ function v11_to_v12(old) {
     if (!k.wages) k.wages = {};
   });
   old.v = 12;
+  return old;
+}
+
+/* v13: two new stops in every chapter (audit D7/E1). A chapter is done when every stop in
+   it is read, so a child who had finished one would wake to find the Jar Shed, the Bank or
+   the next world shut again. The gate stays open for what they had already earned
+   (`learn.kept`, read by content.js chapterOpened); the new stops still show as unread on
+   the path, so they are led to them, and nothing is marked read that was not. */
+const V13_NEW = ['c1e', 'c1f', 'c2e', 'c2f', 'c3e', 'c3f', 'c4e', 'c4f', 'c5e', 'c5f', 'c6e', 'c6f', 'c7i', 'c7j', 'c8i', 'c8j'];
+const V13_BEFORE = {
+  c1: ['c1a', 'c1b', 'c1c', 'c1d'], c2: ['c2a', 'c2b', 'c2c', 'c2d'], c3: ['c3a', 'c3b', 'c3c', 'c3d'],
+  c4: ['c4a', 'c4b', 'c4c', 'c4d'], c5: ['c5a', 'c5b', 'c5c', 'c5d'], c6: ['c6a', 'c6b', 'c6c', 'c6d'],
+  c7: ['c7a', 'c7b', 'c7c', 'c7d', 'c7e', 'c7f', 'c7g', 'c7h'], c8: ['c8a', 'c8b', 'c8c', 'c8d', 'c8e', 'c8f', 'c8g', 'c8h'],
+};
+function v12_to_v13(old) {
+  old.kids.forEach((k) => {
+    const l = k.learn; if (!l) return;
+    const done = l.done || {};
+    if (!l.kept) l.kept = {};
+    Object.entries(V13_BEFORE).forEach(([ch, ids]) => {
+      if (ids.every((id) => done[id]) && !V13_NEW.filter((id) => id.startsWith(ch)).every((id) => done[id])) l.kept[ch] = true;
+    });
+  });
+  old.v = 13;
   return old;
 }
 
