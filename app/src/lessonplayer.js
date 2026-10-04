@@ -83,7 +83,7 @@ export function lessonBlock(id) {
   if (!LOADERS[id]) return '';
   const L = MEDIA[id];
   return `<div class="card lesson pad0" id="lessonstage" data-lesson="${id}">
-    <div class="lstage-holder"><div class="lstage" style="--stage:url(${stagePlate(id)})"><img class="lpip" src="./mascot/pip-point.webp" alt="" width="120" height="120"></div></div>
+    <div class="lstage-holder"><div class="lstage" style="--stage:url(${stagePlate(id)})"><img class="lpip" src="./mascot/sm/pip-point.webp" alt="" width="120" height="120"></div></div>
     <div class="lfoot">
       <div class="row"><div class="grow"><div class="eyebrow">Nana Bizz explains</div>
         <b style="font-size:15px">${L ? esc(L.title) : '…'}</b></div>

@@ -135,7 +135,7 @@ export function profileCard(c) {
       <div class="pc-medals">${medals.length ? medals.map((b) => `<span class="pc-medal">${ico(b.em, '', 20)}<b>${esc(b.name)}</b></span>`).join('') : '<span class="small muted">Your first medal will sit here.</span>'}</div>
       ${best.length ? `<div class="pc-faces">${best.map((a) => `<span class="bz-av mini" data-tier="${a.tier}" data-state="owned"><img src="${a.thumb}" alt="${esc(a.name)}" width="44" height="44"></span>`).join('')}</div>` : ''}
     </div>
-    <img class="pc-pip" src="./mascot/pip-cheer.webp" alt="" width="84" height="84">
+    <img class="pc-pip" src="./mascot/sm/pip-cheer.webp" alt="" width="84" height="84">
   </section>`;
 }
 

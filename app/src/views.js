@@ -323,7 +323,7 @@ export function viewHome() {
   const jobs = sim.jobsToday(c), jdone = jobs.filter((j) => j.done).length;
   const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
   const body = bzHome({
-    greet: { mascot: './mascot/pip-wave.webp', hello, name: c.name, line },
+    greet: { mascot: './mascot/sm/pip-wave.webp', hello, name: c.name, line },
     /* how far to the next level, not only its name (audit v4, B3) */
     ring: { html: ring, foot: { kicker: `Your level · ${xb.need} XP to level ${c.learn.level + 1}`, title: `${rank.name} · level ${c.learn.level}`, href: '#/me/rank' } },
     /* a tap is a 10-second check on the word, not a trip to the glossary (audit v4, B8) */

@@ -133,7 +133,7 @@ export function walletSheet(c) {
 }
 
 export function pipPose(pose, size = 96, alt = '') {
-  return `<img class="pip pip-${pose}" src="./mascot/pip-${pose}.webp" alt="${esc(alt)}" width="${size}" height="${size}">`;
+  return `<img class="pip pip-${pose}" src="./mascot/sm/pip-${pose}.webp" alt="${esc(alt)}" width="${size}" height="${size}">`;
 }
 
 /* ── the avatar menu: drops from the child's face in the top bar ─────────

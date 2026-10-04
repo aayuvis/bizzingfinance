@@ -105,6 +105,10 @@ async function run(label, vp, isMobile, scheme) {
   await page.click('[data-act="obAvatar"][data-arg="mango"]');
   await page.click('[data-act="obNext"]');
   const bands = page.locator('[data-act="obBand"]'); await bands.last().click();
+  /* A3 · the band tap opens the first stop itself — the one Continue would — not a menu */
+  await page.waitForFunction(() => /^#\/atlas\/c1a$/.test(location.hash));
+  ok(`${label}: the band tap opens the first stop straight away`, /Money is an agreement/.test(await page.textContent('main h1')), await page.textContent('main h1'));
+  await page.evaluate(() => { location.hash = '#/home'; });
   await page.waitForSelector('[data-bz=next]');
   ok(`${label}: setup is a name, a face and a band — and the face is in the top bar`, await page.locator('[data-bz=kid] img[src*="mango"]').count() === 1);
   await page.waitForTimeout(3600);                 /* let the welcome confetti finish */
@@ -881,6 +885,7 @@ async function demo() {
   await dp.goto(URL0); await dp.waitForSelector('[data-act="obStart"]'); await dp.waitForTimeout(400);
   await dp.click('[data-act="obStart"]'); await dp.waitForSelector('#nm');
   await dp.fill('#nm', 'Mira'); await dp.click('[data-act="obNext"]'); await dp.locator('[data-act="obBand"]').last().click();
+  await dp.waitForFunction(() => /^#\/atlas\//.test(location.hash)); await dp.evaluate(() => { location.hash = '#/home'; });
   await dp.waitForSelector('[data-bz=next]'); await dp.waitForTimeout(3800);
   await dp.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); }); await dp.waitForTimeout(300);
   const darkFails = await checkShell(dp, { phone: false });

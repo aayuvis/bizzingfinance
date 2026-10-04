@@ -246,7 +246,7 @@ function render() {
      Finance brings its words, Pip, the child's face, its six tabs (My Feed last) and its routes. */
   const tabOf = shell.tabOf(nav);
   root.innerHTML = bzShell({
-    app: 'finance', name: 'Finance', mascot: './mascot/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
+    app: 'finance', name: 'Finance', mascot: './mascot/sm/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
     kid: { name: c.name, avatar: avatarSrc(c.avatar) }, search: 'Search lessons, words, games…', query: R.sq || '',
     inRun: !!R.game,
     tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
@@ -992,6 +992,7 @@ on('obBand', (b) => { draft.band = b; fire('obCur', R.s && R.s.kids.length ? C()
 on('obCancel', () => { draft = { step: 0 }; R.adding = false; render(); });
 on('obCur', (cur) => {
   if (!R.s) R.s = sim.newState();
+  const firstChild = !R.s.kids.length;
   const child = sim.newChild(draft.name, draft.band, cur, draft.avatar);
   R.s.kids.push(child);
   R.s.active = R.s.kids.length - 1;
@@ -999,6 +1000,10 @@ on('obCur', (cur) => {
   setCurrency(cur);
   R.fields = {}; draft = { step: 0 }; R.adding = false;
   sfx.level(); confetti(40); render();
+  /* A3 · time to first learning: the household's first child goes from the band tap
+     straight into their first stop — the same one Continue would open (nextStep), with
+     Home one tap away. A second child added later lands on Home as before. */
+  if (firstChild) goContinue();
 });
 
 /* town */
