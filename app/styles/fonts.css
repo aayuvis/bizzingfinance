@@ -35,7 +35,16 @@
   font-weight: 600 800;
   font-display: swap;
   src: url(fonts/fraunces-italic-latin-ext.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20B8, U+20BA-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* ₹ alone, so a rupee page does not fetch the whole latin-ext face (audit v4, N6/R2) */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: italic;
+  font-weight: 600 800;
+  font-display: swap;
+  src: url(fonts/fraunces-italic-rupee.woff2) format('woff2');
+  unicode-range: U+20B9;
 }
 @font-face {
   font-family: 'Fraunces';
@@ -51,7 +60,16 @@
   font-weight: 600 800;
   font-display: swap;
   src: url(fonts/fraunces-normal-latin-ext.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20B8, U+20BA-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* ₹ alone, so a rupee page does not fetch the whole latin-ext face (audit v4, N6/R2) */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600 800;
+  font-display: swap;
+  src: url(fonts/fraunces-normal-rupee.woff2) format('woff2');
+  unicode-range: U+20B9;
 }
 @font-face {
   font-family: 'Hanken Grotesk';
@@ -67,7 +85,16 @@
   font-weight: 400 800;
   font-display: swap;
   src: url(fonts/hanken-grotesk-normal-latin-ext.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20B8, U+20BA-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* ₹ alone, so a rupee page does not fetch the whole latin-ext face (audit v4, N6/R2) */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url(fonts/hanken-grotesk-normal-rupee.woff2) format('woff2');
+  unicode-range: U+20B9;
 }
 @font-face {
   font-family: 'Sono';
@@ -83,5 +110,14 @@
   font-weight: 400 600;
   font-display: swap;
   src: url(fonts/sono-normal-latin-ext.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20B8, U+20BA-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* ₹ alone, so a rupee page does not fetch the whole latin-ext face (audit v4, N6/R2) */
+@font-face {
+  font-family: 'Sono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(fonts/sono-normal-rupee.woff2) format('woff2');
+  unicode-range: U+20B9;
 }
