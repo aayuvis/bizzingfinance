@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Pip, drawn as a cut-out like Bizzing Bee's bee: no square behind it -->
+  <path d="M12 26 L9 5 L27 16 Z" fill="#D9692C"/><path d="M14 22 L12.5 10 L23 17 Z" fill="#F6C9A0"/>
+  <path d="M52 26 L55 5 L37 16 Z" fill="#D9692C"/><path d="M50 22 L51.5 10 L41 17 Z" fill="#F6C9A0"/>
+  <ellipse cx="32" cy="36" rx="25" ry="23" fill="#E8853E"/>
+  <ellipse cx="24" cy="26" rx="11" ry="6" fill="#F4A464" opacity=".6"/>
+  <ellipse cx="32" cy="46" rx="15" ry="11" fill="#FCE6CC"/>
+  <ellipse cx="15" cy="44" rx="4.2" ry="2.6" fill="#FF8FA8" opacity=".85"/>
+  <ellipse cx="49" cy="44" rx="4.2" ry="2.6" fill="#FF8FA8" opacity=".85"/>
+  <circle cx="22.5" cy="34" r="7" fill="#fff"/><circle cx="23.8" cy="35" r="3.8" fill="#2A1A10"/><circle cx="22.6" cy="33.5" r="1.3" fill="#fff"/>
+  <circle cx="41.5" cy="34" r="7" fill="#fff"/><circle cx="42.8" cy="35" r="3.8" fill="#2A1A10"/><circle cx="41.6" cy="33.5" r="1.3" fill="#fff"/>
+  <ellipse cx="32" cy="42.5" rx="3.6" ry="2.6" fill="#3A1E12"/>
+  <path d="M26.5 48.5 Q32 53.5 37.5 48.5" fill="none" stroke="#3A1E12" stroke-width="2.6" stroke-linecap="round"/>
+</svg>
