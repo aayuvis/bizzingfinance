@@ -1094,3 +1094,16 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
 
 /* the road's posters: a scrim under the words, so a title on a pale sky still reads (audit v4, P4) */
 .travel .poster .pv{background:linear-gradient(180deg,rgb(10 22 26 / .42) 0%,rgb(10 22 26 / .55) 40%,rgb(10 22 26 / .88) 100%)}
+
+/* Money Words as illustrated sheets (audit H5): each word a sheet on the ground with its
+   own drawing in a well tinted by that drawing's accent. One column on a phone, as many
+   as fit on a wide screen; never a box inside a box. */
+.words{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))}
+.wcard{display:flex;flex-direction:column;gap:6px;padding:14px 16px;min-width:0;scroll-margin-top:calc(var(--tb,56px) + 12px)}
+.wc-h{display:flex;align-items:center;gap:12px;min-width:0}
+.wc-well{display:inline-grid;place-items:center;width:60px;height:60px;border-radius:16px;flex:0 0 auto;
+  color:var(--ink);background:color-mix(in srgb,var(--wa) 16%,var(--surface))}
+.wc-t{font-size:19px;flex:1;min-width:0;overflow-wrap:anywhere}
+.wc-m{font-size:15px;font-weight:650;line-height:1.4}
+.wc-e{font-size:13.5px;color:var(--muted);line-height:1.45}
+.wc-e .eyebrow{display:block;font-size:10.5px;margin-bottom:1px}

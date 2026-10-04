@@ -106,5 +106,27 @@ console.log('\nFamily · one next step, no streaks\n' + '─'.repeat(56));
   }
   ok(seen.size > 100 && !raw.length, `every game and content emoji has a drawn icon (${seen.size})`, raw.join(' '));
 }
+
+/* every Money Word has its own drawing (audit H5): a word with no drawn icon, or two
+   words sharing one that WORD_ICON_SHARED does not name, fails */
+{
+  const { GLOSSARY, WORD_ICON, WORD_ICON_SHARED } = await import('../src/content.js');
+  const { ICONS } = await import('../src/icons.js');
+  const { ico } = await import('../src/art.js');
+  const terms = GLOSSARY.map((g) => g[0]);
+  const bare = terms.filter((t) => !ICONS[WORD_ICON[t]] || !/<svg class="ico"/.test(ico(WORD_ICON[t], '__F__', 44)));
+  ok(!bare.length, `every Money Word resolves to a drawn icon (${terms.length})`, bare.join(', '));
+  const stray = Object.keys(WORD_ICON).filter((t) => !terms.includes(t));
+  ok(!stray.length, 'every word in WORD_ICON is a Money Word', stray.join(', '));
+  const allowed = new Set(WORD_ICON_SHARED.map((p) => [...p].sort().join('|')));
+  const by = {};
+  terms.forEach((t) => { if (WORD_ICON[t]) (by[WORD_ICON[t]] = by[WORD_ICON[t]] || []).push(t); });
+  const dup = Object.entries(by).filter(([, ts]) => ts.length > 1)
+    .filter(([, ts]) => ts.some((a, i) => ts.slice(i + 1).some((b) => !allowed.has([a, b].sort().join('|')))))
+    .map(([k, ts]) => `${k}: ${ts.join(' + ')}`);
+  ok(!dup.length, `no two Money Words share a drawing (${Object.keys(by).length} drawings)`, dup.join('; '));
+  const view = strip(src('views.js'));
+  ok(/function wordCard\([\s\S]*?WORD_ICON\[term\][\s\S]*?ico\(k/.test(view), 'the Money Words page draws each word from WORD_ICON');
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

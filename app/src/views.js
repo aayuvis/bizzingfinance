@@ -6,6 +6,7 @@ import { cardById as resolveCard, practiceFor, practiceExact, practiceTeach } fr
 import { PLAN, priceFor as planPrice, contents as planContents } from './plan.js';
 import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
+import { ICONS } from './icons.js';
 import { townSVG, PLACES } from './town.js';
 import { townGrowth, GROW_LABEL } from './world.js';
 import { BLD } from './buildings-gen.js';
@@ -26,7 +27,7 @@ import { overnightCard, receiptSlip } from './keepsakes.js';
 import * as co from './companion.js';
 import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount, hintFor,
-  chapterDone, isOpen as chapterOpen, needFor, worldOpen } from './content.js';
+  chapterDone, isOpen as chapterOpen, needFor, worldOpen, WORD_ICON } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
 import { STRANDS } from './objectives.js';
@@ -895,13 +896,20 @@ function viewGlossary() {
         style="margin-top:8px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);font-weight:650;width:100%">
     </div>
     ${rows.length === 0 ? `<div class="card empty">${pipPose('sleep', 72)}<p class="muted">Nothing by that name yet. Try a shorter word.</p></div>` : ''}
-    <div class="card pad0">
-      ${rows.map((g, i) => `<div style="padding:13px 16px;${i ? 'border-top:1px solid var(--line-soft)' : ''}">
-        <div class="row"><b style="font-size:15px;flex:1">${esc(g[0])}</b>${canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="gloss:${esc(g[0])}" aria-label="Read it to me">${ico('sound', '🔊', 14)}</button>` : ''}</div>
-        <p style="font-size:14px;margin-top:2px">${esc(g[1])}</p>
-        <p class="small muted" style="margin-top:3px">${esc(g[2])}</p></div>`).join('')}
-    </div>
+    ${rows.length ? `<div class="words">${rows.map(wordCard).join('')}</div>` : ''}
   </div>`;
+}
+/* One word, one sheet: its own drawing in a well tinted by the drawing's accent, the
+   word, the plain meaning, and the "for instance" (audit H5). */
+function wordCard([term, meaning, eg]) {
+  const k = WORD_ICON[term], acc = (ICONS[k] || {}).a || 'var(--action)';
+  const slug = term.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `<article class="card wcard" id="word-${slug}" data-word="${esc(term)}" data-icon="${esc(k || '')}">
+    <div class="wc-h"><span class="wc-well" style="--wa:${acc}">${ico(k, '', 44)}</span>
+      <h2 class="wc-t">${esc(term)}</h2>${canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="gloss:${esc(term)}" aria-label="Read ${esc(term)} to me">${ico('sound', '🔊', 14)}</button>` : ''}</div>
+    <p class="wc-m">${esc(meaning)}</p>
+    <p class="wc-e"><span class="eyebrow">For instance</span> ${esc(eg)}</p>
+  </article>`;
 }
 
 /* The family plan, for a grown-up: its price (cited), what it opens (computed), and the

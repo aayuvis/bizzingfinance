@@ -6,7 +6,7 @@
 
    Matching is plain: whole words and word-starts in the title count most, then the
    words of the body. No fuzzy guessing that turns "loan" into "lion". */
-import { ALL_CARDS, CHAPTERS, GLOSSARY, WORLDS, LETTERS, SHOP } from './content.js';
+import { ALL_CARDS, CHAPTERS, GLOSSARY, WORD_ICON, WORLDS, LETTERS, SHOP } from './content.js';
 import { NEW_CARD_LIST } from './objectives.js';
 import { PLACES } from './town.js';
 import { GAMES } from './arcade.js';
@@ -21,7 +21,7 @@ export function index() {
     out.push({ kind: 'Lesson', title: c.title, sub: `Stop ${i + 1} · ${ch ? ch.title : ''}`, body: plain(c.teach) + ' ' + plain(c.eg), act: 'card', arg: c.id, icon: 'lesson' });
   });
   NEW_CARD_LIST.forEach((c) => out.push({ kind: 'Lesson', title: c.title, sub: 'A lesson from the Atlas', body: plain(c.teach) + ' ' + plain(c.eg), act: 'card', arg: c.id, icon: 'lesson' }));
-  GLOSSARY.forEach(([t, m, e]) => out.push({ kind: 'Money Word', title: t, sub: m, body: e, act: 'word', arg: t, icon: 'page' }));
+  GLOSSARY.forEach(([t, m, e]) => out.push({ kind: 'Money Word', title: t, sub: m, body: e, act: 'word', arg: t, icon: WORD_ICON[t] || 'page' }));
   GAMES.forEach((g) => out.push({ kind: 'Game', title: g.name, sub: g.blurb, body: g.blurb, act: 'game', arg: g.id, icon: 'arcade' }));
   out.push({ kind: 'Game', title: 'The Market Game', sub: 'Forty companies, forty years', body: 'companies annual reports invest shares market', act: 'nav', arg: 'market40', icon: 'chartUp' });
   PLACES.forEach((p) => out.push({ kind: 'Place', title: p.name, sub: p.blurb, body: p.blurb, act: 'town', arg: p.key, icon: 'town' }));

@@ -1153,6 +1153,26 @@ export const GLOSSARY = [
   ['Exchange rate', 'What one currency is worth in another.', 'It moves. That is why the same holiday costs differently in different years.'],
 ];
 
+/* Each money word's drawing (audit H5), a name in icons.js. A drawing is a word's
+   picture only if it is that word's alone — a page of words that share pictures
+   teaches nothing about either — so test/family.mjs fails a word with no drawn
+   icon and two words with the same one, unless the pair is in WORD_ICON_SHARED. */
+export const WORD_ICON = {
+  'Budget': 'ledger', 'Income': 'coinIn', 'Expense': 'coinOut', 'Opportunity cost': 'crossroads',
+  'Interest': 'percent', 'Compounding': 'compound', 'Principal': 'stack', 'Inflation': 'priceUp',
+  'Saving': 'jars', 'Investing': 'seed', 'Risk': 'dice', 'Return': 'returnArrow',
+  'Diversification': 'mix', 'Share': 'pie', 'Fund': 'basket', 'Index fund': 'indexFund',
+  'Dividend': 'moneyTree', 'Fee': 'toll', 'Volatility': 'zigzag', 'Bear market': 'chartDown',
+  'Bull market': 'chartUp', 'Credit': 'handshake', 'Debt': 'iou', 'Loan term': 'calendar',
+  'Trust score': 'gauge', 'Emergency fund': 'parasol', 'Insurance': 'shield', 'Premium': 'premium',
+  'Tax': 'civic', 'Revenue': 'till', 'Cost': 'receipt', 'Profit': 'coinPlus',
+  'Margin': 'marginTag', 'Cash flow': 'tap', 'Inventory': 'box', 'Subscription': 'repeat',
+  'Wage': 'work', 'Value': 'scales', 'Scam': 'alert', 'Phishing': 'hook',
+  'One-time code': 'otp', 'Net worth': 'abacus', 'Currency': 'coin', 'Exchange rate': 'swap',
+};
+/* Pairs of words deliberately drawn alike, as [word, word]. None yet. */
+export const WORD_ICON_SHARED = [];
+
 export const BADGES = {
   'first-coin':        { em: '🪙', name: 'First earnings',    desc: 'Money you traded your time for.' },
   'scam-spotter':      { em: '🛡️', name: 'Scam spotter',      desc: 'You saw the shape, not the story.' },
