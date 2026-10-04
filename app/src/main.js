@@ -60,7 +60,8 @@ const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
 /* the place stories load when one is opened, not on the first screen */
 import { viewLibrary } from './library.js';
-let viewStory = null;
+let viewStory = null, viewSprint = null;
+const sprintView = () => viewSprint ? viewSprint() : (import('./sprint.js').then((m) => { viewSprint = m.viewSprint; render(); }), '<div class="card"><p class="small muted">Setting the clock…</p></div>');
 const storyView = () => viewStory ? viewStory() : (import('./stories.js').then((m) => { viewStory = m.viewStory; render(); }), '<div class="card"><p class="small muted">Opening the story…</p></div>');
 import * as items from './items.js';
 import * as CERT from './cert.js';
@@ -174,7 +175,7 @@ function readHash() {
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
   /* a place's story (stories.js): #/story/<world> */
   if (m[0] === 'story') { R.s.ui.nav = 'story'; R.storyAt = decodeURIComponent(m[1] || 'market'); R.focus = null; return true; }
-  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed', 'library'];
+  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed', 'library', 'sprint'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -229,6 +230,7 @@ function render() {
     nav === 'market40' ? viewMarketGame() :
     nav === 'story' ? storyView() :
     nav === 'library' ? viewLibrary() :
+    nav === 'sprint' ? sprintView() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
   R.lastNav = nav;
@@ -277,6 +279,8 @@ function render() {
   const km = document.querySelector('.kidmenu'), kb = document.querySelector('.bz-kid');
   if (km && kb) { const r = kb.getBoundingClientRect(); km.style.top = Math.round(r.bottom + 8) + 'px'; km.style.right = Math.max(10, Math.round(innerWidth - r.right)) + 'px'; }
   focusNow();
+  /* a sprint keeps its answer box under the fingers between questions */
+  const spa = root.querySelector('#spAns'); if (spa && document.activeElement !== spa) spa.focus({ preventScroll: true });
   /* a freshly opened dialog takes focus on its first control */
   if (R.overlay && R.focusedOv !== R.overlay) { R.focusedOv = R.overlay; const f = root.querySelector('.drawer .dr-item, .drawer button, .ovbox input, .ovbox button'); if (f && !/search/.test(R.overlay.kind)) f.focus({ preventScroll: true }); }
   if (!R.overlay) R.focusedOv = null;

@@ -720,6 +720,17 @@ async function demo() {
   const toWalk = await page.evaluate(() => /^act:/.test(window.BZF.R.shelf || ''));
   ok('phone Atlas: the whole map, five pins on screen, no long list, and a pin opens its walk', amap.pins === 5 && amap.rows === 0 && amap.fits && toWalk, JSON.stringify({ ...amap, toWalk }));
   await page.evaluate(() => { window.BZF.R.shelf = ''; });
+  /* the sprint (audit v4, F2): typed amounts against the wall clock, a best kept, nothing paid, nothing recorded */
+  await page.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/sprint'; });
+  await page.waitForSelector('[data-act="spStart"]');
+  const spBefore = await page.evaluate(() => { const c = window.BZF.R.s.kids[0]; return { rec: JSON.stringify(c.mastery.rec), wallet: c.money.wallet, xp: c.learn.xp }; });
+  await page.evaluate(() => window.BZF.fire('spStart'));
+  for (let i = 0; i < 2; i++) { const v = await page.evaluate(() => window.BZF.R.sprint.card.drill.value); await page.fill('#spAns', String(v)); await page.press('#spAns', 'Enter'); }
+  await page.evaluate(() => { window.BZF.R.sprint.t0 -= 61000; }); await page.waitForTimeout(500);
+  const spr = await page.evaluate((b) => { const { R } = window.BZF, c = R.s.kids[0]; return { done: R.sprint && R.sprint.done, right: R.sprint && R.sprint.right, best: c.sprint && c.sprint.best,
+    untouched: JSON.stringify(c.mastery.rec) === b.rec && c.money.wallet === b.wallet && c.learn.xp === b.xp }; }, spBefore);
+  ok('the sprint: typed by Enter, ends on the clock, keeps a best, pays and records nothing', spr.done && spr.right === 2 && spr.best >= 2 && spr.untouched, JSON.stringify(spr));
+  await page.evaluate(() => window.BZF.fire('spLeave'));
   /* the Library (audit v4, H1/H2): tools with pictures; a dragged loan length shows the Bank's own price */
   await page.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/library'; }); await page.waitForTimeout(400);
   const lib0 = await page.evaluate(() => ({ tools: document.querySelectorAll('.ltool').length, pics: document.querySelectorAll('.ltool .ltool-art, .ltool img').length }));

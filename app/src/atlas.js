@@ -195,6 +195,7 @@ export function viewAtlas(c) {
       <div class="row" style="gap:7px;flex-wrap:wrap;margin-top:8px">
         <button class="wchip" data-act="shelf" data-arg="words">${ico('lesson', '📖', 15)} Money Words · ${GLOSSARY.length}</button>
         <button class="wchip" data-act="nav" data-arg="arcade">${ico('arcade', '🎮', 15)} Practise it</button>
+        <button class="wchip" data-act="nav" data-arg="sprint">${ico('run', '', 15)} Sixty-second sprint</button>
         ${(() => { const n = reviseList(c).length; return `<button class="wchip${n ? ' hot' : ''}" data-act="shelf" data-arg="revise">${ico('moon', '🔁', 15)} Revise${n ? ' · ' + n : ''}</button>`; })()}
       </div>
     </div>
