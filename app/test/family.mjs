@@ -67,5 +67,13 @@ console.log('\nFamily · one next step, no streaks\n' + '─'.repeat(56));
   ok(hits.length === 0, 'no child-facing string mentions a streak or days in a row', hits.slice(0, 3).join(' | '));
 }
 
+
+/* every medal is drawn, never an emoji glyph (audit v4, L2) */
+{
+  const { BADGES } = await import('../src/content.js');
+  const { ico } = await import('../src/art.js');
+  const em = Object.entries(BADGES).filter(([, b]) => /__F__/.test(ico(b.em, '__F__', 16))).map(([k]) => k);
+  ok(!em.length, `every medal has a drawn icon (${Object.keys(BADGES).length})`, em.join(' '));
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

@@ -35,6 +35,19 @@ const A = { action: 'var(--action)', treasure: 'var(--treasure)', grow: 'var(--g
 const I = (accent, body, line, key) => ({ a: A[accent] || A.action, b: body || '', l: line || '', k: key || '' });
 
 export const ICONS = {
+  /* ── medals that were still emoji (audit v4, L2), drawn in the same three passes ── */
+  rock: I('treasure', '<path d="M3.5 17.5 6 10l4-3.5 5 1.2 3.6 4 1.9 5.8z"/>', '<path d="M3.5 17.5 6 10l4-3.5 5 1.2 3.6 4 1.9 5.8z"/><path d="M8.5 12.5l3 1.5 3-2"/>'),
+  paw: I('spend', '<ellipse cx="12" cy="15.5" rx="4.6" ry="3.8"/>', '<ellipse cx="12" cy="15.5" rx="4.6" ry="3.8"/><circle cx="6.4" cy="10.2" r="1.8"/><circle cx="9.8" cy="6.9" r="1.8"/><circle cx="14.2" cy="6.9" r="1.8"/><circle cx="17.6" cy="10.2" r="1.8"/>'),
+  cap: I('save', '<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/>', '<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6v4.2c1.6 1.6 3.4 2.2 5.5 2.2s3.9-.6 5.5-2.2v-4.2"/><path d="M21.5 9.5v5.5"/>'),
+  abacus: I('treasure', '<rect x="4" y="4" width="16" height="16" rx="2"/>', '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M4 14h16"/><circle cx="8" cy="9" r="1.4"/><circle cx="11" cy="9" r="1.4"/><circle cx="15" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/><circle cx="13" cy="19" r="0"/>'),
+  eye: I('save', '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/>', '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3.2"/>'),
+  ruler: I('treasure', '<path d="m3 16.5 13.5-13.5 4.5 4.5L7.5 21z"/>', '<path d="m3 16.5 13.5-13.5 4.5 4.5L7.5 21z"/><path d="m7 12.5 1.8 1.8M9.5 10l2.6 2.6M12 7.5l1.8 1.8M14.5 5l2.6 2.6"/>'),
+  flag: I('spend', '<path d="M5.5 4.5h12l-2.5 4 2.5 4h-12z"/>', '<path d="M5.5 21V4.5M5.5 4.5h12l-2.5 4 2.5 4h-12"/>'),
+  bow: I('spend', '<path d="M12 12 4.5 7.5v9zM12 12l7.5-4.5v9z"/>', '<path d="M12 12 4.5 7.5v9zM12 12l7.5-4.5v9z"/><circle cx="12" cy="12" r="1.8"/><path d="m10.8 13.6-2.3 6M13.2 13.6l2.3 6"/>'),
+  key: I('treasure', '<circle cx="8" cy="12" r="4.5"/>', '<circle cx="8" cy="12" r="4.5"/><path d="M12.5 12h9M18 12v3.5M21 12v2.5"/><circle cx="8" cy="12" r="1.4"/>'),
+  tree: I('grow', '<circle cx="12" cy="9.5" r="6.5"/>', '<circle cx="12" cy="9.5" r="6.5"/><path d="M12 13v8M9 21h6M12 15.5l-2.6-2.4M12 14l2.4-2"/>'),
+  storm: I('save', '<path d="M6.5 15.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6-1 3.9 3.9 0 0 1 .8 7.7z"/>', '<path d="M6.5 15.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6-1 3.9 3.9 0 0 1 .8 7.7H6.5"/><path d="m12.5 15.5-2 3.5h3l-2 3"/>'),
+  wrench: I('treasure', '<path d="M14.5 3.5a5 5 0 0 0-5 6.6L3.5 16a2.1 2.1 0 0 0 3 3l6-6a5 5 0 0 0 6.6-5l-3 3-2.6-.6-.6-2.6z"/>', '<path d="M14.5 3.5a5 5 0 0 0-5 6.6L3.5 16a2.1 2.1 0 0 0 3 3l6-6a5 5 0 0 0 6.6-5l-3 3-2.6-.6-.6-2.6z"/>'),
   /* ── nav & chrome ───────────────────────────────────────────────────── */
   home: I('treasure',
     '<path d="M3.5 10.8 12 4.2l8.5 6.6V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/>',
@@ -243,4 +256,8 @@ export const EMOJI_MAP = {
   '🧺': 'basket', '🌼': 'flower', '🌸': 'flower', '⛱': 'parasol', '☂': 'parasol', '🚪': 'door', '📬': 'postbox', '📮': 'postbox', '✉': 'envelope',
   '📨': 'envelope', '⛲': 'fountain', '📦': 'box', '📄': 'page', '📋': 'page', '🧾': 'receipt',
   '📒': 'receipt', '🧹': 'broom', '🏃': 'run', '🖨': 'printer', '⭐': 'quest', '🏗': 'work',
+  /* the medals (audit v4, L2) */
+  '🧊': 'calm', '🪨': 'rock', '🐾': 'paw', '✅': 'check', '📿': 'heart', '🎓': 'cap', '🧮': 'abacus', '👁': 'eye',
+  '📏': 'ruler', '🚩': 'flag', '🎀': 'bow', '🥣': 'roti', '☔': 'parasol', '🤲': 'heart', '📙': 'lesson', '📕': 'lesson',
+  '🔑': 'key', '🌳': 'tree', '⛈': 'storm', '🗼': 'chartUp', '🔧': 'wrench',
 };

@@ -1561,6 +1561,8 @@ export function viewProgress() {
             </div>
             ${p.transferred ? `<div class="small" style="color:var(--grow);font-weight:700;margin-top:4px">${p.transferred} done unprompted, out in the town</div>` : ''}
             ${p.lapsed ? `<div class="small" style="color:var(--spend);margin-top:4px">${p.lapsed} slipped — they are in Revise</div>` : ''}
+            ${(() => { /* fading: held once, now due for a second look (audit v4, E9) */ const f = mastery.due(c).filter((o) => o.strand === st && mastery.stateOf(c, o.id) !== 'lapsed').length;
+              return f ? `<div class="small" style="color:var(--treasure-deep);margin-top:4px">${f} fading — <a href="#/atlas" data-act="shelf" data-arg="revise">a second look keeps ${f === 1 ? 'it' : 'them'}</a></div>` : ''; })()}
           </div>`;
         }).join('')}
       </div>

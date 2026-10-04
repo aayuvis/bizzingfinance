@@ -492,6 +492,8 @@ function overlay() {
         ${o.first ? `<li>${ico('coin', '', 16)} +5 Bizzing coins for finishing it${o.xp ? ` · +${o.xp} XP` : ''}</li>` : ''}
         ${o.firstEver ? `<li>${ico('jars', '', 16)} Your first Bizzing coins — spend them in the Shop on a new face</li>` : ''}
       </ul>
+      ${o.first ? (() => { const xb = sim.xpBar(c); return `<div class="lvlbump" role="img" aria-label="Level ${c.learn.level}, ${xb.need} XP to the next">
+        <span class="lv">Level ${c.learn.level}</span><span class="lvbar"><i style="--to:${Math.round(xb.pct * 100)}%"></i></span><span class="small">${xb.need} XP to level ${c.learn.level + 1}</span></div>`; })() : ''}
       ${n && n.title ? `<p style="margin-top:10px">Next: <b>${esc(n.title)}</b></p>` : ''}
       <button class="btn wide" style="margin-top:14px" data-act="stopNext">${n && n.button ? esc(n.button) : 'Continue'} →</button>
       <button class="btn ghost wide" style="margin-top:8px" data-act="closeOv">Back to the Atlas</button></div>`);
