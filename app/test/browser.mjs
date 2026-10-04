@@ -749,6 +749,57 @@ async function demo() {
   const lib = await page.evaluate(() => { const { R, sim } = window.BZF, c = R.s.kids[0], o = sim.loanOffer(c, R.lib.loanU, R.lib.loanW);
     return { weeks: R.lib.loanW, shown: document.getElementById('lo-total').textContent, want: o.total, wantText: document.getElementById('lo-total').textContent.replace(/[^0-9]/g, '') === String(o.total) }; });
   ok('the Library: tools with pictures, and a dragged loan length shows the Bank\'s own price', lib0.tools >= 6 && lib0.pics >= 5 && lib.weeks === 12 && lib.wantText, JSON.stringify({ ...lib0, ...lib }));
+  /* G8/G9 · three levels and three goals: Tricky picked on the title card by tap (and 1 2 3 by
+     key) reaches the game — its chip in the HUD, its knobs in the run — and the purse still
+     moves by keyboard and by tap. A shift picks its level before the 3-2-1, the same way. */
+  {
+    await page.evaluate(() => { const B = window.BZF; B.fire('closeOv'); B.R.s.kids[0].tiers = {}; B.fire('game', 'cr'); });
+    await page.waitForSelector('.gilevel .tierpick');
+    const lit0 = await page.getAttribute('.tierbtn[aria-pressed="true"]', 'data-tier');
+    await page.tap('.tierbtn[data-tier="tricky"]'); await page.waitForTimeout(150);
+    const intro = await page.evaluate(() => ({ lit: (document.querySelector('.tierbtn[aria-pressed="true"]') || {}).dataset?.tier, kept: window.BZF.R.s.kids[0].tiers.cr,
+      goals: document.querySelectorAll('.gilevel .goals li').length, start: (document.querySelector('[data-act="gbegin"]') || {}).textContent || '' }));
+    await page.keyboard.press('1'); await page.waitForTimeout(120);
+    const byKey = await page.evaluate(() => window.BZF.R.s.kids[0].tiers.cr);
+    await page.keyboard.press('3'); await page.waitForTimeout(120);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tiers-intro.png`, fullPage: true });
+    await page.tap('[data-act="gbegin"]'); await page.waitForTimeout(400);
+    const inGame = await page.evaluate(() => { const g = window.BZF.R.game, chip = document.querySelector('.hud .tierchip');
+      return { id: g && g.id, chip: chip ? chip.dataset.tier + ':' + chip.textContent : '', visible: !!(chip && chip.offsetParent), help: g && g.st ? g.st.target : 0, lane: g.st.lane }; });
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(80);
+    const afterKey = await page.evaluate(() => window.BZF.R.game.st.lane);
+    await page.tap('.crlane[data-arg="0"]'); await page.waitForTimeout(80);
+    const afterTap = await page.evaluate(() => window.BZF.R.game.st.lane);
+    const cb = await page.locator('#crCanvas').boundingBox();
+    await page.touchscreen.tap(cb.x + cb.width * 0.9, cb.y + cb.height * 0.6); await page.waitForTimeout(80);
+    const afterCanvas = await page.evaluate(() => window.BZF.R.game.st.lane);
+    await page.waitForTimeout(2600);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tiers-tricky-cr.png` });
+    await page.evaluate(() => window.BZF.quitGame());
+    ok('levels: the title card lights the remembered level, Tricky is picked by tap (and 1/3 by key), and three goals are listed',
+      lit0 === 'standard' && intro.lit === 'tricky' && intro.kept === 'tricky' && byKey === 'easy' && intro.goals === 3 && /Tricky/.test(intro.start), JSON.stringify({ lit0, intro, byKey }));
+    ok('levels: Tricky reaches the game (its chip in the HUD) and the purse still moves by ← →, a lane tap and a canvas tap',
+      inGame.id === 'cr' && /^tricky:Tricky$/.test(inGame.chip) && inGame.visible && afterKey === inGame.lane + 1 && afterTap === 0 && afterCanvas === 3,
+      JSON.stringify({ inGame, afterKey, afterTap, afterCanvas }));
+    /* a shift on Tricky: the picker first, on the shift's own painting, then the 3-2-1 */
+    const job = await page.evaluate(async () => {
+      const B = window.BZF, { R, sim } = B, c = R.s.kids[0];
+      const j = sim.jobsToday(c).find((x) => !x.done); if (!j) return { none: true };
+      B.fire('job', j.id); for (let i = 0; i < 40 && !R.game; i++) await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 200));
+      return { id: j.id, picking: R.game.__st().picking, picker: !!document.querySelector('.jgpick .tierpick'), goals: document.querySelectorAll('.jgpick .goals li').length };
+    });
+    await page.tap('.jgpick [data-act="jgTier"][data-arg="tricky"]'); await page.waitForTimeout(200);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tiers-shift-pick.png`, fullPage: true });
+    await page.tap('[data-act="jgStart"]'); await page.waitForTimeout(3600);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tiers-shift-tricky.png` });
+    const live = await page.evaluate(() => { const g = window.BZF.R.game, p = g.__st(), chip = document.querySelector('.hud .tierchip');
+      return { tier: p.tier, go: p.go, par: p.par, chip: chip ? chip.dataset.tier : '', kept: window.BZF.R.s.kids[0].tiers }; });
+    await page.evaluate(() => window.BZF.quitGame());
+    ok('levels: a shift opens on its level picker with three goals; Tricky picked by tap starts the shift on Tricky, at Tricky\'s own par',
+      !job.none && job.picking && job.picker && job.goals === 3 && live.tier === 'tricky' && live.go && live.chip === 'tricky' && live.kept[job.id] === 'tricky',
+      JSON.stringify({ job, live }));
+  }
   /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
   await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
   const town = await page.evaluate(() => {

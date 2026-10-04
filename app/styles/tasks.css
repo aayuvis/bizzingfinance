@@ -209,3 +209,34 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 .showcard h2{font-size:30px;margin:4px 0 6px}
 .sc-foot{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px}
 @media (prefers-reduced-motion:reduce){.showcard,.showcard .ray{animation:none}}
+
+/* ── G8 · three levels, G9 · three goals (arcade.js tierPicker / goalList, the job shell) ── */
+.tierpick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px;border-radius:16px;background:var(--tint)}
+.tierbtn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 6px;border:0;border-radius:12px;
+  background:transparent;color:var(--ink);font:800 14px var(--ui);cursor:pointer;transition:background .15s,box-shadow .15s}
+.tierbtn .tk{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:6px;background:rgb(0 0 0 / .08);font:800 11px var(--mono,ui-monospace,monospace)}
+.tierbtn:hover{background:color-mix(in srgb,var(--action) 10%,transparent)}
+.tierbtn.on{background:var(--surface,#fff);box-shadow:0 2px 8px rgb(20 24 36 / .16),inset 0 0 0 2px var(--action)}
+.tierbtn.on[data-tier="easy"]{box-shadow:0 2px 8px rgb(20 24 36 / .16),inset 0 0 0 2px var(--grow)}
+.tierbtn.on[data-tier="tricky"]{box-shadow:0 2px 8px rgb(20 24 36 / .16),inset 0 0 0 2px var(--spend)}
+.tierbtn:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+.tiersays{margin:6px 2px 0;font-weight:650}
+.tierpar{margin:4px 2px 0}
+.gilevel{display:grid;gap:8px;padding:14px}
+.jgpick{display:grid;gap:8px;margin-top:8px}
+.tierchip{display:inline-block;padding:0 2px;font-weight:800;color:var(--action)}
+.tierchip[data-tier="easy"]{color:var(--grow)}
+.tierchip[data-tier="tricky"]{color:var(--spend)}
+.goals{display:grid;gap:6px;text-align:left}
+.goals ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.goals li{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:12px;background:var(--surface2,var(--tint));border:1px solid var(--line);font-size:13.5px;font-weight:650}
+.goals .gtick{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);font-weight:900;font-size:13px;color:#fff}
+.goals li.met .gtick{background:var(--grow);border-color:var(--grow)}
+.goals li.met{border-color:color-mix(in srgb,var(--grow) 45%,var(--line))}
+.goals .gnew{margin-left:4px;padding:1px 7px;border-radius:999px;background:var(--treasure);color:#3A2400;font-size:11px}
+.goals .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.endcard .goals{width:100%;max-width:420px;margin:0 auto}
+.tclock{height:6px;border-radius:999px;background:var(--tint);overflow:hidden}
+.tclock i{display:block;height:100%;background:linear-gradient(90deg,var(--spend),var(--treasure));transform-origin:left;animation:tclock linear forwards}
+@keyframes tclock{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+:root[data-motion="reduced"] .tclock i,:root[data-calm] .tclock i{animation-timing-function:steps(6,end)}

@@ -5,7 +5,8 @@
    Wages land in the same wallet as everything else. There is no second,
    magic money, and no randomised reward for money spent — anywhere. */
 
-import { esc, sfx, toast, rng, clamp, sparkline } from './ui.js';
+import { esc, sfx, toast, rng, clamp, sparkline, on } from './ui.js';
+import { TIER_IDS, TIER_NAME, tierOf, setTier, goalsMet, earnGoals } from './jobtable.js';
 import { money, price, currency, CURRENCIES } from './fmt.js';
 import { say, ico } from './art.js';
 import { hero } from './hero.js';
@@ -109,9 +110,177 @@ export const PRACTISED = {
   st: 'doing nothing on a red day', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
   tt: 'turning monthly costs into yearly ones', sn: 'how big compounding really gets',
 };
-let current = null;
+/* ── G8 · three levels, G9 · three goals ──────────────────────────────────
+   A level turns the mechanic's own knobs and nothing else. Each level has its
+   own `par` — the number its pay is measured against — so the same care earns
+   the same wage on every level: Tricky is a challenge, never a bigger payday.
+   Standard is every game exactly as it was. For a game scored as a share of a
+   fixed set (the two-choice cards, the drills, Budget Blitz, Market Storm) the
+   par is that set, and the pay is the share of it you got right.
+
+   Main Street (board.js) has no levels yet: its knobs live in board.js. */
+export const ARCADE_TIERS = {
+  /* fall: coin speed · spawn: time between coins · coins: how many coin sizes · min/max: coins in an amount ·
+     help: how often a coin that fits is sent · par: a careful round's score */
+  cr: {
+    easy:     { fall: 0.75, spawn: 1.15, coins: 4, min: 2, max: 3, help: 0.7, par: 67, says: 'Slower coins, smaller amounts, fewer kinds of coin.' },
+    standard: { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55, par: 74, says: 'The round as it comes.' },
+    tricky:   { fall: 1.25, spawn: 0.85, coins: 5, min: 3, max: 5, help: 0.45, par: 80, says: 'Faster coins and bigger amounts.' },
+  },
+  /* n: cards in a round (0 = all) · clock: ms to decide each card (0 = no clock) · par: cards to get right */
+  nw: {
+    easy:     { n: 8, clock: 0, says: 'A shorter round: eight cards.' },
+    standard: { n: 0, clock: 0, says: 'Every card, no clock.' },
+    tricky:   { n: 0, clock: 6000, says: 'Every card, and six seconds to decide each one.' },
+  },
+  ss: {
+    easy:     { n: 6, clock: 0, says: 'A shorter round: six messages.' },
+    standard: { n: 0, clock: 0, says: 'Every message, no clock.' },
+    tricky:   { n: 0, clock: 9000, says: 'Every message, and nine seconds to decide — the way a real one rushes you.' },
+  },
+  /* pot: the month's money, × · first: which bills arrive first · par: the most a month can earn (decision points) */
+  bb: {
+    easy:     { pot: 1.25, first: null, par: 14, says: 'A roomier month.' },
+    standard: { pot: 1, first: null, par: 14, says: 'The month as it comes.' },
+    tricky:   { pot: 0.8, first: 'wants', par: 14, says: 'A tight month, and the treats arrive before the bills.' },
+  },
+  /* charge: how fast holding charges · target: the line (the badge and a goal) · par: the pay's
+     yardstick — the same on every level, because what a year grows by never depends on the line */
+  cc: {
+    easy:     { charge: 0.75, target: 360, says: 'The charge fills slower, so the middle is easier to hit. The line is lower.' },
+    standard: { charge: 1, target: 420, says: 'Fifteen years, the line at 420.' },
+    tricky:   { charge: 1.35, target: 480, says: 'The charge races, and the line is higher.' },
+  },
+  /* spawn: time between customers, × · patience: ms a customer waits · par: a careful day's profit,
+     in price units (only the ratio between levels is used, so the currency does not matter) */
+  sr: {
+    easy:     { spawn: 1.15, patience: 10500, par: 161, says: 'Fewer customers, and they wait longer.' },
+    standard: { spawn: 1, patience: 9000, par: 186, says: 'Sixty seconds as they come.' },
+    tricky:   { spawn: 0.75, patience: 7000, par: 224, says: 'A rush: more customers, less patience.' },
+  },
+  /* every: ms between shouts · shout: panic per shout · drift: panic per ms · par: hold (1) */
+  st: {
+    easy:     { every: 4200, shout: 9, drift: 0.0018, par: 1, says: 'Fewer shouts, and they rattle you less.' },
+    standard: { every: 3400, shout: 11, drift: 0.0022, par: 1, says: 'The storm as it comes.' },
+    tricky:   { every: 2700, shout: 13, drift: 0.0026, par: 1, says: 'More shouting, louder, and the panic climbs faster.' },
+  },
+  /* shock: week-to-week swing, × · crash: the red week, × · par: Boring Bella's cup score on this level (worked out) */
+  mc: {
+    easy:     { shock: 0.6, crash: 0.6, says: 'A calmer market.' },
+    standard: { shock: 1, crash: 1, says: 'The season as it comes.' },
+    tricky:   { shock: 1.5, crash: 1.4, says: 'A wild market with a deeper red week.' },
+  },
+  /* set: which numbers · par: questions to get right */
+  tt: {
+    easy:     { set: 'easy', says: 'Round numbers.' },
+    standard: { set: 'standard', says: 'Everyday numbers.' },
+    tricky:   { set: 'tricky', says: 'Awkward numbers, the kind real prices are.' },
+  },
+  sn: {
+    easy:     { set: 'easy', says: 'Shorter times and friendly rates.' },
+    standard: { set: 'standard', says: 'Ten to thirty years.' },
+    tricky:   { set: 'tricky', says: 'Odd rates and long horizons.' },
+  },
+};
+/* the pars that are a fixed set: worked out from the game itself, so they cannot drift */
+ARCADE_TIERS.nw.easy.par = 8; ARCADE_TIERS.nw.standard.par = 12; ARCADE_TIERS.nw.tricky.par = 12;
+ARCADE_TIERS.ss.easy.par = 6; ARCADE_TIERS.ss.standard.par = 10; ARCADE_TIERS.ss.tricky.par = 10;
+ARCADE_TIERS.cc.easy.par = 420; ARCADE_TIERS.cc.standard.par = 420; ARCADE_TIERS.cc.tricky.par = 420;
+ARCADE_TIERS.tt.easy.par = 8; ARCADE_TIERS.tt.standard.par = 8; ARCADE_TIERS.tt.tricky.par = 8;
+ARCADE_TIERS.sn.easy.par = 6; ARCADE_TIERS.sn.standard.par = 6; ARCADE_TIERS.sn.tricky.par = 6;
+export const TIERLESS = { mn: 'Main Street\'s rules live in board.js; its levels are not built yet.' };
+
+/* Three goals per game, each a decision you can choose to make. They read the run's
+   summary when it ends, tick a record on the child, and pay nothing at all. */
+export const ARCADE_GOALS = {
+  cr: [
+    { id: 'exact3', name: 'Exact three times in a round', check: (r) => r.exact >= 3 },
+    { id: 'clean', name: 'A whole round without overpaying', check: (r) => r.finished && r.overpays === 0 && r.exact >= 2 },
+    { id: 'five', name: 'Five exact amounts before a single overpay', check: (r) => r.firstRun >= 5 },
+  ],
+  nw: [
+    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
+    { id: 'needs', name: 'Every need called a need', check: (r) => r.needWrong === 0 },
+    { id: 'wants', name: 'Every want called a want', check: (r) => r.wantWrong === 0 },
+  ],
+  ss: [
+    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
+    { id: 'notrap', name: 'Never fell for a trap', check: (r) => r.scamWrong === 0 },
+    { id: 'trust', name: 'Trusted every real message', check: (r) => r.safeWrong === 0 },
+  ],
+  bb: [
+    { id: 'musts', name: 'Every bill you needed, paid', check: (r) => r.mustMissed === 0 },
+    { id: 'spare', name: 'Needs paid, and money left at the end', check: (r) => r.mustMissed === 0 && r.left > 0 },
+    { id: 'quarter', name: 'Needs paid, and a quarter of the month kept', check: (r) => r.mustMissed === 0 && r.left >= r.pot / 4 },
+  ],
+  cc: [
+    { id: 'target', name: 'Over the target line', check: (r) => r.reached },
+    { id: 'nofall', name: 'Fifteen years without one going backwards', check: (r) => r.years >= 15 && r.falls === 0 },
+    { id: 'steady', name: 'Never charged past three-quarters', check: (r) => r.years >= 15 && r.maxCharge <= 75 },
+  ],
+  sr: [
+    { id: 'profit', name: 'Made a profit', check: (r) => r.profit > 0 },
+    { id: 'nolost', name: 'Nobody gave up waiting', check: (r) => r.lost === 0 && r.served >= 8 },
+    { id: 'nowrong', name: 'Never served what nobody wanted', check: (r) => r.wrong === 0 && r.served >= 8 },
+  ],
+  st: [
+    { id: 'held', name: 'Held through the whole storm', check: (r) => r.held },
+    { id: 'cool', name: 'Held, and panic never reached 80', check: (r) => r.held && r.maxPanic < 80 },
+    { id: 'calm', name: 'Held, and panic never passed half', check: (r) => r.held && r.maxPanic <= 50 },
+  ],
+  mc: [
+    { id: 'spread', name: 'Spread out every single week', check: (r) => r.spreadWeeks === r.weeks },
+    { id: 'nerve', name: 'Kept your nerve: moved 40% or less all cup', check: (r) => r.churn <= 40 },
+    { id: 'bella', name: 'Beat Boring Bella on cup score', check: (r) => r.beatBella },
+  ],
+  tt: [
+    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
+    { id: 'weekly', name: 'Every weekly one right', check: (r) => r.weeklyWrong === 0 },
+    { id: 'yearly', name: 'Saw through the yearly price', check: (r) => r.compareRight },
+  ],
+  sn: [
+    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
+    { id: 'nosimple', name: 'Never picked the adding-up answer', check: (r) => r.simple === 0 },
+    { id: 'long', name: 'Every one over the longest time right', check: (r) => r.longWrong === 0 },
+  ],
+};
+
+let current = null, curTier = 'standard', lastGoals = null;
+/* the knobs of the game being played, at the level it was started on */
+const knobs = (id) => ARCADE_TIERS[id][curTier] || ARCADE_TIERS[id].standard;
+/* pay measured against this level's par: Standard's scale is exactly 1 */
+const parScale = (id) => ARCADE_TIERS[id].standard.par / (knobs(id).par || ARCADE_TIERS[id].standard.par);
+function goalsFor(id, run) {
+  const c = K();
+  lastGoals = { id, list: earnGoals(c, id, ARCADE_GOALS[id], Object.assign({ tier: curTier }, run)) };
+  if (R.s) sim.save(R.s);
+  return lastGoals.list;
+}
+
+/* The level picker, shared with the job shifts: three buttons, the lit one says what it changes. */
+export function tierPicker(tier, act, prefix = '', says = null) {
+  return `<div class="tierpick" role="group" aria-label="Level">
+    ${TIER_IDS.map((t, i) => `<button class="tierbtn${t === tier ? ' on' : ''}" data-act="${act}" data-arg="${prefix}${t}" data-tier="${t}"
+      aria-pressed="${t === tier}"><span class="tk" aria-hidden="true">${i + 1}</span>${TIER_NAME[t]}</button>`).join('')}
+  </div>${says && says[tier] ? `<p class="small tiersays">${esc(says[tier])}</p>` : ''}`;
+}
+/* The three goals, ticked from the child's record. `earned` (this run's) marks the new ones. */
+export function goalList(table, c, id, earned = null) {
+  if (!table || !table.length) return '';
+  const have = goalsMet(c, id), fresh = new Set((earned || []).filter((g) => g.fresh).map((g) => g.id));
+  return `<div class="goals"><div class="eyebrow">Goals · a record, not a prize</div>
+    <ul>${table.map((g) => `<li class="${have[g.id] ? 'met' : ''}${fresh.has(g.id) ? ' fresh' : ''}" data-goal="${g.id}">
+      <span class="gtick" aria-hidden="true">${have[g.id] ? '✓' : ''}</span>
+      <span>${esc(g.name)}${fresh.has(g.id) ? ' <b class="gnew">new</b>' : ''}</span>
+      <span class="sr-only">${have[g.id] ? 'done' : 'not yet'}</span></li>`).join('')}</ul></div>`;
+}
+const endGoals = () => (lastGoals && lastGoals.id === current && R.game && R.game.id === current
+  ? goalList(ARCADE_GOALS[current], K(), current, lastGoals.list) : '');
+
 export function introView(id) {
   const g = GAMES.find((x) => x.id === id) || { name: id, keys: '' }, art = COVERS[id], how = HOW[id] || [];
+  const c = K(), tiers = ARCADE_TIERS[id], tier = tierOf(c, id);
+  const says = tiers ? Object.fromEntries(TIER_IDS.map((t) => [t, tiers[t].says])) : null;
   return `<div class="stack">
     <section class="gintro" style="${art ? `--cover:url(${art.src})` : ''}" aria-labelledby="gi-h">
       <span class="cv-veil"></span>
@@ -119,17 +288,42 @@ export function introView(id) {
         <ol>${how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol>
         ${g.keys ? `<span class="pill">${esc(g.keys)}</span>` : ''}</div>
     </section>
-    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start →</button>
+    ${tiers ? `<div class="card gilevel" style="box-shadow:none">
+      <div class="row"><span class="eyebrow grow">Level</span><span class="small muted">1 2 3 to pick</span></div>
+      ${tierPicker(tier, 'gTier', id + ':', says)}
+      <p class="small muted tierpar">Every level pays the same for the same care — a harder one is a challenge, not a bigger wage.</p>
+      ${goalList(ARCADE_GOALS[id], c, id)}
+    </div>` : ''}
+    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start${tiers ? ' on ' + TIER_NAME[tier] : ''} →</button>
     <button class="btn ghost wide" data-act="gback">Back to Play</button></div>`;
 }
-export function startGame(id, seed) {
-  current = id;
+/* the picker's own action: arcade.js registers it, so the level is remembered on the child */
+on('gTier', (arg) => {
+  const [id, t] = String(arg || '').split(':');
+  if (!ARCADE_TIERS[id] || !setTier(K(), id, t)) return;
+  if (R.s) sim.save(R.s);
+  sfx.click(); R.render();
+});
+/* and by keyboard on the title card: 1 2 3 pick a level (Enter on Start begins) */
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('keydown', (e) => {
+    if (!R.gameIntro || R.game || R.overlay || e.defaultPrevented) return;
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName || '')) return;
+    const n = ['1', '2', '3'].indexOf(e.key);
+    if (n >= 0 && ARCADE_TIERS[R.gameIntro]) { e.preventDefault(); setTier(K(), R.gameIntro, TIER_IDS[n]); if (R.s) sim.save(R.s); sfx.click(); R.render(); }
+  });
+}
+export function startGame(id, seed, tier) {
+  current = id; lastGoals = null;
+  curTier = TIER_IDS.includes(tier) ? tier : (ARCADE_TIERS[id] ? tierOf(K(), id) : 'standard');
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
     mc: marketCup, mn: mainStreet }[id];
   if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = seed != null ? f(seed) : f(); sfx.click(); }
 }
-export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
+export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; }
+/* the level chip every game's HUD carries */
+const tierChip = () => `<span class="tierchip" data-tier="${curTier}">${TIER_NAME[curTier]}</span>`;
 
 export function hud(bits) {
   /* an empty bit is no chip at all (audit v4: an empty chip after '120cm wide') */
@@ -164,6 +358,7 @@ export function endCard(em, title, sub, wage, line, who) {
     ${best != null ? `<p class="endbest">${isNew ? 'A new best for you' : 'Your best'}: <b class="tabnum">${best}</b></p>` : ''}
     ${line ? say(who || 'pip', line) : ''}
     ${current && PRACTISED[current] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current])}</p>` : ''}
+    ${endGoals()}
     <p class="small muted">${lastCapped ? `Played for practice: ${esc(current ? (GAMES.find((g) => g.id === current) || {}).name || 'this game' : 'this game')} pays for its first ${sim.GAME_PAYS} games a day. Tomorrow it pays again.` : `Earned ${money(wage)}, straight into your wallet.`}</p>
     <button class="btn wide" data-act="gquit">Back to Play</button></div>`;
 }
@@ -177,25 +372,44 @@ function shuffle(arr, seed) {
 }
 /* Two-choice games share a shape: a card, a verdict, a note, a tally. */
 function twoChoice(cfg) {
-  const items = shuffle(cfg.items.slice(), cfg.seed);
-  const st = { i: 0, right: 0, note: null, done: false };
+  /* G8 · a level is how many cards and whether each one has a clock; the pay is the
+     share right, scaled to the full round, so a short round is not a cheaper one */
+  const kn = knobs(cfg.id), nStd = cfg.items.length;
+  const all = shuffle(cfg.items.slice(), cfg.seed);
+  const items = kn.n ? all.slice(0, kn.n) : all;
+  const st = { i: 0, right: 0, note: null, done: false, wrong: {}, shown: Date.now() };
+  let timer = 0;
+  const stop = () => { if (timer) clearTimeout(timer); timer = 0; };
+  const arm = () => {
+    stop();
+    st.shown = Date.now();
+    if (kn.clock && !st.done) timer = setTimeout(() => { timer = 0; pick(null); }, kn.clock);
+  };
   const pick = (side) => {
     if (st.done) return;
+    stop();
     const it = items[st.i];
-    const ok = it.a === side || it.a === 'both';
-    if (ok) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
+    const ok = side != null && (it.a === side || it.a === 'both');
+    if (ok) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; st.wrong[it.a] = (st.wrong[it.a] || 0) + 1; sfx.bad(); }
     st.pop = ok ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
     /* Specific, never a bare "Yes." (D3): say what it was and, when the item
        carries one, why. */
     const sideLabel = (k) => (cfg.left.side === k ? cfg.left : cfg.right).label;
     const named = it.a === 'both' ? 'It can be both — that is the interesting kind.' : `${sideLabel(it.a)}.`;
-    st.note = { ok, text: ok ? (it.note ? `${named} ${it.note}` : named) : (it.note ? `${cfg.wrongNote(it)} ${it.note}` : cfg.wrongNote(it)) };
+    const wrong = side == null ? `The bell rang. It was: ${named}` : cfg.wrongNote(it);
+    st.note = { ok, text: ok ? (it.note ? `${named} ${it.note}` : named) : (it.note ? `${wrong} ${it.note}` : wrong) };
     st.i++;
-    if (st.i >= items.length) { st.done = true; st.won = payout(Math.round(st.right * cfg.pay), cfg.name); }
+    if (st.i >= items.length) {
+      st.done = true;
+      st.won = payout(Math.round((st.right / items.length) * nStd * cfg.pay), cfg.name);
+      goalsFor(cfg.id, { right: st.right, n: items.length, needWrong: st.wrong.need || 0, wantWrong: st.wrong.want || 0,
+        scamWrong: st.wrong.scam || 0, safeWrong: st.wrong.safe || 0 });
+    } else arm();
     R.render();
   };
+  arm();
   return {
-    id: cfg.id,
+    id: cfg.id, st, stop,
     key(e) {
       if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
       if (e.key === 'ArrowLeft') pick(cfg.left.side);
@@ -203,13 +417,15 @@ function twoChoice(cfg) {
     },
     act(n) { if (n === cfg.left.act) pick(cfg.left.side); else if (n === cfg.right.act) pick(cfg.right.side); },
     view() {
-      if (st.done) return `<div class="stack">${hud(['Done'])}
+      if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
         ${endCard(st.right >= items.length - 1 ? '🏅' : '👍', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
       const it = items[st.i];
+      /* the clock is a bar that drains; a re-render picks it up where it was */
+      const clock = kn.clock ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, Date.now() - st.shown)}ms"></i></div>` : '';
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${items.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}
+        ${hud([tierChip(), `${st.i + 1} / ${items.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}
         <div class="stage">${st.pop ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
-          ${cfg.card(it)}
+          ${clock}${cfg.card(it)}
           ${st.note ? `<div style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
           <div class="grow"></div>
           <div class="choices">
@@ -291,15 +507,19 @@ function scamSpotter() {
 
 /* ══ 3 · BUDGET BLITZ ═════════════════════════════════════════════════ */
 function budgetBlitz() {
-  const c = K();
-  const pot = sim.weeklyIncome(c) * 4;
+  const c = K(), kn = knobs('bb');
   const bills = [
     { n: 'Rent on the stall', u: 14, must: true }, { n: 'Food for the month', u: 22, must: true },
     { n: 'Bus pass', u: 8, must: true }, { n: 'A film with friends', u: 6, must: false },
     { n: 'Phone plan', u: 6, must: true }, { n: "Mags's brass button", u: 12, must: false },
     { n: 'Sister’s birthday cake', u: 5, must: false }, { n: 'New shoes — the old ones leak', u: 10, must: true },
   ];
-  const order = shuffle(bills.slice(), 4423);
+  /* G8 · a tight month is tight, never impossible: every bill you need always fits */
+  const mustSum = bills.filter((b) => b.must).reduce((t, b) => t + price(b.u), 0);
+  const base = sim.weeklyIncome(c) * 4;
+  const pot = kn.pot >= 1 ? base * kn.pot : Math.max(Math.ceil(mustSum * 1.05), Math.round(base * kn.pot));
+  const shuffled = shuffle(bills.slice(), 4423);
+  const order = kn.first === 'wants' ? shuffled.filter((b) => !b.must).concat(shuffled.filter((b) => b.must)) : shuffled;
   const st = { i: 0, left: pot, missed: [], paid: [], done: false };
   const decide = (payIt) => {
     if (st.done) return;
@@ -313,22 +533,23 @@ function budgetBlitz() {
       st.done = true;
       st.mustMissed = st.missed.filter((x) => x.must).length;
       st.won = payout(Math.max(0, 10 - st.mustMissed * 4) + (st.left > 0 ? 4 : 0), 'Budget Blitz');
+      goalsFor('bb', { mustMissed: st.mustMissed, left: st.left, pot });
     }
     R.render();
   };
   return {
-    id: 'bb',
+    id: 'bb', st, decide,
     key(e) { if (e.key === '1') decide(true); else if (e.key === '2') decide(false); else if (e.key === 'Enter' && st.done) { quitGame(); R.render(); } },
     act(n) { if (n === 'bbPay') decide(true); else if (n === 'bbSkip') decide(false); },
     view() {
-      if (st.done) return `<div class="stack">${hud(['Month over'])}
+      if (st.done) return `<div class="stack">${hud(['Month over', tierChip()])}
         ${endCard(st.mustMissed === 0 ? '🎯' : '😬', money(st.left) + ' left over',
           st.mustMissed === 0 ? 'Everything you actually needed got paid.'
             : st.mustMissed + ' thing' + (st.mustMissed > 1 ? 's' : '') + ' you needed went unpaid. Those do not disappear — they move to next month.',
           st.won, 'Leftover money is not a prize. It is the part of the month you get to choose about.', 'nana')}</div>`;
       const b = order[st.i], amt = price(b.u);
       return `<div class="stack">
-        ${hud([`Left ${money(st.left)}`, `${st.i + 1} / ${order.length}`])}
+        ${hud([tierChip(), `Left ${money(st.left)}`, `${st.i + 1} / ${order.length}`])}
         <div class="stage">
           <div class="gcard"><span class="em">🧾</span><span class="nm">${esc(b.n)}</span>
             <div class="big" style="margin-top:6px">${money(amt)}</div></div>
@@ -345,11 +566,13 @@ function budgetBlitz() {
 
 /* ── quiz-shaped games share a shape too ─────────────────────────────── */
 function quizGame(cfg) {
-  const qs = cfg.build();
-  const st = { i: 0, right: 0, pick: null, done: false };
+  /* G8 · a level is the numbers (cfg.build reads the level's set); the count stays the same */
+  const qs = cfg.build(knobs(cfg.id).set);
+  const st = { i: 0, right: 0, pick: null, done: false, log: [] };
   const choose = (n) => {
     if (st.done || st.pick != null) return;
     st.pick = n;
+    st.log.push({ q: qs[st.i], pick: n, ok: n === qs[st.i].a });
     if (n === qs[st.i].a) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
     st.pop = n === qs[st.i].a ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
     R.render();
@@ -357,11 +580,19 @@ function quizGame(cfg) {
   const next = () => {
     if (st.pick == null) return;
     st.pick = null; st.i++;
-    if (st.i >= qs.length) { st.done = true; st.won = payout(Math.round(st.right * cfg.pay), cfg.name); }
+    if (st.i >= qs.length) {
+      st.done = true; st.won = payout(Math.round(st.right * cfg.pay), cfg.name);
+      const L = st.log;
+      goalsFor(cfg.id, { right: st.right, n: qs.length,
+        weeklyWrong: L.filter((x) => x.q.tag === 'weekly' && !x.ok).length,
+        compareRight: L.some((x) => x.q.tag === 'compare' && x.ok),
+        simple: L.filter((x) => x.q.trap != null && x.pick === x.q.trap).length,
+        longWrong: L.filter((x) => x.q.tag === 'long' && !x.ok).length });
+    }
     R.render();
   };
   return {
-    id: cfg.id,
+    id: cfg.id, st, qs, choose, next,
     key(e) {
       if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
       if (e.key === 'Enter') { next(); return; }
@@ -370,11 +601,11 @@ function quizGame(cfg) {
     },
     act(n, arg) { if (n === cfg.pickAct) choose(+arg); else if (n === cfg.nextAct) next(); },
     view() {
-      if (st.done) return `<div class="stack">${hud(['Done'])}
+      if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
         ${endCard(st.right >= qs.length - 1 ? '🏅' : '👍', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
       const q = qs[st.i];
       return `<div class="stack">
-        ${hud([`${st.i + 1} / ${qs.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}${st.pop && st.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
+        ${hud([tierChip(), `${st.i + 1} / ${qs.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}${st.pop && st.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
         <div class="stage">
           <div class="gcard"><span class="em">${cfg.em}</span>
             <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>
@@ -395,15 +626,22 @@ function quizGame(cfg) {
 }
 
 /* ══ 4 · TIMES TWELVE ═════════════════════════════════════════════════ */
+/* G8 · number size per level. The yearly price is always the cheaper one, as in Standard. */
+export const TT_SETS = {
+  easy:     { monthly: [10, 20, 30, 40, 50, 5, 25], weekly: [5, 10, 20], compare: [20, 200] },
+  standard: { monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] },
+  tricky:   { monthly: [35, 45, 65, 75, 85, 95, 55], weekly: [17, 23, 35], compare: [65, 740] },
+};
 function timesTwelve() {
   return quizGame({
     id: 'tt', name: 'Times Twelve', em: '🗓️', pay: 1.2, who: 'pip',
     pickAct: 'ttPick', nextAct: 'ttNext',
     outro: 'Multiply every monthly thing by twelve <b>before</b> you agree to it. Then cancel the ones you would not buy at that price.',
-    build() {
+    build(set = 'standard') {
       const r = rng(5150);
       const out = [];
-      const monthly = [15, 25, 30, 40, 60, 12, 20];
+      const N = TT_SETS[set] || TT_SETS.standard;
+      const monthly = N.monthly.slice();
       shuffle(monthly.slice(), 991).slice(0, 4).forEach((m) => {
         const right = m * 12;
         const opts = shuffle([right, m * 10, m * 6, right + m], Math.round(r() * 1e6) + m);
@@ -413,18 +651,20 @@ function timesTwelve() {
           why: `${money(price(m))} × 12 = <b>${money(price(right))}</b>. Small monthly numbers are the entire technique.`,
         });
       });
-      const weekly = [8, 15, 25];
+      const weekly = N.weekly;
       weekly.forEach((w) => {
         const right = w * 52;
         const opts = shuffle([right, w * 12, w * 30, w * 100], w * 77);
         out.push({
+          tag: 'weekly',
           q: `You spend <b>${money(price(w))} a week</b> on snacks. In a year?`,
           opts: opts.map((v) => money(price(v))), a: opts.indexOf(right),
           why: `${money(price(w))} × 52 = <b>${money(price(right))}</b>. A week is a small unit and a year is not.`,
         });
       });
-      const a = 45, b = 480;
+      const [a, b] = N.compare;
       out.push({
+        tag: 'compare',
         q: `One shop wants <b>${money(price(a))} a month</b>. Another wants <b>${money(price(b))} once a year</b>. Which costs less?`,
         opts: [money(price(a)) + ' a month', money(price(b)) + ' a year', 'They are the same', 'Not enough information'],
         a: 1,
@@ -436,21 +676,35 @@ function timesTwelve() {
 }
 
 /* ══ 5 · THE SNOWBALL ═════════════════════════════════════════════════ */
+/* G8 · horizon and rate per level; six rows each, as in Standard */
+export const SN_SETS = {
+  easy: [
+    { p: 100, r: 0.10, y: 5 }, { p: 100, r: 0.10, y: 10 }, { p: 200, r: 0.10, y: 7 },
+    { p: 500, r: 0.05, y: 10 }, { p: 100, r: 0.20, y: 5 }, { p: 1000, r: 0.10, y: 10 },
+  ],
+  standard: [
+    { p: 100, r: 0.10, y: 10 }, { p: 100, r: 0.07, y: 20 }, { p: 500, r: 0.05, y: 10 },
+    { p: 1000, r: 0.10, y: 20 }, { p: 200, r: 0.08, y: 30 }, { p: 100, r: 0.10, y: 30 },
+  ],
+  tricky: [
+    { p: 150, r: 0.06, y: 25 }, { p: 250, r: 0.09, y: 20 }, { p: 400, r: 0.04, y: 35 },
+    { p: 120, r: 0.12, y: 30 }, { p: 800, r: 0.07, y: 40 }, { p: 300, r: 0.11, y: 15 },
+  ],
+};
 function snowball() {
   return quizGame({
     id: 'sn', name: 'The Snowball', em: '❄️', pay: 1.6, who: 'nana',
     pickAct: 'snPick', nextAct: 'snNext',
     outro: 'Almost nobody guesses high enough, because we all quietly add instead of multiplying. Time is the ingredient, not the amount.',
-    build() {
-      const rows = [
-        { p: 100, r: 0.10, y: 10 }, { p: 100, r: 0.07, y: 20 }, { p: 500, r: 0.05, y: 10 },
-        { p: 1000, r: 0.10, y: 20 }, { p: 200, r: 0.08, y: 30 }, { p: 100, r: 0.10, y: 30 },
-      ];
+    build(set = 'standard') {
+      const rows = SN_SETS[set] || SN_SETS.standard;
+      const longest = Math.max(...rows.map((x) => x.y));
       return rows.map((row, i) => {
         const right = Math.round(row.p * Math.pow(1 + row.r, row.y));
         const simple = Math.round(row.p * (1 + row.r * row.y));   // the answer everyone reaches for
         const opts = shuffle([right, simple, Math.round(row.p * (1 + row.r * row.y * 0.5)), Math.round(right * 2.1)], 700 + i * 13);
         return {
+          tag: row.y === longest ? 'long' : '', trap: opts.indexOf(simple),
           q: `<b>${money(price(row.p))}</b> growing <b>${(row.r * 100).toFixed(0)}% a year</b> for <b>${row.y} years</b>. Where does it land?`,
           opts: opts.map((v) => money(price(v))), a: opts.indexOf(right),
           why: `<b>${money(price(right))}</b>. Adding ${(row.r * 100).toFixed(0)}% ${row.y} times would only reach ${money(price(simple))} — the extra is growth landing on earlier growth.`,
@@ -464,18 +718,30 @@ function snowball() {
    Ranked on cup score, not returns. A leaderboard sorted by return alone
    would tell a child the luckiest single bet was the best decision, which
    is the one thing this app must never say. */
-function marketCup() {
-  const ROUNDS = 6, START = 1000, RED = 3;
-  const r = rng(120);
-  const ret = [];
+/* the season's weeks, seeded: a level scales the swing and the red week, nothing else */
+function cupRows(kn) {
+  const ROUNDS = 6, RED = 3, r = rng(120), ret = [];
   for (let k = 0; k < ROUNDS; k++) {
     const row = {};
     ASSETS.forEach((a) => {
-      const shock = (r() + r() + r() - 1.5) * 2 * a.vol * 1.0;
-      row[a.id] = a.drift * 3.6 + shock + (k === RED ? -a.vol * 1.5 : 0);
+      const shock = (r() + r() + r() - 1.5) * 2 * a.vol * 1.0 * kn.shock;
+      row[a.id] = a.drift * 3.6 + shock + (k === RED ? -a.vol * 1.5 * kn.crash : 0);
     });
     ret.push(row);
   }
+  return ret;
+}
+/* G8 · the Cup's par on each level is Boring Bella's own cup score there — the basket in
+   week one and then home — worked out from the same weeks, so it cannot drift */
+function bellaCup(kn) {
+  let v = 1000;
+  cupRows(kn).forEach((row) => { v = Math.round(v * (1 + row.basket)); });
+  return Math.round((v / 1000 - 1) * 100) + 4 * 7 + Math.max(0, 30 - Math.round(100 / 8));
+}
+TIER_IDS.forEach((t) => { ARCADE_TIERS.mc[t].par = bellaCup(ARCADE_TIERS.mc[t]); });
+function marketCup() {
+  const ROUNDS = 6, START = 1000;
+  const ret = cupRows(knobs('mc'));
   const st = {
     round: 0, sel: 0, done: false, churn: 0, divSum: 0,
     alloc: { basket: 0, grain: 0, chai: 0, rocket: 0 },
@@ -508,6 +774,7 @@ function marketCup() {
   const next = () => {
     if (st.done) return;
     st.divSum += effective();
+    if (effective() >= 4) st.spread = (st.spread || 0) + 1;
     const row = ret[st.round];
     let g = 0;
     ASSETS.forEach((a) => { g += (st.alloc[a.id] / 100) * row[a.id]; });
@@ -544,7 +811,10 @@ function marketCup() {
       .sort((a, b) => b.sc.total - a.sc.total);
     st.place = st.table.findIndex((x) => x.who === 'You') + 1;
     st.byReturn = st.table.slice().sort((a, b) => b.v - a.v)[0].who;
-    st.won = payout(Math.max(4, Math.round(st.score.total / 6)), 'The Market Cup');
+    /* measured against this level's par (Bella's cup score here), so a wild market is not a richer one */
+    st.won = payout(Math.max(4, Math.round((st.score.total / 6) * parScale('mc'))), 'The Market Cup');
+    const bella = st.table.find((x) => x.who === 'Boring Bella');
+    goalsFor('mc', { spreadWeeks: st.spread || 0, weeks: ROUNDS, churn: st.churn, beatBella: st.score.total > bella.sc.total });
     if (st.score.div >= 24) sim.badge(c, 'diversified');
     const line = `${st.place}${['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]} of 4 · cup score ${st.score.total}`;
     if (!c.market.best) c.market.best = line;
@@ -569,7 +839,7 @@ function marketCup() {
     view() {
       if (st.done) {
         const sc = st.score;
-        return `<div class="stack">${hud(['Cup over'])}
+        return `<div class="stack">${hud(['Cup over', tierChip()])}
           <div class="stage">
             <div style="text-align:center"><div style="font-size:42px">${st.place === 1 ? '🏆' : '🎗️'}</div>
             <h2>${st.place === 1 ? 'You won the Cup' : st.place + ' of 4'}</h2>
@@ -598,12 +868,13 @@ function marketCup() {
               st.table[0].who === 'Boring Bella'
                 ? 'Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat.'
                 : 'You beat Bella this time. Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.')}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st.won)}. Fictional companies, real market behaviour, nothing here is advice.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       return `<div class="stack">
-        ${hud([`Week ${st.round + 1} / ${ROUNDS}`, `${st.me}`, `cash ${cash()}%`])}
+        ${hud([tierChip(), `Week ${st.round + 1} / ${ROUNDS}`, `${st.me}`, `cash ${cash()}%`])}
         <div class="stage">
           <p class="small muted">Split 100% across what you fancy. What you leave in cash is safe and grows by nothing.</p>
           <div class="alloc">
@@ -629,7 +900,7 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSk
   'ccHold', 'ccRelease', 'srServe', 'srStock',
   'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
   /* the job games (jobgames.js) — a job is a game now, not a button */
-  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane'];
+  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart'];
 
 /* ══ COMPOUND CLIMB ═══════════════════════════════════════════════════
    Risk and return as a physical feeling. Hold to charge the year's growth:
@@ -644,9 +915,10 @@ function warmFonts() {
   try { ['600 18px Sono', '800 18px "Hanken Grotesk"', '800 24px Fraunces'].forEach((f) => document.fonts.load(f)); } catch (e) { /* the fallbacks still read */ }
 }
 function compoundClimb() {
-  const YEARS = 15, START = 100, TARGET = 420, W = 360, H = 350;
+  const kn = knobs('cc');
+  const YEARS = 15, START = 100, TARGET = kn.target, W = 360, H = 350;
   const st = { year: 0, money: START, charge: 0, holding: false, done: false,
-    hist: [START], last: null, ruined: false, peak: START };
+    hist: [START], last: null, ruined: false, peak: START, falls: 0, maxCharge: 0 };
   let raf = 0, prev = 0, ctx = null, cv = null;
   const r = rng(8821);
   /* everything below is drawing — the money is decided in release() and nowhere else */
@@ -661,8 +933,10 @@ function compoundClimb() {
   const finish = () => {
     if (st.done) return;
     st.done = true; stop();
-    st.won = payout(Math.max(3, Math.round(st.money / 22)), 'Compound Climb');
+    /* the same par on every level: the line moves the badge and a goal, never the wage */
+    st.won = payout(Math.max(3, Math.round((st.money / 22) * parScale('cc'))), 'Compound Climb');
     if (st.money >= TARGET) sim.badge(K(), 'climbed');
+    goalsFor('cc', { reached: st.money >= TARGET && !st.ruined, years: st.year, falls: st.falls, maxCharge: st.maxCharge });
     sfx.level(); R.render();
   };
   /* the last year lands, the tower is seen, then the card — a beat, never a delay to input */
@@ -673,6 +947,7 @@ function compoundClimb() {
   const release = () => {
     if (st.done || look.ending || !st.holding) return;
     st.holding = false;
+    st.maxCharge = Math.max(st.maxCharge, st.charge);
     const ch = st.charge / 100;
     const mean = ch * 0.22;                     // 0 % → 22 % expected
     const vol = ch * ch * 0.34;                 // and the swing grows faster than the return
@@ -683,6 +958,7 @@ function compoundClimb() {
     st.peak = Math.max(st.peak, st.money);
     st.last = { pct: actual, before, after: st.money };
     st.year++;
+    if (actual < 0) st.falls++;
     st.charge = 0;
     look.land = 0; look.newest = st.year;
     const pct = (actual >= 0 ? '+' : '−') + Math.abs(actual * 100).toFixed(1) + '%';
@@ -719,7 +995,7 @@ function compoundClimb() {
     const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
     look.clock += dt;
     cd.step(dt);
-    if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075);
+    if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075 * kn.charge);
     /* the tower rises to its new height rather than jumping to it */
     look.disp = still() ? st.money : look.disp + (st.money - look.disp) * Math.min(1, dt * 0.007);
     look.land = Math.min(1, look.land + dt / 520);
@@ -911,7 +1187,7 @@ function compoundClimb() {
   };
 
   return {
-    id: 'cc',
+    id: 'cc', st, release, kn,
     mount() {
       warmFonts();
       cv = document.getElementById('ccCanvas');
@@ -945,7 +1221,7 @@ function compoundClimb() {
     view() {
       if (st.done) {
         const reached = st.money >= TARGET;
-        return `<div class="stack">${hud(['Fifteen years'])}
+        return `<div class="stack">${hud(['Fifteen years', tierChip()])}
           ${endCard(st.ruined ? '💀' : reached ? '🗼' : '📈',
             st.ruined ? 'Wiped out in year ' + st.year : Math.round(st.money) + ' from ' + START,
             st.ruined ? 'Nothing left to compound. That is the half of "high return" nobody puts on the poster.'
@@ -958,7 +1234,7 @@ function compoundClimb() {
       }
       const l = st.last;
       return `<div class="stack">
-        ${hud([`Year ${Math.min(YEARS, st.year + 1)} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
+        ${hud([tierChip(), `Year ${Math.min(YEARS, st.year + 1)} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
           <canvas id="ccCanvas" class="arccv" role="img" aria-label="Your coin tower, the target line and the years so far" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
           ${l ? `<div class="ccyear ${l.pct >= 0 ? 'up' : 'down'}">
@@ -1003,29 +1279,31 @@ function jolt(kind = 'bad') {
    Sixty seconds of customers, so that "busy" and "profitable" can come
    apart in front of the child rather than in a sentence. */
 function stallRush() {
-  const LEN = 60000, MAXQ = 4;
+  const LEN = 60000, MAXQ = 4, kn = knobs('sr');
   const st = { t: 0, cash: 0, revenue: 0, spent: 0, served: 0, lost: 0,
     stock: { chai: 3, ice: 3, umbrella: 2, rope: 2 }, q: [], done: false,
-    spawn: 900, restock: 0, msg: '' };
+    spawn: 900, restock: 0, msg: '', wrong: 0 };
   let raf = 0, prev = 0, nid = 0;
   const r = rng(3312);
   const items = STOCK.map((x) => x.id);
   const shown = new Set();   // customers already dealt in, so only a newcomer slides in
-  const btnFor = (id) => document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`);
+  const btnFor = (id) => (typeof document !== 'undefined' ? document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`) : null);
 
   const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
   const finish = () => {
     if (st.done) return;
     st.done = true; stop();
     st.profit = st.revenue - st.spent;
-    st.won = payout(Math.max(2, Math.round(st.profit / 14)), 'Stall Rush');
+    /* measured against this level's par: a rush is busier, never richer */
+    st.won = payout(Math.max(2, Math.round((st.profit / 14) * parScale('sr'))), 'Stall Rush');
     if (st.profit > 0) sim.badge(K(), 'profit-day');
+    goalsFor('sr', { profit: st.profit, lost: st.lost, wrong: st.wrong, served: st.served });
     sfx.level(); R.render();
   };
   const serve = (id) => {
     if (st.done) return;
     const i = st.q.findIndex((c) => c.want === id);
-    if (i < 0) { sfx.bad(); st.msg = 'Nobody is waiting for that'; R.render(); jolt('bad'); domPop(btnFor(id), 'nobody wants it', 'bad'); return; }
+    if (i < 0) { st.wrong++; sfx.bad(); st.msg = 'Nobody is waiting for that'; R.render(); jolt('bad'); domPop(btnFor(id), 'nobody wants it', 'bad'); return; }
     if (!st.stock[id]) { sfx.bad(); st.msg = 'Out of ' + id + ' — restock costs time'; R.render(); jolt('bad'); domPop(btnFor(id), 'sold out', 'bad'); return; }
     const item = STOCK.find((x) => x.id === id);
     st.stock[id]--; st.q.splice(i, 1);
@@ -1046,24 +1324,31 @@ function stallRush() {
     sfx.click(); R.render();
     domPop('.gplay [data-act="srStock"]', '−' + money(cost), 'cost');
   };
-  const step = (ts) => {
-    if (st.done) return;
-    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
-    const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
+  /* one slice of the day — the frame loop and a headless player share it */
+  const advance = (dt) => {
+    if (st.done) return false;
     st.t += dt;
     st.restock = Math.max(0, st.restock - dt);
     st.spawn -= dt;
     let dirty = false;
     if (st.spawn <= 0 && st.q.length < MAXQ) {
-      st.spawn = 900 + r() * 700;
+      st.spawn = (900 + r() * 700) * kn.spawn;
       st.q.push({ id: ++nid, want: items[Math.floor(r() * items.length)], patience: 1 });
       dirty = true;
     }
     for (let i = st.q.length - 1; i >= 0; i--) {
-      st.q[i].patience -= dt / 9000;
+      st.q[i].patience -= dt / kn.patience;
       if (st.q[i].patience <= 0) { st.q.splice(i, 1); st.lost++; dirty = true; sfx.bad(); domPop('.gplay .srq', 'gave up waiting', 'bad'); }
     }
-    if (st.t >= LEN) { finish(); return; }
+    if (st.t >= LEN) { finish(); return false; }
+    return dirty;
+  };
+  const step = (ts) => {
+    if (st.done) return;
+    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
+    const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
+    const dirty = advance(dt);
+    if (st.done) return;
     const tl = document.getElementById('srTime');
     if (tl) tl.textContent = Math.ceil((LEN - st.t) / 1000);
     st.q.forEach((c) => {
@@ -1076,7 +1361,7 @@ function stallRush() {
     raf = requestAnimationFrame(step);
   };
   return {
-    id: 'sr',
+    id: 'sr', st, advance, serve, restock,
     mount() { if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); } },
     stop,
     key(e) {
@@ -1088,7 +1373,7 @@ function stallRush() {
     act(n, arg) { if (n === 'srServe') serve(arg); else if (n === 'srStock') restock(); },
     view() {
       if (st.done) {
-        return `<div class="stack">${hud(['Closed'])}
+        return `<div class="stack">${hud(['Closed', tierChip()])}
           <div class="stage" style="justify-content:center;text-align:center">
             <div style="font-size:44px">${st.profit > 0 ? '💹' : '📉'}</div>
             <h2>${st.profit >= 0 ? '+' : '−'}${money(Math.abs(st.profit))} profit</h2>
@@ -1103,12 +1388,13 @@ function stallRush() {
             ${say('nana', st.revenue > 0 && st.profit <= 0
               ? 'You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent.'
               : 'Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.')}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st.won)}.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       return `<div class="stack">
-        ${hud([`<span id="srTime">${Math.ceil((LEN - st.t) / 1000)}</span>s`,
+        ${hud([tierChip(), `<span id="srTime">${Math.ceil((LEN - st.t) / 1000)}</span>s`,
           `took ${money(st.revenue)}`, `stock ${money(st.spent)}`, `lost ${st.lost}`])}
         <div class="stage">
           ${BLD.stall ? `<img class="srstall" src="${BLD.stall.src}" alt="Your stall" width="${BLD.stall.w}" height="${BLD.stall.h}">` : ''}
@@ -1146,11 +1432,12 @@ function stallRush() {
    ones that make the amount exactly — and catching one too many is the
    whole point: overpaying is a mistake you can feel. */
 function changeRush(seed = (Date.now() % 100000) | 0) {
-  const cur = CURRENCIES[currency()];
-  const COINS = cur.coins.slice(0, 5);
+  const cur = CURRENCIES[currency()], kn = knobs('cr');
+  /* G8 · Easy drops the biggest coin size (never below two kinds, so change still means choosing) */
+  const COINS = cur.coins.slice(0, Math.max(Math.min(2, cur.coins.length), kn.coins));
   const LANES = 4, W = 360, H = 300, LEN = 60000;
   const st = { target: 0, got: 0, lives: 3, round: 1, score: 0, lane: 1, exact: 0,
-    drops: [], t: 0, spawn: 0, done: false, flash: 0, msg: '', pops: [] };
+    drops: [], t: 0, spawn: 0, done: false, flash: 0, msg: '', pops: [], overpays: 0, firstRun: 0 };
   let raf = 0, last = 0, ctx = null, cv = null;
   /* seeded, so a round can be replayed and tested; the score is the arithmetic,
      never the luck of the draw (a coin that can finish the job is always coming) */
@@ -1162,7 +1449,7 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
   const look = { px: LX(1), sq: 0, meter: 0, hold: null, clock: 0 };
 
   const newTarget = () => {
-    const n = 2 + Math.floor(r() * 3);
+    const n = kn.min + Math.floor(r() * (kn.max - kn.min + 1));
     let t = 0;
     for (let i = 0; i < n; i++) t += COINS[Math.floor(r() * COINS.length)];
     st.target = t; st.got = 0; st.drops = []; st.spawn = 0;
@@ -1177,8 +1464,10 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     if (st.done) return;
     st.done = true;
     stop();
-    st.won = payout(Math.round(st.score * 0.5), 'Change Rush');
+    /* measured against this level's par: faster coins are a challenge, not a bigger wage */
+    st.won = payout(Math.round(st.score * 0.5 * parScale('cr')), 'Change Rush');
     if (st.round > 4) sim.badge(K(), 'exact-change');
+    goalsFor('cr', { exact: st.exact, overpays: st.overpays, firstRun: st.firstRun, finished: st.t >= LEN });
     R.render();
   };
   const el = (id) => (typeof document !== 'undefined' ? document.getElementById(id) : null);
@@ -1200,6 +1489,7 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
       fxl.coins(x, H - 44, 16); fxl.burst(x, H - 44, { n: 26, speed: 0.28, colors: ['#F0B429', '#FFF3C4', '#2FBF71', '#FFFFFF'] });
       fxl.flash('#FFF3C4', 200);
       st.score += 4 + st.round; st.round++; st.exact++; st.flash = 1; st.msg = 'Exact!';
+      if (!st.overpays) st.firstRun = st.exact;
       sfx.coin(); newTarget();
     } else if (st.got > st.target) {
       look.hold = { t: 900, kind: 'over', text: 'Over by ' + money(st.got - st.target) };
@@ -1208,7 +1498,7 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
       fxl.shake(11, 400); fxl.flash('#E0483A', 240);
       /* the purse bursts: what you handed over spills on the ground */
       fxl.coins(x, H - 40, 10); fxl.burst(x, H - 36, { n: 18, speed: 0.26, gravity: 0.0012, colors: ['#E0483A', '#F0B429', '#C87533'] });
-      st.lives--; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
+      st.lives--; st.overpays++; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
       sfx.bad(); newTarget();
       if (st.lives <= 0) end();
     } else {
@@ -1228,15 +1518,15 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     st.t += dt;
     st.spawn -= dt;
     if (st.spawn <= 0) {
-      st.spawn = 620 - Math.min(320, st.round * 40);
+      st.spawn = (620 - Math.min(320, st.round * 40)) * kn.spawn;
       const need = st.target - st.got;
       const usable = COINS.filter((v) => v <= need);
-      const v = (usable.length && r() < 0.55)
+      const v = (usable.length && r() < kn.help)
         ? usable[Math.floor(r() * usable.length)]
         : COINS[Math.floor(r() * COINS.length)];
       st.drops.push({ lane: Math.floor(r() * LANES), y: -20, v });
     }
-    const speed = 0.075 + st.round * 0.012;
+    const speed = (0.075 + st.round * 0.012) * kn.fall;
     const caught = [], keep = [];
     for (const d of st.drops) {
       d.y += speed * dt;
@@ -1447,11 +1737,11 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     },
     act(n, arg) { if (n === 'crLane') { st.lane = clamp(+arg, 0, LANES - 1); lanes(); } },
     view() {
-      if (st.done) return `<div class="stack">${hud(['Done'])}
-        ${endCard(st.round > 4 ? '🏅' : '🪙', st.exact + ' exact', 'Score ' + st.score + '.', st.won,
+      if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
+        ${endCard(st.round > 4 ? '🏅' : '🪙', st.exact + ' exact', 'Score ' + st.score + ' · par ' + knobs('cr').par + ' on ' + TIER_NAME[curTier] + '.', st.won,
           'Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.', 'mags')}</div>`;
       return `<div class="stack">
-        ${hud([`Need <b id="crNeed">${money(st.target)}</b>`, `Got <b id="crGot">${money(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
+        ${hud([tierChip(), `Need <b id="crNeed">${money(st.target)}</b>`, `Got <b id="crGot">${money(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
           <canvas id="crCanvas" class="arccv" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
           <div class="choices crlanes" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
@@ -1497,9 +1787,9 @@ function stormChart(line, live, t) {
   </svg>`;
 }
 function marketStorm() {
-  const START = 1000, LEN = 42000;
+  const START = 1000, LEN = 42000, kn = knobs('st');
   const st = { t: 0, panic: 0, val: START, low: START, line: [START, START, START], done: false,
-    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0, shoutN: 0 };
+    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0, shoutN: 0, maxPanic: 0, calms: 0 };
   let iv = 0, last = 0, seenShout = 0;
   const r = rng(4477);
 
@@ -1511,33 +1801,42 @@ function marketStorm() {
        is actually rewarded, and pretending otherwise would be a lie */
     st.after = Math.round(START * 1.12);
     st.soldAt = Math.round(st.val);
+    /* the same wage on every level: holding is the target, and a louder storm only makes it harder */
     st.won = payout(sold ? 3 : 14, 'Market Storm');
     if (!sold) sim.badge(K(), 'held-the-storm');
+    goalsFor('st', { held: !sold, maxPanic: st.maxPanic, calms: st.calms });
     if (sold) sfx.bad(); else { sfx.level(); }
     R.render();
   };
-  const tick = (ts) => {
+  /* one slice of the storm — the frame loop and a headless player share it */
+  const advance = (dt) => {
     if (st.done) return;
-    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
-    const dt = Math.min(1000, ts - (last || ts)); last = ts;
     st.t += dt;
     const p = st.t / LEN;
     const wobble = (r() - 0.5) * 22;
     st.val = Math.max(520, START * (1 - 0.34 * Math.sin(Math.min(1, p) * Math.PI * 0.92)) + wobble);
     st.low = Math.min(st.low, st.val);
     if (st.line.length < 120 && st.t - (st.lastPt || 0) > 350) { st.lastPt = st.t; st.line.push(Math.round(st.val)); }
-    st.panic = clamp(st.panic + dt * 0.0022, 0, 100);
+    st.panic = clamp(st.panic + dt * kn.drift, 0, 100);
     st.shoutT -= dt; st.calmT = Math.max(0, st.calmT - dt);
     if (st.shoutT <= 0) {
-      st.shoutT = 3400;
+      st.shoutT = kn.every;
       st.shout = SHOUTS[Math.floor(r() * SHOUTS.length)];
-      st.panic = clamp(st.panic + 11, 0, 100);
+      st.panic = clamp(st.panic + kn.shout, 0, 100);
       st.shoutN++;
       R.render();
-      jolt('bad'); domPop('.gplay .stpanic', '+11 panic', 'bad');
+      jolt('bad'); domPop('.gplay .stpanic', '+' + kn.shout + ' panic', 'bad');
     }
+    st.maxPanic = Math.max(st.maxPanic, st.panic);
     if (st.panic >= 100) { finish(true); return; }
     if (st.t >= LEN) { finish(false); return; }
+  };
+  const tick = (ts) => {
+    if (st.done) return;
+    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
+    const dt = Math.min(1000, ts - (last || ts)); last = ts;
+    advance(dt);
+    if (st.done) return;
     const el = document.getElementById('stPanic');
     if (el) {
       el.style.width = st.panic.toFixed(1) + '%';
@@ -1561,13 +1860,13 @@ function marketStorm() {
   const calm = () => {
     if (st.done || st.calmT > 0) return;
     st.panic = clamp(st.panic - 26, 0, 100);
-    st.calmT = 2600;
+    st.calmT = 2600; st.calms++;
     sfx.good();
     R.render();
     domPop('.gplay .stpanic', '−26 panic', 'good');
   };
   return {
-    id: 'st',
+    id: 'st', st, advance, calm,
     mount() { if (!st.done && !iv) { last = 0; iv = requestAnimationFrame(tick); } },
     stop,
     key(e) {
@@ -1577,7 +1876,7 @@ function marketStorm() {
     act(n) { if (n === 'stSell') finish(true); else if (n === 'stPlan') calm(); },
     view() {
       if (st.done) {
-        return `<div class="stack">${hud(['Storm over'])}
+        return `<div class="stack">${hud(['Storm over', tierChip()])}
           <div class="stage" style="text-align:center;justify-content:center">
             <div style="font-size:44px">${st.sold ? '📉' : '⛰️'}</div>
             <h2>${st.sold ? 'You sold' : 'You held'}</h2>
@@ -1595,13 +1894,14 @@ function marketStorm() {
             ${say(st.sold ? 'bea' : 'nana', st.sold
               ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go.'
               : 'A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.')}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st.won)}. Fictional market, real behaviour, nothing here is advice.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       const sh = st.shout, freshShout = st.shoutN !== seenShout; seenShout = st.shoutN;
       return `<div class="stack">
-        ${hud([`<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `<span id="stVal">${Math.round(st.val)}</span> / ${START}`])}
+        ${hud([tierChip(), `<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `<span id="stVal">${Math.round(st.val)}</span> / ${START}`])}
         <div class="stage ststage" style="--panic:${(st.panic / 100).toFixed(3)}">
           <div>
             <div class="row"><span class="eyebrow grow">Panic</span>
