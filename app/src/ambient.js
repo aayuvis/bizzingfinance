@@ -26,7 +26,8 @@ const NEAR = {
   petals: 'bunting', spray: 'ropes', leaves: 'boughs', motes: 'balustrade', smoke: 'rooftops', fireflies: 'lanterns',
 };
 
-function nearSVG(kind, night) {
+export const nearOf = (w) => NEAR[w.ambient.particles] || 'bunting';
+export function nearSVG(kind, night) {
   const ink = night ? '#0B1022' : '#3A2A5C';
   const flags = ['#E8684A', '#F0B429', '#3FA6B5', '#7FB069', '#B07FD0'];
   if (kind === 'bunting' || kind === 'lanterns') {

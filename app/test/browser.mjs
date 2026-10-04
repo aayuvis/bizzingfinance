@@ -429,10 +429,14 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
     /* §6a · My Feed passes AA in every world, by day and by night */
     await go('#/feed'); await page.waitForSelector('.bzf-card'); await page.waitForTimeout(150);
     const fcr = await page.evaluate(CONTRAST);
+    /* D5 · the Town street wears the chosen world */
+    await go('#/town'); await page.waitForSelector('.street-dress');
+    const dress = await page.evaluate(() => { const d = document.querySelector('.street-dress'); return { look: d.dataset.look, kind: d.dataset.dress, drawn: d.querySelectorAll('path,rect,ellipse,circle').length, kerb: document.querySelector('.street-kerb').getAttribute('fill') }; });
     await go('#/home');
-    worldRes.push({ w, layers: st.layers, world: st.world, plateOk: dark ? night : !night, aa: cr.length + fcr.length, feed: fcr.slice(0, 2) });
+    worldRes.push({ w, layers: st.layers, world: st.world, plateOk: dark ? night : !night, aa: cr.length + fcr.length, feed: fcr.slice(0, 2), dress });
     if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${label}-world-${w}.png` });
   }
+  ok(`${label}: the Town street wears each chosen world — its own dressing and kerb colour, six different`, worldRes.every((x) => x.dress.look === x.w && x.dress.drawn > 0) && new Set(worldRes.map((x) => x.dress.kind)).size === 6 && new Set(worldRes.map((x) => x.dress.kerb)).size >= 5, JSON.stringify(worldRes.map((x) => x.dress)));
   ok(`${label}: six worlds, each with three layers of life`, worldRes.length === 6 && worldRes.every((x) => x.layers >= 3), JSON.stringify(worldRes.map((x) => x.w + ':' + x.layers)));
   ok(`${label}: every world wears its ${scheme === 'dark' ? 'night' : 'day'} painting`, worldRes.every((x) => x.plateOk), JSON.stringify(worldRes.filter((x) => !x.plateOk)));
   ok(`${label}: text on Home and My Feed meets AA in every world (${scheme})`, worldRes.every((x) => x.aa === 0), JSON.stringify(worldRes.filter((x) => x.aa)));

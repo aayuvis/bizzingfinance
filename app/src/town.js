@@ -7,7 +7,8 @@ import { esc } from './ui.js';
 import { goodDaysThisWeek } from './sim.js';
 import { WORLDS, FIXES, isOpen as chapterOpen, needFor, tester } from './content.js';
 import { art } from './art-gen.js';
-import { plateFor } from './looks.js';
+import { plateFor, lookById } from './looks.js';
+import { nearSVG, nearOf } from './ambient.js';
 import { R } from './runtime.js';
 
 export const PLACES = [
@@ -237,6 +238,12 @@ export function townSVG(c) {
 
   /* the place's own painting, and its NIGHT painting on a dark page (looks.js) */
   const plate = plateFor(world.id, !!R.dark);
+  /* D5 · the street wears the world the child chose (looks.js): its near plane — bunting,
+     harbour ropes, plane-tree boughs, the Exchange balustrade, Works rooftops, festival
+     lanterns — strung across the top, and its accent along the kerb. The painting stays the
+     place's own, so the street still shows where the child actually is. */
+  const look = lookById((c.fam && c.fam.look) || 'market'), dressKind = nearOf(look);
+  const dress = `<g class="street-dress" data-look="${look.id}" data-dress="${dressKind}" aria-hidden="true">${nearSVG(dressKind, !!R.dark).replace('<svg ', `<svg x="0" y="0" width="${W}" height="46" `)}</g>`;
   const lanterns = Array.from({ length: 7 }, (_, i) =>
     lantern(70 + i * ((W - 140) / 6), i < Math.min(7, good), LANTERN_GLOW[(c.fam || {}).lanterns])).join('');
 
@@ -302,6 +309,7 @@ export function townSVG(c) {
       <path d="M300 82 q7-6 14 0 q7-6 14 0"/><path d="M352 62 q6-5 12 0 q6-5 12 0"/>
     </g>
     <path d="M0 210 q90-46 190-10 t180-4 q100-40 200 2 t210-6 v140 H0z" fill="rgba(80,110,100,.18)"/>`}
+    ${dress}
     ${lanterns}
     ${plate ? '' : `<rect x="0" y="${G}" width="${W}" height="${VH - G}" fill="var(--ground)"/>
     <rect x="0" y="${G}" width="${W}" height="${VH - G}" fill="${world.tint}" opacity=".3"/>`}
@@ -309,6 +317,7 @@ export function townSVG(c) {
     <rect x="0" y="${H - 8}" width="${W}" height="${VH - H + 8}" fill="${world.tint}" opacity=".26"/>
     <text x="14" y="${H + 8}" font-size="11" font-weight="800" fill="var(--ink)" opacity=".5">Mended by ${esc(c.name || 'you')}</text>` : ''}
     <rect x="0" y="${G + 30}" width="${W}" height="6" fill="var(--road)" opacity=".7"/>
+    <rect class="street-kerb" x="0" y="${G + 36}" width="${W}" height="3" fill="${R.dark ? look.accent[1] : look.accent[0]}" opacity=".75"/>
     ${here.map(build).join('')}
     ${deeds}
     ${companionOnStreet(c, here, xOf)}
