@@ -59,6 +59,7 @@ import { spend as spendCoins } from './family/bizzing-wallet.js';
 const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
 /* the place stories load when one is opened, not on the first screen */
+import { viewLibrary } from './library.js';
 let viewStory = null;
 const storyView = () => viewStory ? viewStory() : (import('./stories.js').then((m) => { viewStory = m.viewStory; render(); }), '<div class="card"><p class="small muted">Opening the story…</p></div>');
 import * as items from './items.js';
@@ -111,6 +112,7 @@ function focusFor(m) {
   }
   if (a === 'medals') return [`[data-focus="badge:${q(b)}"]`];
   if (a === 'store') return [`[data-arg="${q(b)}"]`];
+  if (a === 'library') return [`[data-focus="tool:${q(b)}"]`];
   if (a === 'town') {
     if (b === 'fix') return [`[data-focus="fix:${q(c2)}"]`, '[data-focus="repairs"]'];
     if (b === 'job') return [`[data-act="job"][data-arg="${q(c2)}"]`, '[data-act="job"]'];
@@ -172,7 +174,7 @@ function readHash() {
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
   /* a place's story (stories.js): #/story/<world> */
   if (m[0] === 'story') { R.s.ui.nav = 'story'; R.storyAt = decodeURIComponent(m[1] || 'market'); R.focus = null; return true; }
-  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
+  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed', 'library'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -226,6 +228,7 @@ function render() {
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
     nav === 'market40' ? viewMarketGame() :
     nav === 'story' ? storyView() :
+    nav === 'library' ? viewLibrary() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
   R.lastNav = nav;
@@ -248,7 +251,7 @@ function render() {
     drawer: { sub: `${rankObj(c.learn.level).name} · level ${c.learn.level}`,
       routes: { me: '#/me', shop: '#/shop', collection: '#/collection', medals: '#/medals', settings: '#/settings', grownups: '#/parents', help: '#/help', privacy: '#/privacy' },
       app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
-        { icon: 'book', label: 'Money Words', sub: 'every word, in plain English', href: '#/words' },
+        { icon: 'book', label: 'The Library', sub: 'tools to try things on, and every Money Word', href: '#/library' },
         { icon: 'path', label: 'Ones to try again', sub: 'questions that tripped you, back after a gap', href: '#/mistakes' },
         { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
     content: `${R.session && nav !== 'parents' ? sessionBar() : ''}

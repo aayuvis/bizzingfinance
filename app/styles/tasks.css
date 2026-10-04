@@ -131,3 +131,29 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 @media (prefers-reduced-motion:reduce){.st-stage::before,.st-bld,.st-fig,.st-text{animation:none !important}}
 :root[data-motion="reduced"] .st-stage::before,:root[data-motion="reduced"] .st-bld,:root[data-motion="reduced"] .st-fig,:root[data-motion="reduced"] .st-text,
 :root[data-calm] .st-stage::before,:root[data-calm] .st-bld,:root[data-calm] .st-fig,:root[data-calm] .st-text{animation:none !important}
+/* the Library (audit v4, H1): every tool with a picture, sliders that drag */
+.ltools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.ltool{display:grid;gap:10px;align-content:start}
+.ltool-h{display:flex;gap:12px;align-items:center}
+.ltool-h h2{font-size:18px;margin:0}
+.ltool-art{width:72px;height:72px;object-fit:contain;flex:0 0 72px;filter:drop-shadow(0 4px 6px rgb(40 25 5 / .18))}
+.ltool-link{text-decoration:none;color:inherit}
+.ltool-link:hover{transform:translateY(-2px)}
+.lslide{display:grid;gap:4px;font-size:13.5px;font-weight:700}
+.lslide span{display:flex;justify-content:space-between}
+.lslide b{font:600 14px var(--mono)}
+.lslide input[type=range]{width:100%;min-height:44px;accent-color:var(--action)}
+.lbig{font:800 26px var(--display);margin:2px 0}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.ltool-wait{display:flex;gap:6px;align-items:center}
+/* the phone Atlas: the whole map, five big pins, places as banners (audit v4, D2) */
+.phone-only{display:none}
+@media (max-width:600px){
+  .desk-only{display:none}
+  .phone-only{display:block}
+  .aboard-scroll{overflow:visible}
+  .aboard-scroll .aboard{width:100% !important;max-width:100%}
+  .apin{min-width:48px;min-height:48px}
+  .apin .achip{font-size:10.5px;padding:3px 7px;max-width:92px;white-space:normal;text-align:center;line-height:1.15}
+  .apin .achip i{display:block}
+}

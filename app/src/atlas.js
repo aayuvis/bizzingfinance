@@ -202,7 +202,11 @@ export function viewAtlas(c) {
     ${upNext(c)}
     ${board(c)}
     ${(() => { const here = cur ? cur.wi : WORLDS.length - 1;
-      return WORLDS.map((w, wi) => actSection(c, wi, r, { compact: wi !== here })).join(''); })()}
+      /* on a phone the map is the way in (audit v4, D2, owner 4 Oct): every place is a banner
+         that opens its walk; the current place's full list of stops is a desk view */
+      return WORLDS.map((w, wi) => wi === here
+        ? `<div class="desk-only">${actSection(c, wi, r, { compact: false })}</div><div class="phone-only">${actSection(c, wi, r, { compact: true })}</div>`
+        : actSection(c, wi, r, { compact: true })).join(''); })()}
   </div>`;
 }
 /* ── the walk ─────────────────────────────────────────────────────────────

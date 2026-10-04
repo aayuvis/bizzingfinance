@@ -706,6 +706,29 @@ export function loanOffer(c, units, weeks) {
   const perWeek = Math.ceil(total / weeks);
   return { amount, weeks, rate, total, perWeek, cost: total - amount };
 }
+/* ── the Library's explorers (audit v4, H1/H2/H4): what-ifs on the town's own rules,
+   computed here because sim.js owns the money. Nothing in them touches the child's town. */
+/* an amount left in the bank for `years`, at the town's one rate, a fifty-second each pay day */
+export function growWhatIf(c, amount, years) {
+  return Math.round(amount * Math.pow(1 + bankRateAnnual(c) / 100 / WEEKS_PER_YEAR, years * WEEKS_PER_YEAR));
+}
+/* a pay split by the child's own pay-day rule (jars in every 100), the last jar taking the rounding */
+export function splitWhatIf(c, pay) {
+  const r = c.money.rules, ks = ['spend', 'save', 'grow', 'give'];
+  let left = pay;
+  return ks.map((k, i) => { const a = i === ks.length - 1 ? left : Math.round(pay * r[k] / 100); left -= a; return { k, a, per100: r[k] }; });
+}
+/* a pretend week: what comes in, each thing that goes out, and what is left */
+export function weekWhatIf(inn, outs) {
+  const out = outs.reduce((t, x) => t + x.a, 0);
+  return { inn, out, left: inn - out };
+}
+/* two packs of the same thing: the price of one in each, and which is cheaper per one */
+export function unitWhatIf(n1, p1, n2, p2) {
+  const u1 = p1 / n1, u2 = p2 / n2;
+  return { u1, u2, better: Math.abs(u1 - u2) < 1e-9 ? 0 : u1 < u2 ? 1 : 2 };
+}
+
 export function takeLoan(c, offer) {
   if (c.money.bank.loan) return false;
   c.money.bank.loan = { amount: offer.amount, owed: offer.total, perWeek: offer.perWeek,

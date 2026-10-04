@@ -30,7 +30,7 @@ export const TABS = [
 ];
 /* routes that belong to a tab, so the tab stays lit inside it */
 /* Money lives inside the Town (owner, 3 Oct 2026): its screens are the town's buildings */
-const TAB_OF = { money: 'town', arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn' };
+const TAB_OF = { money: 'town', library: 'learn', arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn' };
 export const tabOf = (nav) => TAB_OF[nav] || nav;
 
 export const DRAWER = [

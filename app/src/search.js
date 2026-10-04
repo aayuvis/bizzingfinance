@@ -28,6 +28,10 @@ export function index() {
   /* a result opens ITS thing — the world on the town page, the letter itself — not the page it lives on */
   WORLDS.forEach((w, i) => out.push({ kind: 'Place', title: w.name, sub: `World ${i + 1} of the journey`, body: plain(w.blurb || w.line || ''), act: 'goto', arg: '#/town/' + w.id, icon: 'town' }));
   LETTERS.forEach((l) => out.push({ kind: 'Story', title: l.title, sub: 'A letter in the postbox', body: plain(l.body), act: 'goto', arg: '#/letter/' + l.id, icon: 'envelope' }));
+  /* the Library's tools, each opening at its own tool */
+  [['loan', 'The loan explorer', 'borrow loan cost price pay back weeks'], ['grow', 'The snowball', 'interest bank grow years compound'], ['split', 'Your jar split', 'jars split pay day rule save'],
+    ['week', 'The budget sandbox', 'budget week rent food left over plan'], ['unit', 'The unit price checker', 'unit price cheaper pack better value']]
+    .forEach(([id, t, b]) => out.push({ kind: 'Tool', title: t, sub: 'In the Library', body: b, act: 'goto', arg: '#/library/' + id, icon: 'book' }));
   /* Mags' store: each thing opens at its own shelf (audit v4, C4) */
   SHOP.forEach((it) => out.push({ kind: 'Store', title: it.name, sub: "In Mags' General Store", body: plain(it.desc) + ' ' + plain(it.gives || ''), act: 'goto', arg: '#/store/' + it.id, icon: 'bag' }));
   return (INDEX = out);

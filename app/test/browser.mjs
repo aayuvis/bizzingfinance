@@ -710,6 +710,23 @@ async function demo() {
     return { ok, id: j.id, colours: window.__seen };
   });
   ok('a shift from the Town opens its game, drawn (not a flat box)', shift.ok, JSON.stringify(shift));
+  /* the phone Atlas (audit v4, D2): the whole map with five pins on screen, places as banners, a pin opens its walk */
+  await page.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/atlas'; }); await page.waitForTimeout(400);
+  const amap = await page.evaluate(() => { const b = document.querySelector('.aboard').getBoundingClientRect();
+    const pins = [...document.querySelectorAll('.apin')].filter((p) => { const r = p.getBoundingClientRect(); return r.left >= b.left - 2 && r.right <= b.right + 2 && r.width > 0; }).length;
+    const rows = [...document.querySelectorAll('.atlas .stop')].filter((x) => x.offsetParent).length;
+    return { pins, rows, fits: b.width <= innerWidth }; });
+  await page.tap('.apin >> nth=1'); await page.waitForTimeout(300);
+  const toWalk = await page.evaluate(() => /^act:/.test(window.BZF.R.shelf || ''));
+  ok('phone Atlas: the whole map, five pins on screen, no long list, and a pin opens its walk', amap.pins === 5 && amap.rows === 0 && amap.fits && toWalk, JSON.stringify({ ...amap, toWalk }));
+  await page.evaluate(() => { window.BZF.R.shelf = ''; });
+  /* the Library (audit v4, H1/H2): tools with pictures; a dragged loan length shows the Bank's own price */
+  await page.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/library'; }); await page.waitForTimeout(400);
+  const lib0 = await page.evaluate(() => ({ tools: document.querySelectorAll('.ltool').length, pics: document.querySelectorAll('.ltool .ltool-art, .ltool img').length }));
+  await page.focus('[data-lib="loanW"]'); for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
+  const lib = await page.evaluate(() => { const { R, sim } = window.BZF, c = R.s.kids[0], o = sim.loanOffer(c, R.lib.loanU, R.lib.loanW);
+    return { weeks: R.lib.loanW, shown: document.getElementById('lo-total').textContent, want: o.total, wantText: document.getElementById('lo-total').textContent.replace(/[^0-9]/g, '') === String(o.total) }; });
+  ok('the Library: tools with pictures, and a dragged loan length shows the Bank\'s own price', lib0.tools >= 6 && lib0.pics >= 5 && lib.weeks === 12 && lib.wantText, JSON.stringify({ ...lib0, ...lib }));
   /* Town is Money (owner, 3 Oct 2026): the money drawn, the seven places, doors that open */
   await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
   const town = await page.evaluate(() => {
