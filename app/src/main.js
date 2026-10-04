@@ -38,6 +38,7 @@ const mg = (fn) => (...a) => { if (MG) fn(...a); else mgReady(); };
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
+import { teachFor, egFor } from './sprout.js';
 import { R } from './runtime.js';
 import { nextStep, nextStop } from './next.js';
 import { demoState } from './demo.js';
@@ -962,7 +963,8 @@ on('say', (key) => {
   }
   if (key === 'word') { const w = daily.wordOfHour(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
   else if (key === 'ask') text = daily.askOfWeek();
-  else if (key.startsWith('card:')) { const k = ALL_CARDS.find((x) => x.id === key.slice(5)); if (k) text = `${k.title}. ${String(k.teach).replace(/<[^>]+>/g, '')} For instance: ${k.eg}`; }
+  /* the reading she sees is the reading she hears: a Sprout's own (sprout.js), and the Atlas's own stops too */
+  else if (key.startsWith('card:')) { const id = key.slice(5), k = ALL_CARDS.find((x) => x.id === id) || NEW_CARD_LIST.find((x) => x.id === id); if (k) text = `${k.title}. ${String(teachFor(k, c)).replace(/<[^>]+>/g, '')} For instance: ${egFor(k, c)}`; }
   else if (key.startsWith('gloss:')) { const g = GLOSSARY.find((x) => x[0] === key.slice(6)); if (g) text = `${g[0]}. ${g[1]} ${g[2]}`; }
   else if (key.startsWith('letter:') && R.overlay && R.overlay.letter) { const L = R.overlay.letter; text = `${L.title}. ${L.body}`; }
   if (!speak(text)) toast('This device has no reading voice');

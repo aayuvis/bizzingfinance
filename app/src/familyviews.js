@@ -170,7 +170,7 @@ export function viewMistakes() {
       <h3 style="font-size:18px">${esc(d.q)}</h3>
       <div class="stack" style="gap:8px">${d.opts.map((o, i) => { let k = ''; if (settled) k = i === d.answer ? ' ok' : i === cur.pick ? ' no' : ''; else if (held && i === cur.pick) k = ' no';
         return `<button class="opt${k}" data-act="mkPick" data-arg="${i}" ${settled || (held && i === cur.pick) ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`; }).join('')}</div>
-      ${held ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, m.qi))}<div style="margin-top:6px;font-weight:700">One more try.</div></div>` : ''}
+      ${held ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, m.qi, c.band))}<div style="margin-top:6px;font-weight:700">One more try.</div></div>` : ''}
       ${settled ? `<div class="fb ${cur.pick === d.answer && cur.tries === 1 ? 'yes' : 'no'}" role="status"><b>${cur.pick === d.answer && cur.tries === 1 ? 'Yours again.' : 'That one is ' + esc(d.opts[d.answer]) + '.'}</b> ${esc(d.why)}</div>
         <button class="btn wide" data-act="mkNext">Next one →</button>` : ''}
     </div>`;

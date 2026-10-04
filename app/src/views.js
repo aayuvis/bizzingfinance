@@ -53,6 +53,7 @@ import * as ITEMS from './items.js';
 import * as CERT from './cert.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
+import { teachFor, egFor } from './sprout.js';
 
 const K = () => sim.kid(R.s);
 
@@ -778,8 +779,8 @@ function viewCard(card) {
     ${!c.learn.done[card.id] && !(st && st.card === card.id && st.picks && st.picks.length) ? `<button class="btn ghost wide coldgo" data-act="coldStart" data-arg="${card.id}">${ico('next', '', 16)} Know this already? Answer it cold</button>` : ''}
     ${lessonBlock(card.id)}
     <div class="card reading">
-      <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${card.teach}</span></p>
-      <div class="aside"><span class="eyebrow">For instance</span>${esc(card.eg)}</div>
+      <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${teachFor(card, c)}</span></p>
+      <div class="aside"><span class="eyebrow">For instance</span>${esc(egFor(card, c))}</div>
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico('sound', '🔊', 15)} Read it to me</button></div>` : ''}
     </div>
     ${tryBlock(card)}
@@ -811,7 +812,7 @@ function viewCard(card) {
             <span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`;
         }).join('')}
       </div>
-      ${hold ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, qi))}
+      ${hold ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(hintFor(card, qi, c.band))}
           <div style="margin-top:6px;font-weight:700">Have another go. One more try.</div><button class="sayit" data-act="sayEl" aria-label="Read it to me">${ico('sound', '', 16)}</button></div>` : ''}
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
           <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : dq.num ? 'It is ' + esc(String(dq.value)) + '.' : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}

@@ -14,6 +14,7 @@ import { WALKS } from './walks-gen.js';
 import { face, ico } from './art.js';
 import { kidBadge } from './shell.js';
 import { esc } from './ui.js';
+import { teachFor } from './sprout.js';
 import { R } from './runtime.js';
 import * as sim from './sim.js';
 import * as mastery from './mastery.js';
@@ -99,7 +100,7 @@ function medallion(c, s, kind) {
 }
 function stopRow(c, s) {
   const kind = s.done ? 'passed' : s.cur ? 'cur' : s.locked ? 'locked' : 'open';
-  const blurb = s.cur ? String(s.card.teach || '').replace(/<[^>]+>/g, '').split(/(?<=[.!?])\s/)[0] : '';
+  const blurb = s.cur ? String(teachFor(s.card, c)).replace(/<[^>]+>/g, '').split(/(?<=[.!?])\s/)[0] : '';
   const who = s.card.who && s.card.who !== 'pip' ? s.card.who : null;
   return `<button class="stop ${kind}" data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}" style="--ja:${s.w.tint}">
     ${medallion(c, s, kind)}

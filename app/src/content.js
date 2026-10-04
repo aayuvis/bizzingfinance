@@ -8,6 +8,7 @@
 
 import { rng } from './ui.js';
 import { EXTRA_QS } from './content-extra.js';
+import { teachFor, egFor } from './sprout.js';
 
 /* ── the ladder ──────────────────────────────────────────────────────────
    Thirty levels, five ranks. The rank is what opens the next building. */
@@ -541,7 +542,8 @@ export function leaks(text, d) {
   const ans = String(d.opts[d.a]).replace(/<[^>]+>/g, '').trim().toLowerCase();
   return ans.length >= 3 && String(text).replace(/<[^>]+>/g, '').toLowerCase().includes(ans);
 }
-export function hintFor(card, qi = 0) {
+/* `band`: the hint quotes the lesson the child actually read — a Sprout's own reading (sprout.js) */
+export function hintFor(card, qi = 0, band) {
   const d = drillAt(card, qi);
   /* a typed amount: the hint is the method, never a number (generate.js writes it) */
   if (d.kind === 'num') return d.hint && !numbersInText(d.hint).includes(d.value) ? d.hint : 'Work it out step by step, then type the amount again.';
@@ -551,7 +553,7 @@ export function hintFor(card, qi = 0) {
   }
   if (d.hint && !leaks(d.hint, d)) return d.hint;
   const plain = (x) => String(x || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-  const sentences = [...plain(card.teach).split(/(?<=[.!?])\s+/), plain(card.eg)].filter((x) => x.length > 12);
+  const sentences = [...plain(teachFor(card, band)).split(/(?<=[.!?])\s+/), plain(egFor(card, band))].filter((x) => x.length > 12);
   const who = (CAST_NAMES[card.who] || 'the lesson');
   const say = (x) => `Look back at what ${who} said: “${x}”`;
   const pickS = sentences.find((x) => !leaks(say(x), d));

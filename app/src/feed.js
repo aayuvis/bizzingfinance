@@ -23,6 +23,7 @@
 import { feedFor, feedCard, feedEnd, feedHead, hash } from './family/bizzing-feed.js';
 import { CHAPTERS, WORLDS, chapterDone, worldOpen, levelAtLeast, tester, ALL_CARDS, LETTERS } from './content.js';
 import { NEW_CARD_LIST, objective } from './objectives.js';
+import { SPROUT } from './sprout.js';
 import * as ledger from './ledger.js';
 import * as mastery from './mastery.js';
 import * as mistakes from './mistakes.js';
@@ -81,7 +82,16 @@ function statusFor(it, c, nextId) {
 }
 function enrich(it, c, nextId) {
   const st = statusFor(it, c, nextId);
-  return { ...it, art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
+  return { ...sproutBody(it, c), art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
+}
+/* audit E2 · a lesson's teaching or example card reads to a Sprout as the stop itself does: her
+   band's reading (sprout.js), the same idea and no new number. The card that was cut stays the
+   builder text, so the corpus the feed is checked against is unchanged; only the words shown move. */
+const plainText = (s) => String(s ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+export function sproutBody(it, c) {
+  const m = c && c.band === 'sprout' && /^card:([^#]+)#(teach|eg)$/.exec(it.src || '');
+  const s = m && SPROUT[m[1]] && SPROUT[m[1]][m[2]];
+  return s ? { ...it, body: plainText(s) } : it;
 }
 
 const DAY = 864e5;

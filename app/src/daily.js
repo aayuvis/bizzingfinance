@@ -13,6 +13,7 @@
    Everything rotates from the day index, never from randomness, so the whole
    household sees the same deed and the same word. */
 import { GLOSSARY, ALL_CARDS } from './content.js';
+import { egFor } from './sprout.js';
 import { dayIndex } from './fmt.js';
 import * as sim from './sim.js';
 
@@ -71,7 +72,7 @@ export function tipOfDay(c, d = today()) {
   const read = ALL_CARDS.filter((k) => c.learn.done[k.id] && k.eg);
   if (!read.length) return null;
   const k = read[d % read.length];
-  return { card: k, text: k.eg, title: k.title };
+  return { card: k, text: egFor(k, c), title: k.title };
 }
 
 /* ── deeds are kept ───────────────────────────────────────────────────── */
