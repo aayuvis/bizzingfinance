@@ -10684,7 +10684,52 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
   function hasJobGame(id) {
     return !!JOB_GAME[id];
   }
-  var JOB_GAME;
+  function tierOf(c, id) {
+    const t = c && c.tiers && c.tiers[id];
+    return TIER_IDS.includes(t) ? t : "standard";
+  }
+  function setTier(c, id, t) {
+    if (!c || !TIER_IDS.includes(t)) return false;
+    c.tiers = c.tiers || {};
+    c.tiers[id] = t;
+    return true;
+  }
+  function goalsMet(c, id) {
+    return c && c.goals && c.goals[id] || {};
+  }
+  function earnGoals(c, id, table, run2) {
+    const out = [];
+    if (!c || !table || !run2) return out;
+    c.goals = c.goals || {};
+    const have = c.goals[id] || (c.goals[id] = {});
+    for (const g of table) {
+      let met = false;
+      try {
+        met = !!g.check(run2);
+      } catch (e) {
+        met = false;
+      }
+      if (!met) continue;
+      out.push({ id: g.id, name: g.name, fresh: !have[g.id] });
+      have[g.id] = true;
+    }
+    return out;
+  }
+  function jobPar(id, tier2 = "standard") {
+    const cfg2 = JOB_GAME[id];
+    if (!cfg2) return 0;
+    if (tier2 === "standard") return cfg2.par;
+    return JOB_PARS[id] && JOB_PARS[id][tier2] || cfg2.par;
+  }
+  function jobKnobs(id, tier2 = "standard") {
+    const cfg2 = JOB_GAME[id];
+    return cfg2 ? JOB_TIERS[cfg2.kind][TIER_IDS.includes(tier2) ? tier2 : "standard"] : null;
+  }
+  function jobGoals(id) {
+    const cfg2 = JOB_GAME[id];
+    return cfg2 ? JOB_GOALS[cfg2.kind] : [];
+  }
+  var JOB_GAME, TIER_IDS, TIER_NAME, JOB_TIERS, JOB_TIER_SAYS, JOB_PARS, JOB_GOALS;
   var init_jobtable = __esm({
     "src/jobtable.js"() {
       JOB_GAME = {
@@ -10701,6 +10746,61 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         errands: { kind: "runner", par: 24, item: "\u{1F3C3}", verb: "Every stop, in order", tint: "--action" },
         runner: { kind: "runner", par: 25, item: "\u{1F4E8}", verb: "Get the orders out", tint: "--action" },
         board: { kind: "runner", par: 24, item: "\u{1F58D}\uFE0F", verb: "Chalk up every price", tint: "--action" }
+      };
+      TIER_IDS = ["easy", "standard", "tricky"];
+      TIER_NAME = { easy: "Easy", standard: "Standard", tricky: "Tricky" };
+      JOB_TIERS = {
+        /* speed: how fast the crate swings · snap: how close counts as square (px) */
+        stack: { easy: { speed: 0.85, snap: 4 }, standard: { speed: 1, snap: 5 }, tricky: { speed: 1.25, snap: 4 } },
+        /* gap: time between loads · heavy: the biggest weight, ± · limit: how far she can lean */
+        trim: { easy: { gap: 1.3, heavy: -1, limit: 48 }, standard: { gap: 1, heavy: 0, limit: 42 }, tricky: { gap: 0.8, heavy: 1, limit: 38 } },
+        /* fall: how fast things drop · spawn: time between them · cap: catcher's top speed · reach: catch half-width */
+        sweep: { easy: { fall: 0.85, spawn: 1, cap: 0.37, reach: 26 }, standard: { fall: 1, spawn: 1, cap: 0.34, reach: 24 }, tricky: { fall: 1.1, spawn: 0.95, cap: 0.34, reach: 24 } },
+        /* speed: the street's pace · spawn: time per stretch of street · dog: how often the dog is out */
+        runner: { easy: { speed: 0.88, spawn: 1, dog: 0.7 }, standard: { speed: 1, spawn: 1, dog: 1 }, tricky: { speed: 1.12, spawn: 1, dog: 1.1 } }
+      };
+      JOB_TIER_SAYS = {
+        stack: { easy: "A slower swing \u2014 square still takes the same good eye.", standard: "The shift as it comes.", tricky: "A faster swing, and square means square." },
+        trim: { easy: "Lighter loads, more time, a steadier boat.", standard: "The shift as it comes.", tricky: "Heavier loads, faster, and she leans sooner." },
+        sweep: { easy: "It drifts down slower, and you reach a little wider.", standard: "The shift as it comes.", tricky: "It falls faster and thicker." },
+        runner: { easy: "A gentler pace, and the dog mostly naps.", standard: "The shift as it comes.", tricky: "A quicker street and a busier dog." }
+      };
+      JOB_PARS = {
+        crates: { easy: 39, tricky: 36 },
+        haul: { easy: 39, tricky: 36 },
+        counter: { easy: 40, tricky: 37 },
+        cargo: { easy: 27, tricky: 26 },
+        nets: { easy: 24, tricky: 24 },
+        books: { easy: 26, tricky: 25 },
+        sweep: { easy: 39, tricky: 38 },
+        lamplight: { easy: 36, tricky: 37 },
+        mend: { easy: 36, tricky: 35 },
+        flyers: { easy: 22, tricky: 23 },
+        errands: { easy: 23, tricky: 23 },
+        runner: { easy: 24, tricky: 24 },
+        board: { easy: 23, tricky: 23 }
+      };
+      JOB_GOALS = {
+        stack: [
+          { id: "five", name: "Five perfect drops in a row", check: (r) => r.bestCombo >= 5 },
+          { id: "square8", name: "Eight square drops in one shift", check: (r) => r.squares >= 8 },
+          { id: "nowobble", name: "A full shift without a wobble", check: (r) => r.finished && r.misses === 0 }
+        ],
+        trim: [
+          { id: "nolurch", name: "Every load aboard and she never lurched", check: (r) => r.finished && r.lurches === 0 },
+          { id: "allright", name: "Every load to the side that levels her", check: (r) => r.finished && r.wrong === 0 && r.lurches === 0 },
+          { id: "ten", name: "Ten good trims in a row", check: (r) => r.bestCombo >= 10 }
+        ],
+        sweep: [
+          { id: "chain10", name: "A chain of ten", check: (r) => r.bestChain >= 10 },
+          { id: "chain20", name: "A chain of twenty", check: (r) => r.bestChain >= 20 },
+          { id: "few", name: "Three misses or fewer all shift", check: (r) => r.finished && r.misses <= 3 && r.caught >= 10 }
+        ],
+        runner: [
+          { id: "nodog", name: "The whole street without meeting the dog", check: (r) => r.finished && r.dogs === 0 },
+          { id: "ten", name: "Ten doors in a row", check: (r) => r.bestCombo >= 10 },
+          { id: "few", name: "Three doors missed or fewer", check: (r) => r.finished && r.missed <= 3 && r.posted >= 10 }
+        ]
       };
     }
   });
@@ -12985,8 +13085,31 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ""}
   </div>`;
   }
+  function goalsFor(id, run2) {
+    const c = K3();
+    lastGoals = { id, list: earnGoals(c, id, ARCADE_GOALS[id], Object.assign({ tier: curTier }, run2)) };
+    if (R.s) save2(R.s);
+    return lastGoals.list;
+  }
+  function tierPicker(tier2, act, prefix = "", says = null) {
+    return `<div class="tierpick" role="group" aria-label="Level">
+    ${TIER_IDS.map((t, i) => `<button class="tierbtn${t === tier2 ? " on" : ""}" data-act="${act}" data-arg="${prefix}${t}" data-tier="${t}"
+      aria-pressed="${t === tier2}"><span class="tk" aria-hidden="true">${i + 1}</span>${TIER_NAME[t]}</button>`).join("")}
+  </div>${says && says[tier2] ? `<p class="small tiersays">${esc(says[tier2])}</p>` : ""}`;
+  }
+  function goalList(table, c, id, earned2 = null) {
+    if (!table || !table.length) return "";
+    const have = goalsMet(c, id), fresh = new Set((earned2 || []).filter((g) => g.fresh).map((g) => g.id));
+    return `<div class="goals"><div class="eyebrow">Goals \xB7 a record, not a prize</div>
+    <ul>${table.map((g) => `<li class="${have[g.id] ? "met" : ""}${fresh.has(g.id) ? " fresh" : ""}" data-goal="${g.id}">
+      <span class="gtick" aria-hidden="true">${have[g.id] ? "\u2713" : ""}</span>
+      <span>${esc(g.name)}${fresh.has(g.id) ? ' <b class="gnew">new</b>' : ""}</span>
+      <span class="sr-only">${have[g.id] ? "done" : "not yet"}</span></li>`).join("")}</ul></div>`;
+  }
   function introView(id) {
     const g = GAMES.find((x) => x.id === id) || { name: id, keys: "" }, art3 = COVERS[id], how = HOW[id] || [];
+    const c = K3(), tiers = ARCADE_TIERS[id], tier2 = tierOf(c, id);
+    const says = tiers ? Object.fromEntries(TIER_IDS.map((t) => [t, tiers[t].says])) : null;
     return `<div class="stack">
     <section class="gintro" style="${art3 ? `--cover:url(${art3.src})` : ""}" aria-labelledby="gi-h">
       <span class="cv-veil"></span>
@@ -12994,11 +13117,19 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         <ol>${how.map((h) => `<li>${esc(h)}</li>`).join("")}</ol>
         ${g.keys ? `<span class="pill">${esc(g.keys)}</span>` : ""}</div>
     </section>
-    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start \u2192</button>
+    ${tiers ? `<div class="card gilevel" style="box-shadow:none">
+      <div class="row"><span class="eyebrow grow">Level</span><span class="small muted">1 2 3 to pick</span></div>
+      ${tierPicker(tier2, "gTier", id + ":", says)}
+      <p class="small muted tierpar">Every level pays the same for the same care \u2014 a harder one is a challenge, not a bigger wage.</p>
+      ${goalList(ARCADE_GOALS[id], c, id)}
+    </div>` : ""}
+    <button class="btn wide" data-act="gbegin" data-arg="${id}" style="min-height:52px;font-size:17px">Start${tiers ? " on " + TIER_NAME[tier2] : ""} \u2192</button>
     <button class="btn ghost wide" data-act="gback">Back to Play</button></div>`;
   }
-  function startGame(id, seed) {
+  function startGame(id, seed, tier2) {
     current3 = id;
+    lastGoals = null;
+    curTier = TIER_IDS.includes(tier2) ? tier2 : ARCADE_TIERS[id] ? tierOf(K3(), id) : "standard";
     const f = {
       cr: changeRush,
       nw: needsWants,
@@ -13021,6 +13152,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
   function quitGame() {
     if (R.game && R.game.stop) R.game.stop();
     R.game = null;
+    lastGoals = null;
   }
   function hud(bits) {
     return `<div class="hud">${bits.filter((b) => b != null && String(b).replace(/<[^>]*>/g, "").trim()).map((b) => `<span class="box">${b}</span>`).join("")}
@@ -13056,6 +13188,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     ${best2 != null ? `<p class="endbest">${isNew ? "A new best for you" : "Your best"}: <b class="tabnum">${best2}</b></p>` : ""}
     ${line2 ? say2(who || "pip", line2) : ""}
     ${current3 && PRACTISED[current3] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current3])}</p>` : ""}
+    ${endGoals()}
     <p class="small muted">${lastCapped ? `Played for practice: ${esc(current3 ? (GAMES.find((g) => g.id === current3) || {}).name || "this game" : "this game")} pays for its first ${GAME_PAYS} games a day. Tomorrow it pays again.` : `Earned ${money(wage)}, straight into your wallet.`}</p>
     <button class="btn wide" data-act="gquit">Back to Play</button></div>`;
   }
@@ -13070,33 +13203,62 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     return arr;
   }
   function twoChoice(cfg2) {
-    const items2 = shuffle(cfg2.items.slice(), cfg2.seed);
-    const st2 = { i: 0, right: 0, note: null, done: false };
+    const kn = knobs(cfg2.id), nStd = cfg2.items.length;
+    const all = shuffle(cfg2.items.slice(), cfg2.seed);
+    const items2 = kn.n ? all.slice(0, kn.n) : all;
+    const st2 = { i: 0, right: 0, note: null, done: false, wrong: {}, shown: Date.now() };
+    let timer2 = 0;
+    const stop3 = () => {
+      if (timer2) clearTimeout(timer2);
+      timer2 = 0;
+    };
+    const arm = () => {
+      stop3();
+      st2.shown = Date.now();
+      if (kn.clock && !st2.done) timer2 = setTimeout(() => {
+        timer2 = 0;
+        pick4(null);
+      }, kn.clock);
+    };
     const pick4 = (side) => {
       if (st2.done) return;
+      stop3();
       const it = items2[st2.i];
-      const ok = it.a === side || it.a === "both";
+      const ok = side != null && (it.a === side || it.a === "both");
       if (ok) {
         st2.right++;
         st2.combo = (st2.combo || 0) + 1;
         sfx.good();
       } else {
         st2.combo = 0;
+        st2.wrong[it.a] = (st2.wrong[it.a] || 0) + 1;
         sfx.bad();
       }
       st2.pop = ok ? st2.combo > 1 ? `Combo \xD7${st2.combo}` : "+1" : null;
       const sideLabel = (k) => (cfg2.left.side === k ? cfg2.left : cfg2.right).label;
       const named = it.a === "both" ? "It can be both \u2014 that is the interesting kind." : `${sideLabel(it.a)}.`;
-      st2.note = { ok, text: ok ? it.note ? `${named} ${it.note}` : named : it.note ? `${cfg2.wrongNote(it)} ${it.note}` : cfg2.wrongNote(it) };
+      const wrong = side == null ? `The bell rang. It was: ${named}` : cfg2.wrongNote(it);
+      st2.note = { ok, text: ok ? it.note ? `${named} ${it.note}` : named : it.note ? `${wrong} ${it.note}` : wrong };
       st2.i++;
       if (st2.i >= items2.length) {
         st2.done = true;
-        st2.won = payout(Math.round(st2.right * cfg2.pay), cfg2.name);
-      }
+        st2.won = payout(Math.round(st2.right / items2.length * nStd * cfg2.pay), cfg2.name);
+        goalsFor(cfg2.id, {
+          right: st2.right,
+          n: items2.length,
+          needWrong: st2.wrong.need || 0,
+          wantWrong: st2.wrong.want || 0,
+          scamWrong: st2.wrong.scam || 0,
+          safeWrong: st2.wrong.safe || 0
+        });
+      } else arm();
       R.render();
     };
+    arm();
     return {
       id: cfg2.id,
+      st: st2,
+      stop: stop3,
       key(e) {
         if (st2.done) {
           if (e.key === "Enter") {
@@ -13113,13 +13275,14 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         else if (n === cfg2.right.act) pick4(cfg2.right.side);
       },
       view() {
-        if (st2.done) return `<div class="stack">${hud(["Done"])}
+        if (st2.done) return `<div class="stack">${hud(["Done", tierChip()])}
         ${endCard(st2.right >= items2.length - 1 ? "\u{1F3C5}" : "\u{1F44D}", st2.right + " of " + items2.length, "", st2.won, cfg2.outro(st2.right, items2.length), cfg2.who)}</div>`;
         const it = items2[st2.i];
+        const clock = kn.clock ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, Date.now() - st2.shown)}ms"></i></div>` : "";
         return `<div class="stack">
-        ${hud([`${st2.i + 1} / ${items2.length}`, `right ${st2.right}`, st2.combo > 1 ? `<span class="combo">Combo \xD7${st2.combo}</span>` : ""].filter(Boolean))}
+        ${hud([tierChip(), `${st2.i + 1} / ${items2.length}`, `right ${st2.right}`, st2.combo > 1 ? `<span class="combo">Combo \xD7${st2.combo}</span>` : ""].filter(Boolean))}
         <div class="stage">${st2.pop ? `<span class="numpop" aria-hidden="true">${esc(st2.pop)}</span>` : ""}
-          ${cfg2.card(it)}
+          ${clock}${cfg2.card(it)}
           ${st2.note ? `<div style="background:${st2.note.ok ? "var(--grow-tint)" : "var(--spend-tint)"};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st2.note.text)}</div>` : ""}
           <div class="grow"></div>
           <div class="choices">
@@ -13165,8 +13328,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     });
   }
   function budgetBlitz() {
-    const c = K3();
-    const pot = weeklyIncome(c) * 4;
+    const c = K3(), kn = knobs("bb");
     const bills = [
       { n: "Rent on the stall", u: 14, must: true },
       { n: "Food for the month", u: 22, must: true },
@@ -13177,7 +13339,11 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       { n: "Sister\u2019s birthday cake", u: 5, must: false },
       { n: "New shoes \u2014 the old ones leak", u: 10, must: true }
     ];
-    const order2 = shuffle(bills.slice(), 4423);
+    const mustSum = bills.filter((b) => b.must).reduce((t, b) => t + price(b.u), 0);
+    const base = weeklyIncome(c) * 4;
+    const pot = kn.pot >= 1 ? base * kn.pot : Math.max(Math.ceil(mustSum * 1.05), Math.round(base * kn.pot));
+    const shuffled = shuffle(bills.slice(), 4423);
+    const order2 = kn.first === "wants" ? shuffled.filter((b) => !b.must).concat(shuffled.filter((b) => b.must)) : shuffled;
     const st2 = { i: 0, left: pot, missed: [], paid: [], done: false };
     const decide = (payIt) => {
       if (st2.done) return;
@@ -13202,11 +13368,14 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         st2.done = true;
         st2.mustMissed = st2.missed.filter((x) => x.must).length;
         st2.won = payout(Math.max(0, 10 - st2.mustMissed * 4) + (st2.left > 0 ? 4 : 0), "Budget Blitz");
+        goalsFor("bb", { mustMissed: st2.mustMissed, left: st2.left, pot });
       }
       R.render();
     };
     return {
       id: "bb",
+      st: st2,
+      decide,
       key(e) {
         if (e.key === "1") decide(true);
         else if (e.key === "2") decide(false);
@@ -13220,7 +13389,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         else if (n === "bbSkip") decide(false);
       },
       view() {
-        if (st2.done) return `<div class="stack">${hud(["Month over"])}
+        if (st2.done) return `<div class="stack">${hud(["Month over", tierChip()])}
         ${endCard(
           st2.mustMissed === 0 ? "\u{1F3AF}" : "\u{1F62C}",
           money(st2.left) + " left over",
@@ -13231,7 +13400,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         )}</div>`;
         const b = order2[st2.i], amt = price(b.u);
         return `<div class="stack">
-        ${hud([`Left ${money(st2.left)}`, `${st2.i + 1} / ${order2.length}`])}
+        ${hud([tierChip(), `Left ${money(st2.left)}`, `${st2.i + 1} / ${order2.length}`])}
         <div class="stage">
           <div class="gcard"><span class="em">\u{1F9FE}</span><span class="nm">${esc(b.n)}</span>
             <div class="big" style="margin-top:6px">${money(amt)}</div></div>
@@ -13246,11 +13415,12 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     };
   }
   function quizGame(cfg2) {
-    const qs = cfg2.build();
-    const st2 = { i: 0, right: 0, pick: null, done: false };
+    const qs = cfg2.build(knobs(cfg2.id).set);
+    const st2 = { i: 0, right: 0, pick: null, done: false, log: [] };
     const choose = (n) => {
       if (st2.done || st2.pick != null) return;
       st2.pick = n;
+      st2.log.push({ q: qs[st2.i], pick: n, ok: n === qs[st2.i].a });
       if (n === qs[st2.i].a) {
         st2.right++;
         st2.combo = (st2.combo || 0) + 1;
@@ -13269,11 +13439,24 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       if (st2.i >= qs.length) {
         st2.done = true;
         st2.won = payout(Math.round(st2.right * cfg2.pay), cfg2.name);
+        const L = st2.log;
+        goalsFor(cfg2.id, {
+          right: st2.right,
+          n: qs.length,
+          weeklyWrong: L.filter((x) => x.q.tag === "weekly" && !x.ok).length,
+          compareRight: L.some((x) => x.q.tag === "compare" && x.ok),
+          simple: L.filter((x) => x.q.trap != null && x.pick === x.q.trap).length,
+          longWrong: L.filter((x) => x.q.tag === "long" && !x.ok).length
+        });
       }
       R.render();
     };
     return {
       id: cfg2.id,
+      st: st2,
+      qs,
+      choose,
+      next: next5,
       key(e) {
         if (st2.done) {
           if (e.key === "Enter") {
@@ -13294,11 +13477,11 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         else if (n === cfg2.nextAct) next5();
       },
       view() {
-        if (st2.done) return `<div class="stack">${hud(["Done"])}
+        if (st2.done) return `<div class="stack">${hud(["Done", tierChip()])}
         ${endCard(st2.right >= qs.length - 1 ? "\u{1F3C5}" : "\u{1F44D}", st2.right + " of " + qs.length, "", st2.won, cfg2.outro, cfg2.who)}</div>`;
         const q = qs[st2.i];
         return `<div class="stack">
-        ${hud([`${st2.i + 1} / ${qs.length}`, `right ${st2.right}`, st2.combo > 1 ? `<span class="combo">Combo \xD7${st2.combo}</span>` : ""].filter(Boolean))}${st2.pop && st2.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st2.pop)}</span>` : ""}
+        ${hud([tierChip(), `${st2.i + 1} / ${qs.length}`, `right ${st2.right}`, st2.combo > 1 ? `<span class="combo">Combo \xD7${st2.combo}</span>` : ""].filter(Boolean))}${st2.pop && st2.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st2.pop)}</span>` : ""}
         <div class="stage">
           <div class="gcard"><span class="em">${cfg2.em}</span>
             <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>
@@ -13327,10 +13510,11 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       pickAct: "ttPick",
       nextAct: "ttNext",
       outro: "Multiply every monthly thing by twelve <b>before</b> you agree to it. Then cancel the ones you would not buy at that price.",
-      build() {
+      build(set2 = "standard") {
         const r = rng(5150);
         const out = [];
-        const monthly = [15, 25, 30, 40, 60, 12, 20];
+        const N2 = TT_SETS[set2] || TT_SETS.standard;
+        const monthly = N2.monthly.slice();
         shuffle(monthly.slice(), 991).slice(0, 4).forEach((m2) => {
           const right = m2 * 12;
           const opts = shuffle([right, m2 * 10, m2 * 6, right + m2], Math.round(r() * 1e6) + m2);
@@ -13341,19 +13525,21 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
             why: `${money(price(m2))} \xD7 12 = <b>${money(price(right))}</b>. Small monthly numbers are the entire technique.`
           });
         });
-        const weekly2 = [8, 15, 25];
+        const weekly2 = N2.weekly;
         weekly2.forEach((w) => {
           const right = w * 52;
           const opts = shuffle([right, w * 12, w * 30, w * 100], w * 77);
           out.push({
+            tag: "weekly",
             q: `You spend <b>${money(price(w))} a week</b> on snacks. In a year?`,
             opts: opts.map((v) => money(price(v))),
             a: opts.indexOf(right),
             why: `${money(price(w))} \xD7 52 = <b>${money(price(right))}</b>. A week is a small unit and a year is not.`
           });
         });
-        const a = 45, b = 480;
+        const [a, b] = N2.compare;
         out.push({
+          tag: "compare",
           q: `One shop wants <b>${money(price(a))} a month</b>. Another wants <b>${money(price(b))} once a year</b>. Which costs less?`,
           opts: [money(price(a)) + " a month", money(price(b)) + " a year", "They are the same", "Not enough information"],
           a: 1,
@@ -13373,20 +13559,16 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       pickAct: "snPick",
       nextAct: "snNext",
       outro: "Almost nobody guesses high enough, because we all quietly add instead of multiplying. Time is the ingredient, not the amount.",
-      build() {
-        const rows = [
-          { p: 100, r: 0.1, y: 10 },
-          { p: 100, r: 0.07, y: 20 },
-          { p: 500, r: 0.05, y: 10 },
-          { p: 1e3, r: 0.1, y: 20 },
-          { p: 200, r: 0.08, y: 30 },
-          { p: 100, r: 0.1, y: 30 }
-        ];
+      build(set2 = "standard") {
+        const rows = SN_SETS[set2] || SN_SETS.standard;
+        const longest = Math.max(...rows.map((x) => x.y));
         return rows.map((row2, i) => {
           const right = Math.round(row2.p * Math.pow(1 + row2.r, row2.y));
           const simple = Math.round(row2.p * (1 + row2.r * row2.y));
           const opts = shuffle([right, simple, Math.round(row2.p * (1 + row2.r * row2.y * 0.5)), Math.round(right * 2.1)], 700 + i * 13);
           return {
+            tag: row2.y === longest ? "long" : "",
+            trap: opts.indexOf(simple),
             q: `<b>${money(price(row2.p))}</b> growing <b>${(row2.r * 100).toFixed(0)}% a year</b> for <b>${row2.y} years</b>. Where does it land?`,
             opts: opts.map((v) => money(price(v))),
             a: opts.indexOf(right),
@@ -13396,18 +13578,28 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       }
     });
   }
-  function marketCup() {
-    const ROUNDS = 6, START = 1e3, RED = 3;
-    const r = rng(120);
-    const ret = [];
+  function cupRows(kn) {
+    const ROUNDS = 6, RED = 3, r = rng(120), ret = [];
     for (let k = 0; k < ROUNDS; k++) {
       const row2 = {};
       ASSETS.forEach((a) => {
-        const shock = (r() + r() + r() - 1.5) * 2 * a.vol * 1;
-        row2[a.id] = a.drift * 3.6 + shock + (k === RED ? -a.vol * 1.5 : 0);
+        const shock = (r() + r() + r() - 1.5) * 2 * a.vol * 1 * kn.shock;
+        row2[a.id] = a.drift * 3.6 + shock + (k === RED ? -a.vol * 1.5 * kn.crash : 0);
       });
       ret.push(row2);
     }
+    return ret;
+  }
+  function bellaCup(kn) {
+    let v = 1e3;
+    cupRows(kn).forEach((row2) => {
+      v = Math.round(v * (1 + row2.basket));
+    });
+    return Math.round((v / 1e3 - 1) * 100) + 4 * 7 + Math.max(0, 30 - Math.round(100 / 8));
+  }
+  function marketCup() {
+    const ROUNDS = 6, START = 1e3;
+    const ret = cupRows(knobs("mc"));
     const st2 = {
       round: 0,
       sel: 0,
@@ -13451,6 +13643,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     const next5 = () => {
       if (st2.done) return;
       st2.divSum += effective();
+      if (effective() >= 4) st2.spread = (st2.spread || 0) + 1;
       const row2 = ret[st2.round];
       let g = 0;
       ASSETS.forEach((a) => {
@@ -13488,7 +13681,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       }))).sort((a, b) => b.sc.total - a.sc.total);
       st2.place = st2.table.findIndex((x) => x.who === "You") + 1;
       st2.byReturn = st2.table.slice().sort((a, b) => b.v - a.v)[0].who;
-      st2.won = payout(Math.max(4, Math.round(st2.score.total / 6)), "The Market Cup");
+      st2.won = payout(Math.max(4, Math.round(st2.score.total / 6 * parScale("mc"))), "The Market Cup");
+      const bella = st2.table.find((x) => x.who === "Boring Bella");
+      goalsFor("mc", { spreadWeeks: st2.spread || 0, weeks: ROUNDS, churn: st2.churn, beatBella: st2.score.total > bella.sc.total });
       if (st2.score.div >= 24) badge(c, "diversified");
       const line2 = `${st2.place}${["st", "nd", "rd", "th"][Math.min(st2.place - 1, 3)]} of 4 \xB7 cup score ${st2.score.total}`;
       if (!c.market.best) c.market.best = line2;
@@ -13528,7 +13723,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       view() {
         if (st2.done) {
           const sc = st2.score;
-          return `<div class="stack">${hud(["Cup over"])}
+          return `<div class="stack">${hud(["Cup over", tierChip()])}
           <div class="stage">
             <div style="text-align:center"><div style="font-size:42px">${st2.place === 1 ? "\u{1F3C6}" : "\u{1F397}\uFE0F"}</div>
             <h2>${st2.place === 1 ? "You won the Cup" : st2.place + " of 4"}</h2>
@@ -13555,12 +13750,13 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
             st2.table[0].who === "Boring Bella" ? "bea" : "bo",
             st2.table[0].who === "Boring Bella" ? "Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat." : "You beat Bella this time. Run another six weeks and see whether that keeps happening \u2014 that question <b>is</b> the game."
           )}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st2.won)}. Fictional companies, real market behaviour, nothing here is advice.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
         }
         return `<div class="stack">
-        ${hud([`Week ${st2.round + 1} / ${ROUNDS}`, `${st2.me}`, `cash ${cash()}%`])}
+        ${hud([tierChip(), `Week ${st2.round + 1} / ${ROUNDS}`, `${st2.me}`, `cash ${cash()}%`])}
         <div class="stage">
           <p class="small muted">Split 100% across what you fancy. What you leave in cash is safe and grows by nothing.</p>
           <div class="alloc">
@@ -13588,7 +13784,8 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     }
   }
   function compoundClimb() {
-    const YEARS = 15, START = 100, TARGET = 420, W3 = 360, H3 = 350;
+    const kn = knobs("cc");
+    const YEARS = 15, START = 100, TARGET = kn.target, W3 = 360, H3 = 350;
     const st2 = {
       year: 0,
       money: START,
@@ -13598,7 +13795,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       hist: [START],
       last: null,
       ruined: false,
-      peak: START
+      peak: START,
+      falls: 0,
+      maxCharge: 0
     };
     let raf2 = 0, prev = 0, ctx3 = null, cv2 = null;
     const r = rng(8821);
@@ -13616,8 +13815,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       if (st2.done) return;
       st2.done = true;
       stop3();
-      st2.won = payout(Math.max(3, Math.round(st2.money / 22)), "Compound Climb");
+      st2.won = payout(Math.max(3, Math.round(st2.money / 22 * parScale("cc"))), "Compound Climb");
       if (st2.money >= TARGET) badge(K3(), "climbed");
+      goalsFor("cc", { reached: st2.money >= TARGET && !st2.ruined, years: st2.year, falls: st2.falls, maxCharge: st2.maxCharge });
       sfx.level();
       R.render();
     };
@@ -13633,6 +13833,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     const release2 = () => {
       if (st2.done || look.ending || !st2.holding) return;
       st2.holding = false;
+      st2.maxCharge = Math.max(st2.maxCharge, st2.charge);
       const ch = st2.charge / 100;
       const mean = ch * 0.22;
       const vol = ch * ch * 0.34;
@@ -13643,6 +13844,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       st2.peak = Math.max(st2.peak, st2.money);
       st2.last = { pct: actual, before, after: st2.money };
       st2.year++;
+      if (actual < 0) st2.falls++;
       st2.charge = 0;
       look.land = 0;
       look.newest = st2.year;
@@ -13695,7 +13897,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       prev = ts;
       look.clock += dt;
       cd.step(dt);
-      if (st2.holding) st2.charge = Math.min(100, st2.charge + dt * 0.075);
+      if (st2.holding) st2.charge = Math.min(100, st2.charge + dt * 0.075 * kn.charge);
       look.disp = still() ? st2.money : look.disp + (st2.money - look.disp) * Math.min(1, dt * 7e-3);
       look.land = Math.min(1, look.land + dt / 520);
       animate(dt);
@@ -13995,6 +14197,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     };
     return {
       id: "cc",
+      st: st2,
+      release: release2,
+      kn,
       mount() {
         warmFonts();
         cv2 = document.getElementById("ccCanvas");
@@ -14060,7 +14265,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       view() {
         if (st2.done) {
           const reached2 = st2.money >= TARGET;
-          return `<div class="stack">${hud(["Fifteen years"])}
+          return `<div class="stack">${hud(["Fifteen years", tierChip()])}
           ${endCard(
             st2.ruined ? "\u{1F480}" : reached2 ? "\u{1F5FC}" : "\u{1F4C8}",
             st2.ruined ? "Wiped out in year " + st2.year : Math.round(st2.money) + " from " + START,
@@ -14072,7 +14277,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         }
         const l = st2.last;
         return `<div class="stack">
-        ${hud([`Year ${Math.min(YEARS, st2.year + 1)} / ${YEARS}`, `${Math.round(st2.money)}`, `target ${TARGET}`])}
+        ${hud([tierChip(), `Year ${Math.min(YEARS, st2.year + 1)} / ${YEARS}`, `${Math.round(st2.money)}`, `target ${TARGET}`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
           <canvas id="ccCanvas" class="arccv" role="img" aria-label="Your coin tower, the target line and the years so far" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W3}/${H3};display:block;touch-action:none"></canvas>
           ${l ? `<div class="ccyear ${l.pct >= 0 ? "up" : "down"}">
@@ -14115,7 +14320,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     }, 460);
   }
   function stallRush() {
-    const LEN2 = 6e4, MAXQ = 4;
+    const LEN2 = 6e4, MAXQ = 4, kn = knobs("sr");
     const st2 = {
       t: 0,
       cash: 0,
@@ -14128,13 +14333,14 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       done: false,
       spawn: 900,
       restock: 0,
-      msg: ""
+      msg: "",
+      wrong: 0
     };
     let raf2 = 0, prev = 0, nid = 0;
     const r = rng(3312);
     const items2 = STOCK.map((x) => x.id);
     const shown2 = /* @__PURE__ */ new Set();
-    const btnFor = (id) => document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`);
+    const btnFor = (id) => typeof document !== "undefined" ? document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`) : null;
     const stop3 = () => {
       if (raf2) cancelAnimationFrame(raf2);
       raf2 = 0;
@@ -14144,8 +14350,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       st2.done = true;
       stop3();
       st2.profit = st2.revenue - st2.spent;
-      st2.won = payout(Math.max(2, Math.round(st2.profit / 14)), "Stall Rush");
+      st2.won = payout(Math.max(2, Math.round(st2.profit / 14 * parScale("sr"))), "Stall Rush");
       if (st2.profit > 0) badge(K3(), "profit-day");
+      goalsFor("sr", { profit: st2.profit, lost: st2.lost, wrong: st2.wrong, served: st2.served });
       sfx.level();
       R.render();
     };
@@ -14153,6 +14360,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       if (st2.done) return;
       const i = st2.q.findIndex((c) => c.want === id);
       if (i < 0) {
+        st2.wrong++;
         sfx.bad();
         st2.msg = "Nobody is waiting for that";
         R.render();
@@ -14203,21 +14411,19 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       R.render();
       domPop('.gplay [data-act="srStock"]', "\u2212" + money(cost), "cost");
     };
-    const step4 = (ts) => {
-      if (st2.done) return;
-      const dt = Math.min(1e3, ts - (prev || ts));
-      prev = ts;
+    const advance3 = (dt) => {
+      if (st2.done) return false;
       st2.t += dt;
       st2.restock = Math.max(0, st2.restock - dt);
       st2.spawn -= dt;
       let dirty = false;
       if (st2.spawn <= 0 && st2.q.length < MAXQ) {
-        st2.spawn = 900 + r() * 700;
+        st2.spawn = (900 + r() * 700) * kn.spawn;
         st2.q.push({ id: ++nid, want: items2[Math.floor(r() * items2.length)], patience: 1 });
         dirty = true;
       }
       for (let i = st2.q.length - 1; i >= 0; i--) {
-        st2.q[i].patience -= dt / 9e3;
+        st2.q[i].patience -= dt / kn.patience;
         if (st2.q[i].patience <= 0) {
           st2.q.splice(i, 1);
           st2.lost++;
@@ -14228,8 +14434,16 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       }
       if (st2.t >= LEN2) {
         finish5();
-        return;
+        return false;
       }
+      return dirty;
+    };
+    const step4 = (ts) => {
+      if (st2.done) return;
+      const dt = Math.min(1e3, ts - (prev || ts));
+      prev = ts;
+      const dirty = advance3(dt);
+      if (st2.done) return;
       const tl = document.getElementById("srTime");
       if (tl) tl.textContent = Math.ceil((LEN2 - st2.t) / 1e3);
       st2.q.forEach((c) => {
@@ -14245,6 +14459,10 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     };
     return {
       id: "sr",
+      st: st2,
+      advance: advance3,
+      serve,
+      restock,
       mount() {
         if (!st2.done && !raf2) {
           prev = 0;
@@ -14270,7 +14488,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       },
       view() {
         if (st2.done) {
-          return `<div class="stack">${hud(["Closed"])}
+          return `<div class="stack">${hud(["Closed", tierChip()])}
           <div class="stage" style="justify-content:center;text-align:center">
             <div style="font-size:44px">${st2.profit > 0 ? "\u{1F4B9}" : "\u{1F4C9}"}</div>
             <h2>${st2.profit >= 0 ? "+" : "\u2212"}${money(Math.abs(st2.profit))} profit</h2>
@@ -14283,12 +14501,14 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
             </div>
             <p class="small muted">${st2.lost} customer${st2.lost === 1 ? "" : "s"} gave up waiting.</p>
             ${say2("nana", st2.revenue > 0 && st2.profit <= 0 ? "You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent." : "Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.")}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st2.won)}.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
         }
         return `<div class="stack">
         ${hud([
+          tierChip(),
           `<span id="srTime">${Math.ceil((LEN2 - st2.t) / 1e3)}</span>s`,
           `took ${money(st2.revenue)}`,
           `stock ${money(st2.spent)}`,
@@ -14326,8 +14546,8 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     };
   }
   function changeRush(seed = Date.now() % 1e5 | 0) {
-    const cur3 = CURRENCIES[currency()];
-    const COINS = cur3.coins.slice(0, 5);
+    const cur3 = CURRENCIES[currency()], kn = knobs("cr");
+    const COINS = cur3.coins.slice(0, Math.max(Math.min(2, cur3.coins.length), kn.coins));
     const LANES = 4, W3 = 360, H3 = 300, LEN2 = 6e4;
     const st2 = {
       target: 0,
@@ -14343,7 +14563,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       done: false,
       flash: 0,
       msg: "",
-      pops: []
+      pops: [],
+      overpays: 0,
+      firstRun: 0
     };
     let raf2 = 0, last2 = 0, ctx3 = null, cv2 = null;
     const r = rng(seed);
@@ -14352,7 +14574,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     const LX = (lane) => lane * (W3 / LANES) + W3 / LANES / 2;
     const look = { px: LX(1), sq: 0, meter: 0, hold: null, clock: 0 };
     const newTarget = () => {
-      const n = 2 + Math.floor(r() * 3);
+      const n = kn.min + Math.floor(r() * (kn.max - kn.min + 1));
       let t = 0;
       for (let i = 0; i < n; i++) t += COINS[Math.floor(r() * COINS.length)];
       st2.target = t;
@@ -14373,8 +14595,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       if (st2.done) return;
       st2.done = true;
       stop3();
-      st2.won = payout(Math.round(st2.score * 0.5), "Change Rush");
+      st2.won = payout(Math.round(st2.score * 0.5 * parScale("cr")), "Change Rush");
       if (st2.round > 4) badge(K3(), "exact-change");
+      goalsFor("cr", { exact: st2.exact, overpays: st2.overpays, firstRun: st2.firstRun, finished: st2.t >= LEN2 });
       R.render();
     };
     const el3 = (id) => typeof document !== "undefined" ? document.getElementById(id) : null;
@@ -14405,6 +14628,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         st2.exact++;
         st2.flash = 1;
         st2.msg = "Exact!";
+        if (!st2.overpays) st2.firstRun = st2.exact;
         sfx.coin();
         newTarget();
       } else if (st2.got > st2.target) {
@@ -14416,6 +14640,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         fxl.coins(x, H3 - 40, 10);
         fxl.burst(x, H3 - 36, { n: 18, speed: 0.26, gravity: 12e-4, colors: ["#E0483A", "#F0B429", "#C87533"] });
         st2.lives--;
+        st2.overpays++;
         st2.flash = -1;
         st2.msg = "Overpaid by " + money(st2.got - st2.target);
         sfx.bad();
@@ -14433,13 +14658,13 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       st2.t += dt;
       st2.spawn -= dt;
       if (st2.spawn <= 0) {
-        st2.spawn = 620 - Math.min(320, st2.round * 40);
+        st2.spawn = (620 - Math.min(320, st2.round * 40)) * kn.spawn;
         const need = st2.target - st2.got;
         const usable = COINS.filter((v2) => v2 <= need);
-        const v = usable.length && r() < 0.55 ? usable[Math.floor(r() * usable.length)] : COINS[Math.floor(r() * COINS.length)];
+        const v = usable.length && r() < kn.help ? usable[Math.floor(r() * usable.length)] : COINS[Math.floor(r() * COINS.length)];
         st2.drops.push({ lane: Math.floor(r() * LANES), y: -20, v });
       }
-      const speed = 0.075 + st2.round * 0.012;
+      const speed = (0.075 + st2.round * 0.012) * kn.fall;
       const caught = [], keep2 = [];
       for (const d of st2.drops) {
         d.y += speed * dt;
@@ -14789,17 +15014,17 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         }
       },
       view() {
-        if (st2.done) return `<div class="stack">${hud(["Done"])}
+        if (st2.done) return `<div class="stack">${hud(["Done", tierChip()])}
         ${endCard(
           st2.round > 4 ? "\u{1F3C5}" : "\u{1FA99}",
           st2.exact + " exact",
-          "Score " + st2.score + ".",
+          "Score " + st2.score + " \xB7 par " + knobs("cr").par + " on " + TIER_NAME[curTier] + ".",
           st2.won,
           "Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.",
           "mags"
         )}</div>`;
         return `<div class="stack">
-        ${hud([`Need <b id="crNeed">${money(st2.target)}</b>`, `Got <b id="crGot">${money(st2.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st2.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN2 - st2.t) / 1e3))}</span>s`])}
+        ${hud([tierChip(), `Need <b id="crNeed">${money(st2.target)}</b>`, `Got <b id="crGot">${money(st2.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st2.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN2 - st2.t) / 1e3))}</span>s`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
           <canvas id="crCanvas" class="arccv" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W3}/${H3};display:block;touch-action:none"></canvas>
           <div class="choices crlanes" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
@@ -14828,7 +15053,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
   </svg>`;
   }
   function marketStorm() {
-    const START = 1e3, LEN2 = 42e3;
+    const START = 1e3, LEN2 = 42e3, kn = knobs("st");
     const st2 = {
       t: 0,
       panic: 0,
@@ -14841,7 +15066,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       shoutT: 0,
       calmT: 0,
       recover: 0,
-      shoutN: 0
+      shoutN: 0,
+      maxPanic: 0,
+      calms: 0
     };
     let iv = 0, last2 = 0, seenShout = 0;
     const r = rng(4477);
@@ -14858,16 +15085,15 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       st2.soldAt = Math.round(st2.val);
       st2.won = payout(sold ? 3 : 14, "Market Storm");
       if (!sold) badge(K3(), "held-the-storm");
+      goalsFor("st", { held: !sold, maxPanic: st2.maxPanic, calms: st2.calms });
       if (sold) sfx.bad();
       else {
         sfx.level();
       }
       R.render();
     };
-    const tick3 = (ts) => {
+    const advance3 = (dt) => {
       if (st2.done) return;
-      const dt = Math.min(1e3, ts - (last2 || ts));
-      last2 = ts;
       st2.t += dt;
       const p = st2.t / LEN2;
       const wobble = (r() - 0.5) * 22;
@@ -14877,18 +15103,19 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         st2.lastPt = st2.t;
         st2.line.push(Math.round(st2.val));
       }
-      st2.panic = clamp(st2.panic + dt * 22e-4, 0, 100);
+      st2.panic = clamp(st2.panic + dt * kn.drift, 0, 100);
       st2.shoutT -= dt;
       st2.calmT = Math.max(0, st2.calmT - dt);
       if (st2.shoutT <= 0) {
-        st2.shoutT = 3400;
+        st2.shoutT = kn.every;
         st2.shout = SHOUTS[Math.floor(r() * SHOUTS.length)];
-        st2.panic = clamp(st2.panic + 11, 0, 100);
+        st2.panic = clamp(st2.panic + kn.shout, 0, 100);
         st2.shoutN++;
         R.render();
         jolt("bad");
-        domPop(".gplay .stpanic", "+11 panic", "bad");
+        domPop(".gplay .stpanic", "+" + kn.shout + " panic", "bad");
       }
+      st2.maxPanic = Math.max(st2.maxPanic, st2.panic);
       if (st2.panic >= 100) {
         finish5(true);
         return;
@@ -14897,6 +15124,13 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         finish5(false);
         return;
       }
+    };
+    const tick3 = (ts) => {
+      if (st2.done) return;
+      const dt = Math.min(1e3, ts - (last2 || ts));
+      last2 = ts;
+      advance3(dt);
+      if (st2.done) return;
       const el3 = document.getElementById("stPanic");
       if (el3) {
         el3.style.width = st2.panic.toFixed(1) + "%";
@@ -14922,12 +15156,16 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       if (st2.done || st2.calmT > 0) return;
       st2.panic = clamp(st2.panic - 26, 0, 100);
       st2.calmT = 2600;
+      st2.calms++;
       sfx.good();
       R.render();
       domPop(".gplay .stpanic", "\u221226 panic", "good");
     };
     return {
       id: "st",
+      st: st2,
+      advance: advance3,
+      calm,
       mount() {
         if (!st2.done && !iv) {
           last2 = 0;
@@ -14954,7 +15192,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       },
       view() {
         if (st2.done) {
-          return `<div class="stack">${hud(["Storm over"])}
+          return `<div class="stack">${hud(["Storm over", tierChip()])}
           <div class="stage" style="text-align:center;justify-content:center">
             <div style="font-size:44px">${st2.sold ? "\u{1F4C9}" : "\u26F0\uFE0F"}</div>
             <h2>${st2.sold ? "You sold" : "You held"}</h2>
@@ -14968,6 +15206,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
               </div>
             </div>
             ${say2(st2.sold ? "bea" : "nana", st2.sold ? "I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go." : "A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.")}
+            ${endGoals()}
             <p class="small muted">Earned ${money(st2.won)}. Fictional market, real behaviour, nothing here is advice.</p>
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
@@ -14975,7 +15214,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         const sh = st2.shout, freshShout = st2.shoutN !== seenShout;
         seenShout = st2.shoutN;
         return `<div class="stack">
-        ${hud([`<span id="stTime">${Math.ceil((LEN2 - st2.t) / 1e3)}</span>s left`, `<span id="stVal">${Math.round(st2.val)}</span> / ${START}`])}
+        ${hud([tierChip(), `<span id="stTime">${Math.ceil((LEN2 - st2.t) / 1e3)}</span>s left`, `<span id="stVal">${Math.round(st2.val)}</span> / ${START}`])}
         <div class="stage ststage" style="--panic:${(st2.panic / 100).toFixed(3)}">
           <div>
             <div class="row"><span class="eyebrow grow">Panic</span>
@@ -14997,10 +15236,11 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       }
     };
   }
-  var K3, GAMES, HOW, PRACTISED, current3, lastCapped, NW, SS, GAME_ACTS, fontsWarm, joltT, SHOUTS;
+  var K3, GAMES, HOW, PRACTISED, ARCADE_TIERS, ARCADE_GOALS, current3, curTier, lastGoals, knobs, parScale, endGoals, tierChip, lastCapped, NW, SS, TT_SETS, SN_SETS, GAME_ACTS, fontsWarm, joltT, SHOUTS;
   var init_arcade = __esm({
     "src/arcade.js"() {
       init_ui();
+      init_jobtable();
       init_fmt();
       init_art();
       init_hero();
@@ -15140,7 +15380,164 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         tt: "turning monthly costs into yearly ones",
         sn: "how big compounding really gets"
       };
+      ARCADE_TIERS = {
+        /* fall: coin speed · spawn: time between coins · coins: how many coin sizes · min/max: coins in an amount ·
+           help: how often a coin that fits is sent · par: a careful round's score */
+        cr: {
+          easy: { fall: 0.75, spawn: 1.15, coins: 4, min: 2, max: 3, help: 0.7, par: 67, says: "Slower coins, smaller amounts, fewer kinds of coin." },
+          standard: { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55, par: 74, says: "The round as it comes." },
+          tricky: { fall: 1.25, spawn: 0.85, coins: 5, min: 3, max: 5, help: 0.45, par: 80, says: "Faster coins and bigger amounts." }
+        },
+        /* n: cards in a round (0 = all) · clock: ms to decide each card (0 = no clock) · par: cards to get right */
+        nw: {
+          easy: { n: 8, clock: 0, says: "A shorter round: eight cards." },
+          standard: { n: 0, clock: 0, says: "Every card, no clock." },
+          tricky: { n: 0, clock: 6e3, says: "Every card, and six seconds to decide each one." }
+        },
+        ss: {
+          easy: { n: 6, clock: 0, says: "A shorter round: six messages." },
+          standard: { n: 0, clock: 0, says: "Every message, no clock." },
+          tricky: { n: 0, clock: 9e3, says: "Every message, and nine seconds to decide \u2014 the way a real one rushes you." }
+        },
+        /* pot: the month's money, × · first: which bills arrive first · par: the most a month can earn (decision points) */
+        bb: {
+          easy: { pot: 1.25, first: null, par: 14, says: "A roomier month." },
+          standard: { pot: 1, first: null, par: 14, says: "The month as it comes." },
+          tricky: { pot: 0.8, first: "wants", par: 14, says: "A tight month, and the treats arrive before the bills." }
+        },
+        /* charge: how fast holding charges · target: the line (the badge and a goal) · par: the pay's
+           yardstick — the same on every level, because what a year grows by never depends on the line */
+        cc: {
+          easy: { charge: 0.75, target: 360, says: "The charge fills slower, so the middle is easier to hit. The line is lower." },
+          standard: { charge: 1, target: 420, says: "Fifteen years, the line at 420." },
+          tricky: { charge: 1.35, target: 480, says: "The charge races, and the line is higher." }
+        },
+        /* spawn: time between customers, × · patience: ms a customer waits · par: a careful day's profit,
+           in price units (only the ratio between levels is used, so the currency does not matter) */
+        sr: {
+          easy: { spawn: 1.15, patience: 10500, par: 161, says: "Fewer customers, and they wait longer." },
+          standard: { spawn: 1, patience: 9e3, par: 186, says: "Sixty seconds as they come." },
+          tricky: { spawn: 0.75, patience: 7e3, par: 224, says: "A rush: more customers, less patience." }
+        },
+        /* every: ms between shouts · shout: panic per shout · drift: panic per ms · par: hold (1) */
+        st: {
+          easy: { every: 4200, shout: 9, drift: 18e-4, par: 1, says: "Fewer shouts, and they rattle you less." },
+          standard: { every: 3400, shout: 11, drift: 22e-4, par: 1, says: "The storm as it comes." },
+          tricky: { every: 2700, shout: 13, drift: 26e-4, par: 1, says: "More shouting, louder, and the panic climbs faster." }
+        },
+        /* shock: week-to-week swing, × · crash: the red week, × · par: Boring Bella's cup score on this level (worked out) */
+        mc: {
+          easy: { shock: 0.6, crash: 0.6, says: "A calmer market." },
+          standard: { shock: 1, crash: 1, says: "The season as it comes." },
+          tricky: { shock: 1.5, crash: 1.4, says: "A wild market with a deeper red week." }
+        },
+        /* set: which numbers · par: questions to get right */
+        tt: {
+          easy: { set: "easy", says: "Round numbers." },
+          standard: { set: "standard", says: "Everyday numbers." },
+          tricky: { set: "tricky", says: "Awkward numbers, the kind real prices are." }
+        },
+        sn: {
+          easy: { set: "easy", says: "Shorter times and friendly rates." },
+          standard: { set: "standard", says: "Ten to thirty years." },
+          tricky: { set: "tricky", says: "Odd rates and long horizons." }
+        }
+      };
+      ARCADE_TIERS.nw.easy.par = 8;
+      ARCADE_TIERS.nw.standard.par = 12;
+      ARCADE_TIERS.nw.tricky.par = 12;
+      ARCADE_TIERS.ss.easy.par = 6;
+      ARCADE_TIERS.ss.standard.par = 10;
+      ARCADE_TIERS.ss.tricky.par = 10;
+      ARCADE_TIERS.cc.easy.par = 420;
+      ARCADE_TIERS.cc.standard.par = 420;
+      ARCADE_TIERS.cc.tricky.par = 420;
+      ARCADE_TIERS.tt.easy.par = 8;
+      ARCADE_TIERS.tt.standard.par = 8;
+      ARCADE_TIERS.tt.tricky.par = 8;
+      ARCADE_TIERS.sn.easy.par = 6;
+      ARCADE_TIERS.sn.standard.par = 6;
+      ARCADE_TIERS.sn.tricky.par = 6;
+      ARCADE_GOALS = {
+        cr: [
+          { id: "exact3", name: "Exact three times in a round", check: (r) => r.exact >= 3 },
+          { id: "clean", name: "A whole round without overpaying", check: (r) => r.finished && r.overpays === 0 && r.exact >= 2 },
+          { id: "five", name: "Five exact amounts before a single overpay", check: (r) => r.firstRun >= 5 }
+        ],
+        nw: [
+          { id: "perfect", name: "All right first time", check: (r) => r.right === r.n },
+          { id: "needs", name: "Every need called a need", check: (r) => r.needWrong === 0 },
+          { id: "wants", name: "Every want called a want", check: (r) => r.wantWrong === 0 }
+        ],
+        ss: [
+          { id: "perfect", name: "All right first time", check: (r) => r.right === r.n },
+          { id: "notrap", name: "Never fell for a trap", check: (r) => r.scamWrong === 0 },
+          { id: "trust", name: "Trusted every real message", check: (r) => r.safeWrong === 0 }
+        ],
+        bb: [
+          { id: "musts", name: "Every bill you needed, paid", check: (r) => r.mustMissed === 0 },
+          { id: "spare", name: "Needs paid, and money left at the end", check: (r) => r.mustMissed === 0 && r.left > 0 },
+          { id: "quarter", name: "Needs paid, and a quarter of the month kept", check: (r) => r.mustMissed === 0 && r.left >= r.pot / 4 }
+        ],
+        cc: [
+          { id: "target", name: "Over the target line", check: (r) => r.reached },
+          { id: "nofall", name: "Fifteen years without one going backwards", check: (r) => r.years >= 15 && r.falls === 0 },
+          { id: "steady", name: "Never charged past three-quarters", check: (r) => r.years >= 15 && r.maxCharge <= 75 }
+        ],
+        sr: [
+          { id: "profit", name: "Made a profit", check: (r) => r.profit > 0 },
+          { id: "nolost", name: "Nobody gave up waiting", check: (r) => r.lost === 0 && r.served >= 8 },
+          { id: "nowrong", name: "Never served what nobody wanted", check: (r) => r.wrong === 0 && r.served >= 8 }
+        ],
+        st: [
+          { id: "held", name: "Held through the whole storm", check: (r) => r.held },
+          { id: "cool", name: "Held, and panic never reached 80", check: (r) => r.held && r.maxPanic < 80 },
+          { id: "calm", name: "Held, and panic never passed half", check: (r) => r.held && r.maxPanic <= 50 }
+        ],
+        mc: [
+          { id: "spread", name: "Spread out every single week", check: (r) => r.spreadWeeks === r.weeks },
+          { id: "nerve", name: "Kept your nerve: moved 40% or less all cup", check: (r) => r.churn <= 40 },
+          { id: "bella", name: "Beat Boring Bella on cup score", check: (r) => r.beatBella }
+        ],
+        tt: [
+          { id: "perfect", name: "All right first time", check: (r) => r.right === r.n },
+          { id: "weekly", name: "Every weekly one right", check: (r) => r.weeklyWrong === 0 },
+          { id: "yearly", name: "Saw through the yearly price", check: (r) => r.compareRight }
+        ],
+        sn: [
+          { id: "perfect", name: "All right first time", check: (r) => r.right === r.n },
+          { id: "nosimple", name: "Never picked the adding-up answer", check: (r) => r.simple === 0 },
+          { id: "long", name: "Every one over the longest time right", check: (r) => r.longWrong === 0 }
+        ]
+      };
       current3 = null;
+      curTier = "standard";
+      lastGoals = null;
+      knobs = (id) => ARCADE_TIERS[id][curTier] || ARCADE_TIERS[id].standard;
+      parScale = (id) => ARCADE_TIERS[id].standard.par / (knobs(id).par || ARCADE_TIERS[id].standard.par);
+      endGoals = () => lastGoals && lastGoals.id === current3 && R.game && R.game.id === current3 ? goalList(ARCADE_GOALS[current3], K3(), current3, lastGoals.list) : "";
+      on("gTier", (arg) => {
+        const [id, t] = String(arg || "").split(":");
+        if (!ARCADE_TIERS[id] || !setTier(K3(), id, t)) return;
+        if (R.s) save2(R.s);
+        sfx.click();
+        R.render();
+      });
+      if (typeof document !== "undefined" && document.addEventListener) {
+        document.addEventListener("keydown", (e) => {
+          if (!R.gameIntro || R.game || R.overlay || e.defaultPrevented) return;
+          if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName || "")) return;
+          const n = ["1", "2", "3"].indexOf(e.key);
+          if (n >= 0 && ARCADE_TIERS[R.gameIntro]) {
+            e.preventDefault();
+            setTier(K3(), R.gameIntro, TIER_IDS[n]);
+            if (R.s) save2(R.s);
+            sfx.click();
+            R.render();
+          }
+        });
+      }
+      tierChip = () => `<span class="tierchip" data-tier="${curTier}">${TIER_NAME[curTier]}</span>`;
       lastCapped = false;
       NW = [
         { em: "\u{1F35A}", t: "Rice for the week", a: "need" },
@@ -15208,6 +15605,40 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
           note: "Guaranteed and doubling do not belong in the same sentence \u2014 and there are always exactly five places left."
         }
       ];
+      TT_SETS = {
+        easy: { monthly: [10, 20, 30, 40, 50, 5, 25], weekly: [5, 10, 20], compare: [20, 200] },
+        standard: { monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] },
+        tricky: { monthly: [35, 45, 65, 75, 85, 95, 55], weekly: [17, 23, 35], compare: [65, 740] }
+      };
+      SN_SETS = {
+        easy: [
+          { p: 100, r: 0.1, y: 5 },
+          { p: 100, r: 0.1, y: 10 },
+          { p: 200, r: 0.1, y: 7 },
+          { p: 500, r: 0.05, y: 10 },
+          { p: 100, r: 0.2, y: 5 },
+          { p: 1e3, r: 0.1, y: 10 }
+        ],
+        standard: [
+          { p: 100, r: 0.1, y: 10 },
+          { p: 100, r: 0.07, y: 20 },
+          { p: 500, r: 0.05, y: 10 },
+          { p: 1e3, r: 0.1, y: 20 },
+          { p: 200, r: 0.08, y: 30 },
+          { p: 100, r: 0.1, y: 30 }
+        ],
+        tricky: [
+          { p: 150, r: 0.06, y: 25 },
+          { p: 250, r: 0.09, y: 20 },
+          { p: 400, r: 0.04, y: 35 },
+          { p: 120, r: 0.12, y: 30 },
+          { p: 800, r: 0.07, y: 40 },
+          { p: 300, r: 0.11, y: 15 }
+        ]
+      };
+      TIER_IDS.forEach((t) => {
+        ARCADE_TIERS.mc[t].par = bellaCup(ARCADE_TIERS.mc[t]);
+      });
       GAME_ACTS = [
         "nwNeed",
         "nwWant",
@@ -15242,7 +15673,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         "jgStar",
         "jgLeft",
         "jgRight",
-        "jgLane"
+        "jgLane",
+        "jgTier",
+        "jgStart"
       ];
       fontsWarm = false;
       joltT = 0;
@@ -17654,10 +18087,19 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     const job = JOBS.find((j) => j.id === jobId) || { name: "Work", who: "the town" };
     const cfg2 = JOB_GAME[jobId];
     const FX = fx2(), CD = countdown(), img = plate(K9() && K9().world || 0);
-    let raf2 = 0, last2 = 0, ctx3 = null, cv2 = null, T2 = 0, said = 3, dpr = 1;
+    let raf2 = 0, last2 = 0, ctx3 = null, cv2 = null, T2 = 0, cdT = 0, said = 3, dpr = 1;
     st2.over = false;
     st2.overT = 0;
-    const live3 = () => CD.done && !st2.over && !st2.done;
+    st2.tier = TIER_IDS.includes(spec.tier) ? spec.tier : tierOf(K9(), jobId);
+    st2.picking = !spec.tier;
+    const par = () => jobPar(jobId, st2.tier);
+    const retier = (t) => {
+      if (!TIER_IDS.includes(t)) return;
+      st2.tier = t;
+      if (spec.retier) spec.retier(t);
+    };
+    retier(st2.tier);
+    const live3 = () => !st2.picking && CD.done && !st2.over && !st2.done;
     const stop3 = () => {
       if (raf2) cancelAnimationFrame(raf2);
       raf2 = 0;
@@ -17666,9 +18108,11 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       if (st2.done) return;
       st2.done = true;
       stop3();
-      st2.quality = st2.score / cfg2.par;
+      st2.quality = st2.score / par();
       st2.best = setJobBest(K9(), jobId, st2.score);
       st2.won = doJob(K9(), jobId, st2.quality);
+      st2.goals = earnGoals(K9(), jobId, jobGoals(jobId), Object.assign({ tier: st2.tier }, spec.summary()));
+      if (R.s) save2(R.s);
       if (st2.won > 0) sfx.coin();
       R.render();
     };
@@ -17681,6 +18125,21 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       sfx.level();
     };
     st2.end = finish5;
+    const pick4 = (t) => {
+      if (!st2.picking || !TIER_IDS.includes(t)) return;
+      retier(t);
+      setTier(K9(), jobId, t);
+      sfx.click();
+      R.render();
+    };
+    const begin2 = () => {
+      if (!st2.picking) return;
+      st2.picking = false;
+      setTier(K9(), jobId, st2.tier);
+      if (R.s) save2(R.s);
+      sfx.click();
+      R.render();
+    };
     const paint = () => {
       const amb = still() ? 0 : T2;
       const after = FX.begin(ctx3);
@@ -17688,8 +18147,15 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       draw3(ctx3, { img, T: amb, FX });
       after();
       FX.draw(ctx3, W2, H2);
-      meter(ctx3, st2.score, cfg2.par, spec.unit);
+      meter(ctx3, st2.score, par(), spec.unit);
       if (spec.hud) spec.hud(ctx3);
+      if (st2.picking) {
+        ctx3.fillStyle = "rgba(20,24,36,.28)";
+        ctx3.fillRect(0, 0, W2, H2);
+        label2(ctx3, TIER_NAME[st2.tier], W2 / 2, H2 / 2 - 12, { size: 30, serif: true });
+        label2(ctx3, `par ${par()} \xB7 pick a level below`, W2 / 2, H2 / 2 + 18, { size: 12 });
+        return;
+      }
       CD.draw(ctx3, W2, H2);
       if (st2.over) {
         const k = Math.min(1, st2.overT / 380), s = ease.back(k);
@@ -17715,8 +18181,26 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         ctx3.scale(s, s);
         ctx3.rotate(-0.04);
         label2(ctx3, "SHIFT DONE!", 0, -6, { size: 32, serif: true, color: "#3A2400", stroke: "#FFF3C4" });
-        label2(ctx3, `${st2.score} ${spec.unit} \xB7 par ${cfg2.par}`, 0, 20, { size: 12, color: "#3A2400", stroke: "#FFE7A0" });
+        label2(ctx3, `${st2.score} ${spec.unit} \xB7 par ${par()}`, 0, 20, { size: 12, color: "#3A2400", stroke: "#FFE7A0" });
         ctx3.restore();
+      }
+    };
+    const advance3 = (dt) => {
+      if (st2.done || st2.picking) return;
+      const was = CD.done;
+      CD.step(dt);
+      if (!was) {
+        cdT += dt;
+        const n = CD.done ? 0 : Math.ceil((2400 - cdT) / 800);
+        if (n < said) {
+          said = n;
+          sfx.click();
+        }
+      } else if (!st2.over) {
+        for (let left2 = dt; left2 > 1e-4 && !st2.over; left2 -= 50) step4(Math.min(50, left2), finish5, FX);
+      } else {
+        st2.overT += dt;
+        if (st2.overT >= (still() ? 500 : 1500)) end();
       }
     };
     const loop2 = (ts) => {
@@ -17724,23 +18208,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       const dt = Math.min(1e3, ts - (last2 || ts));
       last2 = ts;
       T2 += dt;
-      const was = CD.done;
-      CD.step(dt);
-      if (!was) {
-        const n = CD.done ? 0 : Math.ceil((2400 - T2) / 800);
-        if (n < said) {
-          said = n;
-          sfx.click();
-        }
-      } else if (!st2.over) {
-        for (let left2 = dt; left2 > 1e-4 && !st2.over; left2 -= 50) step4(Math.min(50, left2), finish5);
-      } else {
-        st2.overT += dt;
-        if (st2.overT >= (still() ? 500 : 1500)) {
-          end();
-          return;
-        }
-      }
+      advance3(dt);
+      if (st2.done) return;
       FX.step(dt);
       if (ctx3) {
         try {
@@ -17760,7 +18229,26 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
          than mash keys at it — the only way to find out how long a competent
          run actually takes, which is the number that decides whether any of
          this is worth a child's evening. `go` is false during the countdown. */
-      __st: () => Object.assign(spec.probe(), { go: live3(), over: !!st2.over, done: !!st2.done }),
+      __st: () => Object.assign(spec.probe(), { go: live3(), over: !!st2.over, done: !!st2.done, tier: st2.tier, picking: !!st2.picking, par: par() }),
+      /* the same slice of time the frame loop runs, for a headless player in node */
+      __tick: (dt) => advance3(dt),
+      __key: (k) => {
+        if (live3()) onKey({ key: k });
+      },
+      __point: (x, y) => {
+        if (live3() && onPoint) onPoint(x, y);
+      },
+      /* one frame painted onto a given context, faults NOT swallowed — so a test can see them */
+      __paint: (c2) => {
+        const keep2 = ctx3;
+        ctx3 = c2;
+        try {
+          paint();
+        } finally {
+          ctx3 = keep2;
+        }
+      },
+      st: st2,
       mount() {
         cv2 = document.getElementById("jobCanvas");
         if (!cv2) return;
@@ -17794,27 +18282,48 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           }
           return;
         }
+        if (st2.picking) {
+          const i = TIER_IDS.indexOf(st2.tier);
+          if (e.key >= "1" && e.key <= "3" && e.key.length === 1) pick4(TIER_IDS[+e.key - 1]);
+          else if (e.key === "ArrowLeft") pick4(TIER_IDS[Math.max(0, i - 1)]);
+          else if (e.key === "ArrowRight") pick4(TIER_IDS[Math.min(2, i + 1)]);
+          else if (e.key === "Enter" || e.key === " ") {
+            if (e.preventDefault) e.preventDefault();
+            begin2();
+          }
+          return;
+        }
         if (live3()) onKey(e);
         else if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key) && e.preventDefault) e.preventDefault();
       },
       act(n, arg) {
+        if (n === "jgTier") {
+          pick4(arg);
+          return;
+        }
+        if (n === "jgStart") {
+          begin2();
+          return;
+        }
         if (spec.onAct && live3()) spec.onAct(n, arg);
       },
       view() {
+        const chip = `<span class="tierchip" data-tier="${st2.tier}">${TIER_NAME[st2.tier]}</span>`;
         if (st2.done) {
           const grade = st2.quality >= 1.45 ? ["\u{1F3C5}", "A cracking shift"] : st2.quality >= 1 ? ["\u{1F44D}", "A good shift"] : st2.quality >= 0.7 ? ["\u{1F642}", "Got it done"] : ["\u{1F605}", "Hard going"];
-          return `<div class="stack">${hud([esc(job.name)])}
+          return `<div class="stack">${hud([esc(job.name), chip])}
           ${endCard(
             grade[0],
             grade[1],
-            `${st2.score} ${spec.unit} \xB7 par ${cfg2.par}${st2.best ? " \xB7 <b>new personal best</b>" : ""}`,
+            `${st2.score} ${spec.unit} \xB7 par ${par()} on ${TIER_NAME[st2.tier]}${st2.best ? " \xB7 <b>new personal best</b>" : ""}`,
             st2.won,
             finishLine(st2),
             job.whoArt || "pip"
-          )}</div>`;
+          )}
+          ${goalList(jobGoals(jobId), K9(), jobId, st2.goals)}</div>`;
         }
         return `<div class="stack">
-        ${hud(spec.boxes())}
+        ${hud([chip].concat(spec.boxes()))}
         <div class="stage jobstage" style="min-height:0;padding:12px">
           <div class="row" style="gap:8px">
             <span class="grow"><b style="font-size:15px">${esc(cfg2.verb)}</b>
@@ -17823,8 +18332,14 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           </div>
           <canvas id="jobCanvas" role="img" aria-label="${esc(cfg2.verb)} \u2014 ${esc(hint)}" style="width:100%;max-width:400px;margin:0 auto;height:auto;
             aspect-ratio:${W2}/${H2};border-radius:var(--r-md);display:block;touch-action:none;box-shadow:0 6px 18px rgba(20,24,36,.18)"></canvas>
-          ${controls()}
-          <p class="hint">${esc(hint)}</p>
+          ${st2.picking ? `<div class="jgpick">
+            ${tierPicker(st2.tier, "jgTier", "", JOB_TIER_SAYS[cfg2.kind])}
+            <p class="small muted tierpar">Par on ${TIER_NAME[st2.tier]}: <b>${par()}</b>. Pay is measured against it, so every level pays the same for the same care.</p>
+            ${goalList(jobGoals(jobId), K9(), jobId)}
+            <button class="btn wide" data-act="jgStart" style="min-height:48px">Start the shift \u2192</button>
+            <p class="hint">1 2 3 or \u2190 \u2192 to pick a level, Enter to start. Or tap.</p>
+          </div>` : `${controls()}
+          <p class="hint">${esc(hint)}</p>`}
         </div></div>`;
       }
     };
@@ -17898,10 +18413,11 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       }
     } else crate(ctx3, x, y, w, h, tint);
   }
-  function stackGame(jobId, quit) {
+  function stackGame(jobId, quit, lvl) {
     const c = K9(), t = tier(c);
     const look = STACK_LOOK[jobId] || "crate", tints = STACK_TINT[look];
-    const SHIFT = 16, CLOCK = 6e4, CH = 26, BASEW = 120, BASEX = (W2 - BASEW) / 2, BASEY = H2 - 42, HOOK = 66, SNAP = 5;
+    const SHIFT = 16, CLOCK = 6e4, CH = 26, BASEW = 120, BASEX = (W2 - BASEW) / 2, BASEY = H2 - 42, HOOK = 66;
+    let kn = jobKnobs(jobId, "standard");
     const st2 = {
       score: 0,
       landed: 0,
@@ -17918,10 +18434,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       cam: 0,
       debris: [],
       land: 0,
-      misses: 0
+      misses: 0,
+      squares: 0,
+      bestCombo: 0
     };
     const top = () => st2.pile.length ? st2.pile[st2.pile.length - 1] : { x: BASEX, w: BASEW };
-    const speed = () => 0.11 + t * 0.015 + st2.landed * 7e-3;
+    const speed = () => (0.11 + t * 0.015 + st2.landed * 7e-3) * kn.speed;
     const topScreen = () => BASEY - st2.pile.length * CH + st2.cam;
     const drop = () => {
       if (st2.done || st2.over || st2.falling) return;
@@ -17931,7 +18449,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       const f = st2.falling;
       st2.falling = null;
       const tp = top(), ty = topScreen();
-      if (Math.abs(f.x - tp.x) <= SNAP) {
+      if (Math.abs(f.x - tp.x) <= kn.snap) {
         const nw = Math.min(BASEW, tp.w + 8), nx = clamp(tp.x - (nw - tp.w) / 2, 0, W2 - nw);
         st2.pile.push({ x: nx, w: nw, tint: f.tint });
         st2.w = nw;
@@ -17939,6 +18457,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         st2.score += 4;
         st2.landed++;
         st2.land = 1;
+        st2.squares++;
+        st2.bestCombo = Math.max(st2.bestCombo, st2.combo);
         st2.msg = st2.combo >= 3 ? `${st2.combo} square in a row` : "Dead square!";
         FX.pop(tp.x + tp.w / 2, ty - CH - 10, st2.combo >= 3 ? `Perfect x${st2.combo} +4` : "Perfect! +4", { color: "#8A5B00", size: 18 });
         FX.coins(tp.x + tp.w / 2, ty - CH, 4 + Math.min(4, st2.combo));
@@ -17989,7 +18509,13 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       st: st2,
       quit,
       unit: "points",
-      step(dt) {
+      tier: lvl,
+      retier: (k) => {
+        kn = jobKnobs(jobId, k);
+      },
+      summary: () => ({ finished: st2.landed >= SHIFT, squares: st2.squares, bestCombo: st2.bestCombo, misses: st2.misses }),
+      step(dt, _fin, fxo) {
+        if (!FXref) FXref = fxo;
         st2.left -= dt;
         if (st2.left <= 0) {
           st2.left = 0;
@@ -18157,7 +18683,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         ctx3.fill();
         const tp = top(), ty = topScreen();
         if (!f && !st2.over) {
-          const good = Math.abs(st2.x - tp.x) <= SNAP;
+          const good = Math.abs(st2.x - tp.x) <= kn.snap;
           ctx3.save();
           ctx3.globalAlpha = good ? 0.5 : 0.22;
           ctx3.fillStyle = good ? "#2FA866" : "#1C2A2E";
@@ -18231,7 +18757,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       },
       probe: () => {
         const tp = top();
-        return { kind: "stack", x: st2.x, w: st2.w, topX: tp.x, topW: tp.w, falling: !!st2.falling, score: st2.score, landed: st2.landed, lives: st2.lives, left: st2.left };
+        return { kind: "stack", x: st2.x, w: st2.w, topX: tp.x, topW: tp.w, falling: !!st2.falling, score: st2.score, landed: st2.landed, lives: st2.lives, left: st2.left, dir: st2.dir, v: speed() };
       },
       onKey(e) {
         if (e.key === " " || e.key === "Enter" || e.key === "ArrowDown") {
@@ -18332,10 +18858,11 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     ctx3.textBaseline = "middle";
     ctx3.fillText(String(w), x, y + 0.5);
   }
-  function trimGame(jobId, quit) {
+  function trimGame(jobId, quit, lvl) {
     const c = K9(), t = tier(c);
     const SHIFT = 20, PX = W2 / 2, PY = 202, HANG = 74;
     const kinds = TRIM_LOOKS[jobId] || TRIM_LOOKS.cargo;
+    let kn = jobKnobs(jobId, "standard");
     const st2 = {
       score: 0,
       loads: 0,
@@ -18351,9 +18878,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       combo: 0,
       deck: [],
       flying: [],
-      swing: 0
+      swing: 0,
+      wrong: 0,
+      lurches: 0,
+      bestCombo: 0
     };
-    const gap = () => Math.max(560, 1350 - t * 90 - st2.loads * 40);
+    const gap = () => Math.max(560, 1350 - t * 90 - st2.loads * 40) * kn.gap;
     const ang = () => st2.shown / st2.limit * 0.34;
     const slot = (side, i) => ({ x: side * (30 + i % 3 * 34 + Math.floor(i / 3) * 14), y: -20 - Math.floor(i / 3) * 20 });
     const toScreen = (lx, ly, a) => ({ x: PX + lx * Math.cos(a) - ly * Math.sin(a), y: PY + lx * Math.sin(a) + ly * Math.cos(a) });
@@ -18363,6 +18893,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       st2.combo = 0;
       st2.msg = why;
       st2.score = Math.max(0, st2.score - 3);
+      st2.lurches++;
       if (FX) {
         FX.shake(10, 340);
         FX.flash("#E0483E", 200);
@@ -18390,6 +18921,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       } else if (right) {
         st2.score += 2;
         st2.combo++;
+        st2.bestCombo = Math.max(st2.bestCombo, st2.combo);
         st2.msg = st2.combo >= 3 ? `Good trim x${st2.combo}` : "Good trim";
         if (FX) {
           FX.pop(PX + side * 60, 110, st2.combo >= 3 ? `Trim x${st2.combo} +2` : "Good trim +2", { color: "#178A4C", size: 17 });
@@ -18400,6 +18932,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         st2.combo = 0;
         st2.msg = "Wrong side";
         st2.score = Math.max(0, st2.score - 2);
+        st2.wrong++;
         if (FX) FX.pop(PX + side * 60, 110, "Wrong side \u22122", { color: "#C4453C", size: 15 });
         sfx.click();
       }
@@ -18413,12 +18946,19 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       st: st2,
       quit,
       unit: "points",
-      step(dt) {
+      tier: lvl,
+      retier: (k) => {
+        kn = jobKnobs(jobId, k);
+        st2.limit = kn.limit;
+      },
+      summary: () => ({ finished: st2.loads >= SHIFT, wrong: st2.wrong, lurches: st2.lurches, bestCombo: st2.bestCombo }),
+      step(dt, _fin, fxo) {
+        if (!FX) FX = fxo;
         st2.t += dt;
         st2.spawn -= dt;
         if (st2.spawn <= 0 && st2.queue.length < 4) {
           st2.spawn = gap();
-          st2.queue.push({ w: 1 + Math.floor(Math.random() * (3 + t)), kind: kinds[Math.floor(Math.random() * kinds.length)] });
+          st2.queue.push({ w: 1 + Math.floor(Math.random() * Math.max(1, 3 + t + kn.heavy)), kind: kinds[Math.floor(Math.random() * kinds.length)] });
           st2.swing = 1;
         }
         st2.tilt *= 0.9997 ** dt;
@@ -18748,14 +19288,32 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     }
     ctx3.restore();
   }
-  function sweepGame(jobId, quit) {
+  function sweepGame(jobId, quit, lvl) {
     const c = K9(), t = tier(c);
-    const cfg2 = JOB_GAME[jobId];
     const look = SWEEP_LOOK[jobId] || "sweep";
     const CY = H2 - 62, GROUND = 204, LAMPS = 5, FLAGS = 9;
-    const st2 = { score: 0, done: false, x: W2 / 2, target: W2 / 2, vx: 0, bits: [], spawn: 400, left: 36e3, chain: 0, msg: "", ground: [], swish: 0, caught: 0, n: 0, glow: [] };
+    let kn = jobKnobs(jobId, "standard");
+    const st2 = {
+      score: 0,
+      done: false,
+      x: W2 / 2,
+      target: W2 / 2,
+      vx: 0,
+      bits: [],
+      spawn: 400,
+      left: 36e3,
+      chain: 0,
+      msg: "",
+      ground: [],
+      swish: 0,
+      caught: 0,
+      n: 0,
+      glow: [],
+      misses: 0,
+      bestChain: 0
+    };
     const posX = (b) => clamp(b.x + Math.sin(b.age * 21e-4 + b.ph) * b.amp, 12, W2 - 12);
-    const done = () => Math.min(look === "lamp" ? LAMPS : FLAGS, Math.floor(st2.score * (look === "lamp" ? LAMPS : FLAGS) / cfg2.par));
+    const done = () => Math.min(look === "lamp" ? LAMPS : FLAGS, Math.floor(st2.score * (look === "lamp" ? LAMPS : FLAGS) / jobPar(jobId, st2.tier || "standard")));
     let FX = null;
     const move = (d) => {
       st2.target = clamp(st2.target + d, 20, W2 - 20);
@@ -18765,7 +19323,13 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       st: st2,
       quit,
       unit: "points",
-      step(dt) {
+      tier: lvl,
+      retier: (k) => {
+        kn = jobKnobs(jobId, k);
+      },
+      summary: () => ({ finished: st2.left <= 0, misses: st2.misses, caught: st2.caught, bestChain: st2.bestChain }),
+      step(dt, _fin, fxo) {
+        if (!FX) FX = fxo;
         st2.left -= dt;
         if (st2.left <= 0) {
           st2.left = 0;
@@ -18774,11 +19338,11 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         }
         st2.spawn -= dt;
         if (st2.spawn <= 0 && st2.bits.length < 8) {
-          st2.spawn = Math.max(480, 620 - t * 30);
+          st2.spawn = Math.max(480, 620 - t * 30) * kn.spawn;
           st2.bits.push({
             x: 30 + Math.random() * (W2 - 60),
             y: 30,
-            vy: 0.08 + Math.random() * 0.03 + t * 4e-3,
+            vy: (0.08 + Math.random() * 0.03 + t * 4e-3) * kn.fall,
             age: 0,
             ph: Math.random() * 6,
             amp: 8 + Math.random() * 12,
@@ -18788,7 +19352,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           });
         }
         const ox = st2.x;
-        const dx = st2.target - st2.x, cap2 = 0.34 * dt;
+        const dx = st2.target - st2.x, cap2 = kn.cap * dt;
         st2.x += Math.max(-cap2, Math.min(cap2, dx * Math.min(1, 0.02 * dt)));
         st2.vx = (st2.x - ox) / Math.max(1, dt);
         st2.swish += Math.abs(st2.vx) * dt * 0.05;
@@ -18798,12 +19362,13 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           b.y += b.vy * dt;
           b.rot += b.vr * dt;
           const bx = posX(b);
-          if (b.y >= CY - 16 && b.y <= CY + 12 && Math.abs(bx - st2.x) < 24) {
+          if (b.y >= CY - 16 && b.y <= CY + 12 && Math.abs(bx - st2.x) < kn.reach) {
             st2.bits.splice(i, 1);
             st2.chain++;
             const pts = st2.chain % 5 === 0 ? 2 : 1;
             st2.score += pts;
             st2.caught++;
+            st2.bestChain = Math.max(st2.bestChain, st2.chain);
             st2.msg = st2.chain >= 5 ? st2.chain + " in a row" : "";
             const before = st2.glow.length;
             while (st2.glow.length < done()) st2.glow.push(1);
@@ -18818,6 +19383,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           } else if (b.y > H2 - 14) {
             st2.bits.splice(i, 1);
             st2.score = Math.max(0, st2.score - 2);
+            st2.misses++;
             if (FX) FX.pop(bx, H2 - 40, st2.chain >= 3 ? "Chain broken \u22122" : "\u22122", { color: "#C4453C", size: 14 });
             st2.chain = 0;
             st2.msg = "Missed one";
@@ -18880,7 +19446,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
             ctx3.fillStyle = "#2E3A40";
             ctx3.fillRect(lx - 2, ly, 4, GROUND - ly);
             ctx3.fillRect(lx - 7, GROUND - 6, 14, 6);
-            const on3 = i < lit, part = i === lit ? Math.min(1, st2.score * LAMPS / cfg2.par - lit) : 0;
+            const on3 = i < lit, part = i === lit ? Math.min(1, st2.score * LAMPS / jobPar(jobId, st2.tier || "standard") - lit) : 0;
             if (part > 0) {
               const g = ctx3.createRadialGradient(lx, ly - 8, 1, lx, ly - 8, 24);
               g.addColorStop(0, `rgba(255,200,100,${0.6 * part})`);
@@ -19359,19 +19925,45 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
     ctx3.lineCap = "butt";
     ctx3.restore();
   }
-  function runnerGame(jobId, quit) {
+  function runnerGame(jobId, quit, lvl) {
     const c = K9(), t = tier(c);
     const drop = RUN_DROP[jobId] || "letterbox";
     const LANES = 3, LY = [146, 196, 246], RX = 36, CLOCK = 35e3;
-    const st2 = { score: 0, done: false, lane: 1, ly: LY[1], things: [], spawn: 500, dist: 0, lives: 3, msg: "", left: CLOCK, combo: 0, hurt: 0, posts: [], doorGlow: {} };
-    const speed = () => 0.16 + t * 0.025 + st2.dist / 26e3;
+    let kn = jobKnobs(jobId, "standard");
+    const st2 = {
+      score: 0,
+      done: false,
+      lane: 1,
+      ly: LY[1],
+      things: [],
+      spawn: 500,
+      dist: 0,
+      lives: 3,
+      msg: "",
+      left: CLOCK,
+      combo: 0,
+      hurt: 0,
+      posts: [],
+      doorGlow: {},
+      dogs: 0,
+      missed: 0,
+      posted: 0,
+      bestCombo: 0
+    };
+    const speed = () => (0.16 + t * 0.025 + st2.dist / 26e3) * kn.speed;
     let FX = null, houseAt = [];
     return shell3({
       jobId,
       st: st2,
       quit,
       unit: "points",
-      step(dt) {
+      tier: lvl,
+      retier: (k) => {
+        kn = jobKnobs(jobId, k);
+      },
+      summary: () => ({ finished: st2.left <= 0, dogs: st2.dogs, missed: st2.missed, posted: st2.posted, bestCombo: st2.bestCombo }),
+      step(dt, _fin, fxo) {
+        if (!FX) FX = fxo;
         st2.left -= dt;
         if (st2.left <= 0) {
           st2.left = 0;
@@ -19383,10 +19975,10 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
         st2.hurt = Math.max(0, st2.hurt - dt);
         st2.spawn -= dt;
         if (st2.spawn <= 0) {
-          st2.spawn = Math.max(560, 900 - t * 50);
+          st2.spawn = Math.max(560, 900 - t * 50) * kn.spawn;
           const lane = Math.floor(Math.random() * LANES);
           if (Math.random() < 0.82) st2.things.push({ lane, x: W2 + 20, bad: false });
-          if (Math.random() < 0.38 + t * 0.03) st2.things.push({ lane: (lane + 1 + Math.floor(Math.random() * 2)) % LANES, x: W2 + 20, bad: true });
+          if (Math.random() < (0.38 + t * 0.03) * kn.dog) st2.things.push({ lane: (lane + 1 + Math.floor(Math.random() * 2)) % LANES, x: W2 + 20, bad: true });
         }
         for (let i = st2.things.length - 1; i >= 0; i--) {
           const o = st2.things[i];
@@ -19395,6 +19987,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
             st2.things.splice(i, 1);
             if (o.bad) {
               st2.lives--;
+              st2.dogs++;
               st2.combo = 0;
               st2.hurt = 700;
               st2.msg = "Woof! \u22123";
@@ -19411,6 +20004,8 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
               }
             } else {
               st2.combo++;
+              st2.posted++;
+              st2.bestCombo = Math.max(st2.bestCombo, st2.combo);
               const pts = st2.combo % 5 === 0 ? 2 : 1;
               st2.score += pts;
               st2.msg = st2.combo >= 3 ? `Combo x${st2.combo}` : "";
@@ -19425,6 +20020,7 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
           } else if (o.x < -24) {
             st2.things.splice(i, 1);
             if (!o.bad) {
+              st2.missed++;
               st2.msg = "Missed a door";
               st2.score = Math.max(0, st2.score - 1);
               if (FX) FX.pop(40, LY[o.lane] - 20, "Missed \u22121", { color: "#C4453C", size: 13 });
@@ -19556,11 +20152,12 @@ New number, urgent money, and "don't tell". The secrecy is the tell.`, "route": 
       finishLine: (s) => s.quality >= 1.4 ? "You can move. That is worth actual money on the Row \u2014 the fast runner gets asked back." : "The doors come in a rhythm once you stop chasing every one of them."
     });
   }
-  function startJobGame(id, quit) {
+  function startJobGame(id, quit, opts = {}) {
     const cfg2 = JOB_GAME[id];
     if (!cfg2) return null;
     const f = { stack: stackGame, trim: trimGame, sweep: sweepGame, runner: runnerGame }[cfg2.kind];
-    return f ? f(id, quit) : null;
+    const lvl = opts && TIER_IDS.includes(opts.tier) ? opts.tier : void 0;
+    return f ? f(id, quit, lvl) : null;
   }
   var K9, W2, H2, dark2, hash2, STACK_LOOK, STACK_TINT, TRIM_LOOKS, SWEEP_LOOK, RUN_DROP, HOUSES;
   var init_jobgames = __esm({
@@ -24395,7 +24992,8 @@ ${drawerHTML(o)}`;
         return `<div data-focus="badge:${k}" class="badge${has4 ? " got" : ""}">
             <div class="bic">${ico(has4 ? b.em : "lock", has4 ? b.em : "\u{1F512}", 24)}</div>
             <div class="bnm">${esc(b.name)}</div>
-            <div class="small muted bds">${has4 || hint ? esc(b.desc) : "Not yet"}</div></div>`;
+            <div class="small muted bds">${has4 || hint ? esc(b.desc) : "Not yet"}</div>
+            ${has4 ? `<button class="btn ghost sm showgu" data-act="showMedal" data-arg="${k}">Show a grown-up</button>` : ""}</div>`;
       };
       return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile).join("")}</div>` : ""}
           ${ahead.length ? `<div class="eyebrow" style="margin-top:14px">Next to earn</div>
@@ -25268,9 +25866,9 @@ ${drawerHTML(o)}`;
     const ctx3 = {};
     for (const sg of o.signals || []) if (!ctx3[sg.topic] || ctx3[sg.topic].w < sg.w) ctx3[sg.topic] = sg;
     const scored = [], L = o.level, nm = o.levelName || ((n) => "Level " + n);
-    const tierOf = (it) => it.level == null ? L == null ? "now" : "any" : L == null || it.level === L ? "now" : it.level < L ? "review" : it.level === L + 1 ? "next" : null;
+    const tierOf2 = (it) => it.level == null ? L == null ? "now" : "any" : L == null || it.level === L ? "now" : it.level < L ? "review" : it.level === L + 1 ? "next" : null;
     for (const it of o.items || []) {
-      const tier2 = tierOf(it);
+      const tier2 = tierOf2(it);
       if (!tier2) continue;
       if (o.band && it.bands && !it.bands.includes(o.band)) continue;
       if (o.unlocked && !o.unlocked(it)) continue;
@@ -25985,6 +26583,17 @@ ${drawerHTML(o)}`;
       <div class="stack" style="gap:8px">${q.opts.map((t, i) => `<button class="opt${done ? i === q.answer ? " ok" : i === o.pick ? " no" : "" : ""}" data-act="wcPick" data-arg="${i}" ${done ? "disabled" : ""}><span class="k">${"ABC"[i]}</span>${esc(t)}</button>`).join("")}</div>
       ${done ? `<div class="fb ${right ? "yes" : "no"}" role="status" style="margin-top:10px"><b>${right ? "That\u2019s it." : "It means: " + esc(q.opts[q.answer])}</b> ${esc(q.eg)}</div>
         <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-act="closeOv">Done</button><button class="btn ghost" data-act="goto" data-arg="#/words/${encodeURIComponent(q.term)}">Every Money Word</button></div>` : ""}`);
+    }
+    if (o.kind === "showMedal") {
+      const b = BADGES[o.id];
+      return `<div class="ov showcard-ov" data-act="closeOv"><div class="showcard" data-act="noop" role="dialog" aria-modal="true" aria-label="${esc(b.name)}">
+      <button class="ovx" data-act="closeOv" aria-label="Close">${ico("close", "", 18)}</button>
+      <span class="ray"></span>
+      <div class="sc-medal">${ico(b.em, b.em, 72)}</div>
+      <div class="eyebrow">${esc(c.name)} earned a medal in Bizzington</div>
+      <h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p>
+      <div class="sc-foot">${kidBadge2(c, 44)}<span class="small">Bizzing Finance \xB7 no real money, ever</span></div>
+    </div></div>`;
     }
     if (o.kind === "drawer") return drawer(c);
     if (o.kind === "settings") return box(settingsSheet(c, o.focus), "sheet");
@@ -27143,6 +27752,12 @@ ${drawerHTML(o)}`;
     o.pick = +i;
     if (o.pick === o.q.answer) sfx.good();
     else sfx.bad();
+    render();
+  });
+  on("showMedal", (k) => {
+    if (!BADGES[k] || !C3().badges.includes(k)) return;
+    R.overlay = { kind: "showMedal", id: k };
+    sfx.medal();
     render();
   });
   on("nextQ", () => {
