@@ -60,6 +60,7 @@ import * as shell from './shell.js';
 import { BLD } from './buildings-gen.js';
 import { shell as bzShell, bindShell } from './family/bizzing-shell.js';
 import { avatarSrc } from './avatars.js';
+import { deckView, deckIds } from './avcards.js';
 import { viewShop, viewCollection as viewFaces, viewMistakes, viewTown, profileCard, EXTRA_BY } from './familyviews.js';
 import { LOOKS, lookById, applyLook, isOpen as lookOpen } from './looks.js';
 import * as ambient from './ambient.js';
@@ -427,6 +428,7 @@ function overlay() {
   if (o.kind === 'search') return box(shell.searchSheet(R.sq || '', searchTown(R.sq || '')), true);
   if (o.kind === 'privacy') return box(shell.privacySheet(), true);
   if (o.kind === 'help') return box(shell.helpSheet(), true);
+  if (o.kind === 'avDeck') return box(deckView(R.s, c, o.i), true);
   if (o.kind === 'avInfo') {
     const a = BY_ID[o.id], st = stateOf(a, ctxFor(R.s, c));
     return box(`<div class="sheet-h"><span class="eyebrow">${esc(a.name)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
@@ -800,6 +802,17 @@ on('buyWorld', (n) => {
   sfx.unlock(); confetti(40); toast(`${LOOKS[+n - 1].name} is yours`); render();
 });
 on('wear', (id) => { if (!BY_ID[id]) return; C().avatar = id; sim.save(R.s); sfx.click(); toast('Wearing ' + BY_ID[id].name); render(); });
+/* the hello card's face opens the deck: every card the child owns, flipped by button,
+   ←/→ or a swipe, worn straight from the card (Bizzing Bee's openAvDeck) */
+on('avDeck', () => { const c = C(), ids = deckIds(R.s, c); R.overlay = { kind: 'avDeck', i: Math.max(0, ids.indexOf(c.avatar)) }; sfx.click(); render();
+  const f = document.querySelector('.avd-nav.next, .avdeck [data-act="closeOv"]'); if (f) f.focus(); });
+on('avdGo', (d) => { if (!R.overlay || R.overlay.kind !== 'avDeck') return; R.overlay.i += +d || 0; sfx.click(); render();
+  const f = document.querySelector(+d < 0 ? '.avd-nav.prev' : '.avd-nav.next'); if (f) f.focus(); });
+on('avdWear', (id) => { if (!BY_ID[id]) return; C().avatar = id; sim.save(R.s); sfx.good(); confetti(30);
+  /* the deck can change under a wear (a face that was only in it because it was worn
+     leaves), so stay on the card just put on */
+  if (R.overlay && R.overlay.kind === 'avDeck') R.overlay.i = Math.max(0, deckIds(R.s, C()).indexOf(id));
+  render(); });
 on('avInfo', (id) => { if (BY_ID[id]) { R.overlay = { kind: 'avInfo', id }; render(); } });
 on('buyAv', (id) => {
   if (R.demo) { toast('A sample — nothing is bought or saved here'); return; }
@@ -1803,12 +1816,17 @@ document.addEventListener('keydown', (e) => {
       }
     }
   }
+  if (R.overlay && R.overlay.kind === 'avDeck' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); fire('avdGo', e.key === 'ArrowLeft' ? -1 : 1); return; }
   if (e.key === 'Escape') {
     if (R.overlay) { const k = R.overlay.kind; R.overlay = null; render(); if (k === 'drawer') { const b = document.querySelector('[data-act="drawer"]'); if (b) b.focus(); } }
     else if (C() && C().learn.openCard) fire('closeCard');
     else if (R.shelf) fire('shelf', '');
   }
 });
+/* a swipe flips the avatar deck */
+{ let sx = null;
+  document.addEventListener('touchstart', (e) => { sx = e.target.closest && e.target.closest('.avdeck') ? e.touches[0].clientX : null; }, { passive: true });
+  document.addEventListener('touchend', (e) => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 45 && R.overlay && R.overlay.kind === 'avDeck') fire('avdGo', dx < 0 ? 1 : -1); }, { passive: true }); }
 window.addEventListener('hashchange', () => {
   if (!R.s || !R.s.kids.length) return;
   /* Our own write, echoing back — not a person pressing back. */

@@ -52,7 +52,8 @@ import { pipPose, kidBadge, coinSvg } from './shell.js';
 import * as ITEMS from './items.js';
 import * as WORK from './worked.js';
 import * as CERT from './cert.js';
-import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
+import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency, avatarSrc } from './avatars.js';
+import { deckIds } from './avcards.js';
 import * as drill from './drill.js';
 import { teachFor, egFor } from './sprout.js';
 
@@ -326,7 +327,8 @@ export function viewHome() {
   const jobs = sim.jobsToday(c), jdone = jobs.filter((j) => j.done).length;
   const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
   const body = bzHome({
-    greet: { mascot: './mascot/sm/pip-wave.webp', hello, name: c.name, line },
+    /* the child's own face, as in Bizzing Bee; a tap opens their avatar cards (avcards.js) */
+    greet: { mascot: avatarSrc(c.avatar), hello, name: c.name, line },
     /* how far to the next level, not only its name (audit v4, B3) */
     ring: { html: ring, foot: { kicker: `Your level · ${xb.need} XP to level ${c.learn.level + 1}`, title: `${rank.name} · level ${c.learn.level}`, href: '#/me/rank' } },
     /* a tap is a 10-second check on the word, not a trip to the glossary (audit v4, B8) */
@@ -344,6 +346,8 @@ export function viewHome() {
     quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/cast/' + ({ 'Nana Bizz': 'nana', Pip: 'pip', Mags: 'mags', Bea: 'bea', Bo: 'bo' }[cast[0]] || 'pip') },
     foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
   });
+  const deckN = deckIds(R.s, c).length;
+  const homeBody = body.replace(/(data-bz="greet">)(<img [^>]*>)/, `$1<button class="bz-avbtn" data-act="avDeck" aria-label="Your avatar cards — ${deckN} yours" title="Flip through your avatar cards">$2<span class="bz-avcount" aria-hidden="true">${deckN}</span></button>`);
   /* a first visit says the three things to do today (audit v4, B9); ghost links only, so
      Continue stays the one filled button */
   const first = !Object.keys(c.learn.done || {}).length;
@@ -354,7 +358,7 @@ export function viewHome() {
       ${placement.measured(c) ? '' : `<a class="fd-link" href="#/pipcount">${ico('abacus', '', 18)}<span><b>Help Pip count the stall’s takings</b> — a few quick sums, no clock, no score.</span></a>`}
     </div></section>` : '';
   /* below Bee's three rows, so Home keeps the family's measured layout and Continue its place */
-  return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}${day1}`;
+  return `<h1 class="sr">Home — ${esc(c.name)}</h1>${homeBody}${day1}`;
 }
 
 /* What used to fill Home — the street's day — lives on the Town tab now. */

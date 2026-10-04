@@ -1143,6 +1143,37 @@ async function a6Checks(label, vp, isMobile) {
   await ctx.close();
 }
 
+/* The hello card's face is the child's own, and a tap (or Enter) opens their avatar cards:
+   every face they own, each with its overall, its rank among the 96 and a line of money
+   history; flipped by button, arrow key and swipe; worn from the card (Bizzing Bee's deck). */
+async function deckChecks() {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage(); const errors = []; p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto(URL0 + '?demo'); await p.waitForSelector('[data-bz=greet] .bz-avbtn');
+  await p.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
+  const face = await p.evaluate(() => ({ greet: document.querySelector('[data-bz=greet] .bz-avbtn img').getAttribute('src'), worn: window.BZF.R.s.kids[window.BZF.R.s.active].avatar }));
+  ok('deck: the hello card shows the child’s own face, as a button', face.greet.includes('/' + face.worn + '.webp'), JSON.stringify(face));
+  await p.tap('[data-bz=greet] .bz-avbtn'); await p.waitForSelector('.avdeck .avc');
+  const read = () => p.evaluate(() => { const c = document.querySelector('.avdeck .avc'); return { name: c.querySelector('.avc-name').textContent, ovr: +c.querySelector('.avc-ovr b').textContent, rank: c.querySelector('.avc-rank').textContent.trim(), fact: (c.querySelector('.avc-fact') || {}).textContent || '', count: document.querySelector('.avd-count').textContent, worn: !!document.querySelector('.avd-worn') }; });
+  const first = await read();
+  ok('deck: it opens on the face being worn, with its overall, its rank of 96 and a line of history', first.worn && first.ovr >= 28 && /^#\d+ of 96$/.test(first.rank.replace(/\s+/g, ' ')) && /history of money/i.test(first.fact) && /of \d+ yours/.test(first.count), JSON.stringify(first));
+  await p.tap('.avd-nav.next'); const b1 = await read();
+  await p.keyboard.press('ArrowLeft'); const b2 = await read();
+  const box = await p.locator('.avdeck .avc').boundingBox();
+  await p.touchscreen.tap(box.x + 5, box.y + 5);   /* settle focus inside */
+  await p.evaluate(({ x, y }) => { const el = document.querySelector('.avdeck .avc'); const t = (cx) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: y });
+    el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [t(x + 200)] })); el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [t(x + 40)] })); }, { x: box.x, y: box.y + 200 });
+  const b3 = await read();
+  ok('deck: the arrow button, ← and a swipe each flip a card', b1.name !== first.name && b2.name === first.name && b3.name === b1.name, [first.name, b1.name, b2.name, b3.name].join(' → '));
+  await p.tap('.avdeck [data-act="avdWear"]'); await p.waitForTimeout(150);
+  const wore = await p.evaluate(() => ({ worn: window.BZF.R.s.kids[window.BZF.R.s.active].avatar, badge: !!document.querySelector('.avd-worn') }));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  const after = await p.evaluate(() => ({ open: !!document.querySelector('.avdeck'), greet: document.querySelector('[data-bz=greet] .bz-avbtn img').getAttribute('src') }));
+  ok('deck: "Wear this one" wears it, Escape closes, and the hello card shows the new face', wore.badge && wore.worn !== face.worn && !after.open && after.greet.includes('/' + wore.worn + '.webp'), JSON.stringify({ wore, after }));
+  ok('deck: nothing threw', !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1150,6 +1181,7 @@ await safely('phone', () => run('phone', { width: 390, height: 844 }, true, 'lig
 await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, true, 'dark'));
 await safely('demo', demo);
 await safely('kit', kitChecks);
+await safely('deck', deckChecks);
 await safely('a6-desktop', () => a6Checks('a6-desktop', { width: 1280, height: 860 }, false));
 await safely('a6-phone', () => a6Checks('a6-phone', { width: 390, height: 844 }, true));
 await browser.close(); srv.close();
