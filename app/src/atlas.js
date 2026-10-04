@@ -251,7 +251,8 @@ export function viewAct(c, wi) {
     <div class="row" style="gap:12px;align-items:center">
       <span style="width:56px;height:56px;flex:0 0 auto">${face(GUIDE[w.id] || 'pip', 56)}</span>
       <div class="grow"><h1 style="font-size:24px">${ROMAN[wi]} · ${esc(w.name)}</h1>
-        <p class="small muted">${esc(w.blurb)} · ${st.done} of ${st.total} stops</p></div>
+        <p class="small muted">${esc(w.blurb)} · ${st.done} of ${st.total} stops</p>
+        <a class="st-link" href="#/story/${w.id}">${ico('lesson', '📖', 15)} Read the story</a></div>
     </div>
     ${walk(c, w, r.list.filter((s) => s.wi === wi), wi)}
     ${actSection(c, wi, r, { solo: true })}

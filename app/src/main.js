@@ -58,6 +58,7 @@ import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
 import { spend as spendCoins } from './family/bizzing-wallet.js';
 const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
+import { viewStory } from './stories.js';
 import * as items from './items.js';
 import * as CERT from './cert.js';
 import { search as searchTown } from './search.js';
@@ -147,7 +148,8 @@ function writeHash() {
   /* an open lesson stop is in the address too (#/atlas/c1b), so back closes it and a link
      reopens it (audit v4, C2); questions asked again later are not stops and stay off it */
   const open = u.nav === 'learn' && C().learn.openCard, oc = open && cardById(open);
-  const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '') + (oc && isLesson(oc) ? '/' + oc.id : '');
+  const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '') + (oc && isLesson(oc) ? '/' + oc.id : '')
+    + (u.nav === 'story' ? '/' + (R.storyAt || 'market') : '');
   if (location.hash !== h) { selfHash = h; location.hash = h; }
 }
 function readHash() {
@@ -166,6 +168,8 @@ function readHash() {
   if (m[0] === 'shelter') { R.sheetNow = 'shelterAt'; R.sheetArg = m[1] || ''; return false; }
   if (m[0] === 'wardrobe') { R.sheetNow = 'wardrobeAt'; R.sheetArg = m[1] || ''; return false; }
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
+  /* a place's story (stories.js): #/story/<world> */
+  if (m[0] === 'story') { R.s.ui.nav = 'story'; R.storyAt = decodeURIComponent(m[1] || 'market'); R.focus = null; return true; }
   const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
@@ -219,6 +223,7 @@ function render() {
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
     nav === 'market40' ? viewMarketGame() :
+    nav === 'story' ? viewStory() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
   R.lastNav = nav;

@@ -630,6 +630,33 @@ async function demo() {
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"], .ov .ovx'); if (o) o.click(); });
   }
   ok('demo: every kind of deep link lands on its own thing, on screen', !missed.length, missed.join(' | '));
+  /* a story for every place (stories.js): opened from the Town's road, turned by button,
+     key, tap and swipe, priced in the household's money, and closed back to the Town */
+  await page.evaluate(() => { location.hash = '#/town'; }); await page.waitForTimeout(400);
+  const links = await page.evaluate(() => [...document.querySelectorAll('.travel .poster-story')].map((a) => a.getAttribute('href')));
+  await page.evaluate(() => document.querySelector('.poster-story[href="#/story/market"]').click()); await page.waitForSelector('.story'); await page.waitForTimeout(250);
+  const pg = () => page.evaluate(() => { const d = document.querySelector('.st-dots'); return d ? +((d.getAttribute('aria-label') || '').match(/Page (\d+)/) || [0, 0])[1] : 0; });
+  const story = { links: links.length, all: links.every((h, i) => /^#\/story\//.test(h)), title: await page.textContent('.story h1'), p1: await pg() };
+  await page.tap('.st-next'); await page.waitForTimeout(150); story.button = await pg();
+  story.money = /* page two pays a wage: priced in the household's money, no placeholder left */ await page.evaluate(() => !/\{\d+\}/.test(document.querySelector('.story').textContent) && /₹|\$|£|€|د\.إ/.test(document.querySelector('.story').textContent));
+  await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150); story.right = await pg();
+  await page.keyboard.press('ArrowLeft'); await page.waitForTimeout(150); story.left = await pg();
+  const box = await page.locator('.st-stage').boundingBox();
+  await page.touchscreen.tap(box.x + box.width * 0.85, box.y + box.height / 2); await page.waitForTimeout(450); story.tapR = await pg();
+  await page.touchscreen.tap(box.x + box.width * 0.15, box.y + box.height / 2); await page.waitForTimeout(450); story.tapL = await pg();
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2); await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(500); story.swipe = await pg();
+  story.plate = await page.evaluate(() => getComputedStyle(document.querySelector('.st-stage'), '::before').backgroundImage);
+  await page.tap('[data-act="storyClose"]'); await page.waitForTimeout(500);
+  story.back = await page.evaluate(() => ({ hash: location.hash, nav: window.BZF.R.s.ui.nav }));
+  await page.evaluate(() => { location.hash = '#/story/works'; }); await page.waitForSelector('.story'); await page.waitForTimeout(200);
+  story.works = await page.textContent('.story h1');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  story.esc = await page.evaluate(() => location.hash);
+  ok('a story for every place: the road links all five; buttons, ←/→, a tap on either half and a swipe turn the page; Close goes back to the Town',
+    story.links === 5 && story.all && /First Wage/.test(story.title) && story.p1 === 1 && story.button === 2 && story.right === 3 && story.left === 2
+      && story.tapR === 3 && story.tapL === 2 && story.swipe === 3 && story.money && /market-day/.test(story.plate)
+      && /#\/town/.test(story.back.hash) && story.back.nav === 'town' && /Three Different Words/.test(story.works) && /#\/town/.test(story.esc), JSON.stringify(story));
   /* A3 · every lesson stop offers practice asked fresh; practice is never evidence */
   const prac = await page.evaluate(async () => {
     const B = window.BZF, { R } = B, c = R.s.kids[0], id = 'c2a';

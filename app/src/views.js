@@ -675,7 +675,7 @@ export function viewWorlds() {
         ? `Finish ${WORLDS[i - 1].chapters.filter((ch) => !chapterDone(c, ch)).map((ch) => '“' + esc(title(ch)) + '”').join(' and ') || 'the last stretch'} in ${esc(WORLDS[i - 1].name)} to walk on.`
         : here && left.length ? `Still to learn here: ${left.map((ch) => '<b>' + esc(title(ch)) + '</b>').join(', ')}.`
         : here && !left.length && i < WORLDS.length - 1 ? 'Everything here is learned. The road is open.' : '';
-      return `<button data-focus="world:${w.id}" class="poster${here ? ' here' : ''}${open ? '' : ' locked'}" data-act="${open && !here ? 'travel' : 'noop'}" data-arg="${i}"
+      return `<div class="poster-wrap"><button data-focus="world:${w.id}" class="poster${here ? ' here' : ''}${open ? '' : ' locked'}" data-act="${open && !here ? 'travel' : 'noop'}" data-arg="${i}"
         style="--ja:${w.tint};${plate ? `--plate:url(${plate})` : ''}">
         <span class="pv"></span>
         <span class="pb">
@@ -690,7 +690,7 @@ export function viewWorlds() {
             ${here ? '<span class="pill gold">here</span>' : open ? '<span class="pill">Go →</span>' : `<span class="pill">${ico('lock', '🔒', 12)}</span>`}
           </span>
         </span>
-      </button>`;
+      </button><a class="poster-story" href="#/story/${w.id}">${ico('lesson', '📖', 15)} Read the story</a></div>`;
     }).join('')}
   </div>`;
 }
