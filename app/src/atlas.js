@@ -14,6 +14,7 @@ import { WALKS } from './walks-gen.js';
 import { face, ico } from './art.js';
 import { kidBadge } from './shell.js';
 import { esc } from './ui.js';
+import { R } from './runtime.js';
 import * as sim from './sim.js';
 import * as mastery from './mastery.js';
 import { OBJECTIVES } from './objectives.js';
@@ -225,6 +226,10 @@ function walk(c, w, ns, wi) {
   const gap = 100 / (n + 1);
   const cur = ns.findIndex((s) => s.cur);
   const y = art.road * 100;
+  /* a stop cleared since this walk was last seen: the child walks the road to the new one (audit v4, D6) */
+  R.walkSeen = R.walkSeen || {};
+  const arrive = R.walkSeen[wi] != null && cur > R.walkSeen[wi] ? R.walkSeen[wi] : -1;
+  R.walkSeen[wi] = cur;
   return `<div class="walk-scroll" data-walk="${wi}" data-cur="${cur}">
     <div class="walk" style="aspect-ratio:${art.w}/${art.h};background-image:url(${art.src})">
       <svg class="walk-road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -233,7 +238,7 @@ function walk(c, w, ns, wi) {
       </svg>
       ${ns.map((s, i) => {
         const kind = s.done ? 'passed' : s.cur ? 'cur' : s.locked ? 'locked' : 'open';
-        return `<button class="wstop ${kind}" style="left:${gap * (i + 1)}%;top:${y}%;--ja:${w.tint}"
+        return `<button class="wstop ${kind}${s.cur && arrive >= 0 ? ' arrive' : ''}" style="left:${gap * (i + 1)}%;top:${y}%;--ja:${w.tint}${s.cur && arrive >= 0 ? `;--from:${gap * (arrive + 1)}%` : ''}"
           data-act="${s.locked ? 'locked' : 'card'}" data-arg="${s.locked ? s.ch.lv : s.card.id}"
           aria-label="Stop ${s.n}: ${esc(s.card.title)}">
           <span class="wdot">${s.done ? ico('check', '', 16) : s.cur ? `${kidBadge(c, 34)}<i class="medn">${s.n}</i>` : s.locked ? ico('lock', '🔒', 12) : s.n}</span>

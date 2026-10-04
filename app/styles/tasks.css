@@ -183,3 +183,12 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 @media (prefers-reduced-motion:reduce){.unveil img,.unveil .curtain,.ray,.rs-medal{animation:none !important}.unveil .curtain{display:none}}
 :root[data-motion="reduced"] .unveil .curtain{display:none}
 :root[data-motion="reduced"] .unveil img,:root[data-motion="reduced"] .ray,:root[data-motion="reduced"] .rs-medal{animation:none !important}
+/* walking the road to the next stop (audit v4, D6) */
+.wstop.cur.arrive{animation:walkin 1.2s .2s cubic-bezier(.45,0,.2,1) both}
+.wstop.cur.arrive .wdot{animation:hop .3s 4 .2s ease-in-out alternate}
+.wstop.cur.arrive .wcard{animation:cardin .4s 1.35s ease both}
+@keyframes walkin{from{left:var(--from)}}
+@keyframes hop{to{transform:translateY(-6px)}}
+@keyframes cardin{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.wstop.cur.arrive,.wstop.cur.arrive .wdot,.wstop.cur.arrive .wcard{animation:none !important}}
+:root[data-motion="reduced"] .wstop.cur.arrive,:root[data-motion="reduced"] .wstop.cur.arrive .wdot,:root[data-motion="reduced"] .wstop.cur.arrive .wcard{animation:none !important}

@@ -731,6 +731,17 @@ async function demo() {
     untouched: JSON.stringify(c.mastery.rec) === b.rec && c.money.wallet === b.wallet && c.learn.xp === b.xp }; }, spBefore);
   ok('the sprint: typed by Enter, ends on the clock, keeps a best, pays and records nothing', spr.done && spr.right === 2 && spr.best >= 2 && spr.untouched, JSON.stringify(spr));
   await page.evaluate(() => window.BZF.fire('spLeave'));
+  /* the walk (audit v4, D6): after a stop is walked, the next visit walks the child along the road to the new one */
+  const walkArr = await page.evaluate(async () => {
+    const B = window.BZF, { R } = B, c = R.s.kids[0], all = B.allCards, at = all.findIndex((k) => !c.learn.done[k.id]);
+    const wi = window.BZF.R.s.kids[0].world || 0; B.fire('closeOv'); B.fire('nav', 'learn');
+    R.shelf = 'act:1'; B.fire('closeOv'); const before = !!document.querySelector('.wstop.cur.arrive');
+    c.learn.done[all[at].id] = { right: true }; R.shelf = 'act:1'; B.fire('closeOv');
+    const after = !!document.querySelector('.wstop.cur.arrive');
+    delete c.learn.done[all[at].id]; R.shelf = '';
+    return { before, after };
+  });
+  ok('the walk: a stop walked, and the next visit walks the child along the road to the new one', !walkArr.before && walkArr.after, JSON.stringify(walkArr));
   /* the Library (audit v4, H1/H2): tools with pictures; a dragged loan length shows the Bank's own price */
   await page.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/library'; }); await page.waitForTimeout(400);
   const lib0 = await page.evaluate(() => ({ tools: document.querySelectorAll('.ltool').length, pics: document.querySelectorAll('.ltool .ltool-art, .ltool img').length }));
