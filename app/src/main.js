@@ -58,7 +58,9 @@ import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
 import { spend as spendCoins } from './family/bizzing-wallet.js';
 const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
-import { viewStory } from './stories.js';
+/* the place stories load when one is opened, not on the first screen */
+let viewStory = null;
+const storyView = () => viewStory ? viewStory() : (import('./stories.js').then((m) => { viewStory = m.viewStory; render(); }), '<div class="card"><p class="small muted">Opening the story…</p></div>');
 import * as items from './items.js';
 import * as CERT from './cert.js';
 import { search as searchTown } from './search.js';
@@ -223,7 +225,7 @@ function render() {
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
     nav === 'market40' ? viewMarketGame() :
-    nav === 'story' ? viewStory() :
+    nav === 'story' ? storyView() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
   R.lastNav = nav;
