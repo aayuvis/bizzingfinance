@@ -1,5 +1,5 @@
 {
-  "total": 1799,
+  "total": 1801,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,7 +12,7 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 6,
+    "figure": 8,
     "game": 11,
     "quest": 13,
     "medal": 48,
@@ -43,12 +43,12 @@
   "byLevel": {
     "chapter 1": 134,
     "chapter 2": 153,
-    "chapter 3": 235,
+    "chapter 3": 236,
     "chapter 4": 203,
     "chapter 5": 159,
     "chapter 6": 165,
     "chapter 7": 203,
-    "chapter 8": 119,
+    "chapter 8": 120,
     "any": 428
   },
   "levels": [
@@ -68,7 +68,7 @@
       "level": 3,
       "chapter": "c3",
       "title": "Making a plan",
-      "n": 235
+      "n": 236
     },
     {
       "level": 4,
@@ -98,7 +98,7 @@
       "level": 8,
       "chapter": "c8",
       "title": "Running something",
-      "n": 119
+      "n": 120
     }
   ],
   "nearDuplicatesLetGo": [

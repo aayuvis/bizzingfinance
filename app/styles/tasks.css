@@ -249,3 +249,10 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 .hearts{display:inline-flex;gap:1px;align-items:center}
 .hearts .ico{vertical-align:middle}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* A6 · day one's two offers under the first-day list: answer the place cold, the counting game */
+.firstday .fd-more{display:grid;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.firstday .fd-link{display:flex;gap:10px;align-items:flex-start;text-decoration:none;font-weight:600;font-size:14.5px;line-height:1.4}
+.firstday .fd-link svg{flex:0 0 auto;margin-top:2px}
+.firstday .fd-link b{text-decoration:underline;text-decoration-color:var(--treasure);text-underline-offset:3px}
+/* E3 · the worked example inside the lesson */
+.yhow.worked{margin-top:12px}

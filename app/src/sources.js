@@ -61,6 +61,20 @@ export const SOURCES = {
     where: 'content.js · JOBS',
     says: 'Chosen so that a week of the town works arithmetically, in the child\'s own currency. They are not a claim about what any real work pays anywhere.',
   },
+  homes: {
+    kind: 'own',
+    what: 'What a place to live costs',
+    value: () => "the town's own rents, bills and food",
+    where: 'content.js · HOMES',
+    says: 'The rooms, flats and the little house are Bizzington\'s, priced so a week of the town adds up in the child\'s own currency. They are not a claim about what anywhere real costs to live.',
+  },
+  stock: {
+    kind: 'own',
+    what: "What Bizz & Co's stock costs and sells for",
+    value: () => "the town's own prices",
+    where: 'content.js · STOCK',
+    says: 'Chai, umbrellas, ice golas and rope at prices chosen so a stall in the town can make a profit or a loss you can see. They are Bizzington\'s, not any real market\'s.',
+  },
 };
 
 export function source(k) { return SOURCES[k] || null; }

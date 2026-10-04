@@ -1188,7 +1188,7 @@ export const BADGES = {
   'tested-out':        { em: '🎓', name: 'Tested out',         desc: 'Already knew a chapter, and proved it in six questions.' },
   'till-solved':       { em: '🧮', name: 'Worked the till',    desc: "Found the missing price on the day's receipt." },
   'first-look':        { em: '👁️', name: 'First look',         desc: 'Got the till right with the first guess.' },
-  'placed':            { em: '📏', name: 'Knows the ceiling',  desc: 'Sat the maths check, so the town knows what it may show.' },
+  'placed':            { em: '📏', name: 'Counted the stall',  desc: 'Helped Pip count the stall’s takings, so the town knows how to fit you.' },
   'checkpoint':        { em: '🚩', name: 'Checkpoint',         desc: 'A whole chapter, mixed up, passed.' },
   'dressed-up':        { em: '🎀', name: 'Dressed up',         desc: 'Bought a want, on purpose, with a full bowl already paid for.' },
   'well-fed':          { em: '🥣', name: 'Ten full bowls',     desc: 'Ten pay days running, the food bill was met.' },

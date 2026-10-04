@@ -40,7 +40,7 @@ import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './o
 import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
 import { teachFor, egFor } from './sprout.js';
 import { R } from './runtime.js';
-import { nextStep, nextStop } from './next.js';
+import { nextStep, nextStop, path as roadPath } from './next.js';
 import { demoState } from './demo.js';
 import * as SESSION from './session.js';
 import * as family from './family.js';
@@ -176,6 +176,9 @@ function readHash() {
   /* the shelter with one kind picked; the wardrobe at one thing */
   /* the word of the hour, as a 10-second check */
   if (m[0] === 'wordcheck' && m[1]) { R.sheetNow = 'wordCheck'; R.sheetArg = decodeURIComponent(m[1]); return false; }
+  /* day one (A6): a whole place answered cold, and the counting game */
+  if (m[0] === 'coldplace') { R.sheetNow = 'coldPlace'; R.sheetArg = m[1] || '0'; return false; }
+  if (m[0] === 'pipcount') { R.sheetNow = 'placement'; R.sheetArg = ''; return false; }
   if (m[0] === 'shelter') { R.sheetNow = 'shelterAt'; R.sheetArg = m[1] || ''; return false; }
   if (m[0] === 'wardrobe') { R.sheetNow = 'wardrobeAt'; R.sheetArg = m[1] || ''; return false; }
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
@@ -522,7 +525,20 @@ function overlay() {
         <span class="lv">Level ${c.learn.level}</span><span class="lvbar"><i style="--to:${Math.round(xb.pct * 100)}%"></i></span><span class="small">${xb.need} XP to level ${c.learn.level + 1}</span></div>`; })() : ''}
       ${n && n.title ? `<p style="margin-top:10px">Next: <b>${esc(n.title)}</b></p>` : ''}
       <button class="btn wide" style="margin-top:14px" data-act="stopNext">${n && n.button ? esc(n.button) : 'Continue'} →</button>
+      ${R.coldPlace && coldPlaceAfterId(o.id) ? `<button class="btn ghost wide" style="margin-top:8px" data-act="coldPlaceNext">${ico('forward', '', 16)} Carry on answering ${esc(WORLDS[R.coldPlace.wi].name)} cold</button>` : ''}
       <button class="btn ghost wide" style="margin-top:8px" data-act="closeOv">Back to the Atlas</button></div>`);
+  }
+  if (o.kind === 'coldPlaceDone') {
+    const w = WORLDS[o.wi] || WORLDS[0], wait = o.waiting.map((id) => cardById(id)).filter(Boolean);
+    return box(`<div class="celebrate stopdone" style="text-align:center">
+      <div class="endfig">${shell.pipPose(o.yours ? 'cheer' : 'wave', 104)}<span class="endav">${kidBadge(c, 52)}</span></div>
+      <div class="eyebrow">${esc(w.name)} · answered cold</div>
+      <h2 style="margin:4px 0 8px;font-size:26px">${o.yours ? (o.yours === 1 ? 'One stop was yours already' : `${nWord(o.yours)[0].toUpperCase() + nWord(o.yours).slice(1)} stops were yours already`) : 'Every stop here has something new'}</h2>
+      <p class="muted">${o.yours ? 'Walked without the lesson — the Atlas says so, and so does the grown-ups’ card. ' : ''}${wait.length ? `${wait.length === 1 ? 'One stop waits' : nWord(wait.length)[0].toUpperCase() + nWord(wait.length).slice(1) + ' stops wait'} on the road with its lesson open. Nothing was lost by missing it.` : 'Nothing is waiting.'}</p>
+      ${o.level ? `<p class="small muted" style="margin-top:4px">And you reached level ${o.level}.</p>` : ''}
+      ${wait.length ? `<ul class="cl">${wait.map((k) => `<li>${ico('lesson', '', 16)} ${esc(k.title)}</li>`).join('')}</ul>
+        <button class="btn wide" style="margin-top:14px" data-act="betweenGo" data-arg="${wait[0].id}">Read “${esc(wait[0].title)}” →</button>` : ''}
+      <button class="btn ${wait.length ? 'ghost ' : ''}wide" style="margin-top:8px" data-act="closeOv">Back to the Atlas</button></div>`);
   }
   if (o.kind === 'sessionDone') {
     const s = o.sum;
@@ -817,6 +833,7 @@ on('itBin', (b) => { const t = R.item || (R.item = {}); if (t.sel == null) retur
 on('itStep', (i) => { const t = R.item || (R.item = {}); const seq = t.seq || (t.seq = []); if (!seq.includes(+i)) seq.push(+i); sfx.click(); render(); });
 on('itUndo', () => { const t = R.item || {}; if (t.seq) t.seq.pop(); render(); });
 /* E6 · show me how: open the worked method (other numbers) before the first try */
+on('genHow', (id) => { const c = C(); if (c.learn.openCard !== id) return; R.genHow = id; sfx.click(); render(); const el = document.getElementById('gh-' + id); if (el) el.focus(); });
 on('itHow', () => { const t = R.item || {}; if (t.tries || t.settled) return; t.how = true; sfx.click(); render();
   const el = t.id && document.getElementById('yh-' + t.id); if (el) el.focus({ preventScroll: true }); });
 on('itCheck', (id) => {
@@ -1030,7 +1047,7 @@ on('card', (id) => {
    resolver so every caller stops caring which. */
 const cardById = (id) => resolveCard(id, C());
 
-on('closeCard', () => { R.practice = null; R.cold = null; C().learn.openCard = null; C().learn.drill = null; render(); });
+on('closeCard', () => { R.practice = null; R.cold = null; R.coldPlace = null; C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
   const c = C(), card = cardById(c.learn.openCard);
   if (!card || card.pending) return;
@@ -1044,7 +1061,7 @@ on('answer', (i) => {
   st.done = t.done; st.right = t.right;
   if (p.right) { sfx.good(); if (p.first) family.coins(c.name, 'answer'); }
   else { sfx.bad(); if (p.tries === 1 && isLesson(card)) mistakes.record(c, card.id, st.qi); }
-  if (!p.right && R.cold === card.id) { R.cold = null; toast('Here is the lesson — then have another go'); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
+  if (!p.right && R.cold === card.id) { R.cold = null; coldPlaceMiss(card.id); toast('Here is the lesson — then have another go'); }   /* the deck holds lesson stops; a generated item is asked again by the ledger instead */   /* F3: a wrong FIRST answer goes in the deck */
   render();
   /* G2 · the kit's feedback, from the option the child chose and only after the verdict is
      drawn: coins out of a right one, a small shake of a wrong one. It touches nothing the
@@ -1099,7 +1116,45 @@ on('practiceDone', () => {
 /* Answering a stop cold (owner, 3 Oct 2026: "add per-stop skipping"). Runtime only until
    it succeeds; what is kept is c.learn.cold[id], so a report can say "answered cold". */
 on('coldStart', (id) => { const c = C(); if (c.learn.done[id]) return; R.cold = id; c.learn.drill = null; sfx.click(); render(); window.scrollTo(0, 0); });
-on('coldStop', () => { R.cold = null; render(); });
+on('coldStop', () => { if (R.cold) coldPlaceMiss(R.cold); R.cold = null; render(); });
+
+/* A6 · a whole place answered cold (audit A6). The place's open, unwalked stops run back to
+   back, each through the per-stop path above — R.cold, then cardDone writes c.learn.cold[id]
+   exactly as it does for one stop. Nothing new marks learning: a stop answered right cold is
+   walked the same way, and a miss opens that stop's lesson where the child is, with the
+   choice to read it or carry on cold. Runtime only; closing the card ends the run. */
+function coldPlaceAfterId(id) { const r = R.coldPlace; if (!r) return null; const c = C(), at = r.ids.indexOf(id); return r.ids.slice(at + 1).find((x) => !c.learn.done[x] && !r.waiting.includes(x)) || null; }
+function coldPlaceIds(c, wi) { return roadPath(c).filter((s) => s.wi === wi && !s.done && !s.locked).map((s) => s.card.id); }
+function coldPlaceMiss(id) { const r = R.coldPlace; if (r && r.ids.includes(id) && !r.waiting.includes(id)) r.waiting.push(id); }
+/* the next stop in the run after the one open now, still unwalked */
+function coldPlaceAfter(c) {
+  const r = R.coldPlace; if (!r) return null;
+  const at = r.ids.indexOf(c.learn.openCard);
+  return r.ids.slice(at + 1).find((id) => !c.learn.done[id] && !r.waiting.includes(id)) || null;
+}
+function coldPlaceGo(id) { fire('card', id); R.cold = id; C().learn.drill = null; render(); }
+function coldPlaceEnd(level) {
+  const r = R.coldPlace; R.coldPlace = null; R.cold = null;
+  const c = C(); c.learn.openCard = null; c.learn.drill = null;
+  /* a level reached on the last stop is said here, rather than replacing this moment */
+  if (level) { sfx.level(); confetti(50); }
+  R.overlay = { kind: 'coldPlaceDone', wi: r.wi, yours: r.yours, waiting: r.waiting.filter((id) => !c.learn.done[id]), level: level || null };
+  sim.save(R.s); render(); window.scrollTo(0, 0);
+}
+on('coldPlace', (wi) => {
+  const c = C(); wi = +wi || 0;
+  const ids = coldPlaceIds(c, wi);
+  if (!ids.length) { toast('Nothing left to answer here'); return; }
+  R.overlay = null;
+  R.coldPlace = { wi, ids, yours: 0, waiting: [] };
+  sfx.click(); coldPlaceGo(ids[0]); window.scrollTo(0, 0);
+});
+on('coldPlaceNext', () => {
+  const c = C(); R.overlay = null; if (!R.coldPlace) return;
+  const nx = coldPlaceAfter(c);
+  if (nx) { coldPlaceGo(nx); window.scrollTo(0, 0); } else coldPlaceEnd();
+});
+on('coldPlaceEnd', () => { if (R.coldPlace) coldPlaceEnd(); });
 /* the word of the hour, checked in ten seconds: one go, the meaning shown either way, nothing paid */
 on('wordCheck', (term) => { const q = daily.wordCheck(term); if (!q) return; R.overlay = { kind: 'wordCheck', q, pick: null }; render(); });
 on('wcPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'wordCheck' || o.pick != null) return; o.pick = +i; if (o.pick === o.q.answer) sfx.good(); else sfx.bad(); render(); });
@@ -1147,6 +1202,9 @@ on('cardDone', (id) => {
   }
   const cold = R.cold === id && right; R.cold = null;
   if (cold) { c.learn.cold = c.learn.cold || {}; c.learn.cold[id] = true; }
+  const run = R.coldPlace && R.coldPlace.ids.includes(id) ? R.coldPlace : null;
+  if (run && cold) run.yours += 1;
+  const runNext = run ? coldPlaceAfter(c) : null;
   c.learn.done[id] = true;
   if (first && ch) sim.questTick(c, 'lesson', 1);
   const res = sim.addXP(c, sim.cardXP(first, right));
@@ -1163,6 +1221,20 @@ on('cardDone', (id) => {
      four lessons, what it opens — never how anyone else did. */
   /* answered cold: straight on to the next stop on the road (next.js), no finish card;
      a level gained on the way still gets its moment, over the next stop */
+  /* a whole place answered cold (A6): straight on to the place's next stop, cold again; the
+     chapter's moment, if one was finished on the way, sits over it */
+  if (run && cold) {
+    if (runNext) {
+      sfx.good(); toast('“' + card.title + '” — yours already');
+      coldPlaceGo(runNext);
+      if (finished) { R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; confetti(50); render(); }
+      else if (res.leveled) levelUp(res);
+      window.scrollTo(0, 0);
+      return;
+    }
+    coldPlaceEnd(res.leveled ? res.level : null);
+    return;
+  }
   const onward = cold && !finished ? nextStop(c) : null;
   if (onward) { sfx.good(); toast('“' + card.title + '” — yours already'); fire('card', onward.id); if (res.leveled) levelUp(res); }
   else if (finished) { sfx.level(); confetti(70); R.overlay = { kind: 'chapter', ch: ch.id, level: res.leveled ? res.level : null }; render(); }
@@ -1708,6 +1780,12 @@ document.addEventListener('keydown', (e) => {
     R.game.key(e);
     return;
   }
+  /* the counting game (placement): A–D or 1–4 picks, Enter goes on — touch taps the same buttons */
+  if (R.overlay && R.overlay.kind === 'placement' && !R.overlay.done && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const k = e.key.toLowerCase(), i = 'abcd'.indexOf(k) >= 0 ? 'abcd'.indexOf(k) : '1234'.indexOf(k);
+    if (i >= 0 && k.length === 1 && R.overlay.pick == null) { e.preventDefault(); fire('plPick', i); return; }
+    if ((e.key === 'Enter' || e.key === 'ArrowRight') && R.overlay.pick != null && !(document.activeElement && document.activeElement.matches('button'))) { e.preventDefault(); fire('plNext'); return; }
+  }
   /* a dialog keeps focus inside it (FAMILY-STANDARD §3: the ☰ drawer traps focus) */
   if (e.key === 'Tab' && R.overlay) {
     const box = document.querySelector('.drawer, .ovbox');
@@ -1818,7 +1896,7 @@ window.addEventListener('appinstalled', () => { R.install = null; toast('Install
 
 window.BZF = { R, sim, quitGame, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
-  cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
+  placement, cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 
 
 /* ── six questions, one chapter (quiz.js) ─────────────────────────────── */
@@ -1938,27 +2016,59 @@ on('tillShare', async () => {
   catch (e) { toast('Could not copy on this device'); }
 });
 
-/* ══ the maths check ══════════════════════════════════════════════════ */
+/* ══ the maths check, as a game: help Pip count the stall's takings (audit A6) ══
+   placement.js still asks the same twelve questions in the same order and stops at two
+   wrong in a row — it measures exactly what it measured. Only the dress is new: Pip, the
+   stall, a drawn icon for each sum, a trail of stepping stones instead of "question 4 of
+   12", and an ending with no score at all. The trail never marks right or wrong, and the
+   end never says how far anyone got: it is a ceiling, never a mark (CLAUDE.md). What the
+   town now fits to is on the grown-ups' page, and nowhere a child reads it. */
+const PL_FRAME = {
+  M1: ['abacus', 'Three tins of coins sit on the counter.'],
+  M2: ['receipt', 'Two customers have paid at the stall.'],
+  M3: ['wallet', 'Pip takes some coins to market for the stall.'],
+  M4: ['handshake', 'Pip and Mags are sharing the morning’s takings.'],
+  M5: ['basket', 'A customer’s basket comes to the till.'],
+  M6: ['cart', 'Someone wants more than one of the same thing.'],
+  M7: ['jars', 'Pip puts part of the takings in his jars.'],
+  M8: ['family', 'Four friends ran the stall together today.'],
+  M9: ['calendar', 'Pip is saving for a new awning for the stall.'],
+  M10: ['bank', 'The stall’s savings sit in the Bizzington bank.'],
+  M11: ['seed', 'Pip leaves the stall’s savings to grow.'],
+  M12: ['tree', 'Last one — a long, slow grow.'],
+};
+function plTrail(o) {
+  /* stepping stones, lit as they are walked — never coloured by right or wrong */
+  return `<ol class="pltrail" aria-label="The road to the end of the count">${placement.RUNGS.map((_, i) =>
+    `<li class="${i < o.i ? 'walked' : i === o.i ? 'here' : ''}">${i === o.i ? shell.pipPose('head', 26) : ''}</li>`).join('')}</ol>`;
+}
 function placementView(o) {
   const c = C();
   if (o.done) {
-    const r = placement.finish(c, o) || { ceiling: placement.ceilingOf(o) };
-    const can = placement.RUNGS[o.reached - 1] || null;
-    return `<div class="eyebrow">The maths check</div><h2 style="margin:4px 0 8px">Done — thank you</h2>
-      <p class="small">${esc(c.name)} got as far as <b>${can ? esc(can.can.toLowerCase()) : 'the first rung'}</b>. The town will not put a screen in front of ${esc(c.name)} that needs more than that; it will wait, or show the same truth another way.</p>
-      <p class="small muted" style="margin-top:8px">This is a ceiling, not a mark. It is not shown to the child, it is not in any report, and it can be sat again whenever it stops fitting.</p>
-      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sm" data-act="closeOv">Back</button></div>`;
+    placement.finish(c, o);
+    return `<div class="plgame plend" style="text-align:center">
+      <div class="endfig">${shell.pipPose('cheer', 120, 'Pip, cheering')}</div>
+      <div class="eyebrow">The stall is counted</div>
+      <h2 style="margin:4px 0 8px;font-size:26px">Thank you, ${esc(c.name)}!</h2>
+      <p>Pip has the takings counted, and now he knows how to set the town up to fit you.</p>
+      <p class="small muted" style="margin-top:8px">No score — it was never a test. Grown-ups can see what it changed on their page.</p>
+      <button class="btn wide" style="margin-top:14px" data-act="closeOv">Off you go →</button></div>`;
   }
-  const q = placement.current(o), p = o.pick;
-  return `<div class="eyebrow">The maths check · question ${o.i + 1} of ${placement.RUNGS.length}</div>
-    <p class="small muted" style="margin-top:4px">It stops as soon as two in a row go wrong, so it is usually shorter than this.</p>
+  const q = placement.current(o), p = o.pick, fr = PL_FRAME[q.m] || ['coin', ''];
+  return `<div class="plgame">
+    <div class="plhead">${shell.pipPose(p ? (p.ok ? 'cheer' : 'think') : o.i ? 'point' : 'wave', 72, 'Pip')}
+      <div><div class="eyebrow">Help Pip count the stall’s takings</div>
+      <p class="small muted" style="margin-top:2px">${o.i ? 'Take your time — there is no clock.' : 'Pip is counting up after market. Help him with a few sums — there is no clock, and it ends by itself.'}</p></div></div>
+    ${plTrail(o)}
+    <div class="plscene"><span class="plico">${ico(fr[0], '', 34)}</span><span>${esc(fr[1])}</span></div>
     <h3 style="font-size:19px;margin:10px 0 10px">${esc(q.q)}</h3>
     <div class="stack" style="gap:8px">
       ${q.opts.map((opt, i) => { let k = ''; if (p) k = i === q.a ? ' ok' : (i === p.i ? ' no' : '');
         return `<button class="opt${k}" data-act="plPick" data-arg="${i}" ${p ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span>${esc(opt)}</button>`; }).join('')}
     </div>
-    ${p ? `<div style="background:${p.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:12px 14px;font-size:14px;margin-top:10px">${esc(p.why)}</div>
-      <button class="btn wide" style="margin-top:12px" data-act="plNext">Next →</button>` : ''}`;
+    ${p ? `<div class="fb ${p.ok ? 'yes' : 'hold'}" role="status"><b>${p.ok ? 'That’s it!' : 'Good try.'}</b> ${esc(p.why)}</div>
+      <button class="btn wide" style="margin-top:12px" data-act="plNext">On we go →</button>` : ''}
+  </div>`;
 }
 on('placement', () => { R.overlay = placement.start(); sfx.click(); render(); });
 on('plPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'placement') return; placement.answer(o, i); if (o.pick.ok) sfx.good(); else sfx.click(); render(); });

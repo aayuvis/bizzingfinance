@@ -728,6 +728,15 @@ export function genCard(o, seed, cx) {
   /* a typed answer whose number is printed in its own question is a leak: draw again */
   let d;
   for (let k = 0; k < 12; k++) { d = g(rng(seed * 2654435761 + o.id.length + k * 7919), cx || { ceil: 6 }); if (!leaks(d)) break; }
+  /* E3 · a typed amount carries its worked example: the same generator, other numbers —
+     a sibling drawn from a different seed whose answer is not this one's. Every number in
+     it is the generator's own, so it claims nothing about the real world. */
+  if (d.kind === 'num' && !d.worked) {
+    for (let k = 1; k < 40; k++) {
+      const s = g(rng((seed + 7 * k) * 2246822519 + o.id.length * 31 + k), cx || { ceil: 6 });
+      if (s.kind === 'num' && s.value !== d.value && s.q !== d.q && !leaks(s) && !numbersIn(s.q + ' ' + s.why).includes(d.value)) { d = { ...d, worked: { q: s.q, why: s.why, value: s.value } }; break; }
+    }
+  }
   return { id: `${o.id}~${seed}`, title: o.short, who: 'pip', objective: o.id, assess: true, generated: true, drill: d };
 }
 export const hasGen = (id) => !!GEN[id];

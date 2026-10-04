@@ -676,14 +676,17 @@ async function demo() {
     const rec = JSON.stringify(c.mastery.rec);   /* after the stop itself was recorded */
     const first = c.learn.openCard, eyebrow = (document.querySelector('main .eyebrow') || {}).textContent || '';
     const k = B.cardById(first);
+    /* E3 · a typed amount offers its worked example (a sibling from the same generator) before the first try */
+    let how = k.drill.kind !== 'num';
+    if (!how) { const hb = document.querySelector('[data-act="genHow"]'); if (hb) { hb.click(); await new Promise((r) => setTimeout(r, 30)); const box = document.querySelector('.yhow'); how = !!box && !(box.textContent.match(/\d[\d,]*/g) || []).map((x) => +x.replace(/,/g, '')).includes(k.drill.value) && box.textContent.includes(k.drill.worked.q); } }
     if (k.drill.kind === 'num') { document.getElementById('numAns').value = String(k.drill.value); B.fire('answerNum'); } else B.fire('answer', B.key(first, 0));
     const right = !!document.querySelector('.fb.yes');
     document.querySelector('[data-act="practise"]').click(); await new Promise((r) => setTimeout(r, 50));
     const second = c.learn.openCard;
     B.fire('practiceDone');
-    return { btn: true, practice: /Practice/.test(eyebrow), right, fresh: first !== second && /~/.test(first) && /~/.test(second), untouched: JSON.stringify(c.mastery.rec) === rec, done: !!c.learn.done[id] };
+    return { btn: true, how, practice: /Practice/.test(eyebrow), right, fresh: first !== second && /~/.test(first) && /~/.test(second), untouched: JSON.stringify(c.mastery.rec) === rec, done: !!c.learn.done[id] };
   });
-  ok('a lesson stop offers practice asked fresh: a new question each time, recorded nowhere but XP', prac.btn && prac.practice && prac.right && prac.fresh && prac.untouched && prac.done, JSON.stringify(prac));
+  ok('a lesson stop offers practice asked fresh: a new question each time, recorded nowhere but XP', prac.btn && prac.how && prac.practice && prac.right && prac.fresh && prac.untouched && prac.done, JSON.stringify(prac));
   /* per-stop skipping (owner, 3 Oct 2026): answer cold — three right and it is walked, a miss opens the lesson */
   const coldRun = await page.evaluate(async () => {
     const B = window.BZF, { R } = B, c = R.s.kids[0], all = B.allCards, at = all.findIndex((k) => !c.learn.done[k.id]), id = all[at].id, next = all[at + 1].id;
@@ -1032,6 +1035,113 @@ async function kitChecks() {
   await rctx.close();
 }
 
+/* A6 · day one: a whole place answered cold, and the maths check as a game. A fresh child,
+   keyboard on the desktop and touch on the phone (screenshots from the phone). */
+async function a6Checks(label, vp, isMobile) {
+  const ctx = await browser.newContext({ viewport: vp, isMobile, hasTouch: isMobile, deviceScaleFactor: isMobile ? 2 : 1 });
+  const page = await ctx.newPage();
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+  const shot = (n) => SHOTS && isMobile && page.screenshot({ path: `${SHOTS}/a6-${n}.png` });
+  const press = async (sel) => {
+    try { if (isMobile) await page.tap(sel, { timeout: 5000 }); else { await page.focus(sel, { timeout: 5000 }); await page.keyboard.press('Enter'); } }
+    catch (e) { throw new Error('could not press ' + sel + ': ' + String(e.message).split('\n')[0]); }
+    await page.waitForTimeout(180);
+  };
+  await page.goto(URL0); await page.waitForSelector('[data-act="obStart"]');
+  await page.click('[data-act="obStart"]'); await page.fill('#nm', 'Asha');
+  await page.click('[data-act="obNext"]'); await page.locator('[data-act="obBand"]').last().click();
+  await page.waitForSelector('[data-bz=next]'); await page.waitForTimeout(3600);
+  await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); }); await page.waitForTimeout(200);
+
+  /* Home on day one offers both, as links — Continue stays the only filled button */
+  const home = await page.evaluate(() => ({ cold: !!document.querySelector('.firstday a[href="#/coldplace/0"]'), game: !!document.querySelector('.firstday a[href="#/pipcount"]') }));
+  const prim = await page.evaluate(PRIMARY);
+  ok(`${label}: day one on Home offers “answer Market Row cold” and Pip’s counting game, with Continue still the one filled button`, home.cold && home.game && prim.length === 1 && prim[0] === 'continue', JSON.stringify({ home, prim }));
+  await page.evaluate(() => document.querySelector('.firstday').scrollIntoView({ block: 'center' })); await shot('home-firstday');
+
+  /* the counting game: Pip, a drawn icon, stepping stones — and no score at the end */
+  await press('.firstday a[href="#/pipcount"]'); await page.waitForSelector('.plgame');
+  const look = await page.evaluate(() => { const g = document.querySelector('.plgame'); return { pip: !!g.querySelector('img.pip'), stones: g.querySelectorAll('.pltrail li').length,
+    icon: !!g.querySelector('.plscene svg'), framed: /Help Pip count/.test(g.textContent), testy: /question \d+ of|maths check|test\b/i.test(g.textContent) }; });
+  await shot('game-question');
+  const pickRight = async (right) => {
+    const a = await page.evaluate(() => { const o = window.BZF.R.overlay; return window.BZF.placement.RUNGS[o.i].a; });
+    const i = right ? a : (a + 1) % 4;
+    if (isMobile) await page.tap(`[data-act="plPick"][data-arg="${i}"]`); else await page.keyboard.press('abcd'[i]);
+    await page.waitForTimeout(120);
+  };
+  const goOn = async () => { if (isMobile) await page.tap('[data-act="plNext"]'); else { await page.evaluate(() => document.activeElement && document.activeElement.blur()); await page.keyboard.press('Enter'); } await page.waitForTimeout(120); };
+  await pickRight(true); const fb1 = await page.evaluate(() => (document.querySelector('.plgame .fb') || {}).className || '');
+  await shot('game-answered');
+  await goOn(); const after1 = await page.evaluate(() => ({ stone: document.querySelectorAll('.pltrail li.walked').length, marked: document.querySelectorAll('.pltrail li.ok, .pltrail li.no, .pltrail li.right, .pltrail li.wrong').length }));
+  after1.fb = fb1;
+  await pickRight(true); await goOn(); await pickRight(true); await goOn();
+  await pickRight(false); await goOn(); await pickRight(false); await goOn();
+  await page.waitForSelector('.plend');
+  const end = await page.evaluate(() => { const t = document.querySelector('.plend').textContent; const c = window.BZF.R.s.kids[0];
+    return { digits: /\d/.test(t), says: /got as far|ceiling|reached|level|out of|right first|correct/i.test(t), pip: !!document.querySelector('.plend img.pip'), maths: c.maths && c.maths.reached, ceil: !!(c.maths && c.maths.ceiling) }; });
+  await shot('game-end');
+  ok(`${label}: the maths check plays as “help Pip count the stall’s takings” — Pip, a drawn icon, twelve stepping stones, no test words`, look.pip && look.stones === 12 && look.icon && look.framed && !look.testy, JSON.stringify(look));
+  ok(`${label}: the game is played by ${isMobile ? 'touch' : 'keyboard'}, and a stone is lit for walking it, not for being right`, after1.stone === 1 && !after1.marked && /\bfb\b/.test(after1.fb), JSON.stringify(after1));
+  ok(`${label}: it ends with Pip and no score — no number, no "how far" — while placement.js still writes the ceiling it measured`, !end.digits && !end.says && end.pip && end.maths === 3 && end.ceil, JSON.stringify(end));
+  await page.evaluate(() => window.BZF.fire('closeOv')); await page.waitForTimeout(150);
+  const gone = await page.evaluate(() => !document.querySelector('.firstday a[href="#/pipcount"]'));
+  ok(`${label}: once played, Home stops offering the game`, gone);
+
+  /* the Atlas offers the whole place on a first visit; the run reuses the per-stop cold path */
+  await page.evaluate(() => { location.hash = '#/atlas'; }); await page.waitForTimeout(450);
+  const offer = await page.evaluate(() => ({ card: !!document.querySelector('.coldcard [data-act="coldPlace"][data-arg="0"]') }));
+  await page.evaluate(() => document.querySelector('.coldcard').scrollIntoView({ block: 'center' })); await shot('atlas-offer');
+  await press('.coldcard [data-act="coldPlace"]'); await page.waitForTimeout(250);
+  const ids = await page.evaluate(() => window.BZF.R.coldPlace && window.BZF.R.coldPlace.ids.slice());
+  const s1 = await page.evaluate(() => ({ open: window.BZF.R.s.kids[0].learn.openCard, cold: window.BZF.R.cold, lesson: !!document.querySelector('main .reading'),
+    note: (document.querySelector('.coldnote') || {}).textContent || '', stones: document.querySelectorAll('.coldtrail li').length }));
+  await shot('cold-stop');
+  const levels = [];
+  const answerAll = async (id, wrongFirst) => {
+    for (let q = 0; q < 3; q++) {
+      const k = await page.evaluate(([x, qi]) => window.BZF.key(x, qi), [id, q]);
+      const i = wrongFirst && q === 0 ? (k + 1) % 4 : k;
+      await press(`[data-act="answer"][data-arg="${i}"]`);
+      if (wrongFirst && q === 0) return;
+      if (await page.locator('[data-act="nextQ"]').count()) await press('[data-act="nextQ"]');
+    }
+    await press('[data-act="cardDone"]'); await page.waitForTimeout(200);
+    /* a level gained on the way gets its moment over the next stop; the child closes it */
+    const lv = await page.evaluate(() => window.BZF.R.overlay && window.BZF.R.overlay.kind); if (lv) { levels.push(lv); await page.evaluate(() => window.BZF.fire('closeOv')); await page.waitForTimeout(150); }
+  };
+  await answerAll(ids[0], false);
+  const s2 = await page.evaluate(() => ({ open: window.BZF.R.s.kids[0].learn.openCard, cold: window.BZF.R.cold, ov: window.BZF.R.overlay && window.BZF.R.overlay.kind }));
+  await answerAll(ids[1], true);
+  const miss = await page.evaluate(() => ({ cold: window.BZF.R.cold, lesson: !!document.querySelector('main .reading'), held: !!document.querySelector('[data-act="coldPlaceNext"]') }));
+  await page.evaluate(() => { document.querySelector('.coldnote').scrollIntoView({ block: 'start' }); window.scrollBy(0, -230); }); await page.waitForTimeout(2600); await shot('cold-miss');
+  await press('[data-act="coldPlaceNext"]');
+  const s3 = await page.evaluate(() => ({ open: window.BZF.R.s.kids[0].learn.openCard, cold: window.BZF.R.cold }));
+  await answerAll(ids[2], false);
+  await press('[data-act="coldPlaceEnd"]'); await page.waitForTimeout(250);
+  const done = await page.evaluate((x) => { const c = window.BZF.R.s.kids[0], o = window.BZF.R.overlay || {};
+    return { kind: o.kind, yours: o.yours, waiting: o.waiting, cold: Object.keys(c.learn.cold || {}), done: x.map((id) => !!c.learn.done[id]), text: (document.querySelector('.ovbox') || {}).textContent || '',
+      report: window.BZF.reportcard.card(c).progress.cold, run: !!window.BZF.R.coldPlace }; }, ids);
+  await shot('cold-done');
+  ok(`${label}: the Atlas offers “already know this place? answer it cold” on a first visit`, offer.card, JSON.stringify(offer));
+  ok(`${label}: the run opens the place’s first stop cold — lesson hidden, “stop 1 of N” and stepping stones`, ids && ids.length >= 3 && s1.open === ids[0] && s1.cold === ids[0] && !s1.lesson && /Answering Market Row cold · stop 1 of/.test(s1.note) && s1.stones === ids.length, JSON.stringify(s1));
+  ok(`${label}: three right first time walks the stop and goes straight on to the next, cold`, s2.open === ids[1] && s2.cold === ids[1], JSON.stringify(s2));
+  ok(`${label}: a miss opens that stop’s lesson where the child is, with “carry on cold” — and carrying on skips it`, !miss.cold && miss.lesson && miss.held && s3.open === ids[2] && s3.cold === ids[2], JSON.stringify({ miss, s3 }));
+  ok(`${label}: the end says what was yours and what waits — marked through the per-stop path (c.learn.cold), and the missed stop is not walked`,
+    !levels.some((k) => k !== 'level') && done.kind === 'coldPlaceDone' && done.yours === 2 && done.waiting.length === 1 && done.waiting[0] === ids[1] && done.cold.includes(ids[0]) && done.cold.includes(ids[2]) && !done.cold.includes(ids[1])
+      && done.done[0] && !done.done[1] && done.done[2] && !done.done[3] && done.report === 2 && !done.run && /yours already/.test(done.text), JSON.stringify({ ...done, levels }));
+  /* E3 · an arithmetic stop shows its worked example in the lesson, and not while answering cold */
+  await page.evaluate(() => { window.BZF.fire('closeOv'); window.BZF.fire('card', 'c1f'); }); await page.waitForTimeout(250);
+  const wk = await page.evaluate(() => { const w = document.querySelector('main .reading .yhow.worked'); return { shown: !!w, steps: w ? w.querySelectorAll('li').length : 0, text: w ? w.textContent : '' }; });
+  if (wk.shown) { await page.evaluate(() => { document.querySelector('main .yhow.worked').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(200); await shot('e3-worked'); }
+  await page.evaluate(() => window.BZF.fire('coldStart', 'c1f')); await page.waitForTimeout(150);
+  const wkCold = await page.evaluate(() => !!document.querySelector('main .yhow.worked'));
+  await page.evaluate(() => window.BZF.fire('closeCard'));
+  ok(`${label}: an arithmetic stop shows the sum step by step in its lesson, and hides it while answered cold`, wk.shown && wk.steps >= 3 && /35 \+ 5 = 40/.test(wk.text) && !wkCold, JSON.stringify({ ...wk, wkCold }));
+  ok(`${label}: the A6 run threw nothing`, !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1039,6 +1149,8 @@ await safely('phone', () => run('phone', { width: 390, height: 844 }, true, 'lig
 await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, true, 'dark'));
 await safely('demo', demo);
 await safely('kit', kitChecks);
+await safely('a6-desktop', () => a6Checks('a6-desktop', { width: 1280, height: 860 }, false));
+await safely('a6-phone', () => a6Checks('a6-phone', { width: 390, height: 844 }, true));
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

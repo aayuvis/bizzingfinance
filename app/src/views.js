@@ -50,6 +50,7 @@ import { home as bzHome } from './family/bizzing-shell.js';
 const dayIndexOf = (t) => Math.floor((t - new Date(t).getTimezoneOffset() * 60000) / 864e5);
 import { pipPose, kidBadge, coinSvg } from './shell.js';
 import * as ITEMS from './items.js';
+import * as WORK from './worked.js';
 import * as CERT from './cert.js';
 import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency } from './avatars.js';
 import * as drill from './drill.js';
@@ -347,7 +348,11 @@ export function viewHome() {
      Continue stays the one filled button */
   const first = !Object.keys(c.learn.done || {}).length;
   const day1 = first ? `<section class="card firstday" aria-label="Your first day"><span class="eyebrow">Your first day in Bizzington</span>
-    <ol><li><a href="#/continue">Walk your first stop — “${esc(ALL_CARDS[0].title)}”</a></li><li><a href="#/town">Take a shift on Market Row</a></li><li><a href="#/town">Open the postbox — one letter a day</a></li></ol></section>` : '';
+    <ol><li><a href="#/continue">Walk your first stop — “${esc(ALL_CARDS[0].title)}”</a></li><li><a href="#/town">Take a shift on Market Row</a></li><li><a href="#/town">Open the postbox — one letter a day</a></li></ol>
+    <div class="fd-more">
+      <a class="fd-link" href="#/coldplace/0">${ico('forward', '', 18)}<span><b>Already know ${esc(WORLDS[0].name)}?</b> Answer it cold — every stop you get right is yours without the lesson.</span></a>
+      ${placement.measured(c) ? '' : `<a class="fd-link" href="#/pipcount">${ico('abacus', '', 18)}<span><b>Help Pip count the stall’s takings</b> — a few quick sums, no clock, no score.</span></a>`}
+    </div></section>` : '';
   /* below Bee's three rows, so Home keeps the family's measured layout and Continue its place */
   return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}${day1}`;
 }
@@ -755,6 +760,33 @@ function viewLearnOld() {
   </div>`;
 }
 
+/* A6 · answering a whole place cold: where the run is, as stepping stones — walked, here,
+   ahead — never as right and wrong; and when a miss has opened a lesson, the choice to read
+   it or carry on cold (main.js keeps the run) */
+function coldTrail(run, card) {
+  const k = K();
+  return `<ol class="coldtrail" aria-label="Stops in this place">${run.ids.map((id) => `<li class="${id === card.id ? 'here' : k.learn.done[id] ? 'walked' : run.waiting.includes(id) ? 'waiting' : ''}"></li>`).join('')}</ol>`;
+}
+function coldNote(c, card) {
+  const run = R.coldPlace && R.coldPlace.ids.includes(card.id) ? R.coldPlace : null;
+  if (!run) return `<div class="card coldnote" role="status"><b>Answering cold.</b> Get all three right first time and this stop is yours without the lesson. Miss one and the lesson opens — no harm done.
+          <button class="btn ghost sm" data-act="coldStop" style="margin-top:8px">Show me the lesson instead</button></div>`;
+  const w = WORLDS[run.wi] || WORLDS[0], n = run.ids.indexOf(card.id) + 1;
+  return `<div class="card coldnote" role="status"><b>Answering ${esc(w.name)} cold · stop ${n} of ${run.ids.length}.</b> Three right first time and this stop is yours; miss one and its lesson opens — no harm done.
+    ${coldTrail(run, card)}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm" data-act="coldStop">Show me this lesson instead</button>
+      <button class="btn ghost sm" data-act="coldPlaceEnd">Stop answering cold</button></div></div>`;
+}
+function coldPlaceHeld(c, card) {
+  const run = R.coldPlace && R.coldPlace.ids.includes(card.id) ? R.coldPlace : null;
+  if (!run || c.learn.done[card.id]) return '';
+  const w = WORLDS[run.wi] || WORLDS[0];
+  return `<div class="card coldnote" role="status"><b>This one has something new.</b> Its lesson is open below — read it and finish the stop, or carry on through ${esc(w.name)} cold. It waits on the road either way.
+    ${coldTrail(run, card)}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm" data-act="coldPlaceNext">${ico('forward', '', 15)} Carry on cold</button>
+      <button class="btn ghost sm" data-act="coldPlaceEnd">Stop answering cold</button></div></div>`;
+}
+
 const OPENS = { c3: 'the Jar Shed and the Build Yard', c5: 'the Bank',
   c6: 'borrowing', c7: 'the Exchange', c8: 'Bizz & Co' };
 function opensWhat(id) { return OPENS[id]; }
@@ -770,17 +802,18 @@ function viewCard(card) {
     ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
       : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
       : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
-    ${card.assess && R.practice && R.practice.id === card.id ? '' : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
+    ${card.assess && R.practice && R.practice.id === card.id ? genHowBlock(card, st) : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
       /* per-stop skipping (owner, 3 Oct 2026): answer a stop cold, lesson hidden; three right
          first time and it is walked; one miss and the lesson opens where the child is */
-      : R.cold === card.id ? `<div class="card coldnote" role="status"><b>Answering cold.</b> Get all three right first time and this stop is yours without the lesson. Miss one and the lesson opens — no harm done.
-          <button class="btn ghost sm" data-act="coldStop" style="margin-top:8px">Show me the lesson instead</button></div>`
+      : R.cold === card.id ? coldNote(c, card)
       : `
-    ${!c.learn.done[card.id] && !(st && st.card === card.id && st.picks && st.picks.length) ? `<button class="btn ghost wide coldgo" data-act="coldStart" data-arg="${card.id}">${ico('next', '', 16)} Know this already? Answer it cold</button>` : ''}
+    ${coldPlaceHeld(c, card)}
+    ${!c.learn.done[card.id] && !(st && st.card === card.id && st.picks && st.picks.length) ? `<button class="btn ghost wide coldgo" data-act="coldStart" data-arg="${card.id}">${ico('forward', '', 16)} Know this already? Answer it cold</button>` : ''}
     ${lessonBlock(card.id)}
     <div class="card reading">
       <p class="sh-line" style="margin-top:0"><span>${face(card.who, 34)}</span><span><span class="nm">${esc(who.name)}</span>${teachFor(card, c)}</span></p>
       <div class="aside"><span class="eyebrow">For instance</span>${esc(egFor(card, c))}</div>
+      ${workedBlock(card)}
       ${canSay() ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="say" data-arg="card:${card.id}">${ico('sound', '🔊', 15)} Read it to me</button></div>` : ''}
     </div>
     ${tryBlock(card)}
@@ -825,6 +858,25 @@ function viewCard(card) {
           ${!card.assess && practiceFor(card) ? `<button class="btn ghost wide" data-act="practise" data-arg="${card.id}">${ico('repeat', '', 16)} One more on this, asked fresh</button>` : ''}` : ''}
     </div>`; })()}
   </div>`;
+}
+
+/* E3 · the sum, written out: a worked example on every arithmetic stop (worked.js), in the
+   Show-me-how style. Its numbers are the card's own or the town's dials, and it never ends
+   on the answer to one of the stop's own checks (test/worked.mjs). */
+function workedBlock(card) {
+  const w = WORK.worked(card.id); if (!w) return '';
+  return `<div class="yhow worked" role="region" aria-labelledby="wk-${card.id}"><div class="eyebrow" id="wk-${card.id}">Worked example · the sum, step by step</div>
+    <ol>${w.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+}
+/* practice in fresh numbers: the same generator's sibling question, worked, offered before
+   the first try and never after (generate.js) */
+function genHowBlock(card, st) {
+  const w = card.drill && card.drill.worked;
+  const started = st && st.card === card.id && st.picks && st.picks.length;
+  if (!w || started) return '';
+  if (R.genHow !== card.id) return `<div class="yhow-row"><button class="btn ghost sm yhow-btn" data-act="genHow" data-arg="${esc(card.id)}" aria-expanded="false" aria-controls="gh-${esc(card.id)}">Show me how</button></div>`;
+  return `<div class="yhow" id="gh-${esc(card.id)}" tabindex="-1" role="region" aria-label="How to work it out"><div class="eyebrow">The same idea, with other numbers</div>
+    <ol><li>${esc(w.q)}</li><li>${esc(w.why)}</li><li>That one comes to ${esc(/how many/i.test(w.q) ? String(w.value) : money(w.value))}. Now try yours.</li></ol></div>`;
 }
 
 /* E4 · Your turn: sort, order or work out an amount (items.js). A wrong first try
@@ -2184,7 +2236,7 @@ export function placementCard(c) {
     <div class="eyebrow">The maths check</div>
     <p class="small muted">${m
       ? `Measured on ${shortDate(c.maths.at)}: ${esc(c.name)} reached <b>${(placement.RUNGS[c.maths.reached - 1] || {}).can ? esc(placement.RUNGS[c.maths.reached - 1].can.toLowerCase()) : 'the first rung'}</b>. The town uses that to decide what it may put on screen — a screen that needs arithmetic not met yet waits, or shows the same truth another way.`
-      : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
+      : `Twelve questions, stopped the moment two in a row go wrong, about three minutes. ${esc(c.name)} sees it as a game — “help Pip count the stall’s takings” — and it is offered on their first day. It sets a ceiling, not a score: it is never shown to ${esc(c.name)} as a mark and never goes in a report. Until it is sat, the app is guessing from the age band.`}</p>
     <div class="row" style="gap:8px"><span class="grow"></span>
       <button class="btn ${m ? 'ghost' : ''} sm" data-act="placement">${m ? 'Sit it again' : 'Start the check'}</button></div>
   </div>`;

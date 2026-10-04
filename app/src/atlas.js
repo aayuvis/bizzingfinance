@@ -45,6 +45,16 @@ export function stops(c) {
   out.forEach((s, i) => { s.i = i; s.n = (perWorld[s.wi] = (perWorld[s.wi] || 0) + 1); s.cur = i === fr; s.locked = s.lockedCh || !worldOpen(c, s.wi); });
   return { list: out, frontier: fr < 0 ? out.length : fr };
 }
+/* A6 · the stops a whole place answered cold would ask: open, not yet walked */
+export const coldable = (r, wi) => r.list.filter((s) => s.wi === wi && !s.done && !s.locked);
+function coldPlaceRow(c, w, wi, r) {
+  const n = coldable(r, wi).length; if (n < 2) return '';
+  return `<button class="stop coldplace" data-act="coldPlace" data-arg="${wi}" style="--ja:${w.tint}">
+    <span class="med">${ico('forward', '', 15)}</span>
+    <span class="stbody"><span class="sttitle">Already know ${esc(w.name)}?</span>
+      <span class="sttag">Answer its ${n} open stops cold, back to back. Every one you get right is yours without the lesson; a miss just opens that lesson.</span>
+      <span class="stgo ghost">Answer it cold →</span></span></button>`;
+}
 const worldStat = (r, wi) => { const ns = r.list.filter((s) => s.wi === wi); return { total: ns.length, done: ns.filter((s) => s.done).length, here: ns.some((s) => s.cur) }; };
 
 /* ── the level bar, Bee's tier bar ────────────────────────────────────── */
@@ -154,6 +164,7 @@ export function actSection(c, wi, r, opts = {}) {
     </div>
     <div class="rail">
       <span class="railline" aria-hidden="true"><span style="height:${pct}%"></span></span>
+      ${open ? coldPlaceRow(c, w, wi, r) : ''}
       ${w.chapters.map((chId) => {
         const ch = CHAPTERS.find((x) => x.id === chId); if (!ch) return '';
         const mine = ns.filter((s) => s.ch.id === chId);
@@ -187,6 +198,21 @@ function upNext(c) {
   </button>`;
 }
 
+/* A6 · the first visit to a place offers it whole: nothing walked here yet, and more than
+   one stop open — "already know this place? answer it cold" (keyboard and touch: a button) */
+function coldCard(c, r, cur) {
+  const wi = cur ? cur.wi : -1; if (wi < 0) return '';
+  const w = WORLDS[wi], st = worldStat(r, wi), n = coldable(r, wi).length;
+  if (st.done || n < 2) return '';
+  return `<section class="card coldcard" style="--ja:${w.tint}" aria-labelledby="cc-${wi}">
+    <span class="ccfig">${face(GUIDE[w.id] || 'pip', 52)}</span>
+    <span class="grow" style="min-width:0"><span class="eyebrow">New to ${esc(w.name)}?</span>
+      <b class="untitle" id="cc-${wi}">Already know this place?</b>
+      <span class="small muted">Answer its ${n} open stops cold, one after another. Get a stop’s three questions right first time and it is yours without the lesson.</span>
+      <button class="btn ghost sm" style="margin-top:10px" data-act="coldPlace" data-arg="${wi}">${ico('forward', '', 15)} Answer it cold</button></span>
+  </section>`;
+}
+
 /* ── the two screens ──────────────────────────────────────────────────── */
 export function viewAtlas(c) {
   const r = stops(c);
@@ -203,6 +229,7 @@ export function viewAtlas(c) {
     </div>
     ${levelBar(c)}
     ${upNext(c)}
+    ${coldCard(c, r, cur)}
     ${board(c)}
     ${(() => { const here = cur ? cur.wi : WORLDS.length - 1;
       /* on a phone the map is the way in (audit v4, D2, owner 4 Oct): every place is a banner
