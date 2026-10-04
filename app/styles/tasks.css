@@ -192,3 +192,8 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 @keyframes cardin{from{opacity:0;transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.wstop.cur.arrive,.wstop.cur.arrive .wdot,.wstop.cur.arrive .wcard{animation:none !important}}
 :root[data-motion="reduced"] .wstop.cur.arrive,:root[data-motion="reduced"] .wstop.cur.arrive .wdot,:root[data-motion="reduced"] .wstop.cur.arrive .wcard{animation:none !important}
+/* a screen change, not a redraw: a short fade and rise (audit v4, N10) */
+#main.route-in{animation:routein .26s cubic-bezier(.2,.9,.3,1) both}
+@keyframes routein{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){#main.route-in{animation:none}}
+:root[data-motion="reduced"] #main.route-in{animation:none}

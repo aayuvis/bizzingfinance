@@ -233,6 +233,7 @@ function render() {
     nav === 'sprint' ? sprintView() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
+  const moved = R.lastNav !== undefined && R.lastNav !== nav;   /* a new screen, not a redraw */
   R.lastNav = nav;
 
   dressWorld(c);
@@ -279,6 +280,8 @@ function render() {
   const km = document.querySelector('.kidmenu'), kb = document.querySelector('.bz-kid');
   if (km && kb) { const r = kb.getBoundingClientRect(); km.style.top = Math.round(r.bottom + 8) + 'px'; km.style.right = Math.max(10, Math.round(innerWidth - r.right)) + 'px'; }
   focusNow();
+  /* a new screen arrives with a short fade and rise (audit v4, N10); a redraw does not */
+  if (moved) { const mc = root.querySelector('#main'); if (mc) mc.classList.add('route-in'); }
   /* a sprint keeps its answer box under the fingers between questions */
   const spa = root.querySelector('#spAns'); if (spa && document.activeElement !== spa) spa.focus({ preventScroll: true });
   /* a freshly opened dialog takes focus on its first control */
