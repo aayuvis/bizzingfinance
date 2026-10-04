@@ -154,3 +154,4 @@ export function crate(ctx, x, y, w, h, tint = '#C98A46') {
   ctx.beginPath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + w - 4, y + h - 4); ctx.stroke();
   ctx.fillStyle = 'rgba(255,240,200,.45)'; ctx.fillRect(x + 2, y + 1.5, w - 4, 2);
 }
+

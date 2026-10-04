@@ -196,14 +196,16 @@ function shell(spec) {
 
   const loop = (ts) => {
     if (st.done) return;
-    const dt = Math.min(50, ts - (last || ts)); last = ts;
+    /* the wall's clock, not the frame rate's (audit v4); the shift's logic runs in slices of
+       at most 50 ms so nothing falls through a catcher on a slow frame */
+    const dt = Math.min(1000, ts - (last || ts)); last = ts;
     T += dt;
     const was = CD.done;
     CD.step(dt);          /* stepped every frame so the GO! can fade out */
     if (!was) {
       const n = CD.done ? 0 : Math.ceil((2400 - T) / 800);
       if (n < said) { said = n; sfx.click(); }
-    } else if (!st.over) step(dt, finish);
+    } else if (!st.over) { for (let left = dt; left > 0.0001 && !st.over; left -= 50) step(Math.min(50, left), finish); }
     else { st.overT += dt; if (st.overT >= (still() ? 500 : 1500)) { end(); return; } }
     FX.step(dt);
     /* a drawing fault must never stop the shift: the clock keeps running */

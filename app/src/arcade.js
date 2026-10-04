@@ -714,7 +714,8 @@ function compoundClimb() {
 
   const step = (ts) => {
     if (st.done) return;
-    const dt = Math.min(60, ts - (prev || ts)); prev = ts;
+    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
+    const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
     look.clock += dt;
     cd.step(dt);
     if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075);
@@ -1046,7 +1047,8 @@ function stallRush() {
   };
   const step = (ts) => {
     if (st.done) return;
-    const dt = Math.min(60, ts - (prev || ts)); prev = ts;
+    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
+    const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
     st.t += dt;
     st.restock = Math.max(0, st.restock - dt);
     st.spawn -= dt;
@@ -1249,10 +1251,13 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
   };
   const step = (ts) => {
     if (st.done) return;
-    const dt = Math.min(50, ts - (last || ts)); last = ts;
+    /* the wall's clock, not the frame rate's (audit v4: a 60 s round took 90 s on slow
+       frames). Coins move, so the round runs in slices of at most 50 ms — none skips the purse */
+    const dt = Math.min(1000, ts - (last || ts)); last = ts;
     look.clock += dt;
     /* the clock and the coins wait for GO; the purse can already be moved */
-    if (cd.step(dt)) advance(dt);
+    if (cd.step(dt)) for (let left = dt; left > 0.0001 && !st.done; left -= 50) advance(Math.min(50, left));
+    if (st.done) return;
     look.px += (LX(st.lane) - look.px) * (still() ? 1 : Math.min(1, dt * 0.022));
     look.sq = Math.max(0, look.sq - dt / 320);
     const frac = Math.min(1.15, st.got / st.target);
@@ -1512,7 +1517,8 @@ function marketStorm() {
   };
   const tick = (ts) => {
     if (st.done) return;
-    const dt = Math.min(60, ts - (last || ts)); last = ts;
+    /* the wall's clock, not the frame rate's (audit v4): a slow frame carries its real time */
+    const dt = Math.min(1000, ts - (last || ts)); last = ts;
     st.t += dt;
     const p = st.t / LEN;
     const wobble = (r() - 0.5) * 22;

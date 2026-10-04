@@ -768,6 +768,20 @@ async function demo() {
   const darkFails = await checkShell(dp, { phone: false });
   ok('desktop-dark: checkShell — the chrome and Home match Bee\'s', darkFails.length === 0, JSON.stringify(darkFails));
   await dctx.close();
+  /* G6 · the clock is the wall's, not the frame rate's (audit v4: at 4 fps a 60 s round took >90 s).
+     Animation frames are throttled to 4 a second; 8 real seconds after GO, Change Rush must
+     have spent about 8 seconds of its round. */
+  const sctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await sctx.addInitScript(() => { window.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 250); });
+  const sp = await sctx.newPage();
+  await sp.goto(URL0 + '?demo'); await sp.waitForSelector('[data-bz=next]');
+  await sp.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); B.fire('game', 'cr'); B.fire('gbegin', 'cr'); });
+  await sp.waitForTimeout(2400 + 600);   /* the 3-2-1-GO, plus a frame or two */
+  const t0 = await sp.evaluate(() => +(document.getElementById('crTime') || {}).textContent);
+  await sp.waitForTimeout(8000);
+  const t1 = await sp.evaluate(() => +(document.getElementById('crTime') || {}).textContent);
+  ok('slow frames: Change Rush keeps the wall\'s time (8 s at 4 fps spends ~8 s of the round)', t0 - t1 >= 7 && t0 - t1 <= 9, `${t0} → ${t1}`);
+  await sctx.close();
   /* D10 · under reduced motion the world is one still frame: nothing runs */
   const rctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
   const rp = await rctx.newPage();
