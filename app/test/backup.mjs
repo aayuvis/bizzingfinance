@@ -20,6 +20,8 @@ ok(Object.keys(sh).every((k) => SYNC_KEYS.includes(k)), 'shred is an allow-list:
 c.somethingAddedTomorrow = { secret: true };
 ok(shred(c).somethingAddedTomorrow === undefined, 'a field added later is excluded by default, not included by accident');
 ok(sh.money && sh.learn && sh.mastery, 'what a restore actually needs does survive');
+{ const k = sim.kid(S); k.tiers = { cr: 'tricky' }; k.goals = { cr: { exact3: true } }; k.sprint = { best: 7 };
+  const s2 = shred(k); ok(s2.tiers && s2.goals && s2.sprint, 'the games\' levels, goals and the sprint best survive a backup (game records, nothing about the child)'); }
 ok(shredAll(S).kids.length === 1 && shredAll(S).kids[0].name === undefined, 'the whole household shreds the same way');
 
 /* the file a grown-up saves is the full record, and it round-trips */

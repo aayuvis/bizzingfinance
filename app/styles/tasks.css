@@ -240,3 +240,5 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
 .tclock i{display:block;height:100%;background:linear-gradient(90deg,var(--spend),var(--treasure));transform-origin:left;animation:tclock linear forwards}
 @keyframes tclock{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 :root[data-motion="reduced"] .tclock i,:root[data-calm] .tclock i{animation-timing-function:steps(6,end)}
+/* a game's header stays on one line on a phone, the level chip included (audit v4 follow-up) */
+@media (max-width:480px){.hud{flex-wrap:nowrap;gap:5px}.hud .box{padding:4px 6px;font-size:12px;white-space:nowrap}.hud .btn.sm{padding-inline:10px;flex:0 0 auto}}
