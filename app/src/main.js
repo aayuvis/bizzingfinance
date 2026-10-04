@@ -31,7 +31,7 @@ import { hasJobGame } from './jobtable.js';   /* the games themselves load when 
 import { viewMarketGame, newGame, startAct, study, assess, buy, sell, advance, ACTS } from './marketgame.js';
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
-import { cardById as resolveCard, isLesson, practiceCard, genReady, whenGenReady } from './cards.js';
+import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
 import { R } from './runtime.js';
 import { nextStep, nextStop } from './next.js';
 import { COMPANIES as MG_COMPANIES } from '../content/companies.js';
@@ -144,7 +144,10 @@ function writeHash() {
   if (!R.s || !R.s.kids.length) return;
   const u = R.s.ui;
   /* the Learn screen is called the Atlas, and so is its address */
-  const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '');
+  /* an open lesson stop is in the address too (#/atlas/c1b), so back closes it and a link
+     reopens it (audit v4, C2); questions asked again later are not stops and stay off it */
+  const open = u.nav === 'learn' && C().learn.openCard, oc = open && cardById(open);
+  const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '') + (oc && isLesson(oc) ? '/' + oc.id : '');
   if (location.hash !== h) { selfHash = h; location.hash = h; }
 }
 function readHash() {
@@ -158,6 +161,8 @@ function readHash() {
   if (m[0] === 'letter' && m[1]) { R.sheetNow = 'letterRead'; R.sheetArg = decodeURIComponent(m[1]); return false; }
   if (m[0] === 'market40' && ['company', 'event'].includes(m[1]) && m[2]) { R.sheetNow = 'mgRead'; R.sheetArg = m[1] + ':' + decodeURIComponent(m[2]); return false; }
   /* the shelter with one kind picked; the wardrobe at one thing */
+  /* the word of the hour, as a 10-second check */
+  if (m[0] === 'wordcheck' && m[1]) { R.sheetNow = 'wordCheck'; R.sheetArg = decodeURIComponent(m[1]); return false; }
   if (m[0] === 'shelter') { R.sheetNow = 'shelterAt'; R.sheetArg = m[1] || ''; return false; }
   if (m[0] === 'wardrobe') { R.sheetNow = 'wardrobeAt'; R.sheetArg = m[1] || ''; return false; }
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
@@ -167,6 +172,8 @@ function readHash() {
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
   /* deep links (My Feed's cards): #/atlas/<card> (or the older #/learn/<card>) opens the lesson when its chapter is open;
      #/words/<term> opens Money Words on that word */
+  /* back from #/atlas/c1b to #/atlas closes the stop */
+  if ((m[0] === 'learn' || m[0] === 'atlas') && !m[1] && R.s.kids.length) { const oc = cardById(C().learn.openCard); if (oc && isLesson(oc)) { C().learn.openCard = null; C().learn.drill = null; } }
   if ((m[0] === 'learn' || m[0] === 'atlas') && m[1] && R.s.kids.length) {
     const k = cardById(m[1]), ch = k && k.ch && CHAPTERS.find((x) => x.id === k.ch);
     if (k && !(ch && chapterLockedFor(C(), ch))) { C().learn.openCard = k.id; C().learn.drill = null; R.shelf = ''; }
@@ -277,8 +284,15 @@ function render() {
      back where they left it rather than yanking it home every render. */
   const ts = root.querySelector('.town-scroll');
   if (ts && ts.scrollWidth > ts.clientWidth) {
-    ts.scrollLeft = R.townPan != null ? R.townPan : (ts.scrollWidth - ts.clientWidth) / 2;
-    ts.onscroll = () => { R.townPan = ts.scrollLeft; };
+    /* ...but never past the postbox: it opened 91px left of it on a phone (audit v4, C5) */
+    let open = (ts.scrollWidth - ts.clientWidth) / 2;
+    const pb = ts.querySelector('[data-act="postbox"]');
+    if (pb) open = Math.min(open, Math.max(0, pb.getBoundingClientRect().left - ts.getBoundingClientRect().left + ts.scrollLeft - 12));
+    ts.scrollLeft = R.townPan != null ? R.townPan : open;
+    /* an edge arrow while there is more street to the right */
+    const cue = () => { const t = ts.closest('.town'); if (t) t.classList.toggle('more-right', ts.scrollLeft < ts.scrollWidth - ts.clientWidth - 8); };
+    ts.onscroll = () => { R.townPan = ts.scrollLeft; cue(); };
+    cue();
   }
   writeHash();
   sim.save(s);
@@ -355,6 +369,15 @@ function overlay() {
            </div>`}`);
   }
 
+  if (o.kind === 'wordCheck') {
+    const q = o.q, done = o.pick != null, right = done && o.pick === q.answer;
+    return box(`<div class="eyebrow">Money word of the hour · ten seconds</div>
+      <h3 style="font-size:24px;margin:2px 0 10px">${esc(q.term)}</h3>
+      <p class="small muted" style="margin-bottom:8px">Which one does it mean?</p>
+      <div class="stack" style="gap:8px">${q.opts.map((t, i) => `<button class="opt${done ? (i === q.answer ? ' ok' : i === o.pick ? ' no' : '') : ''}" data-act="wcPick" data-arg="${i}" ${done ? 'disabled' : ''}><span class="k">${'ABC'[i]}</span>${esc(t)}</button>`).join('')}</div>
+      ${done ? `<div class="fb ${right ? 'yes' : 'no'}" role="status" style="margin-top:10px"><b>${right ? 'That’s it.' : 'It means: ' + esc(q.opts[q.answer])}</b> ${esc(q.eg)}</div>
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-act="closeOv">Done</button><button class="btn ghost" data-act="goto" data-arg="#/words/${encodeURIComponent(q.term)}">Every Money Word</button></div>` : ''}`);
+  }
   if (o.kind === 'drawer') return shell.drawer(c);
   if (o.kind === 'settings') return box(shell.settingsSheet(c, o.focus), 'sheet');
   if (o.kind === 'walletSheet') return box(shell.walletSheet(c), true);
@@ -750,7 +773,11 @@ on('itSel', (i) => { const t = R.item || (R.item = {}); t.sel = +i; render(); })
 on('itBin', (b) => { const t = R.item || (R.item = {}); if (t.sel == null) return; (t.bins || (t.bins = {}))[t.sel] = +b; t.sel = null; sfx.click(); render(); });
 on('itStep', (i) => { const t = R.item || (R.item = {}); const seq = t.seq || (t.seq = []); if (!seq.includes(+i)) seq.push(+i); sfx.click(); render(); });
 on('itUndo', () => { const t = R.item || {}; if (t.seq) t.seq.pop(); render(); });
+/* E6 · show me how: open the worked method (other numbers) before the first try */
+on('itHow', () => { const t = R.item || {}; if (t.tries || t.settled) return; t.how = true; sfx.click(); render();
+  const el = t.id && document.getElementById('yh-' + t.id); if (el) el.focus({ preventScroll: true }); });
 on('itCheck', (id) => {
+  id = id || (R.item || {}).id;      /* Enter in the amount box fires it without an arg */
   const it = items.ITEMS[id], t = R.item || (R.item = {}); if (!it || t.settled) return;
   const attempt = it.kind === 'amount' ? (document.getElementById('itAmt') || {}).value
     : it.kind === 'order' ? (t.seq || []) : it.things.map((_, i) => (t.bins || {})[i]);
@@ -892,7 +919,7 @@ on('say', (key) => {
     const k = key.slice(2), cut = k.lastIndexOf('#'), id = k.slice(0, cut), qi = k.slice(cut + 1), card = cardById(id);   /* EARN-1#0#0: the last # is the question */
     if (card && !card.pending) { const d = shuffledDrill(card, +qi || 0); text = d.num ? `${d.q} Type the amount.` : `${d.q} ${d.opts.map((o, i) => `${'ABCD'[i]}: ${o}.`).join(' ')}`; }
   }
-  if (key === 'word') { const w = daily.wordOfDay(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
+  if (key === 'word') { const w = daily.wordOfHour(); text = `${w.term}. ${w.meaning} ${w.eg}`; }
   else if (key === 'ask') text = daily.askOfWeek();
   else if (key.startsWith('card:')) { const k = ALL_CARDS.find((x) => x.id === key.slice(5)); if (k) text = `${k.title}. ${String(k.teach).replace(/<[^>]+>/g, '')} For instance: ${k.eg}`; }
   else if (key.startsWith('gloss:')) { const g = GLOSSARY.find((x) => x[0] === key.slice(6)); if (g) text = `${g[0]}. ${g[1]} ${g[2]}`; }
@@ -1004,6 +1031,11 @@ on('practise', (fromId) => {
   R.s.ui.nav = 'learn'; c.learn.openCard = k.id; c.learn.drill = null;
   sfx.click(); render(); window.scrollTo(0, 0);
 });
+/* the miss is recorded first (it is evidence), then one more on the same idea, asked fresh */
+on('moreLike', (id) => {
+  const k = practiceTeach(cardById(id)); if (!k) return;
+  fire('cardDone', id); R.overlay = null; fire('practise', k.id);
+});
 on('practiceDone', () => {
   const c = C(), right = !!(c.learn.drill && c.learn.drill.right);
   if (right) sim.addXP(c, sim.cardXP(false, true));
@@ -1014,6 +1046,9 @@ on('practiceDone', () => {
    it succeeds; what is kept is c.learn.cold[id], so a report can say "answered cold". */
 on('coldStart', (id) => { const c = C(); if (c.learn.done[id]) return; R.cold = id; c.learn.drill = null; sfx.click(); render(); window.scrollTo(0, 0); });
 on('coldStop', () => { R.cold = null; render(); });
+/* the word of the hour, checked in ten seconds: one go, the meaning shown either way, nothing paid */
+on('wordCheck', (term) => { const q = daily.wordCheck(term); if (!q) return; R.overlay = { kind: 'wordCheck', q, pick: null }; render(); });
+on('wcPick', (i) => { const o = R.overlay; if (!o || o.kind !== 'wordCheck' || o.pick != null) return; o.pick = +i; if (o.pick === o.q.answer) sfx.good(); else sfx.bad(); render(); });
 on('nextQ', () => {
   const c = C(), st = c.learn.drill;
   if (!st || !st.picks || !drill.settled(st.picks[st.qi])) return;   /* a held question waits for its second go */
@@ -1216,8 +1251,11 @@ on('job', (id) => {
   if (!row || row.done) { toast('Done that one today'); return; }
   if (hasJobGame(id)) {
     sfx.click();
+    /* a shift returns to wherever it was opened — the Town, the Wallet — not to Play (audit v4) */
+    const from = { nav: R.s.ui.nav, sub: R.s.ui.sub };
+    R.jobFrom = from;
     import('./jobgames.js').then(({ startJobGame }) => {
-      const g = startJobGame(id, () => { quitGame(); render(); });
+      const g = startJobGame(id, () => { quitGame(); R.s.ui.nav = from.nav; R.s.ui.sub = from.sub; R.jobFrom = null; render(); window.scrollTo(0, 0); });
       if (!g) return;
       if (R.game && R.game.stop) R.game.stop();
       R.game = g; R.s.ui.nav = 'arcade';
@@ -1556,7 +1594,9 @@ on('gback', () => { R.gameIntro = null; render(); });
 /* Leaving a game is when a child is most willing to read one card — so the
    lesson is offered here rather than filed in a tab they have to remember. */
 on('gquit', () => {
+  const wasJob = R.game && /^job:/.test(R.game.id || '') && R.jobFrom;
   quitGame();
+  if (wasJob) { R.s.ui.nav = wasJob.nav; R.s.ui.sub = wasJob.sub; R.jobFrom = null; render(); window.scrollTo(0, 0); return; }
   const c = C();
   const next = ALL_CARDS.find((x) => !c.learn.done[x.id]
     && C().learn.level >= CHAPTERS.find((ch) => ch.id === x.ch).lv);
@@ -1706,8 +1746,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !wind
       if (reg.waiting && navigator.serviceWorker.controller) { R.update = reg.waiting; render(); }
       reg.addEventListener('updatefound', () => watch(reg.installing));
     }).catch(() => {});
+    /* reload only when a NEWER build replaces one already running: on a first visit the
+       worker taking control fires this too, and the page used to reload itself under a
+       child a moment after opening (audit v4's "execution context destroyed") */
     let swapped = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (swapped) return; swapped = true; location.reload(); });
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (swapped || !hadController) return; swapped = true; location.reload(); });
   });
 }
 on('update', () => { if (R.update) { R.update.postMessage({ type: 'SKIP_WAITING' }); R.update = null; toast('Swapping to the new build…'); render(); } });

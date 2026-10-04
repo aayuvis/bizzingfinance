@@ -1091,3 +1091,6 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
 :root[data-motion="reduced"] .srhit,:root[data-motion="reduced"] .srbusy,:root[data-motion="reduced"] .srmsg,:root[data-motion="reduced"] .hud .box.arctick,
 :root[data-motion="reduced"] .stpanic,:root[data-motion="reduced"] .stshout,:root[data-motion="reduced"] .stplan,:root[data-motion="reduced"] .tempt,
 :root[data-motion="reduced"][data-arc] .gplay .stage{animation:none !important}
+
+/* the road's posters: a scrim under the words, so a title on a pale sky still reads (audit v4, P4) */
+.travel .poster .pv{background:linear-gradient(180deg,rgb(10 22 26 / .42) 0%,rgb(10 22 26 / .55) 40%,rgb(10 22 26 / .88) 100%)}

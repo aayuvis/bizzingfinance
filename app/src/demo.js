@@ -26,8 +26,10 @@ export function demoState(now = Date.now()) {
   c.created = start;
   s.kids.push(c);
 
-  /* three weeks of lessons: the first ten stops, most right first time */
-  const read = ALL_CARDS.slice(0, 10);
+  /* three weeks of lessons: the first three chapters (twelve stops), most right first time,
+     so the Jar Shed is open before any money goes into a jar (audit v4: the sample's jars
+     were locked yet held money) */
+  const read = ALL_CARDS.slice(0, 12);
   const coins = [];
   read.forEach((card, i) => {
     const t = start + (i * 2 + 1) * DAY;
@@ -45,11 +47,14 @@ export function demoState(now = Date.now()) {
     .forEach((o) => mastery.retrieve(c, o.id, true, now - 3 * DAY));
 
   /* money: jobs, a pay-day split she changed herself, a goal under way */
-  for (let w = 0; w < 6; w++) sim.earn(c, price(6), 'Stack crates', 'job');
+  /* a shift on six different days — "one of each a day" holds in the sample's own statement */
+  for (let w = 0; w < 6; w++) { sim.earn(c, price(6), 'Stack crates', 'job'); c.money.txns[0].t = start + (w * 3 + 2) * DAY; }
   c.money.rules = { spend: 30, save: 40, grow: 20, give: 10 };
   decisions.log(c, { t: now - 2 * DAY, surface: 'rules', chose: 'Spend 30 · Save 40 · Grow 20 · Give 10', label: 'Changed the pay-day split',
     alternatives: ['Leave it at Nana\'s 40/30/20/10'] });
   sim.toJar(c, 'save', price(14)); sim.toJar(c, 'grow', price(6)); sim.toJar(c, 'give', price(3));
+  c.money.txns.slice(0, 3).forEach((x) => { x.t = now - 2 * DAY; });
+  c.money.txns.sort((a, b) => b.t - a.t);
   sim.addGoal(c, 'A cricket bat', price(90));
   sim.fundGoal(c, c.money.goals[c.money.goals.length - 1].id, price(8));
   sim.badge(c, 'cool-head'); sim.badge(c, 'scam-spotter');

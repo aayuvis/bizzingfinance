@@ -42,8 +42,10 @@ export function fx() {
       for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 0.25, vy: -0.28 - Math.random() * 0.18, t: 0, life: 900, c: '#F0B429', s: 6, g: 0.0009, coin: true });
     },
     /* a word or number that rises and fades: "+12", "Perfect!", "×3" */
-    pop(x, y, text, { color = '#1C2A2E', size = 18, life = 800 } = {}) {
-      pops.push({ x, y, text: String(text), color, size, t: 0, life: still() ? life * 0.6 : life });
+    pop(x, y, text, { color = '#1C2A2E', size = 18, life = 800, key = null } = {}) {
+      /* a keyed pop replaces the last one with its key: one year's growth, not two stacked */
+      if (key) for (let i = pops.length - 1; i >= 0; i--) if (pops[i].key === key) pops.splice(i, 1);
+      pops.push({ key, x, y, text: String(text), color, size, t: 0, life: still() ? life * 0.6 : life });
     },
     shake(amount = 6, ms = 260) { if (!still()) { shakeA = amount; shakeT = ms; } },
     flash(color = '#fff', ms = 160) { if (!still()) { flashC = color; flashT = ms; } },

@@ -324,7 +324,6 @@ export const SHORT = {
   4: { floor: 69, close: 'about three more lessons in "Sellers and their tricks", narrated, with three questions each' },
   5: { floor: 66, close: 'about four more lessons in "Keeping it safe", narrated, with three questions each' },
   6: { floor: 74, close: 'about three more lessons in "Borrowing", narrated, with three questions each' },
-  8: { floor: 96, close: 'narration for c8e–c8h, which has none yet (about twenty cards)' },
 };
 
 /* ── write ───────────────────────────────────────────────────────────── */

@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+import { serve, BASE } from './serve.mjs';
+const srv = await serve(new URL('../build', import.meta.url).pathname);
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true })).newPage();
+await p.goto(`http://localhost:${srv.address().port}${BASE}?demo`); await p.waitForSelector('[data-bz=next]'); await p.waitForTimeout(1200);
+await p.evaluate(() => { window.BZF.fire('closeOv'); location.hash = '#/atlas'; }); await p.waitForTimeout(600);
+console.log(await p.evaluate(() => { const s = document.querySelector('.stop.cur'); const m = s.querySelector('.med'), t = s.querySelector('.sttitle'); const cs = getComputedStyle(s);
+  const r = (e) => { const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width)]; };
+  return { stop: r(s), pad: cs.paddingLeft, med: r(m), medPos: getComputedStyle(m).position, medLeft: getComputedStyle(m).left, title: r(t), medClass: m.className, parent: s.parentElement.className }; }));
+await b.close(); srv.close();

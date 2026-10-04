@@ -44,6 +44,39 @@ for (const id of ids) {
 }
 ok(!bad.length, 'every item has exactly one right result, no pre-solved order, no answer in its question or hint', bad.slice(0, 3).join(' | '));
 
+/* E4 · coverage: every stop on the Atlas has something to DO, not only to pick */
+const missing = ALL_CARDS.filter((c) => !ITEMS[c.id]).map((c) => c.id);
+ok(ALL_CARDS.length === 40 && !missing.length, 'all 40 lesson stops have a Your-turn item', missing.length ? 'missing: ' + missing.join(',') : `${ALL_CARDS.length} stops`);
+
+/* every item has the fields its shape needs, in the house voice */
+const shape = [];
+for (const id of ids) {
+  const it = ITEMS[id];
+  if (!it.title || !it.hint) shape.push(id + ': title/hint');
+  if (it.kind === 'sort' && it.things.length < 4) shape.push(id + ': fewer than 4 things');
+  if (it.kind === 'order' && it.steps.length < 4) shape.push(id + ': fewer than 4 steps');
+  if (it.kind === 'amount' && (!it.q || typeof it.calc !== 'function')) shape.push(id + ': q/calc');
+  const words = [it.title, it.hint, it.q || '', ...(it.things || []).map((t) => t[0]), ...(it.steps || []), ...(it.how || [])];
+  if (words.some((w) => /%|\$|₹|£|€/.test(w))) shape.push(id + ': a percent or a real currency');
+  if (it.kind === 'sort' && new Set(it.things.map((t) => t[0])).size !== it.things.length) shape.push(id + ': a thing twice');
+}
+ok(!shape.length, 'every sort and order has at least 4 things or steps; every item has a title and a hint; no real currency or percent', shape.slice(0, 3).join(' | '));
+
+/* E6 · show me how: every amount explains the method with other numbers and never prints
+   this item's answer. Whole-number match, so 8 is caught but 18 is not mistaken for it. */
+const shows = (txt, n) => new RegExp(`(^|[^\\d,.])${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',?')}(?![\\d,]?\\d)`).test(txt);
+const leak = [];
+for (const id of ids.filter((k) => ITEMS[k].kind === 'amount')) {
+  const it = ITEMS[id], a = answerOf(id);
+  if (!Array.isArray(it.how) || it.how.length < 2) { leak.push(id + ': no show-me-how'); continue; }
+  for (const [where, txt] of [['how', it.how.join(' ')], ['hint', it.hint], ['question', it.q], ['title', it.title]]) if (shows(txt, a)) leak.push(`${id}: its ${where} prints ${a}`);
+}
+ok(!leak.length, 'every amount has a show-me-how, and no question, hint, title or method prints its answer', leak.slice(0, 3).join(' | '));
+ok(shows('Divide 72 by 9 to get 8.', 8) && !shows('About 18 years', 8) && shows('pay 1,320 in total', 1320), 'the leak check itself catches a printed answer and ignores a longer number');
+/* the sort/order answers never sit in the hint either: no hint quotes a thing or a step whole */
+const quoted = ids.filter((id) => { const it = ITEMS[id]; return (it.things ? it.things.map((t) => t[0]) : it.steps || []).some((x) => it.hint.toLowerCase().includes(x.toLowerCase())); });
+ok(!quoted.length, 'no sort or order hint quotes one of its own things or steps', quoted.join(','));
+
 /* the deck */
 const c = { mistakes: [] }, t0 = Date.UTC(2026, 9, 1), D = 864e5;
 M.record(c, 'c1b', 0, t0);

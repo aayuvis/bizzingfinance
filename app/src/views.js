@@ -2,7 +2,7 @@
    Nothing here computes money; sim.js owns that and these render it. */
 
 import { esc, sparkline, clamp, nWord } from './ui.js';
-import { cardById as resolveCard, practiceFor, practiceExact } from './cards.js';
+import { cardById as resolveCard, practiceFor, practiceExact, practiceTeach } from './cards.js';
 import { PLAN, priceFor as planPrice, contents as planContents } from './plan.js';
 import { money, moneyExact, price, sign, CURRENCIES, shortDate, weekday } from './fmt.js';
 import { say, face, ico, CAST, mark } from './art.js';
@@ -305,14 +305,14 @@ const CAST_LINES = [
 ];
 export function viewHome() {
   const c = K();
-  const n = nextStep(c), pr = progress(c), rank = rankObj(c.learn.level);
+  const n = nextStep(c), pr = progress(c), rank = rankObj(c.learn.level), xb = sim.xpBar(c);
   /* the ring counts what was MET, not what was claimed elsewhere: a met quest is
      done on Home and can be taken from Home (it once sat at 0/1 until the Town tab) */
   const quests = sim.questList(c), qd = quests.filter((q) => q.done).length;
   const h = new Date().getHours();
   const hello = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
   const line = String(hometalk(c)).replace(/<[^>]+>/g, '');
-  const w = daily.wordOfDay(), tip = daily.tipOfDay(c);
+  const w = daily.wordOfHour(), tip = daily.tipOfDay(c);
   const R0 = 44, C0 = 2 * Math.PI * R0, frac = quests.length ? qd / quests.length : 0;
   const ring = `<div class="fring"><svg width="110" height="110" viewBox="0 0 110 110" role="img" aria-label="Today's three: ${qd} of ${quests.length} done">
       <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-line)" stroke-width="14"/>
@@ -324,20 +324,30 @@ export function viewHome() {
   const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
   const body = bzHome({
     greet: { mascot: './mascot/pip-wave.webp', hello, name: c.name, line },
-    ring: { html: ring, foot: { kicker: 'Your level', title: `${rank.name} · level ${c.learn.level}`, href: '#/me/rank' } },
-    hour: { kicker: 'Money word of the hour', title: w.term, sub: w.meaning, href: '#/words/' + encodeURIComponent(w.term), icon: 'book' },
+    /* how far to the next level, not only its name (audit v4, B3) */
+    ring: { html: ring, foot: { kicker: `Your level · ${xb.need} XP to level ${c.learn.level + 1}`, title: `${rank.name} · level ${c.learn.level}`, href: '#/me/rank' } },
+    /* a tap is a 10-second check on the word, not a trip to the glossary (audit v4, B8) */
+    hour: { kicker: 'Money word of the hour · tap for a 10-second check', title: w.term, sub: w.meaning, href: '#/wordcheck/' + encodeURIComponent(w.term), icon: 'book' },
     next: { plate: plateFor(world.id, R.dark), chip: `Stop ${Math.min(pr.done + 1, pr.total)} of ${pr.total}`, kicker: n.kind === 'revise' ? 'Keep it yours' : 'Next on your journey',
       title: n.title, sub: n.sub, href: '#/continue', cta: n.button || 'Continue', progress: { pct: Math.round(pr.worldDone / Math.max(1, pr.worldTotal) * 100), label: `${pr.world.name} · ${pr.worldDone} of ${pr.worldTotal} stops` } },
-    /* two cards, two pictures: when the journey and the street are the same place,
-       the street card shows it at the other end of the day */
-    second: { plate: plateFor(here.id, here.id === world.id ? !R.dark : R.dark), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
+    /* two cards, two pictures, and never the day painting at night (audit v4, B6): the
+       street card wears the child's chosen world; if that is the journey's picture too, it
+       shows their own stall, drawn ('#sprite' lets family.css lay a sprite out, not crop it) */
+    second: { plate: (() => { const p1 = plateFor(world.id, R.dark), p2 = plateFor((c.fam && c.fam.look) || here.id, R.dark);
+        return p2 !== p1 ? p2 : (BLD.stall ? BLD.stall.src + '#sprite' : p2); })(), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
       progress: { pct: Math.round(frac * 100) } },
     /* every tile goes to its own thing (owner, 3 Oct): the word, the card, the person quoted */
     tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas/' + tip.card.id } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/atlas/c3b' },
     quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/cast/' + ({ 'Nana Bizz': 'nana', Pip: 'pip', Mags: 'mags', Bea: 'bea', Bo: 'bo' }[cast[0]] || 'pip') },
     foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
   });
-  return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}`;
+  /* a first visit says the three things to do today (audit v4, B9); ghost links only, so
+     Continue stays the one filled button */
+  const first = !Object.keys(c.learn.done || {}).length;
+  const day1 = first ? `<section class="card firstday" aria-label="Your first day"><span class="eyebrow">Your first day in Bizzington</span>
+    <ol><li><a href="#/continue">Walk your first stop — “${esc(ALL_CARDS[0].title)}”</a></li><li><a href="#/town">Take a shift on Market Row</a></li><li><a href="#/town">Open the postbox — one letter a day</a></li></ol></section>` : '';
+  /* below Bee's three rows, so Home keeps the family's measured layout and Continue its place */
+  return `<h1 class="sr">Home — ${esc(c.name)}</h1>${body}${day1}`;
 }
 
 /* What used to fill Home — the street's day — lives on the Town tab now. */
@@ -807,6 +817,8 @@ function viewCard(card) {
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
       ${done && last && R.practice && R.practice.id === card.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one →</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>`
         : done && last && R.cold === card.id && st.right ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Skip ahead — it’s yours →</button>`
+        : done && last && card.assess && !st.right && practiceTeach(card) ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>
+          <button class="btn ghost wide" data-act="moreLike" data-arg="${card.id}">${ico('repeat', '', 16)} One more like it, asked fresh</button>`
         : done && last ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>
           ${!card.assess && practiceFor(card) ? `<button class="btn ghost wide" data-act="practise" data-arg="${card.id}">${ico('repeat', '', 16)} One more on this, asked fresh</button>` : ''}` : ''}
     </div>`; })()}
@@ -835,8 +847,14 @@ function itemBlock(card) {
       <div class="ytray">${shown.filter((x) => !seq.includes(x.i)).map((x) => `<button class="ychip" data-act="itStep" data-arg="${x.i}" ${done ? 'disabled' : ''}>${esc(x.t)}</button>`).join('')}</div>
       ${seq.length && !done ? '<button class="btn ghost sm" data-act="itUndo">Take the last one back</button>' : ''}`;
   } else {
+    /* E6 · show me how: a worked method with other numbers, offered before the first try */
+    const how = it.how && !done && (t.how || !t.tries) ? (t.how
+      ? `<div class="yhow" id="yh-${card.id}" tabindex="-1" role="region" aria-label="How to work it out"><div class="eyebrow">The method, with other numbers</div>
+          <ol>${it.how.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div>`
+      : `<div class="yhow-row"><button class="btn ghost sm yhow-btn" data-act="itHow" aria-expanded="false" aria-controls="yh-${card.id}">Show me how</button></div>`) : '';
     body = `<p style="font-weight:650">${esc(it.q)}</p>
-      <label class="yamt"><span class="sr">Your answer</span><input id="itAmt" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(t.last != null && !done ? t.last : done ? ans : '')}" ${done ? 'disabled' : ''} aria-label="Your answer"></label>`;
+      ${how}
+      <label class="yamt"><span class="sr">Your answer</span><input id="itAmt" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" data-enter="itCheck" value="${esc(t.last != null && !done ? t.last : done ? ans : '')}" ${done ? 'disabled' : ''} aria-label="Your answer"></label>`;
   }
   const ready = it.kind === 'sort' ? it.things.every((_, i) => (t.bins || {})[i] != null) : it.kind === 'order' ? (t.seq || []).length === it.steps.length : true;
   return `<section class="card yourturn" aria-labelledby="yt-${card.id}">
@@ -876,7 +894,7 @@ function viewGlossary() {
       <input data-field="query" data-live="1" value="${esc(R.query || '')}" placeholder="Search ${GLOSSARY.length} terms"
         style="margin-top:8px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);font-weight:650;width:100%">
     </div>
-    ${rows.length === 0 ? '<div class="card"><p class="muted">Nothing by that name yet.</p></div>' : ''}
+    ${rows.length === 0 ? `<div class="card empty">${pipPose('sleep', 72)}<p class="muted">Nothing by that name yet. Try a shorter word.</p></div>` : ''}
     <div class="card pad0">
       ${rows.map((g, i) => `<div style="padding:13px 16px;${i ? 'border-top:1px solid var(--line-soft)' : ''}">
         <div class="row"><b style="font-size:15px;flex:1">${esc(g[0])}</b>${canSay() ? `<button class="btn ghost sm" data-act="say" data-arg="gloss:${esc(g[0])}" aria-label="Read it to me">${ico('sound', '🔊', 14)}</button>` : ''}</div>
@@ -2097,7 +2115,7 @@ function landing() {
     </div>
     <button class="btn wide" style="font-size:16px;min-height:52px" data-act="obStart">Start free →</button>
     <a class="btn ghost wide" href="?demo" style="text-decoration:none">Peek inside a sample town first</a>
-    <div class="moneyline stats" style="justify-content:space-between">
+    <div class="moneyline stats obstats">
       ${counts.map(([n, l]) => `<div><div class="v" style="font-size:24px">${n}</div><div class="k">${l}</div></div>`).join('')}
     </div>
     <div class="card pad0"><div class="rows" style="margin:0">

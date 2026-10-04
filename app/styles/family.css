@@ -253,7 +253,7 @@ html[data-bz-dark] .lstage{background:linear-gradient(rgb(8 12 30 / .1),rgb(8 12
 @media (prefers-reduced-motion:reduce){ .coinjar .dropcoin{animation:none;transform:translateY(46px)} }
 html[data-motion="reduced"] .coinjar .dropcoin{animation:none;transform:translateY(46px)}
 /* the Atlas: the child's own face stands on the current stop, and it keeps its number (N12, J6) */
-.med.cur,.wdot{position:relative}
+.wdot,:not(.stop) > .med.cur{position:relative}   /* inside a stop the medallion is already absolute (and so a context for .medn): overriding it put the face over the title (audit v4) */
 .medn{position:absolute;right:-6px;bottom:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--plum);color:#fff;font:700 11px/18px var(--mono);font-style:normal;text-align:center}
 /* G6 · juice inside a round: number pops and a combo that lives only in this round */
 .gplay .stage{position:relative}
@@ -302,3 +302,6 @@ html:not([data-bz-dark]) .bz-kicker{color:var(--treasure-deep)}
 .bz-hiveback{background:var(--bz-accent-soft,#FFF1D6);color:var(--bz-ink);border:1.5px solid var(--bz-line)}
 .bz-tester{background:#C2410C;color:#fff;border:0;letter-spacing:.06em;cursor:pointer}
 @media (max-width:720px){.bz-hiveback span{display:none}.bz-hiveback{width:30px;padding:0;justify-content:center}.bz-tester{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:60;height:16px;padding:0 9px;border-radius:0 0 8px 8px;font-size:9px}}
+/* Home's street card when it shows the child's stall rather than a painting (views.js '#sprite') */
+.bz-second .bz-plate[style*="sprite"]{background-size:auto 88%;background-repeat:no-repeat;background-position:center bottom;
+  background-color:color-mix(in srgb,var(--bz-accent) 14%,var(--bz-card))}

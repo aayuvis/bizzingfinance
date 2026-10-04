@@ -80,5 +80,17 @@ console.log('\nSetup, demo, the grown-ups\' card, the session\n' + '─'.repeat(
   ok(/kind: 'chapter'/.test(m) && /kind: 'goalBuilt'/.test(m), 'finishing a chapter and building a goal each have their own moment');
 }
 
+
+/* the sample obeys the town's own rules (audit v4): no money in a jar the child cannot open
+   yet, and one shift of a kind a day in its own statement */
+{
+  const { demoState } = await import('../src/demo.js');
+  const { isOpen } = await import('../src/content.js');
+  const dc = demoState().kids[0];
+  const inJars = Object.values(dc.money.jars).some((v) => v > 0);
+  ok(!inJars || isOpen(dc, 'jars'), 'the sample keeps money in jars only once the Jar Shed is open');
+  const per = {}; dc.money.txns.filter((t) => t.cat === 'job' || t.label === 'Stack crates').forEach((t) => { const k = t.label + new Date(t.t).toDateString(); per[k] = (per[k] || 0) + 1; });
+  ok(Math.max(0, ...Object.values(per)) <= 1, 'the sample works each shift at most once a day', JSON.stringify(per).slice(0, 80));
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

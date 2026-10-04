@@ -41,3 +41,11 @@ export function practiceCard(card, n, c) {
   const o = practiceFor(card); if (!o) return null;
   return genCard(o, 5000 + n * 37 + card.id.length, { ceil: c ? mathsCeiling(c) : 6 });
 }
+
+/* A missed question asked again later: the stop that teaches its idea, if that stop can be
+   practised (audit v4, E7 — a weak idea gets an extra fresh item at once). */
+export function practiceTeach(card) {
+  const o = card && card.objective && OBJECTIVES.find((x) => x.id === card.objective);
+  const k = o && ALL_CARDS.find((x) => x.id === o.teach);
+  return k && practiceFor(k) ? k : null;
+}

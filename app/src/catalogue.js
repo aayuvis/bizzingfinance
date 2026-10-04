@@ -15,7 +15,8 @@
      keeps in its 96 (the koi stays with Maths; the rest are Bee's own packs);
    · the other 77 were drawn for Finance, two packs per world of the town
      (tools/art/family.py), in the family sticker style, and looked at before shipping. */
-import { validate, stateOf, worldOf, TIERS, WORLD_PRICE } from './family/bizzing-avatars.js';
+import { validate, stateOf as familyStateOf, worldOf, TIERS, WORLD_PRICE } from './family/bizzing-avatars.js';
+import { coinBalance } from './family.js';
 import { CHAPTERS, ALL_CARDS } from './content.js';
 import * as mastery from './mastery.js';
 
@@ -79,7 +80,16 @@ export const CATALOGUE = Object.entries(RAW).flatMap(([pack, rows]) => rows.map(
 export const BY_ID = Object.fromEntries(CATALOGUE.map((a) => [a.id, a]));
 export const COMMONS = CATALOGUE.filter((a) => a.tier === 'common');
 export const PACK_OF = (n) => PACKS.find((p) => p.n === n);
-export { validate, stateOf, worldOf, TIERS, WORLD_PRICE };
+/* The family's stateOf, counting the coins this household actually shows: the drop-in
+   reads the stored wallet, and the sample household's coins live in memory only, so the
+   sample once said "120 more to go" while showing 58 (audit v4). Same rules otherwise. */
+export function stateOf(av, ctx) {
+  const s = familyStateOf(av, ctx);
+  if (s.state !== 'buy' || !ctx || !ctx.who) return s;
+  const p = TIERS[av.tier].price, short = Math.max(0, p - coinBalance(ctx.who));
+  return { ...s, short, say: short ? `${p} coins · ${short} more to go` : `${p} coins` };
+}
+export { validate, worldOf, TIERS, WORLD_PRICE };
 
 /* A child's catalogue context for stateOf(): what they own, which worlds they have
    opened, the plan (a PREVIEW that only tester mode honours: an entitlement comes from the

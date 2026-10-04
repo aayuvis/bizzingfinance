@@ -6,7 +6,7 @@
 
    Matching is plain: whole words and word-starts in the title count most, then the
    words of the body. No fuzzy guessing that turns "loan" into "lion". */
-import { ALL_CARDS, CHAPTERS, GLOSSARY, WORLDS, LETTERS } from './content.js';
+import { ALL_CARDS, CHAPTERS, GLOSSARY, WORLDS, LETTERS, SHOP } from './content.js';
 import { NEW_CARD_LIST } from './objectives.js';
 import { PLACES } from './town.js';
 import { GAMES } from './arcade.js';
@@ -28,6 +28,8 @@ export function index() {
   /* a result opens ITS thing — the world on the town page, the letter itself — not the page it lives on */
   WORLDS.forEach((w, i) => out.push({ kind: 'Place', title: w.name, sub: `World ${i + 1} of the journey`, body: plain(w.blurb || w.line || ''), act: 'goto', arg: '#/town/' + w.id, icon: 'town' }));
   LETTERS.forEach((l) => out.push({ kind: 'Story', title: l.title, sub: 'A letter in the postbox', body: plain(l.body), act: 'goto', arg: '#/letter/' + l.id, icon: 'envelope' }));
+  /* Mags' store: each thing opens at its own shelf (audit v4, C4) */
+  SHOP.forEach((it) => out.push({ kind: 'Store', title: it.name, sub: "In Mags' General Store", body: plain(it.desc) + ' ' + plain(it.gives || ''), act: 'goto', arg: '#/store/' + it.id, icon: 'bag' }));
   return (INDEX = out);
 }
 
@@ -38,8 +40,10 @@ export function search(q, limit = 12) {
     const t = r.title.toLowerCase(), b = (r.sub + ' ' + r.body).toLowerCase();
     let s = 0;
     for (const w of terms) {
-      const re = new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
-      if (t === w) s += 12; else if (re.test(t)) s += 6; else if (re.test(b)) s += 2; else return 0;
+      const e = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      /* a whole word beats the start of one: "bank" finds the Bank before "banknote" (audit v4) */
+      const whole = new RegExp(`(^|[^a-z])${e}($|[^a-z])`), start = new RegExp(`(^|[^a-z])${e}`);
+      if (t === w) s += 12; else if (whole.test(t)) s += 8; else if (start.test(t)) s += 5; else if (whole.test(b)) s += 3; else if (start.test(b)) s += 1; else return 0;
     }
     return s + (r.kind === 'Lesson' ? 1 : 0);
   };

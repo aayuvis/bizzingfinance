@@ -132,7 +132,8 @@ export function startGame(id, seed) {
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; }
 
 export function hud(bits) {
-  return `<div class="hud">${bits.map((b) => `<span class="box">${b}</span>`).join('')}
+  /* an empty bit is no chip at all (audit v4: an empty chip after '120cm wide') */
+  return `<div class="hud">${bits.filter((b) => b != null && String(b).replace(/<[^>]*>/g, '').trim()).map((b) => `<span class="box">${b}</span>`).join('')}
     <span class="grow"></span><button class="btn ghost sm" data-act="gquit">Leave</button></div>`;
 }
 export function payout(n, label) {
@@ -696,9 +697,9 @@ function compoundClimb() {
       }
       look.disp = st.money;
       fxl.shake(10, 380); fxl.flash('#E0483A', 220);
-      fxl.pop(TX, Math.max(76, y1 - 58), pct, { color: '#B23A2E', size: 24, life: 1100 });
+      fxl.pop(TX, Math.max(76, y1 - 58), pct, { color: '#B23A2E', size: 24, life: 1100, key: 'year' });
     } else {
-      fxl.pop(TX, Math.max(76, yOf(st.money) - 58), pct, { color: '#127A43', size: 24, life: 1100 });
+      fxl.pop(TX, Math.max(76, yOf(st.money) - 58), pct, { color: '#127A43', size: 24, life: 1100, key: 'year' });
       fxl.burst(TX, yOf(st.money), { n: 10 + Math.round(actual * 90), speed: 0.2, colors: ['#FFF3C4', '#F0B429', '#FFFFFF'] });
     }
     if (st.money < 20) { st.ruined = true; sfx.bad(); endWith(1300); R.render(); return; }
@@ -1488,7 +1489,7 @@ function stormChart(line, live, t) {
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" style="display:block;width:100%;height:${h}px">
     <defs><linearGradient id="stFall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E0483A" stop-opacity=".45"/><stop offset="1" stop-color="#E0483A" stop-opacity="0"/></linearGradient></defs>
     <line x1="0" x2="${w}" y1="${Y(1000).toFixed(1)}" y2="${Y(1000).toFixed(1)}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="5 5" stroke-width="1.4"/>
-    <text x="6" y="${(Y(1000) - 5).toFixed(1)}" font-size="10" font-weight="700" fill="currentColor" fill-opacity=".7" font-family="Hanken Grotesk, system-ui, sans-serif">you paid 1000</text>
+    <text x="6" y="${(Y(1000) < 14 ? Y(1000) + 13 : Y(1000) - 5).toFixed(1)}" font-size="10" font-weight="700" fill="currentColor" fill-opacity=".7" font-family="Hanken Grotesk, system-ui, sans-serif">you paid 1000</text>
     <path d="M${X(0).toFixed(1)},${h} L${pts.join(' L')} L${hx.toFixed(1)},${h} Z" fill="url(#stFall)"/>
     <polyline points="${pts.join(' ')}" fill="none" stroke="#E0483A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(6 + pulse * 7).toFixed(1)}" fill="#E0483A" fill-opacity="${(0.35 - pulse * 0.3).toFixed(2)}"/>

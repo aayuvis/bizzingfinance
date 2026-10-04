@@ -651,7 +651,8 @@ async function demo() {
   ok('a lesson stop offers practice asked fresh: a new question each time, recorded nowhere but XP', prac.btn && prac.practice && prac.right && prac.fresh && prac.untouched && prac.done, JSON.stringify(prac));
   /* per-stop skipping (owner, 3 Oct 2026): answer cold — three right and it is walked, a miss opens the lesson */
   const coldRun = await page.evaluate(async () => {
-    const B = window.BZF, { R } = B, c = R.s.kids[0], id = 'c3c', next = 'c3d';
+    const B = window.BZF, { R } = B, c = R.s.kids[0], all = B.allCards, at = all.findIndex((k) => !c.learn.done[k.id]), id = all[at].id, next = all[at + 1].id;
+    R.s.settings.tester = true; B.setTester(true);   /* every chapter open, so the road has a next stop */
     B.fire('closeOv'); B.fire('nav', 'learn'); B.fire('card', id); await new Promise((r) => setTimeout(r, 50));
     const offer = !!document.querySelector('[data-act="coldStart"]');
     B.fire('coldStart', id);
@@ -665,7 +666,7 @@ async function demo() {
     const k = B.key(next, 0); B.fire('answer', (k + 1) % 4);
     const opened = !R.cold && !!document.querySelector('main .reading') && !!document.querySelector('.fb.hold');
     const report = window.BZF.reportcard.card(c).progress.cold;
-    B.fire('closeCard');
+    B.fire('closeCard'); R.s.settings.tester = false; B.setTester(false);
     return { offer, hidden, label: /Skip ahead/.test(label), walked, onNext, opened, report, atSkip, ovSkip };
   });
   ok('a stop answered cold: lesson hidden, three right walks it and opens the next stop; a miss opens the lesson', coldRun.offer && coldRun.hidden && coldRun.label && coldRun.walked && coldRun.onNext && coldRun.opened && coldRun.report === 1, JSON.stringify(coldRun));
@@ -768,6 +769,17 @@ async function demo() {
   const darkFails = await checkShell(dp, { phone: false });
   ok('desktop-dark: checkShell — the chrome and Home match Bee\'s', darkFails.length === 0, JSON.stringify(darkFails));
   await dctx.close();
+  /* a first visit never reloads itself when the service worker takes over (it used to, a
+     moment after opening — under a child mid-tap) */
+  {
+    const fctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const fp = await fctx.newPage(); let navs = 0;
+    fp.on('load', () => { navs++; });   /* full page loads, not hash changes */
+    await fp.goto(URL0 + '?demo'); await fp.waitForSelector('[data-bz=next]');
+    await fp.waitForTimeout(4000);
+    ok('a first visit does not reload itself when the offline worker takes over', navs === 1, navs + ' page loads');
+    await fctx.close();
+  }
   /* G6 · the clock is the wall's, not the frame rate's (audit v4: at 4 fps a 60 s round took >90 s).
      Animation frames are throttled to 4 a second; 8 real seconds after GO, Change Rush must
      have spent about 8 seconds of its round. */

@@ -53,6 +53,19 @@ const today = () => dayIndex(Date.now());
 export function deedOfDay(d = today()) { return DEEDS[d % DEEDS.length]; }
 export function askOfWeek(d = today()) { return ASKS[Math.floor(d / 7) % ASKS.length]; }
 export function wordOfDay(d = today()) { const g = GLOSSARY[d % GLOSSARY.length]; return { term: g[0], meaning: g[1], eg: g[2] }; }
+/* Home promises a word "of the hour" — so it changes every hour (audit v4, B4), walking the
+   glossary from the day's word. Three meanings for the 10-second check: the word's own and two
+   others, in an order fixed by the hour, so the right one is not always first. */
+export function wordOfHour(now = Date.now()) {
+  const d = dayIndex(now), h = new Date(now).getHours(), g = GLOSSARY[(d * 24 + h) % GLOSSARY.length];
+  return { term: g[0], meaning: g[1], eg: g[2] };
+}
+export function wordCheck(term) {
+  const i = GLOSSARY.findIndex((g) => g[0] === term); if (i < 0) return null;
+  const n = GLOSSARY.length, others = [GLOSSARY[(i + 7) % n][1], GLOSSARY[(i + 19) % n][1]];
+  const opts = [GLOSSARY[i][1], ...others], order = [[0, 1, 2], [1, 0, 2], [1, 2, 0], [2, 0, 1], [0, 2, 1], [2, 1, 0]][(i * 7 + term.length) % 6];
+  return { term, opts: order.map((k) => opts[k]), answer: order.indexOf(0), eg: GLOSSARY[i][2] };
+}
 /* a tip is a "for instance" from a card she has read — nothing new, on purpose */
 export function tipOfDay(c, d = today()) {
   const read = ALL_CARDS.filter((k) => c.learn.done[k.id] && k.eg);
