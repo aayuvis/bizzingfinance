@@ -8948,7 +8948,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       ];
       RAW = {
         1: [["froggy", "Pond Star", "common"], ["hoppy", "Hoppy", "common"], ["corg", "Zoomies", "rare"], ["capy", "Capy", "rare"], ["fawn", "Fawn", "rare"], ["redpanda", "Rusty", "epic"], ["axo", "Axo", "epic"], ["uni", "Uni", "legendary", "ch-c1"]],
-        2: [["mango", "Mango", "common"], ["teapot", "Teapot Tilly", "common"], ["baskethog", "Basket Hog", "rare"], ["turnip", "Turnip", "rare"], ["scales", "Fair Scales", "rare"], ["stallsnail", "Awning Snail", "epic"], ["barrowmole", "Barrow Mole", "epic"], ["pumpkin", "Prize Pumpkin", "legendary", "ch-c2"]],
+        2: [["mango", "Mango", "common"], ["pip", "Pip", "common"], ["baskethog", "Basket Hog", "rare"], ["turnip", "Turnip", "rare"], ["scales", "Fair Scales", "rare"], ["stallsnail", "Awning Snail", "epic"], ["barrowmole", "Barrow Mole", "epic"], ["pumpkin", "Prize Pumpkin", "legendary", "ch-c2"]],
         3: [["gully", "Gully", "common"], ["pinchy", "Pinchy", "common"], ["sealpup", "Seal Pup", "rare"], ["puffin", "Captain Puffin", "rare"], ["lighthouse", "Little Light", "rare"], ["buoy", "Bobbing Buoy", "epic"], ["sailboat", "Sal the Sailboat", "epic"], ["narwhal", "Admiral Narwhal", "legendary", "ch-c3"]],
         4: [["gg", "GG", "common"], ["duckie", "Duckie", "common"], ["boba", "Boba", "rare"], ["pengu", "Pengu", "rare"], ["plushy", "Plushy", "rare"], ["catlord", "Catlord", "epic"], ["popcorn", "Popcorn", "epic"], ["yeti", "Frost", "legendary", "ch-c4"]],
         5: [["tick", "Tick", "common"], ["cogmouse", "Cog Mouse", "common"], ["tinrobin", "Tin Robin", "rare"], ["hourglass", "Hourglass", "rare"], ["cuckoo", "Cuckoo", "rare"], ["winduprabbit", "Wind-up Rabbit", "epic"], ["brassowl", "Brass Owl", "epic"], ["clockdragon", "Clockwork Dragon", "legendary", "ch-c5"]],
@@ -9185,6 +9185,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       else if (blob.v === 10) blob = v10_to_v11(blob);
       else if (blob.v === 11) blob = v11_to_v12(blob);
       else if (blob.v === 12) blob = v12_to_v13(blob);
+      else if (blob.v === 13) blob = v13_to_v14(blob);
       else break;
     }
     return blob;
@@ -9315,6 +9316,13 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     old.v = 13;
     return old;
   }
+  function v13_to_v14(old) {
+    old.kids.forEach((k) => {
+      if (k.avatar === "teapot") k.avatar = "pip";
+    });
+    old.v = 14;
+    return old;
+  }
   function recDB() {
     return new Promise((res, rej) => {
       if (typeof indexedDB === "undefined") return rej(new Error("no indexedDB"));
@@ -9341,7 +9349,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
       KEY3 = "bzf_profile";
       OLD = "bzf_v1";
       DEV = "bzf_device";
-      SCHEMA = 13;
+      SCHEMA = 14;
       pending = null;
       Store = {
         loadProfile() {
@@ -26494,13 +26502,13 @@ ${drawerHTML(o)}`;
   }
   function reportCard(c) {
     const r = card(c, Store.readFamily("bizzing.activity"));
-    const tile = (k, v, sub) => `<div class="rc-t"><span class="eyebrow">${k}</span><b>${v}</b><span class="small muted">${sub}</span></div>`;
+    const tile2 = (k, v, sub) => `<div class="rc-t"><span class="eyebrow">${k}</span><b>${v}</b><span class="small muted">${sub}</span></div>`;
     return `<section class="card rc" aria-labelledby="rc-h">
     <h2 id="rc-h" style="font-size:19px">${esc(c.name)} this week, at a glance</h2>
     <div class="rc-row">
-      ${tile("Time", r.time.minutes ? `${r.time.minutes} min` : "\u2014", r.time.minutes ? "active minutes, from the family feed" : "no active minutes logged yet")}
-      ${tile("Progress", `${r.progress.stops} / ${r.progress.of}`, `stops${r.progress.cold ? ` (${r.progress.cold} answered cold, lesson skipped)` : ""} \xB7 ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} \xB7 ${esc(r.progress.rank)} L${r.progress.level}`)}
-      ${tile("Mastery", `${r.mastery.held.length} / ${r.mastery.of}`, `skills shown again after a gap \xB7 ${r.mastery.practising} being practised`)}
+      ${tile2("Time", r.time.minutes ? `${r.time.minutes} min` : "\u2014", r.time.minutes ? "active minutes, from the family feed" : "no active minutes logged yet")}
+      ${tile2("Progress", `${r.progress.stops} / ${r.progress.of}`, `stops${r.progress.cold ? ` (${r.progress.cold} answered cold, lesson skipped)` : ""} \xB7 ${esc(r.progress.world)} ${r.progress.worldDone}/${r.progress.worldOf} \xB7 ${esc(r.progress.rank)} L${r.progress.level}`)}
+      ${tile2("Mastery", `${r.mastery.held.length} / ${r.mastery.of}`, `skills shown again after a gap \xB7 ${r.mastery.practising} being practised`)}
     </div>
     ${r.mastery.held.length ? `<p class="small" style="margin-top:10px"><b>Can now do:</b> ${r.mastery.held.slice(0, 4).map(esc).join(" \xB7 ")}</p>` : '<p class="small muted" style="margin-top:10px">Nothing is counted as learned until it is shown again after a gap of a week. The first ones arrive in week two.</p>'}
     ${r.mastery.lapsed.length ? `<p class="small" style="margin-top:6px"><b>Slipped since it was solid \u2014 worth a chat:</b> ${r.mastery.lapsed.slice(0, 3).map(esc).join(" \xB7 ")}</p>` : ""}
@@ -26690,11 +26698,11 @@ ${drawerHTML(o)}`;
     prompts.push("Ask what the first thing you ever saved up for was. It is one of the app's own questions.");
     return { learned, decisions, prompts };
   }
-  function viewCollection() {
+  function viewCollection({ bare: bare2 = false } = {}) {
     const c = K2();
     const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
     return `<div class="stack">
-    ${hero({
+    ${bare2 ? '<p class="small muted" style="margin:0">Medals are for good decisions. Keepsakes are for things you did. Nothing here is for just showing up.</p>' : hero({
       eyebrow: "Kept, never given",
       title: "Medals",
       figure: has2(c) ? companionFigure(c, 110) : pipPose("cheer", 110),
@@ -26717,7 +26725,7 @@ ${drawerHTML(o)}`;
       ${(() => {
       const keys = Object.keys(BADGES);
       const got = keys.filter((k) => c.badges.includes(k)), ahead = keys.filter((k) => !c.badges.includes(k));
-      const tile = (k, hint) => {
+      const tile2 = (k, hint) => {
         const b = BADGES[k], has4 = c.badges.includes(k);
         return `<div data-focus="badge:${k}" class="badge${has4 ? " got" : ""}">
             <div class="bic">${ico(has4 ? b.em : "lock", has4 ? b.em : "\u{1F512}", 24)}</div>
@@ -26725,15 +26733,15 @@ ${drawerHTML(o)}`;
             <div class="small muted bds">${has4 || hint ? esc(b.desc) : "Not yet"}</div>
             ${has4 ? `<button class="btn ghost sm showgu" data-act="showMedal" data-arg="${k}">Show a grown-up</button>` : ""}</div>`;
       };
-      return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile).join("")}</div>` : ""}
+      return `${got.length ? `<div class="grid3" style="margin-top:12px">${got.map(tile2).join("")}</div>` : ""}
           ${ahead.length ? `<div class="eyebrow" style="margin-top:14px">Next to earn</div>
-            <div class="grid3" style="margin-top:8px">${ahead.slice(0, 6).map((k) => tile(k, true)).join("")}</div>` : ""}
+            <div class="grid3" style="margin-top:8px">${ahead.slice(0, 6).map((k) => tile2(k, true)).join("")}</div>` : ""}
           ${ahead.length > 6 ? `<div style="margin-top:12px">${fold(
         "badges",
         `${ahead.length - 6} more to find`,
         "Every one marks a decision, not a visit.",
         "medal",
-        `<div class="grid3">${ahead.slice(6).map(tile).join("")}</div>`
+        `<div class="grid3">${ahead.slice(6).map(tile2).join("")}</div>`
       )}</div>` : ""}`;
     })()}
     </div>
@@ -27033,6 +27041,19 @@ ${drawerHTML(o)}`;
     <span class="avsay small">${wearing ? "Wearing it" : esc(s.say)}</span>
   </button>`;
   }
+  function worldsBody(c, ctx3, coins2) {
+    return `<p class="small muted">Worlds 1 and 2 are open to everyone. Worlds 3 to 6 open with the family plan, or one at a time for ${WORLD_PRICE} coins \u2014 something worth saving for. Each world brings two packs of faces.</p>
+      <p class="small muted">The family plan is something a grown-up decides about: it opens all four at once, with their ${contents().faces} faces. Ask a grown-up \u2014 they can see it behind the ${ico("lock", "\u{1F512}", 13)}.</p>
+      <div class="wshop">${LOOKS.map((w) => {
+      const open2 = isOpen(w, ctx3), short = Math.max(0, WORLD_PRICE - coins2);
+      return `<div class="wcard${open2 ? "" : " locked"}">
+          <img src="${R.dark ? w.thumbNight : w.thumbDay}" alt="" width="360" height="154" loading="lazy">
+          <div class="wbody"><span class="eyebrow">World ${w.n}</span><b>${esc(w.name)}</b><span class="small muted">${esc(w.line)}</span>
+            <span class="small">Packs: ${PACKS2.filter((p) => Math.ceil(p.n / 2) === w.n).map((p) => esc(p.name)).join(" \xB7 ")}</span>
+            ${open2 ? `<button class="btn ghost sm" data-act="look" data-arg="${w.id}">${(c.fam && c.fam.look) === w.id ? "Wearing it" : "Wear this world"}</button>` : `<button class="btn ghost sm" data-act="buyWorld" data-arg="${w.n}" ${short ? "disabled" : ""}>${short ? `${WORLD_PRICE} coins \xB7 ${short} more to go` : `Open for ${WORLD_PRICE} coins`}</button>`}
+          </div></div>`;
+    }).join("")}</div>`;
+  }
   function viewShop() {
     const c = K3(), ctx3 = ctxFor(R.s, c), tab = R.shopTab || "avatars";
     const tabs = [["avatars", "Avatars", "user"], ["worlds", "Worlds", "palette"], ["extras", "Extras", "sparkle"]];
@@ -27050,17 +27071,7 @@ ${drawerHTML(o)}`;
       <div class="avgrid">${soon.map((a) => avCard(a, c, ctx3)).join("")}</div>
       <button class="btn ghost wide" data-act="nav" data-arg="collection">${ico("frame", "", 18)} See all 96 in the Collection</button>`;
     } else if (tab === "worlds") {
-      body = `<p class="small muted">Worlds 1 and 2 are open to everyone. Worlds 3 to 6 open with the family plan, or one at a time for ${WORLD_PRICE} coins \u2014 something worth saving for. Each world brings two packs of faces.</p>
-      <p class="small muted">The family plan is something a grown-up decides about: it opens all four at once, with their ${contents().faces} faces. Ask a grown-up \u2014 they can see it behind the ${ico("lock", "\u{1F512}", 13)}.</p>
-      <div class="wshop">${LOOKS.map((w) => {
-        const open2 = isOpen(w, ctx3), short = Math.max(0, WORLD_PRICE - coins2);
-        return `<div class="wcard${open2 ? "" : " locked"}">
-          <img src="${R.dark ? w.thumbNight : w.thumbDay}" alt="" width="360" height="154" loading="lazy">
-          <div class="wbody"><span class="eyebrow">World ${w.n}</span><b>${esc(w.name)}</b><span class="small muted">${esc(w.line)}</span>
-            <span class="small">Packs: ${PACKS2.filter((p) => Math.ceil(p.n / 2) === w.n).map((p) => esc(p.name)).join(" \xB7 ")}</span>
-            ${open2 ? `<button class="btn ghost sm" data-act="look" data-arg="${w.id}">${(c.fam && c.fam.look) === w.id ? "Wearing it" : "Wear this world"}</button>` : `<button class="btn ghost sm" data-act="buyWorld" data-arg="${w.n}" ${short ? "disabled" : ""}>${short ? `${WORLD_PRICE} coins \xB7 ${short} more to go` : `Open for ${WORLD_PRICE} coins`}</button>`}
-          </div></div>`;
-      }).join("")}</div>`;
+      body = worldsBody(c, ctx3, coins2);
     } else {
       const own = c.fam && c.fam.extras || [];
       const kinds = [["frame", "Avatar frames"], ["board", "Main Street boards"], ["lanterns", "Street lanterns"]];
@@ -27093,23 +27104,43 @@ ${drawerHTML(o)}`;
     </div>
   </div>`;
   }
-  function viewCollection2() {
-    const c = K3(), ctx3 = ctxFor(R.s, c);
+  var TAB_IC = { medals: "medal", avatars: "sparkle", worlds: "palette" };
+  function tile(a, c, ctx3) {
+    const s = stateOf3(a, ctx3), wearing = c.avatar === a.id, T2 = TIERS[a.tier];
+    const action = wearing ? `<span class="ctile-worn">${ico("check", "", 15)} Wearing</span>` : s.state === "owned" ? `<button class="ctile-btn" data-act="wear" data-arg="${a.id}" aria-label="Wear ${esc(a.name)}">Wear</button>` : s.state === "buy" ? `<button class="ctile-btn coin" data-act="buyAv" data-arg="${a.id}" ${s.short ? "disabled" : ""} aria-label="Buy ${esc(a.name)} for ${T2.price} coins${s.short ? ` \u2014 ${s.short} more to go` : ""}">${coinSvg(15)} ${T2.price}</button>` : "";
+    return `<div class="ctile${wearing ? " wearing" : ""}" data-tier="${a.tier}" data-state="${s.state}" style="--tc:${T2.colour}">
+    <button class="ctile-art" data-act="avCard" data-arg="${a.id}" aria-label="${esc(a.name)} \u2014 see the card"><img src="${a.thumb}" alt="" width="96" height="96" loading="lazy"></button>
+    <b class="ctile-nm">${esc(a.name)}</b><span class="ctile-tier">${T2.label}</span>
+    <span class="ctile-say">${esc(wearing && s.state !== "owned" ? "Yours to wear" : s.say)}</span>
+    <span class="ctile-act">${action}</span></div>`;
+  }
+  function viewCollection2(tab = R.colTab || "avatars", medals = () => "") {
+    const c = K3(), ctx3 = ctxFor(R.s, c), coins2 = coinBalance(c.name);
     const owned = CATALOGUE.filter((a) => stateOf3(a, ctx3).state === "owned").length;
-    const mine = BY_ID2[c.avatar];
-    return `<div class="stack">
-    ${hero({
-      eyebrow: `${owned} of ${CATALOGUE.length} faces`,
-      title: "Your Collection",
-      figure: `<span class="bigav">${kidBadge(c, 110)}</span>`,
-      line: `You are ${esc(avatarName(c.avatar))}${mine ? ` \xB7 ${TIERS[mine.tier].label}` : ""}. Tap any face you own to wear it. Every card says how it is earned \u2014 nothing is random.`
-    })}
+    const medalN = (c.badges || []).filter((k) => BADGES[k]).length, worldN = LOOKS.filter((w) => isOpen(w, ctx3)).length;
+    const tabs = [["medals", `Medals \xB7 ${medalN}/${Object.keys(BADGES).length}`], ["avatars", `Avatars \xB7 ${owned}/${CATALOGUE.length}`], ["worlds", `Worlds \xB7 ${worldN}/${LOOKS.length}`]];
+    const ORD = { common: 0, rare: 1, epic: 2, legendary: 3 };
+    let body;
+    if (tab === "medals") body = medals();
+    else if (tab === "worlds") body = `<section class="card">${worldsBody(c, ctx3, coins2)}</section>`;
+    else body = `<p class="col-intro small">Commons are free for everyone. Rares are ${TIERS.rare.price} Bizzing coins and Epics ${TIERS.epic.price} once their world is open; a Legendary is ${TIERS.legendary.price} after its learning milestone. Every price is fixed, and nothing here is left to chance. <a href="#/shop">Open the Shop</a></p>
     ${PACKS2.map((p) => {
-      const faces = CATALOGUE.filter((a) => a.pack === p.n), w = LOOKS[Math.ceil(p.n / 2) - 1], wopen = isOpen(w, ctx3);
-      return `<section class="pack" aria-labelledby="pk-${p.n}">
-        <div class="pack-h"><h2 id="pk-${p.n}">${esc(p.name)}</h2><span class="small muted">${esc(w.name)}${p.from ? " \xB7 " + esc(p.from) : ""} \xB7 ${faces.filter((a) => stateOf3(a, ctx3).state === "owned").length}/8${wopen ? "" : " \xB7 opens with its world"}</span></div>
-        <div class="avgrid">${faces.map((a) => avCard(a, c, ctx3)).join("")}</div></section>`;
-    }).join("")}
+      const faces = CATALOGUE.filter((a) => a.pack === p.n).sort((x, y) => ORD[x.tier] - ORD[y.tier]), w = LOOKS[Math.ceil(p.n / 2) - 1];
+      const n = faces.filter((a) => stateOf3(a, ctx3).state === "owned").length;
+      return `<section class="card cpack" aria-labelledby="pk-${p.n}" style="--pc:${w.accent[0]};--pc2:${w.accent[1]}">
+        <div class="cpack-h"><span class="cpack-dot" aria-hidden="true"></span><h2 id="pk-${p.n}">${esc(p.name)}</h2><span class="cpack-n">${n}/${faces.length}</span>
+          <span class="cpack-src">${ico(p.from ? "hive" : "town", "", 15)} ${esc(p.from ? "Bizzing Bee" : w.name)}${isOpen(w, ctx3) ? "" : " \xB7 opens with its world"}</span></div>
+        <div class="cpack-bar" aria-hidden="true"><i style="width:${Math.round(n / faces.length * 100)}%"></i></div>
+        <div class="ctiles">${faces.map((a) => tile(a, c, ctx3)).join("")}</div></section>`;
+    }).join("")}`;
+    return `<div class="stack colpage">
+    <div class="col-head">
+      <button class="pillbtn" data-act="nav" data-arg="home">${ico("back", "\u2039", 16)} Home</button>
+      <h1>Collection</h1>
+      <span class="col-right">${tab === "avatars" ? `<button class="pillbtn" data-act="printCards">${ico("printer", "", 16)} Print my cards</button>` : ""}<span class="col-coins" aria-label="${coins2} Bizzing coins">${coinSvg(16)} ${coins2}</span></span>
+    </div>
+    <div class="col-tabs" role="tablist" aria-label="Collection">${tabs.map(([k, label3]) => `<button role="tab" data-act="colTab" data-arg="${k}" aria-selected="${tab === k}">${ico(TAB_IC[k], "", 17)} ${esc(label3)}</button>`).join("")}</div>
+    ${body}
   </div>`;
   }
   function profileCard(c) {
@@ -27977,7 +28008,7 @@ ${drawerHTML(o)}`;
     if (!R.s || !R.s.kids.length) return;
     const u = R.s.ui;
     const open2 = u.nav === "learn" && C3().learn.openCard, oc = open2 && cardById2(open2);
-    const h = "#/" + (u.nav === "learn" ? "atlas" : u.nav) + (u.nav === "money" ? "/" + u.sub : "") + (oc && isLesson(oc) ? "/" + oc.id : "") + (u.nav === "story" ? "/" + (R.storyAt || "market") : "");
+    const h = "#/" + (u.nav === "learn" ? "atlas" : u.nav) + (u.nav === "money" ? "/" + u.sub : "") + (oc && isLesson(oc) ? "/" + oc.id : "") + (u.nav === "story" ? "/" + (R.storyAt || "market") : "") + (u.nav === "collection" && R.colTab && R.colTab !== "avatars" ? "/" + R.colTab : "");
     if (location.hash !== h) {
       selfHash = h;
       location.hash = h;
@@ -28060,6 +28091,8 @@ ${drawerHTML(o)}`;
       }
     }
     if (m2[0] === "words") R.query = m2[1] ? decodeURIComponent(m2[1]) : "";
+    if (m2[0] === "collection") R.colTab = ["medals", "worlds"].includes(m2[1]) ? m2[1] : "avatars";
+    if (m2[0] === "medals") R.colTab = "medals";
     R.focus = focusFor(m2);
     return true;
   }
@@ -28082,7 +28115,7 @@ ${drawerHTML(o)}`;
     const c = kid2(s);
     if (ALIAS[s.ui.nav]) s.ui.nav = ALIAS[s.ui.nav];
     const nav = s.ui.nav;
-    const body = nav === "town" ? viewTown(townParts()) : nav === "learn" ? viewLearn() : nav === "money" ? viewMoney() : nav === "play" ? viewArcade2() : nav === "store" ? viewStore() : nav === "me" ? `${profileCard(c)}${viewProgress()}` : nav === "shop" ? viewShop() : nav === "collection" ? viewCollection2() : nav === "medals" ? viewCollection() : nav === "words" ? viewGlossaryPage() : nav === "mistakes" ? viewMistakes() : nav === "parents" ? R.gate ? viewParents() : viewGate() : nav === "report" ? R.gate ? viewReport() : viewGate() : nav === "market40" ? mgView() : nav === "story" ? storyView() : nav === "library" ? viewLibrary() : nav === "sprint" ? sprintView() : nav === "feed" ? view(c, s) : viewHome();
+    const body = nav === "town" ? viewTown(townParts()) : nav === "learn" ? viewLearn() : nav === "money" ? viewMoney() : nav === "play" ? viewArcade2() : nav === "store" ? viewStore() : nav === "me" ? `${profileCard(c)}${viewProgress()}` : nav === "shop" ? viewShop() : nav === "collection" ? viewCollection2(R.colTab || "avatars", () => viewCollection({ bare: true })) : nav === "medals" ? viewCollection2("medals", () => viewCollection({ bare: true })) : nav === "words" ? viewGlossaryPage() : nav === "mistakes" ? viewMistakes() : nav === "parents" ? R.gate ? viewParents() : viewGate() : nav === "report" ? R.gate ? viewReport() : viewGate() : nav === "market40" ? mgView() : nav === "story" ? storyView() : nav === "library" ? viewLibrary() : nav === "sprint" ? sprintView() : nav === "feed" ? view(c, s) : viewHome();
     if (nav === "feed" && R.lastNav !== "feed") resetVisit();
     const moved = R.lastNav !== void 0 && R.lastNav !== nav;
     R.lastNav = nav;
@@ -28275,14 +28308,21 @@ ${drawerHTML(o)}`;
     if (o.kind === "help") return box(helpSheet(), true);
     if (o.kind === "avDeck") return box(deckView(R.s, c, o.i), true);
     if (o.kind === "avInfo") {
-      const a = BY_ID2[o.id], st2 = stateOf3(a, ctxFor(R.s, c));
-      return box(`<div class="sheet-h"><span class="eyebrow">${esc(a.name)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
-      <div style="text-align:center"><span class="bz-av big" data-tier="${a.tier}" data-state="${st2.state}" style="display:inline-grid;width:180px"><img src="${a.art}" alt="" width="140" height="140"><figcaption>${esc(a.name)} <b>${st2.label}</b></figcaption></span>
-      <p style="margin-top:12px;font-weight:700">${esc(st2.say)}</p>
+      const a = BY_ID2[o.id], st2 = stateOf3(a, ctxFor(R.s, c)), wearing = c.avatar === a.id;
+      const act = wearing ? '<span class="avd-worn">Wearing</span>' : st2.state === "owned" ? `<button class="btn" data-act="avdWear" data-arg="${a.id}">Wear this one</button>` : st2.state === "buy" ? `<button class="btn" data-act="buyAv" data-arg="${a.id}" ${st2.short ? "disabled" : ""}>${st2.short ? esc(st2.say) : `Buy for ${st2.price} coins`}</button>` : "";
+      return box(`<div class="avdeck"><div class="sheet-h"><span class="eyebrow">${esc(a.name)} \xB7 ${esc(st2.label)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
+      <div class="avd-stage${st2.state === "owned" || wearing ? "" : " notyet"}">${cardHTML(a.id, { wearing, owned: st2.state === "owned" })}</div>
+      <div class="avd-bar"><span class="small" style="font-weight:700">${esc(wearing ? "Wearing it" : st2.say)}</span>${act}</div>
       ${st2.state === "world" ? `<p class="small muted">${esc(LOOKS[Math.ceil(a.pack / 2) - 1].name)} opens with the family plan, or for 240 coins in the Shop.</p>` : ""}
       ${st2.state === "milestone" ? '<p class="small muted">It is earned by learning \u2014 then it can be bought.</p>' : ""}
-      ${st2.state === "buy" && st2.short ? `<p class="small muted">Coins come from right answers and finished lessons in any Bizzing app.</p>` : ""}
-      <button class="btn wide" style="margin-top:12px" data-act="closeOv">OK</button></div>`);
+      ${st2.state === "buy" && st2.short ? `<p class="small muted">Coins come from right answers and finished lessons in any Bizzing app.</p>` : ""}</div>`, true);
+    }
+    if (o.kind === "printCards") {
+      const ids = deckIds(R.s, c);
+      return box(`<div class="sheet-h"><span class="eyebrow">Print my cards \xB7 ${ids.length}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
+      <p class="small muted">Every card you hold, laid out to cut out and keep. Print it, or save it as a PDF.</p>
+      <button class="btn wide" data-act="doPrint">${ico("printer", "", 18)} Print</button>
+      <div class="printsheet">${ids.map((id) => cardHTML(id, { wearing: c.avatar === id })).join("")}</div>`, true);
     }
     if (o.kind === "quiz") return box(quizView(o), true);
     if (o.kind === "cast") return box(castCard(o.who), true);
@@ -28855,6 +28895,31 @@ ${drawerHTML(o)}`;
   on("shopTab", (t) => {
     R.shopTab = t;
     render();
+  });
+  on("colTab", (t) => {
+    R.colTab = t;
+    R.s.ui.nav = "collection";
+    sfx.click();
+    render();
+    const b = document.querySelector(`.col-tabs [data-arg="${t}"]`);
+    if (b) b.focus();
+  });
+  on("avCard", (id) => {
+    if (BY_ID2[id]) {
+      R.overlay = { kind: "avInfo", id };
+      sfx.click();
+      render();
+    }
+  });
+  on("printCards", () => {
+    R.overlay = { kind: "printCards" };
+    render();
+  });
+  on("doPrint", () => {
+    try {
+      window.print();
+    } catch (e) {
+    }
   });
   on("buyExtra", (id) => {
     if (R.demo) {
