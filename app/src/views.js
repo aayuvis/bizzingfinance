@@ -1975,11 +1975,12 @@ function weekSummary(c) {
 }
 
 /* ══ COLLECTION ═══════════════════════════════════════════════════════ */
-export function viewCollection() {
+/* the Medals tab of the Collection (bare) — and, alone, the old #/medals page */
+export function viewCollection({ bare = false } = {}) {
   const c = K();
   const have = Object.keys(BADGES).filter((k) => c.badges.includes(k)).length;
   return `<div class="stack">
-    ${hero({ eyebrow: 'Kept, never given', title: 'Medals', figure: co.has(c) ? companionFigure(c, 110) : pipPose('cheer', 110),
+    ${bare ? '<p class="small muted" style="margin:0">Medals are for good decisions. Keepsakes are for things you did. Nothing here is for just showing up.</p>' : hero({ eyebrow: 'Kept, never given', title: 'Medals', figure: co.has(c) ? companionFigure(c, 110) : pipPose('cheer', 110),
       line: 'Medals are for good decisions. Keepsakes are for things you did. Nothing here is for just showing up.' })}
     <div class="card">
       <div class="eyebrow">Things you did</div>

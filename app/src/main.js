@@ -60,7 +60,7 @@ import * as shell from './shell.js';
 import { BLD } from './buildings-gen.js';
 import { shell as bzShell, bindShell } from './family/bizzing-shell.js';
 import { avatarSrc } from './avatars.js';
-import { deckView, deckIds } from './avcards.js';
+import { deckView, deckIds, cardHTML } from './avcards.js';
 import { viewShop, viewCollection as viewFaces, viewMistakes, viewTown, profileCard, EXTRA_BY } from './familyviews.js';
 import { LOOKS, lookById, applyLook, isOpen as lookOpen } from './looks.js';
 import * as ambient from './ambient.js';
@@ -166,7 +166,8 @@ function writeHash() {
      reopens it (audit v4, C2); questions asked again later are not stops and stay off it */
   const open = u.nav === 'learn' && C().learn.openCard, oc = open && cardById(open);
   const h = '#/' + (u.nav === 'learn' ? 'atlas' : u.nav) + (u.nav === 'money' ? '/' + u.sub : '') + (oc && isLesson(oc) ? '/' + oc.id : '')
-    + (u.nav === 'story' ? '/' + (R.storyAt || 'market') : '');
+    + (u.nav === 'story' ? '/' + (R.storyAt || 'market') : '')
+    + (u.nav === 'collection' && R.colTab && R.colTab !== 'avatars' ? '/' + R.colTab : '');
   if (location.hash !== h) { selfHash = h; location.hash = h; }
 }
 function readHash() {
@@ -203,6 +204,9 @@ function readHash() {
     if (k && !(ch && chapterLockedFor(C(), ch))) { C().learn.openCard = k.id; C().learn.drill = null; R.shelf = ''; }
   }
   if (m[0] === 'words') R.query = m[1] ? decodeURIComponent(m[1]) : '';
+  /* the Collection's tab is in the address: #/collection, #/collection/medals, #/collection/worlds */
+  if (m[0] === 'collection') R.colTab = ['medals', 'worlds'].includes(m[1]) ? m[1] : 'avatars';
+  if (m[0] === 'medals') R.colTab = 'medals';
   R.focus = focusFor(m);
   return true;
 }
@@ -236,8 +240,8 @@ function render() {
     nav === 'store' ? viewStore() :
     nav === 'me' ? `${profileCard(c)}${viewProgress()}` :
     nav === 'shop' ? viewShop() :
-    nav === 'collection' ? viewFaces() :
-    nav === 'medals' ? viewMedals() :
+    nav === 'collection' ? viewFaces(R.colTab || 'avatars', () => viewMedals({ bare: true })) :
+    nav === 'medals' ? viewFaces('medals', () => viewMedals({ bare: true })) :
     nav === 'words' ? viewGlossaryPage() :
     nav === 'mistakes' ? viewMistakes() :
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
@@ -430,14 +434,23 @@ function overlay() {
   if (o.kind === 'help') return box(shell.helpSheet(), true);
   if (o.kind === 'avDeck') return box(deckView(R.s, c, o.i), true);
   if (o.kind === 'avInfo') {
-    const a = BY_ID[o.id], st = stateOf(a, ctxFor(R.s, c));
-    return box(`<div class="sheet-h"><span class="eyebrow">${esc(a.name)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
-      <div style="text-align:center"><span class="bz-av big" data-tier="${a.tier}" data-state="${st.state}" style="display:inline-grid;width:180px"><img src="${a.art}" alt="" width="140" height="140"><figcaption>${esc(a.name)} <b>${st.label}</b></figcaption></span>
-      <p style="margin-top:12px;font-weight:700">${esc(st.say)}</p>
+    const a = BY_ID[o.id], st = stateOf(a, ctxFor(R.s, c)), wearing = c.avatar === a.id;
+    const act = wearing ? '<span class="avd-worn">Wearing</span>'
+      : st.state === 'owned' ? `<button class="btn" data-act="avdWear" data-arg="${a.id}">Wear this one</button>`
+      : st.state === 'buy' ? `<button class="btn" data-act="buyAv" data-arg="${a.id}" ${st.short ? 'disabled' : ''}>${st.short ? esc(st.say) : `Buy for ${st.price} coins`}</button>` : '';
+    return box(`<div class="avdeck"><div class="sheet-h"><span class="eyebrow">${esc(a.name)} · ${esc(st.label)}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
+      <div class="avd-stage${st.state === 'owned' || wearing ? '' : ' notyet'}">${cardHTML(a.id, { wearing, owned: st.state === 'owned' })}</div>
+      <div class="avd-bar"><span class="small" style="font-weight:700">${esc(wearing ? 'Wearing it' : st.say)}</span>${act}</div>
       ${st.state === 'world' ? `<p class="small muted">${esc(LOOKS[Math.ceil(a.pack / 2) - 1].name)} opens with the family plan, or for 240 coins in the Shop.</p>` : ''}
       ${st.state === 'milestone' ? '<p class="small muted">It is earned by learning — then it can be bought.</p>' : ''}
-      ${st.state === 'buy' && st.short ? `<p class="small muted">Coins come from right answers and finished lessons in any Bizzing app.</p>` : ''}
-      <button class="btn wide" style="margin-top:12px" data-act="closeOv">OK</button></div>`);
+      ${st.state === 'buy' && st.short ? `<p class="small muted">Coins come from right answers and finished lessons in any Bizzing app.</p>` : ''}</div>`, true);
+  }
+  if (o.kind === 'printCards') {
+    const ids = deckIds(R.s, c);
+    return box(`<div class="sheet-h"><span class="eyebrow">Print my cards · ${ids.length}</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
+      <p class="small muted">Every card you hold, laid out to cut out and keep. Print it, or save it as a PDF.</p>
+      <button class="btn wide" data-act="doPrint">${ico('printer', '', 18)} Print</button>
+      <div class="printsheet">${ids.map((id) => cardHTML(id, { wearing: c.avatar === id })).join('')}</div>`, true);
   }
   if (o.kind === 'quiz') return box(quizView(o), true);
   if (o.kind === 'cast') return box(castCard(o.who), true);
@@ -822,6 +835,12 @@ on('buyAv', (id) => {
   sfx.unlock(); confetti(40); toast(`${a.name} is yours — and you are wearing it`); render();
 });
 on('shopTab', (t) => { R.shopTab = t; render(); });
+on('colTab', (t) => { R.colTab = t; R.s.ui.nav = 'collection'; sfx.click(); render(); const b = document.querySelector(`.col-tabs [data-arg="${t}"]`); if (b) b.focus(); });
+/* a face in the Collection opens its trading card */
+on('avCard', (id) => { if (BY_ID[id]) { R.overlay = { kind: 'avInfo', id }; sfx.click(); render(); } });
+/* Print my cards: every card the child holds, laid out to cut out (print.css rules in tasks.css) */
+on('printCards', () => { R.overlay = { kind: 'printCards' }; render(); });
+on('doPrint', () => { try { window.print(); } catch (e) { /* no printer here */ } });
 on('buyExtra', (id) => {
   if (R.demo) { toast('A sample — nothing is bought or saved here'); return; }
   const c = C(), x = EXTRA_BY[id]; if (!x) return;

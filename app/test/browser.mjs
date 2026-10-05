@@ -403,8 +403,33 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   /* §8 the 96, through the engine */
   ok(`${label}: validate(avatars) returns []`, (await page.evaluate(() => window.BZF.validateAvatars())).length === 0);
   await go('#/collection');
-  const coll = await page.evaluate(() => ({ cards: document.querySelectorAll('.pack .bz-av').length, packs: document.querySelectorAll('.pack').length, says: [...document.querySelectorAll('.pack .bz-av .avsay')].every((x) => x.textContent.trim().length > 3) }));
+  const coll = await page.evaluate(() => ({ cards: document.querySelectorAll('.cpack .ctile').length, packs: document.querySelectorAll('.cpack').length, says: [...document.querySelectorAll('.cpack .ctile-say')].every((x) => x.textContent.trim().length > 3) }));
   ok(`${label}: the Collection shows all 96 by pack, each with its path`, coll.cards === 96 && coll.packs === 12 && coll.says, JSON.stringify(coll));
+  /* Bee's Collection: three tabs with their counts, Home a tap back, the purse; each face
+     offers exactly what its state allows — Wear, its printed price, Wearing, or nothing yet */
+  const cpage = await page.evaluate(() => {
+    const tabs = [...document.querySelectorAll('.col-tabs [role=tab]')].map((b) => b.textContent.trim());
+    const bad = [...document.querySelectorAll('.ctile')].filter((t) => { const st = t.dataset.state, worn = t.classList.contains('wearing'), btn = t.querySelector('.ctile-btn'), act = btn && btn.dataset.act;
+      if (worn) return !t.querySelector('.ctile-worn') || btn;
+      if (st === 'owned') return act !== 'wear';
+      if (st === 'buy') return act !== 'buyAv' || !/\d{3}/.test(btn.textContent);
+      return !!btn; }).map((t) => t.querySelector('.ctile-nm').textContent + ':' + t.dataset.state);
+    return { tabs, bad, home: !!document.querySelector('.col-head [data-act=nav][data-arg=home]'), coins: !!document.querySelector('.col-head .col-coins'), print: !!document.querySelector('[data-act=printCards]') };
+  });
+  ok(`${label}: the Collection is Bee's page — Medals · Avatars · Worlds with counts, Home back, the purse, Print my cards`, cpage.tabs.length === 3 && /^Medals · \d+\/\d+$/.test(cpage.tabs[0]) && /^Avatars · \d+\/96$/.test(cpage.tabs[1]) && /^Worlds · \d+\/6$/.test(cpage.tabs[2]) && cpage.home && cpage.coins && cpage.print, JSON.stringify(cpage.tabs));
+  ok(`${label}: every face offers exactly what its state allows (Wear · its price · Wearing · nothing yet)`, !cpage.bad.length, cpage.bad.slice(0, 4).join(' '));
+  await page.click('.ctile[data-tier="epic"] .ctile-art'); await page.waitForSelector('.ov .avc');
+  const ccard = await page.evaluate(() => ({ rank: (document.querySelector('.ov .avc-rank') || {}).textContent || '', ovr: (document.querySelector('.ov .avc-ovr b') || {}).textContent || '' }));
+  await page.evaluate(() => window.BZF.fire('closeOv'));
+  await page.click('.col-tabs [data-arg="medals"]'); await page.waitForTimeout(150);
+  const mt = await page.evaluate(() => ({ hash: location.hash, medals: document.querySelectorAll('.colpage [data-focus^="badge:"]').length }));
+  await page.click('.col-tabs [data-arg="worlds"]'); await page.waitForTimeout(150);
+  const wt = await page.evaluate(() => ({ hash: location.hash, worlds: document.querySelectorAll('.colpage .wcard').length }));
+  await page.click('.col-tabs [data-arg="avatars"]'); await page.waitForTimeout(150);
+  await page.click('[data-act=printCards]'); await page.waitForSelector('.printsheet');
+  const pr = await page.evaluate(() => document.querySelectorAll('.printsheet .avc').length);
+  await page.evaluate(() => window.BZF.fire('closeOv'));
+  ok(`${label}: a face opens its card (rank of 96); the tabs are in the address; Print my cards lays out every card held`, /#\d+\s*of 96/.test(ccard.rank) && +ccard.ovr > 0 && mt.hash === '#/collection/medals' && mt.medals > 0 && wt.hash === '#/collection/worlds' && wt.worlds === 6 && pr >= 24, JSON.stringify({ ccard, mt, wt, pr }));
 
   /* C4 · search finds a lesson, a word and a game */
   await page.evaluate(() => window.BZF.fire('search')); await page.waitForTimeout(150);

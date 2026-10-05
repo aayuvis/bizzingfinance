@@ -16,6 +16,11 @@ const errs = validate(CATALOGUE);
 ok(errs.length === 0, 'validate(CATALOGUE) returns []', errs.slice(0, 3).join(' | '));
 ok(CATALOGUE.length === 96 && PACKS.length === 12, '96 avatars in 12 packs of 8');
 ok(sacredSafe(CATALOGUE, []).length === 0 && !CATALOGUE.some((a) => a.real || a.sacred), 'no sacred figures or real people in Finance’s set');
+/* the app's own face is a free face too, as Bizzy Bee is in Bee (owner, 5 Oct 2026) */
+{ const pip = CATALOGUE.find((a) => a.id === 'pip'); const { migrate } = await import('../src/store.js');
+  ok(!!pip && pip.tier === 'common' && stateOf(pip, {}).state === 'owned', 'Pip, the app icon, is a free Common — owned by every child', pip ? pip.tier : 'missing');
+  const m = migrate({ v: 13, kids: [{ name: 'A', avatar: 'teapot' }, { name: 'B', avatar: 'mango' }] });
+  ok(m.v >= 14 && m.kids[0].avatar === 'pip' && m.kids[1].avatar === 'mango' && !CATALOGUE.some((a) => a.id === 'teapot'), 'a child wearing Teapot Tilly (whose place Pip took) now wears Pip; nobody else changes', JSON.stringify(m.kids.map((k) => k.avatar))); }
 const pub = new URL('../public/', import.meta.url);
 const missing = CATALOGUE.filter((a) => !existsSync(new URL(a.art.replace('./', ''), pub)));
 ok(!missing.length, 'every face is a file that ships', missing.slice(0, 4).map((a) => a.id).join(' '));

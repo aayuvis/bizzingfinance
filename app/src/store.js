@@ -8,7 +8,7 @@ import { hashPin } from './pin.js';
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 13;
+export const SCHEMA = 14;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -62,6 +62,7 @@ export function migrate(blob) {
     else if (blob.v === 10) blob = v10_to_v11(blob);
     else if (blob.v === 11) blob = v11_to_v12(blob);
     else if (blob.v === 12) blob = v12_to_v13(blob);
+    else if (blob.v === 13) blob = v13_to_v14(blob);
     else break;
   }
   return blob;
@@ -236,6 +237,14 @@ function v12_to_v13(old) {
     });
   });
   old.v = 13;
+  return old;
+}
+/* v14: Pip, the app's own face, joins the free faces in Teapot Tilly's place (owner,
+   5 Oct 2026: "the app icon should be a free avatar too", as Bizzy Bee is in Bee).
+   A child wearing Teapot Tilly now wears Pip, so nobody's face silently falls back. */
+function v13_to_v14(old) {
+  old.kids.forEach((k) => { if (k.avatar === 'teapot') k.avatar = 'pip'; });
+  old.v = 14;
   return old;
 }
 

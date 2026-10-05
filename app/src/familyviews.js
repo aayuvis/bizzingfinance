@@ -49,6 +49,20 @@ function avCard(a, c, ctx, { big, act } = {}) {
   </button>`;
 }
 
+/* the six worlds, opened or priced — the Shop's Worlds tab and the Collection's */
+export function worldsBody(c, ctx, coins) {
+  return `<p class="small muted">Worlds 1 and 2 are open to everyone. Worlds 3 to 6 open with the family plan, or one at a time for ${WORLD_PRICE} coins — something worth saving for. Each world brings two packs of faces.</p>
+      <p class="small muted">The family plan is something a grown-up decides about: it opens all four at once, with their ${planContents().faces} faces. Ask a grown-up — they can see it behind the ${ico('lock', '🔒', 13)}.</p>
+      <div class="wshop">${LOOKS.map((w) => { const open = lookOpen(w, ctx), short = Math.max(0, WORLD_PRICE - coins);
+        return `<div class="wcard${open ? '' : ' locked'}">
+          <img src="${R.dark ? w.thumbNight : w.thumbDay}" alt="" width="360" height="154" loading="lazy">
+          <div class="wbody"><span class="eyebrow">World ${w.n}</span><b>${esc(w.name)}</b><span class="small muted">${esc(w.line)}</span>
+            <span class="small">Packs: ${PACKS.filter((p) => Math.ceil(p.n / 2) === w.n).map((p) => esc(p.name)).join(' · ')}</span>
+            ${open ? `<button class="btn ghost sm" data-act="look" data-arg="${w.id}">${(c.fam && c.fam.look) === w.id ? 'Wearing it' : 'Wear this world'}</button>`
+              : `<button class="btn ghost sm" data-act="buyWorld" data-arg="${w.n}" ${short ? 'disabled' : ''}>${short ? `${WORLD_PRICE} coins · ${short} more to go` : `Open for ${WORLD_PRICE} coins`}</button>`}
+          </div></div>`; }).join('')}</div>`;
+}
+
 /* ── Shop: Avatars · Worlds · Extras, then the wallet history (§1, §1.1) ── */
 export function viewShop() {
   const c = K(), ctx = ctxFor(R.s, c), tab = R.shopTab || 'avatars';
@@ -68,16 +82,7 @@ export function viewShop() {
       <div class="avgrid">${soon.map((a) => avCard(a, c, ctx)).join('')}</div>
       <button class="btn ghost wide" data-act="nav" data-arg="collection">${ico('frame', '', 18)} See all 96 in the Collection</button>`;
   } else if (tab === 'worlds') {
-    body = `<p class="small muted">Worlds 1 and 2 are open to everyone. Worlds 3 to 6 open with the family plan, or one at a time for ${WORLD_PRICE} coins — something worth saving for. Each world brings two packs of faces.</p>
-      <p class="small muted">The family plan is something a grown-up decides about: it opens all four at once, with their ${planContents().faces} faces. Ask a grown-up — they can see it behind the ${ico('lock', '🔒', 13)}.</p>
-      <div class="wshop">${LOOKS.map((w) => { const open = lookOpen(w, ctx), short = Math.max(0, WORLD_PRICE - coins);
-        return `<div class="wcard${open ? '' : ' locked'}">
-          <img src="${R.dark ? w.thumbNight : w.thumbDay}" alt="" width="360" height="154" loading="lazy">
-          <div class="wbody"><span class="eyebrow">World ${w.n}</span><b>${esc(w.name)}</b><span class="small muted">${esc(w.line)}</span>
-            <span class="small">Packs: ${PACKS.filter((p) => Math.ceil(p.n / 2) === w.n).map((p) => esc(p.name)).join(' · ')}</span>
-            ${open ? `<button class="btn ghost sm" data-act="look" data-arg="${w.id}">${(c.fam && c.fam.look) === w.id ? 'Wearing it' : 'Wear this world'}</button>`
-              : `<button class="btn ghost sm" data-act="buyWorld" data-arg="${w.n}" ${short ? 'disabled' : ''}>${short ? `${WORLD_PRICE} coins · ${short} more to go` : `Open for ${WORLD_PRICE} coins`}</button>`}
-          </div></div>`; }).join('')}</div>`;
+    body = worldsBody(c, ctx, coins);
   } else {
     const own = (c.fam && c.fam.extras) || [];
     const kinds = [['frame', 'Avatar frames'], ['board', 'Main Street boards'], ['lanterns', 'Street lanterns']];
@@ -106,17 +111,49 @@ export function viewShop() {
 }
 
 /* ── Collection: all 96, by pack, owned and locked, with the path to each ── */
-export function viewCollection() {
-  const c = K(), ctx = ctxFor(R.s, c);
+/* The Collection is Bizzing Bee's page (owner, 5 Oct 2026): one page, three tabs —
+   Medals · Avatars · Worlds — with Home a tap back, the coin purse in the corner, and on
+   the Avatars tab "Print my cards". Each pack is its own card, its faces in tier order, and
+   every face says how it is had and offers the one thing that can be done with it: Wear,
+   the printed price, or nothing yet (a world to open, a milestone to learn). A tap on a
+   face opens its trading card (avcards.js). */
+const TAB_IC = { medals: 'medal', avatars: 'sparkle', worlds: 'palette' };
+function tile(a, c, ctx) {
+  const s = stateOf(a, ctx), wearing = c.avatar === a.id, T = TIERS[a.tier];
+  const action = wearing ? `<span class="ctile-worn">${ico('check', '', 15)} Wearing</span>`
+    : s.state === 'owned' ? `<button class="ctile-btn" data-act="wear" data-arg="${a.id}" aria-label="Wear ${esc(a.name)}">Wear</button>`
+    : s.state === 'buy' ? `<button class="ctile-btn coin" data-act="buyAv" data-arg="${a.id}" ${s.short ? 'disabled' : ''} aria-label="Buy ${esc(a.name)} for ${T.price} coins${s.short ? ` — ${s.short} more to go` : ''}">${coinSvg(15)} ${T.price}</button>` : '';
+  return `<div class="ctile${wearing ? ' wearing' : ''}" data-tier="${a.tier}" data-state="${s.state}" style="--tc:${T.colour}">
+    <button class="ctile-art" data-act="avCard" data-arg="${a.id}" aria-label="${esc(a.name)} — see the card"><img src="${a.thumb}" alt="" width="96" height="96" loading="lazy"></button>
+    <b class="ctile-nm">${esc(a.name)}</b><span class="ctile-tier">${T.label}</span>
+    <span class="ctile-say">${esc(wearing && s.state !== 'owned' ? 'Yours to wear' : s.say)}</span>
+    <span class="ctile-act">${action}</span></div>`;
+}
+export function viewCollection(tab = R.colTab || 'avatars', medals = () => '') {
+  const c = K(), ctx = ctxFor(R.s, c), coins = balance(c.name);
   const owned = CATALOGUE.filter((a) => stateOf(a, ctx).state === 'owned').length;
-  const mine = BY_ID[c.avatar];
-  return `<div class="stack">
-    ${hero({ eyebrow: `${owned} of ${CATALOGUE.length} faces`, title: 'Your Collection', figure: `<span class="bigav">${kidBadge(c, 110)}</span>`,
-      line: `You are ${esc(avatarName(c.avatar))}${mine ? ` · ${TIERS[mine.tier].label}` : ''}. Tap any face you own to wear it. Every card says how it is earned — nothing is random.` })}
-    ${PACKS.map((p) => { const faces = CATALOGUE.filter((a) => a.pack === p.n), w = LOOKS[Math.ceil(p.n / 2) - 1], wopen = lookOpen(w, ctx);
-      return `<section class="pack" aria-labelledby="pk-${p.n}">
-        <div class="pack-h"><h2 id="pk-${p.n}">${esc(p.name)}</h2><span class="small muted">${esc(w.name)}${p.from ? ' · ' + esc(p.from) : ''} · ${faces.filter((a) => stateOf(a, ctx).state === 'owned').length}/8${wopen ? '' : ' · opens with its world'}</span></div>
-        <div class="avgrid">${faces.map((a) => avCard(a, c, ctx)).join('')}</div></section>`; }).join('')}
+  const medalN = (c.badges || []).filter((k) => BADGES[k]).length, worldN = LOOKS.filter((w) => lookOpen(w, ctx)).length;
+  const tabs = [['medals', `Medals · ${medalN}/${Object.keys(BADGES).length}`], ['avatars', `Avatars · ${owned}/${CATALOGUE.length}`], ['worlds', `Worlds · ${worldN}/${LOOKS.length}`]];
+  const ORD = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  let body;
+  if (tab === 'medals') body = medals();
+  else if (tab === 'worlds') body = `<section class="card">${worldsBody(c, ctx, coins)}</section>`;
+  else body = `<p class="col-intro small">Commons are free for everyone. Rares are ${TIERS.rare.price} Bizzing coins and Epics ${TIERS.epic.price} once their world is open; a Legendary is ${TIERS.legendary.price} after its learning milestone. Every price is fixed, and nothing here is left to chance. <a href="#/shop">Open the Shop</a></p>
+    ${PACKS.map((p) => { const faces = CATALOGUE.filter((a) => a.pack === p.n).sort((x, y) => ORD[x.tier] - ORD[y.tier]), w = LOOKS[Math.ceil(p.n / 2) - 1];
+      const n = faces.filter((a) => stateOf(a, ctx).state === 'owned').length;
+      return `<section class="card cpack" aria-labelledby="pk-${p.n}" style="--pc:${w.accent[0]};--pc2:${w.accent[1]}">
+        <div class="cpack-h"><span class="cpack-dot" aria-hidden="true"></span><h2 id="pk-${p.n}">${esc(p.name)}</h2><span class="cpack-n">${n}/${faces.length}</span>
+          <span class="cpack-src">${ico(p.from ? 'hive' : 'town', '', 15)} ${esc(p.from ? 'Bizzing Bee' : w.name)}${lookOpen(w, ctx) ? '' : ' · opens with its world'}</span></div>
+        <div class="cpack-bar" aria-hidden="true"><i style="width:${Math.round(n / faces.length * 100)}%"></i></div>
+        <div class="ctiles">${faces.map((a) => tile(a, c, ctx)).join('')}</div></section>`; }).join('')}`;
+  return `<div class="stack colpage">
+    <div class="col-head">
+      <button class="pillbtn" data-act="nav" data-arg="home">${ico('back', '‹', 16)} Home</button>
+      <h1>Collection</h1>
+      <span class="col-right">${tab === 'avatars' ? `<button class="pillbtn" data-act="printCards">${ico('printer', '', 16)} Print my cards</button>` : ''}<span class="col-coins" aria-label="${coins} Bizzing coins">${coinSvg(16)} ${coins}</span></span>
+    </div>
+    <div class="col-tabs" role="tablist" aria-label="Collection">${tabs.map(([k, label]) => `<button role="tab" data-act="colTab" data-arg="${k}" aria-selected="${tab === k}">${ico(TAB_IC[k], '', 17)} ${esc(label)}</button>`).join('')}</div>
+    ${body}
   </div>`;
 }
 
