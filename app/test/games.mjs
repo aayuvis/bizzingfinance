@@ -204,26 +204,8 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
   }
   ok(`every game's end card says what THAT game practised (${IDS.length} games)`, !own.length, own.join(','));
   ok('a capped play says so: "Paid plays used for today: this one is practice, and it still counts toward your goals"', !capped.length, capped.join(','));
-  /* a job's card is the job's own, never the last arcade game's */
-  fresh(); play('cr', 1, 'standard'); AR.quitGame();
-  const jobs = [];
-  for (const id of ['crates', 'cargo', 'sweep', 'flyers']) {
-    const g = startJobGame(id, () => {}, { tier: 'standard' });
-    for (let i = 0; i < 200; i++) g.__tick(16);
-    g.st.score = JT.jobPar(id, 'standard'); g.st.end();
-    for (let i = 0; i < 200 && !g.st.done; i++) g.__tick(16);
-    const v = g.view(), kind = JT.JOB_GAME[id].kind;
-    jobs.push([id, v.includes(esc(JOB_PRACTISED[kind])) && !v.includes(esc(AR.PRACTISED.cr)) && !v.includes('Change Rush')]);
-  }
-  ok('every job\'s end card carries its own "You practised" line, not the last arcade game\'s', jobs.every((j) => j[1]), JSON.stringify(jobs));
-  {
-    const id = 'crates', g = startJobGame(id, () => {}, { tier: 'standard' });
-    K().jobs[id] = F.dayIndex(Date.now());    /* already paid today */
-    for (let i = 0; i < 200; i++) g.__tick(16);
-    g.st.score = 30; g.st.end(); for (let i = 0; i < 200 && !g.st.done; i++) g.__tick(16);
-    const v = g.view();
-    ok('a job already paid today says its shift is practice, in its own words — not "Earned ₹0."', /Paid shift used for today/.test(v) && !/Earned ₹0/.test(v), (v.match(/class="small muted endpay">([^<]+)/) || [])[1]);
-  }
+  /* a job's card is the job's own (its practised line, its paid-today notice in the shared
+     words): the Shift engine replaced the reflex jobs, and test/shifts.mjs holds those now */
 }
 
 /* ── T17 · the level rule: offered, never forced ── */
@@ -246,15 +228,7 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
   fresh(); g = play('cr', 5, 'standard'); const sh = K().rounds.cr.share; v = g.view();
   ok('a middling round (between half and 1.6× par) offers nothing', sh < 0.5 || sh >= 1.6 || !/data-act="gLevel"/.test(v), `share ${sh}`);
   AR.quitGame();
-  /* and a job's shift: the same rule, offered on its own card */
-  {
-    fresh(); const id = 'cargo', g = startJobGame(id, () => {}, { tier: 'standard' });
-    for (let i = 0; i < 200; i++) g.__tick(16);
-    g.st.score = Math.ceil(JT.jobPar(id, 'standard') * 1.7); g.st.end(); for (let i = 0; i < 200 && !g.st.done; i++) g.__tick(16);
-    const v = g.view(), offered = /data-act="jgLevel" data-arg="tricky"/.test(v) && JT.tierOf(K(), id) === 'standard';
-    g.act('jgLevel', 'tricky');
-    ok('a shift at 1.6× par or more offers the next level on its card, and only the child\'s tap takes it', offered && JT.tierOf(K(), id) === 'tricky', `offered ${offered}, now ${JT.tierOf(K(), id)}`);
-  }
+  /* a job's shift: the same rule on its own card — held in test/shifts.mjs (§1.7) */
   /* every game reports a decision share, so the rule reaches all of them */
   const shares = IDS.map((id) => { fresh(); play(id, 9, 'standard'); const r = K().rounds[id]; AR.quitGame(); return [id, r && r.share]; });
   ok('every game finishes with a decision score against its par, so the level rule applies to all of them', shares.every(([, s]) => Number.isFinite(s)), shares.map(([i, s]) => `${i} ${s}`).join(' · '));

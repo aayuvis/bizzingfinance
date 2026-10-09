@@ -39,7 +39,7 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'tcNext', 'bbP
   /* Stall of My Own (stall.js) */
   'soGoal', 'soBuy', 'soStep', 'soJar', 'soOffer', 'soOpen', 'soAuto', 'soServe', 'soStock', 'soNext', 'soNew', 'soSel',
   'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
-  /* the job games (jobgames.js) — a job is a game now, not a button */
-  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart', 'jgLevel',
+  /* the Shift engine (jobgames.js) — a job is a shift of money decisions, not a button */
+  'jgPick', 'jgCoin', 'jgUndo', 'jgGive', 'jgDigit', 'jgDel', 'jgEnter', 'jgNext', 'jgTier', 'jgStart', 'jgLevel',
   /* Save or Borrow? (saveborrow.js) */
   'sbKey', 'sbCheck', 'sbPath', 'sbCushion', 'sbSkip', 'sbAns', 'sbNext'];

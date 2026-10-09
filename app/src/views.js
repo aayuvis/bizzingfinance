@@ -34,7 +34,7 @@ import { STRANDS } from './objectives.js';
 import * as mastery from './mastery.js';
 import * as report from './report.js';
 import { OBJECTIVES, objective, teachCard } from './objectives.js';
-import { JOB_GAME } from './jobtable.js';
+import { JOB_GAME, KIND_WORD, SHIFT_ITEMS } from './jobtable.js';
 import { CLASSES } from './assetclasses.js';
 import { CAL } from './world.js';
 import * as biz from './business.js';
@@ -159,14 +159,14 @@ function journeys(c) {
   const jobs = sim.jobsToday(c);
   const jleft = jobs.filter((j) => !j.done).length;
   const bizOpen = chapterOpen(c, 'business') && c.biz;
-  const KIND = { stack: 'stacking', trim: 'balancing', sweep: 'clearing', runner: 'running' };
+  const KIND = KIND_WORD;
   const lvBeats = [
     ...jobs.slice(0, 3).map((j) => {
       const gm = JOB_GAME[j.id];
       return j.done
         ? beat('sub', 'wallet', j.em, esc(j.name), 'Done — back tomorrow.', '<span class="pill grow">done</span>')
         : beat('job', j.id, j.em, esc(j.name),
-            `${gm ? esc(KIND[gm.kind]) + ' · ' : ''}for ${esc(j.who)}${sim.jobBest(c, j.id) ? ' · best ' + sim.jobBest(c, j.id) + ' points' : ''}`,
+            `${gm ? esc(KIND[gm.kind]) + ' · ' : ''}for ${esc(j.who)}${sim.jobBest(c, j.id) ? ' · best ' + sim.jobBest(c, j.id) + '/' + SHIFT_ITEMS : ''}`,
             '<span class="pill">Work</span>', true);
     }),
     bizOpen ? beat('sub', 'business', 'shop', "Your shop", 'Stock, prices, and what the till took.',
@@ -616,10 +616,10 @@ function todaysWork(c) {
   const jobs = sim.jobsToday(c);
   if (!jobs.length) return '';
   const left = jobs.filter((j) => !j.done).length;
-  const KIND = { stack: 'stacking', trim: 'balancing', sweep: 'clearing', runner: 'running' };
+  const KIND = KIND_WORD;
   return `<div class="card">
     <div class="row"><div class="grow"><div class="ct">Today's work</div>
-      <p class="cs">${esc(WORLDS[c.world || 0].name)} · each one is a shift you play, and how well you do it is what it pays</p></div>
+      <p class="cs">${esc(WORLDS[c.world || 0].name)} · each one is a shift of twelve money jobs, and how many you get right is what it pays</p></div>
       <span class="pill ${left ? '' : 'grow'}">${left ? left + ' left' : 'all done'}</span></div>
     <div class="rows" style="margin-top:6px">
       ${jobs.map((j) => {
@@ -630,15 +630,15 @@ function todaysWork(c) {
           <span class="grow" style="min-width:0">
             <b style="font-size:14px;${j.done ? 'opacity:.6' : ''}">${esc(j.name)}</b>
             <div class="small muted">${j.done ? 'Back tomorrow.'
-              : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best + ' points' : ''}`}</div>
+              : `${g ? esc(KIND[g.kind]) + ' · ' : ''}for ${esc(j.who)}${best ? ' · best ' + best + '/' + SHIFT_ITEMS : ''}`}</div>
           </span>
           ${j.done ? '<span class="pill grow">done</span>'
             : `<button class="btn ghost sm" data-act="job" data-arg="${j.id}">${g ? 'Work' : money(j.amt)}</button>`}
         </div>`;
       }).join('')}
     </div>
-    <p class="small muted" style="margin-top:10px">A poor shift still pays — you did the work.
-      A good one pays roughly double. It never pays more than that.</p>
+    <p class="small muted" style="margin-top:10px">A shift with a few right still pays a little — you did the work.
+      Eight right is a good shift; all twelve pays half as much again, and never more than that.</p>
   </div>`;
 }
 

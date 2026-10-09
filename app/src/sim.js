@@ -362,8 +362,9 @@ export function gameWage(c, label, amt, t = Date.now()) {
    last week and not another child. */
 /* Bests are points on the job games' scale. The scale changed when the score became the
    skill (3 Oct 2026); a best on the old scale is not one a child can beat, so it reads as
-   none and the first new shift sets it. */
-const BEST_SCALE = 2;
+   none and the first new shift sets it. It changed again with the Shift engine (docs/12 §3.1):
+   a best is now right answers out of twelve. */
+const BEST_SCALE = 3;
 export function jobBest(c, id) { return (c.jobs && c.jobs.bestScale === BEST_SCALE && c.jobs.best && c.jobs.best[id]) || 0; }
 export function setJobBest(c, id, score) {
   if (!c.jobs.best || c.jobs.bestScale !== BEST_SCALE) { c.jobs.best = {}; c.jobs.bestScale = BEST_SCALE; }

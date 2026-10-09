@@ -1449,6 +1449,88 @@ async function sbChecks(label, scheme) {
   await ctx.close();
 }
 
+/* T13 · the Shift engine in the built app: one shift per template, played to its end card by
+   keyboard alone on the desktop and by touch alone on the phone. The HUD must move on every
+   item, a wrong answer must hold with its correction, and the card must be the shift's own.
+   Phone runs (light and dark) leave a screenshot of each template mid-shift. */
+async function shiftChecks(label, vp, isMobile, scheme) {
+  const ctx = await browser.newContext({ viewport: vp, isMobile, hasTouch: isMobile, deviceScaleFactor: isMobile ? 2 : 1, colorScheme: scheme });
+  const page = await ctx.newPage();
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL0); await page.waitForSelector('[data-act="obStart"]');
+  await page.click('[data-act="obStart"]'); await page.fill('#nm', 'Asha');
+  await page.click('[data-act="obNext"]'); await page.locator('[data-act="obBand"]').last().click();
+  await page.waitForFunction(() => /^#\/atlas\//.test(location.hash)); await page.evaluate(() => { location.hash = '#/home'; });
+  await page.waitForSelector('[data-bz=next]'); await page.waitForTimeout(400);
+  await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
+  const tap = async (sel) => { try { await page.tap(sel, { timeout: 5000 }); } catch (e) { throw new Error(`could not tap ${sel}: ${String(e.message).split("\n")[0]}`); } };
+  const key = async (k) => { await page.keyboard.press(k); };
+  const probe = () => page.evaluate(() => { const g = window.BZF.R.game; if (!g || !g.__st) return null; const p = g.__st();
+    const hud = (h) => { const el = document.querySelector(`.hud [data-hud="${h}"]`); return el ? el.textContent.trim() : ''; };
+    return { kind: p.kind, ready: p.ready, hold: p.hold, done: p.done, over: p.over, picking: p.picking, i: p.i, right: p.right, solution: p.solution, item: p.item,
+      hudItem: hud('item'), hudRight: hud('right'), clock: hud('clock'), fb: !!document.querySelector('.shiftfb') }; });
+  const settle = () => page.waitForFunction(() => { const g = window.BZF.R.game; if (!g || !g.__st) return true; const p = g.__st(); return p.ready || p.hold || p.done; }, null, { timeout: 15000 });
+  const input = async (p, ans) => {
+    const it = p.item, digits = (s) => String(s).split('');
+    if (!isMobile) {
+      if (p.kind === 'count') await key(String(ans));
+      else if (p.kind === 'change') { for (const v of ans) await key(String(it.D.indexOf(v) + 1)); await key('Enter'); }
+      else if (p.kind === 'ledger') { if (it.mode === 'check') await key('abcd'[ans]); else { for (const d of digits(ans)) await key(d); await key('Enter'); } }
+      else await key('abcde'[ans]);
+      return;
+    }
+    if (p.kind === 'change') { for (const v of ans) await tap(`[data-act="jgCoin"][data-arg="${v}"]`); await tap('[data-act="jgGive"]'); }
+    else if (p.kind === 'ledger' && it.mode !== 'check') { for (const d of digits(ans)) await tap(`[data-act="jgDigit"][data-arg="${d}"]`); await tap('[data-act="jgEnter"]'); }
+    else await tap(`[data-act="jgPick"][data-arg="${ans}"]`);
+  };
+  const wrongOf = (p) => (p.kind === 'change' ? [p.item.D[0]].concat(p.solution) : p.kind === 'ledger' ? (p.item.mode === 'check' ? (p.solution + 1) % 4 : p.solution + 1) : (p.solution + 1) % p.item.choices);
+  const ONE = { count: 'crates', change: 'counter', ledger: 'books', route: 'flyers' };
+  const out = {};
+  for (const [kind, id] of Object.entries(ONE)) {
+    const r = out[kind] = { hud: [], held: false, painted: 0 };
+    await page.evaluate(async (id) => { const B = window.BZF, { R } = B; delete R.s.kids[0].jobs[id];
+      const g = await B.startJobGame(id, () => B.quitGame()); if (R.game && R.game.stop) R.game.stop(); R.game = g; R.s.ui.nav = 'arcade'; R.render(); window.scrollTo(0, 0); }, id);
+    await page.waitForSelector('.jgpick [data-act="jgStart"]');
+    /* the level picker by the same hand: Standard, then start */
+    if (isMobile) { await tap('.jgpick [data-act="jgTier"][data-arg="standard"]'); await tap('[data-act="jgStart"]'); }
+    else { await key('2'); await key('Enter'); }
+    await settle();
+    let p = await probe(); r.start = { item: p.hudItem, right: p.hudRight, picking: p.picking };
+    /* item one, wrong on purpose: it holds, says why, and goes on by the same hand */
+    await input(p, wrongOf(p)); await settle();
+    p = await probe(); r.held = p.hold && p.fb;
+    if (SHOTS && isMobile && kind === 'change' && scheme === 'light') await page.screenshot({ path: `${SHOTS}/shift-hold-light.png`, fullPage: true });
+    if (isMobile) await tap('[data-act="jgNext"]'); else await key('Enter');
+    await settle();
+    for (let n = 0; n < 14; n++) {
+      p = await probe(); if (!p || p.done || p.over) break;
+      r.hud.push(`${p.hudItem}|${p.hudRight}`);
+      if (n === (kind === 'ledger' ? 3 : 2)) {   /* item four on the ledger is a line to write; three is last week's page */
+        r.painted = await page.evaluate(() => { const cv = document.getElementById('jobCanvas'); if (!cv) return 0; const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; const s = new Set(); for (let i = 0; i < d.length; i += 4 * 97) s.add((d[i] >> 4) + '-' + (d[i + 1] >> 4) + '-' + (d[i + 2] >> 4)); return s.size; });
+        if (SHOTS && isMobile) await page.screenshot({ path: `${SHOTS}/shift-${kind}-${scheme}.png`, fullPage: true });
+      }
+      await input(p, p.solution); await settle();
+      if ((await probe()).hold) { if (isMobile) await tap('[data-act="jgNext"]'); else await key('Enter'); await settle(); }
+    }
+    await page.waitForSelector('.shiftend', { timeout: 8000 });
+    r.card = await page.evaluate(() => { const e = document.querySelector('.shiftend'); return { practised: (e.querySelector('.practised') || {}).textContent || '', paid: (e.querySelector('.shiftpaid') || {}).textContent || '', h2: e.querySelector('h2').textContent }; });
+    r.right = await page.evaluate(() => window.BZF.R.game.st.right);
+    if (SHOTS && isMobile) await page.screenshot({ path: `${SHOTS}/shift-${kind}-end-${scheme}.png`, fullPage: true });
+    if (isMobile) await tap('.shiftend [data-act="gquit"]'); else { await page.focus('.shiftend [data-act="gquit"]'); await key('Enter'); }
+    await page.waitForTimeout(150);
+    r.left = await page.evaluate(() => !window.BZF.R.game);
+    await page.evaluate(() => window.BZF.fire('closeOv')); await page.waitForTimeout(100);   /* the between-card a quit may offer */
+    const how = isMobile ? 'touch' : 'keyboard';
+    const moved = r.hud.every((h, k) => h.startsWith(`${k + 2} of 12|`)) && r.hud.length === 11;
+    ok(`${label}: ${kind} shift by ${how} alone — picker, a wrong answer that holds, eleven right, the HUD moving every item, drawn on the place, its own end card`,
+      r.start.item === '1 of 12' && r.start.right === '0 right' && !r.start.picking && r.held && moved && r.painted > 40 && r.right === 11
+        && /You practised:/.test(r.card.practised) && !/paying exact amounts/.test(r.card.practised) && /Earned/.test(r.card.paid) && r.left,
+      JSON.stringify({ start: r.start, held: r.held, hud: r.hud.slice(0, 3).concat(r.hud.slice(-1)), painted: r.painted, right: r.right, card: r.card.practised.slice(0, 50), left: r.left }));
+  }
+  ok(`${label}: no page errors during the shifts`, !errors.length, errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1466,6 +1548,9 @@ await safely('stall-phone', () => stallChecks('phone', { width: 390, height: 844
 await safely('stall-phone-dark', () => stallChecks('phone-dark', { width: 390, height: 844 }, true, 'dark'));
 await safely('stall-desktop', () => stallChecks('desktop', { width: 1280, height: 860 }, false, 'light'));
 await safely('stall-desktop-dark', () => stallChecks('desktop-dark', { width: 1280, height: 860 }, false, 'dark'));
+await safely('shift-desktop', () => shiftChecks('shift-desktop', { width: 1280, height: 860 }, false, 'light'));
+await safely('shift-phone', () => shiftChecks('shift-phone', { width: 390, height: 844 }, true, 'light'));
+await safely('shift-phone-dark', () => shiftChecks('shift-phone-dark', { width: 390, height: 844 }, true, 'dark'));
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

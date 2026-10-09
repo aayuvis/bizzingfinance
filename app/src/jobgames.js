@@ -1,71 +1,84 @@
-/* jobgames.js — a day's work, with the work put back in.
+/* jobgames.js — the Shift engine (docs/12 §3.1).
 
-   A job used to be a button: tap it, money appears. That is the single most
-   repeated action in the app and it had no play in it at all, which is most
-   of why nobody could stay for five minutes. Every job is now a short game,
-   and how well you do it decides what it pays.
+   A job used to be a button, then a reflex game in four skins (stack, trim, sweep,
+   runner) with no money in any of them: a random player in Trim scored 69% of perfect,
+   the HUDs froze and two of them never ended. Now every job is one SHIFT — one frame,
+   four money-skill templates — and every item in it is a money decision with a right
+   answer:
 
-   Four mechanics, skinned per job, so the Row and the Harbour do not feel
-   like the same afternoon:
+     count   the delivery against the order slip: what is short?
+     change  the customer paid; give the change with the fewest coins and notes
+     ledger  each receipt is + or −: write the running balance, and spot the line
+             on last week's page that does not add up
+     route   be there in time: the cheapest way that is not late (fare against minutes),
+             and then the walk itself on the map
 
-     stack   drop a swinging crate onto the pile — miss and the pile narrows
-     trim    sort arriving weight port or starboard and keep the boat level
-     sweep   clear the row before the bell, and a clean run chains
-     runner  three lanes, post every door, and the street is not empty
+   The frame every template shares, and why:
+   · A shift ENDS: twelve items or ninety seconds of wall-clock time (performance.now
+     deltas, never frames), whichever is first. A wrong answer holds with its correction
+     until Continue, and the clock waits while it is read (for at most HOLD_MS, so even a
+     child who walks away gets an end card).
+   · A LIVE HUD: item, right so far and the clock, in the HUD and drawn on the canvas, and
+     twelve dots that fill as the shift goes.
+   · Its OWN END CARD: the template's "You practised" line and its own capped notice,
+     never the last arcade game's (§1.4).
+   · Pay is ACCURACY through sim.doJob: right answers out of twelve against par, clamped
+     there as it always was, once a day per job. Nothing here is random-for-reward: the
+     seed decides what arrives, never what it is worth, and the same seed replays.
+   · Easy · Standard · Tricky change the content (jobtable.js), never the pay.
+   · BOTH keyboard and touch on every item, drawn on the place's own painting. */
 
-   Each is drawn, not boxed (owner, 3 Oct 2026: "not functional or boring —
-   make them super kool"): the child's own place painted behind, the job's
-   own scene in front, a 3-2-1-GO, the juice from gamefx.js, a meter toward
-   par, three hearts where a run can go wrong, and a clock or a count so
-   every shift ends. Reduced motion keeps the game and drops the shaking.
-
-   Rules that are not negotiable here. BOTH keyboard and touch, inherited
-   from Bizzing Bee. Wages go through arcade.js's payout() so there is still
-   exactly one place that decides what play is worth. And pay is scaled by
-   SKILL and clamped at both ends (sim.JOB_FLOOR / JOB_CEIL) — a bad shift
-   still pays because the work was done, and a great one cannot become a
-   jackpot, because a wage that swings like a slot machine teaches the exact
-   thing CONCEPT §6.3 forbids. Nothing here is random-for-reward: the dice
-   decide what arrives, never what it is worth. */
-
-import { esc, sfx, clamp } from './ui.js';
-import { dayIndex } from './fmt.js';
-import { ico } from './art.js';
-/* lives in the HUD, drawn — with the count in words for a screen reader, which
-   is also what keeps the chip from reading as empty */
-const hearts = (n) => n > 0 ? `<span class="hearts">${ico('heart', '❤️', 14).repeat(n)}<span class="sr-only">${n} ${n === 1 ? 'life' : 'lives'}</span></span>` : '';
+import { esc, sfx, rng } from './ui.js';
 import { JOBS } from './content.js';
-import { hud, endCard, tierPicker, goalList, levelOffer } from './arcade.js';
+import { hud, tierPicker, goalList, levelOffer, PERFECT } from './arcade.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
-import { fx, countdown, plate, backdrop, rr, shadow, crate, ease, still } from './gamefx.js';
-
-const K = () => sim.kid(R.s);
-const W = 360, H = 300;
-/* §1.4 · what each kind of shift practised, in its own words */
-export const JOB_PRACTISED = {
-  stack: 'steady hands on a job that pays for care: a neat pile is a full wage',
-  trim: 'keeping a load balanced, one weight at a time, before it tips',
-  sweep: 'finishing the whole job before the clock does, not just the easy bits',
-  runner: 'getting every delivery to the right door while the street keeps moving',
-};
-
-/* the table lives in jobtable.js, so the Town can list jobs without loading the games */
-import { JOB_GAME, TIER_IDS, TIER_NAME, JOB_TIER_SAYS, tierOf, setTier, jobPar, jobKnobs, jobGoals, earnGoals } from './jobtable.js';
+import { money, currency, dayIndex } from './fmt.js';
+import { say } from './art.js';
+import { pipPose, kidBadge } from './shell.js';
+import { fx, plate, backdrop, rr, shadow, crate, ease, still } from './gamefx.js';
+import { JOB_GAME, TIER_IDS, TIER_NAME, JOB_TIER_SAYS, SHIFT_ITEMS, SHIFT_MS, SHIFT_PRACTISED, KIND_WORD,
+  tierOf, setTier, jobPar, jobKnobs, jobGoals, earnGoals } from './jobtable.js';
 export { JOB_GAME };
 export { hasJobGame } from './jobtable.js';
 
-/* Difficulty rises with the ladder rather than with the clock, so a child who
-   is better at this is playing a harder game, not a longer one. */
-function tier(c) { return Math.min(6, Math.floor(((c.learn && c.learn.level) || 1) / 4)); }
+const K = () => sim.kid(R.s);
+const W = 360, H = 300;
+/* how long a correction may hold the clock, and how long a right answer shows */
+export const HOLD_MS = 8000, FLASH_MS = 650, WALK_MS = 1100;
+const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
 
-function tok(n, f) {
-  const cs = getComputedStyle(document.documentElement);
-  return ((cs.getPropertyValue(n) || f).trim()) || f;
+/* ── small seeded helpers: everything a shift shows comes from its seed ── */
+const int = (r, n) => Math.floor(r() * n);
+const pick = (r, a) => a[int(r, a.length)];
+function shuffle(r, a) { for (let i = a.length - 1; i > 0; i--) { const j = int(r, i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const LETTERS = 'ABCDE';
+
+/* ── the till: whole coins and notes in the display currency ─────────────
+   Whole units only, so every sum is the same sum in ₹, $, £, € and AED (no sub-units to
+   misprint), and every set is one where the biggest-first rule gives the fewest pieces. */
+const PIECES = {
+  INR: [[1, 'c'], [2, 'c'], [5, 'c'], [10, 'c'], [20, 'n']],
+  USD: [[1, 'n'], [5, 'n'], [10, 'n'], [20, 'n']],
+  GBP: [[1, 'c'], [2, 'c'], [5, 'n'], [10, 'n'], [20, 'n']],
+  EUR: [[1, 'c'], [2, 'c'], [5, 'n'], [10, 'n'], [20, 'n']],
+  AED: [[1, 'c'], [5, 'n'], [10, 'n'], [20, 'n']],
+};
+export function tillPieces(n) { const all = PIECES[currency()] || PIECES.INR; return all.slice(0, Math.max(2, Math.min(all.length, n))); }
+/* the fewest pieces that make `amount` (worked out, not assumed), biggest first */
+export function fewest(amount, denoms) {
+  const best = [[]];
+  for (let a = 1; a <= amount; a++) {
+    let b = null;
+    for (const d of denoms) if (d <= a && best[a - d] && (!b || best[a - d].length + 1 < b.length)) b = best[a - d].concat(d);
+    best[a] = b;
+  }
+  return (best[amount] || []).slice().sort((x, y) => y - x);
 }
+const sum = (a) => a.reduce((t, x) => t + x, 0);
 
-/* ── drawing helpers this file shares ─────────────────────────────────────
-   Text on the canvas is always outlined, because it sits on a painting. */
+/* ── drawing helpers ────────────────────────────────────────────────────
+   Text on the canvas is the app's own face, outlined, because it sits on a painting. */
 const dark = () => !!R.dark;
 function label(ctx, text, x, y, { size = 15, color, align = 'center', weight = 800, serif = false, stroke } = {}) {
   ctx.font = `${weight} ${size}px ${serif ? 'Fraunces, Georgia, serif' : 'Sono, ui-monospace, monospace'}`;
@@ -76,212 +89,694 @@ function label(ctx, text, x, y, { size = 15, color, align = 'center', weight = 8
   ctx.fillStyle = color || (dark() ? '#FFF6DA' : '#1C2A2E');
   ctx.fillText(text, x, y);
 }
-function heart(ctx, x, y, s, full) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(s / 16, s / 16);
-  ctx.beginPath(); ctx.moveTo(0, 5);
-  ctx.bezierCurveTo(-9, -1, -7, -9, 0, -4); ctx.bezierCurveTo(7, -9, 9, -1, 0, 5); ctx.closePath();
-  ctx.fillStyle = full ? '#E0483E' : 'rgba(120,120,130,.35)'; ctx.fill();
-  ctx.lineWidth = 1.6; ctx.strokeStyle = full ? '#8E1F18' : 'rgba(60,60,70,.5)'; ctx.stroke();
-  if (full) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(-3.5, -3, 1.6, 0, Math.PI * 2); ctx.fill(); }
-  ctx.restore();
-}
-/* a progress meter toward par, top-left: the bar fills green to par, gold past it */
-function meter(ctx, score, par, unit) {
-  const x = 8, y = 8, w = 132, h = 16, cap = Math.max(par * 1.5, score + 1);
-  ctx.save();
-  ctx.fillStyle = dark() ? 'rgba(10,14,24,.72)' : 'rgba(255,252,245,.85)';
-  rr(ctx, x - 3, y - 3, w + 6, h + 6, 11); ctx.fill();
-  ctx.fillStyle = dark() ? 'rgba(255,255,255,.12)' : 'rgba(28,42,46,.12)';
-  rr(ctx, x, y, w, h, 8); ctx.fill();
-  const k = Math.min(1, score / cap), px = x + w * (par / cap);
-  if (k > 0) {
-    const g = ctx.createLinearGradient(x, 0, x + w, 0);
-    g.addColorStop(0, '#2FA866'); g.addColorStop(Math.min(0.99, par / cap), '#5CCB7E'); g.addColorStop(1, '#F0B429');
-    ctx.fillStyle = score >= par ? '#F0B429' : g;
-    rr(ctx, x, y, Math.max(h, w * k), h, 8); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; rr(ctx, x + 3, y + 2, Math.max(4, w * k - 6), 4, 2); ctx.fill();
-  }
-  ctx.strokeStyle = dark() ? '#FFF6DA' : '#1C2A2E'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(px, y - 2); ctx.lineTo(px, y + h + 2); ctx.stroke();
-  ctx.restore();
-  label(ctx, `${score} ${unit}`, x + 8, y + h / 2 + 0.5, { size: 11, align: 'left' });
-  label(ctx, score >= par ? 'par ✓' : 'par', px, y + h + 11, { size: 9, weight: 700 });
+/* ink on paper: no outline, always dark (paper is paper at night too) */
+function ink(ctx, text, x, y, { size = 13, color = '#2A2016', align = 'left', weight = 700, serif = false } = {}) {
+  ctx.font = `${weight} ${size}px ${serif ? 'Fraunces, Georgia, serif' : 'Sono, ui-monospace, monospace'}`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillStyle = color; ctx.fillText(text, x, y);
 }
 function pill(ctx, text, x, y, { warn = false } = {}) {
   ctx.font = '800 12px Sono, ui-monospace, monospace';
   const w = ctx.measureText(text).width + 16;
-  ctx.fillStyle = warn ? 'rgba(196,69,60,.92)' : (dark() ? 'rgba(10,14,24,.72)' : 'rgba(255,252,245,.85)');
+  ctx.fillStyle = warn ? 'rgba(196,69,60,.92)' : (dark() ? 'rgba(10,14,24,.78)' : 'rgba(255,252,245,.9)');
   rr(ctx, x - w, y, w, 20, 10); ctx.fill();
   ctx.fillStyle = warn ? '#fff' : (dark() ? '#FFF6DA' : '#1C2A2E');
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x - w / 2, y + 10.5);
   return w;
 }
-function lives(ctx, n, of, xRight, y) {
-  for (let i = 0; i < of; i++) heart(ctx, xRight - 10 - (of - 1 - i) * 19, y + 10, 16, i < n);
-}
-/* at night the drawn foreground is pulled toward the plate's dusk, so it sits in it */
-function night(ctx, a = 0.22) {
-  if (!dark()) return;
-  ctx.fillStyle = `rgba(16,22,48,${a})`; ctx.fillRect(0, 0, W, H);
-}
-function cobbles(ctx, y0, h, scroll = 0) {
+function night(ctx, a = 0.2) { if (!dark()) return; ctx.fillStyle = `rgba(16,22,48,${a})`; ctx.fillRect(0, 0, W, H); }
+function cobbles(ctx, y0, h) {
   ctx.fillStyle = '#9C8A6C'; ctx.fillRect(0, y0, W, h);
   const rowH = 10, cw = 22, tones = ['#BCAA88', '#B4A17E', '#C2B08E', '#B09D7A'];
   for (let r = 0; r * rowH < h; r++) {
-    const y = y0 + r * rowH, off = (((r % 2) * 11 - scroll) % cw + cw) % cw;
-    for (let x = off - cw, k = 0; x < W + cw; x += cw, k++) {
-      const n = Math.floor((x + scroll) / cw) + r * 7;
-      ctx.fillStyle = tones[((n % 4) + 4) % 4];
-      rr(ctx, x + 1, y + 1, cw - 2, rowH - 2, 3.5); ctx.fill();
-    }
+    const y = y0 + r * rowH, off = (r % 2) * 11;
+    for (let x = off - cw, k = 0; x < W + cw; x += cw, k++) { ctx.fillStyle = tones[(k + r * 3) % 4]; rr(ctx, x + 1, y + 1, cw - 2, rowH - 2, 3.5); ctx.fill(); }
   }
   ctx.fillStyle = 'rgba(255,240,210,.22)'; ctx.fillRect(0, y0, W, 2);
 }
-/* a tiny deterministic hash, so a street is the same street all shift */
-const hash = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+function paper(ctx, x, y, w, h, rot = 0) {
+  ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(rot);
+  ctx.fillStyle = 'rgba(40,24,8,.18)'; rr(ctx, -w / 2 + 3, -h / 2 + 4, w, h, 6); ctx.fill();
+  ctx.fillStyle = '#FFF8E6'; rr(ctx, -w / 2, -h / 2, w, h, 6); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,90,50,.35)'; ctx.lineWidth = 1.2; rr(ctx, -w / 2 + .5, -h / 2 + .5, w - 1, h - 1, 6); ctx.stroke();
+  ctx.restore();
+}
+/* the twelve dots: the shift so far, at a glance (green right, red wrong, grey to come) */
+function dots(ctx, results, i) {
+  const x0 = 10, y = 18;
+  ctx.fillStyle = dark() ? 'rgba(10,14,24,.78)' : 'rgba(255,252,245,.9)'; rr(ctx, x0 - 6, 8, SHIFT_ITEMS * 12 + 8, 20, 10); ctx.fill();
+  for (let k = 0; k < SHIFT_ITEMS; k++) {
+    const r = results[k];
+    ctx.beginPath(); ctx.arc(x0 + 4 + k * 12, y, k === i && r == null ? 4.6 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = r === true ? '#2FA866' : r === false ? '#D2453A' : (dark() ? 'rgba(255,255,255,.28)' : 'rgba(28,42,46,.22)');
+    ctx.fill();
+    if (k === i && r == null) { ctx.strokeStyle = dark() ? '#FFF6DA' : '#1C2A2E'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  }
+}
+const clockText = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
-/* ── the shared shell ─────────────────────────────────────────────────────
-   Every job game is the same object shape as the arcade's: mount/stop/key/
-   act/view. This builds all of that from a spec so a new mechanic is a step
-   function and a draw function, not another 120 lines of plumbing.
+/* the things a delivery is made of */
+function sack(ctx, x, y, w, h, tint) {
+  ctx.fillStyle = tint; rr(ctx, x, y + 1, w, h - 1, Math.min(9, w / 3)); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,64,30,.7)'; ctx.lineWidth = 1.6; rr(ctx, x + .8, y + 1.8, w - 1.6, h - 2.6, Math.min(9, w / 3)); ctx.stroke();
+  ctx.fillStyle = 'rgba(90,64,30,.55)'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 3, 4, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,245,220,.35)'; rr(ctx, x + 3, y + 4, w - 6, 3, 2); ctx.fill();
+}
+function barrel(ctx, x, y, w, h, tint) {
+  ctx.fillStyle = tint; rr(ctx, x, y, w, h, Math.min(8, w / 3)); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.12)'; rr(ctx, x + w * .66, y, w * .34, h, Math.min(8, w / 3)); ctx.fill();
+  ctx.strokeStyle = '#4E4A48'; ctx.lineWidth = 2.2;
+  for (const k of [0.22, 0.78]) { ctx.beginPath(); ctx.moveTo(x + 1, y + h * k); ctx.lineTo(x + w - 1, y + h * k); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(70,40,10,.45)'; ctx.lineWidth = 1.2; rr(ctx, x + .6, y + .6, w - 1.2, h - 1.2, Math.min(8, w / 3)); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,240,200,.35)'; ctx.fillRect(x + 4, y + 2, w - 8, 2);
+}
+const LOOK_TINT = { crate: ['#C98A46', '#B9773A', '#D49B57', '#A86B34'], sack: ['#CDB07A', '#BFA06A', '#D8BD88', '#C4A572'], barrel: ['#9A6236', '#8A5530', '#A86D3E', '#7E4E2C'] };
+function piece(ctx, look, x, y, w, h, t) {
+  const tint = LOOK_TINT[look][t % 4];
+  if (look === 'sack') sack(ctx, x, y, w, h, tint); else if (look === 'barrel') barrel(ctx, x, y, w, h, tint); else crate(ctx, x, y, w, h, tint);
+}
+/* a customer: ordinary and various — the colours come from the seed */
+const SKIN = ['#F1C9A5', '#E0AC84', '#C68B5E', '#A86B43', '#8A5534', '#5E3A22'];
+const SHIRT = ['#2E7FA8', '#C4453C', '#178A4C', '#8E5BB0', '#E0A23A', '#3C6E8F', '#B5546E'];
+const HAIR = ['#1E1712', '#3B2A1E', '#6B4A2E', '#9A9A9A', '#2A2A2A'];
+function person(ctx, x, y, p) {
+  shadow(ctx, x, y + 6, 70, 0.18);
+  ctx.fillStyle = p.shirt; rr(ctx, x - 28, y - 64, 56, 76, 20); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; rr(ctx, x - 20, y - 58, 12, 40, 6); ctx.fill();
+  ctx.fillStyle = p.skin; ctx.fillRect(x - 6, y - 72, 12, 10);
+  ctx.beginPath(); ctx.arc(x, y - 86, 19, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = p.hair; ctx.beginPath();
+  if (p.long) { ctx.arc(x, y - 88, 21, Math.PI * 0.95, Math.PI * 2.05); ctx.lineTo(x + 21, y - 70); ctx.lineTo(x + 14, y - 80); ctx.lineTo(x - 14, y - 80); ctx.lineTo(x - 21, y - 70); }
+  else ctx.arc(x, y - 89, 20, Math.PI * 1.02, Math.PI * 1.98);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1C1410'; ctx.beginPath(); ctx.arc(x - 7, y - 86, 2, 0, Math.PI * 2); ctx.arc(x + 7, y - 86, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#5A2E1E'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(x, y - 80, 6, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+}
+const personOf = (r) => ({ skin: pick(r, SKIN), shirt: pick(r, SHIRT), hair: pick(r, HAIR), long: r() < 0.5 });
+/* a coin or a note, its value in the app's own face */
+function cash(ctx, x, y, v, kind, s = 1) {
+  if (kind === 'n') {
+    const w = 46 * s, h = 25 * s;
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; rr(ctx, x - w / 2 + 2, y - h / 2 + 2, w, h, 4); ctx.fill();
+    ctx.fillStyle = v >= 50 ? '#6E9FC9' : v >= 20 ? '#E3A867' : v >= 10 ? '#C9A2D8' : '#8CC49A'; rr(ctx, x - w / 2, y - h / 2, w, h, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(30,40,40,.45)'; ctx.lineWidth = 1.2; rr(ctx, x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6, 3); ctx.stroke();
+    ink(ctx, money(v), x, y + 0.5, { size: Math.round(11 * s), align: 'center', weight: 800, color: '#1C2A2E' });
+  } else {
+    const rad = (v >= 10 ? 15 : v >= 5 ? 14 : 12.5) * s;
+    ctx.fillStyle = '#8A6A1E'; ctx.beginPath(); ctx.arc(x, y + 2, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = v >= 5 ? '#F0B429' : '#D9DCDE'; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,40,0,.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, rad - 3, 0, Math.PI * 2); ctx.stroke();
+    ink(ctx, money(v), x, y + 0.5, { size: Math.round(10 * s), align: 'center', weight: 800, color: '#2A2016' });
+  }
+}
 
-   The shell also owns the feel every job shares: a 3-2-1-GO before anything
-   moves (the game's step does not run during it), the juice layer, the meter
-   toward par, and a "Shift done" flourish before the end card. */
-function shell(spec) {
-  const { jobId, st, step, draw, onKey, onPoint, onDrag, controls, hint, finishLine } = spec;
-  const job = JOBS.find((j) => j.id === jobId) || { name: 'Work', who: 'the town' };
-  const cfg = JOB_GAME[jobId];
-  const FX = fx(), CD = countdown(), img = plate((K() && K().world) || 0);
-  let raf = 0, last = 0, ctx = null, cv = null, T = 0, cdT = 0, said = 3, dpr = 1;
-  st.over = false; st.overT = 0;
-  /* G8 · the level is picked before the 3-2-1, on the shift's own painting. A level
-     given up front (a test, a replay) skips the picker; otherwise the child's last
-     level for this job is the one already lit. */
-  st.tier = TIER_IDS.includes(spec.tier) ? spec.tier : tierOf(K(), jobId);
-  st.picking = !spec.tier;
-  const par = () => jobPar(jobId, st.tier);
-  const retier = (t) => { if (!TIER_IDS.includes(t)) return; st.tier = t; if (spec.retier) spec.retier(t); };
-  retier(st.tier);
-  const live = () => !st.picking && CD.done && !st.over && !st.done;
+/* ══ the four templates ════════════════════════════════════════════════
+   Each one: make (content from the seed) · check · solve (what a careful player does,
+   for the headless tests) · explain (the correction a wrong answer holds with) ·
+   draw · prompt/controls (DOM, touch) · key (keyboard). */
 
-  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+/* ── count · the delivery against the slip ── */
+function countLayout(r, n, layout) {
+  const out = [];
+  if (layout === 'rows') {
+    const w = 34, h = 28, gap = 6, x0 = (W - (5 * w + 4 * gap)) / 2;
+    for (let k = 0; k < n; k++) out.push({ x: x0 + (k % 5) * (w + gap), y: 226 - Math.floor(k / 5) * (h + 6), w, h, t: k });
+  } else if (layout === 'loose') {
+    const cols = 6, rows = 3, cw = 48, ch = 34, x0 = (W - cols * cw) / 2 + 4;
+    const cells = shuffle(r, Array.from({ length: cols * rows }, (_, k) => k)).slice(0, n).sort((a, b) => a - b);
+    for (const c of cells) out.push({ x: x0 + (c % cols) * cw + int(r, 7) - 3, y: 158 + Math.floor(c / cols) * ch + int(r, 5) - 2, w: 36, h: 28, t: int(r, 4) });
+  } else {
+    let rem = n; const cols = [];
+    while (rem > 0) {
+      const left = 8 - cols.length, minH = Math.max(1, Math.ceil(rem / left)), maxH = Math.min(4, rem);
+      const h = minH + int(r, maxH - minH + 1); cols.push(h); rem -= h;
+    }
+    shuffle(r, cols);
+    const cw = 40, x0 = (W - cols.length * cw) / 2 + 3;
+    cols.forEach((h, c) => { for (let k = 0; k < h; k++) out.push({ x: x0 + c * cw, y: 236 - k * 26, w: 34, h: 25, t: int(r, 4) }); });
+  }
+  return out;
+}
+const COUNT = {
+  make(r, kn) {
+    let ordered, packs = null;
+    if (kn.packs && r() < 0.6) { const m = r() < 0.5 ? 4 : 6; const k = m === 4 ? 3 + int(r, 4) : 2 + int(r, 3); ordered = k * m; packs = { k, m }; }
+    else ordered = kn.min + int(r, kn.max - kn.min + 1);
+    const short = int(r, kn.short + 1), n = ordered - short;
+    return { ordered, packs, short, n, choices: kn.short + 1, pos: countLayout(r, n, kn.layout) };
+  },
+  check: (it, s) => ({ right: s === it.short, flag: s === it.short && it.short > 0 }),
+  solve: (it) => it.short,
+  random: (it, r) => int(r, it.choices),
+  explain: (it, s, cfg) => `${it.packs ? `${it.packs.k} packs of ${it.packs.m} is ${it.ordered}. ` : ''}Ordered ${it.ordered}, came ${it.n}: ${it.short ? `short by ${it.short}` : 'all here'}${s != null ? `, not ${s ? s + ' short' : 'all here'}` : ''}.`,
+  praise: (it) => (it.short ? `short by ${it.short}, flagged` : 'all here, signed for'),
+  describe: (it, cfg) => `A delivery of ${cfg.noun} and the order slip: ${it.packs ? `${it.packs.k} packs of ${it.packs.m}` : it.ordered + ' ordered'}. ${it.n} ${cfg.noun} came.`,
+  prompt: (it, cfg) => `Count the ${cfg.noun} that came. <b>What is short?</b>`,
+  controls: (it, st, busy) => `<div class="shiftopts" role="group" aria-label="What is short">${Array.from({ length: it.choices }, (_, k) =>
+    `<button class="btn ghost shiftopt" data-act="jgPick" data-arg="${k}"${busy ? ' disabled' : ''}><span class="tk">${k}</span>${k ? `${k} short` : 'All here'}</button>`).join('')}</div>`,
+  hint: 'Tap an answer, or press 0 for all here and 1–6 for how many are short.',
+  key(e, it, api) { const d = +e.key; if (e.key.length === 1 && d >= 0 && d < it.choices) api.answer(d); },
+  act(n, arg, it, api) { if (n === 'jgPick') api.answer(+arg); },
+  draw(ctx, it, st, cfg) {
+    const dock = cfg.look === 'barrel';
+    if (dock) {
+      ctx.fillStyle = dark() ? '#1E3550' : '#4E8DB0'; ctx.fillRect(0, 272, W, 28);
+      ctx.fillStyle = '#8A6640'; ctx.fillRect(0, 262, W, 12);
+      ctx.fillStyle = 'rgba(60,36,14,.5)'; for (let x = 0; x < W; x += 30) ctx.fillRect(x, 262, 2, 12);
+    } else cobbles(ctx, 262, 38);
+    const reveal = st.hold || st.flash > 0;
+    for (let k = 0; k < it.pos.length; k++) {
+      const p = it.pos[k];
+      shadow(ctx, p.x + p.w / 2, p.y + p.h + 1, p.w + 6, 0.1);
+      piece(ctx, cfg.look, p.x, p.y, p.w, p.h, p.t);
+    }
+    /* a correction counts them out loud: a number on each one */
+    if (reveal) it.pos.forEach((p, k) => label(ctx, String(k + 1), p.x + p.w / 2, p.y + p.h / 2, { size: 11, color: '#3A2400', stroke: '#FFF3C4' }));
+    paper(ctx, 12, 38, 132, 64, -0.035);
+    ctx.save(); ctx.translate(78, 70); ctx.rotate(-0.035);
+    ink(ctx, 'ORDER SLIP', -56, -20, { size: 10, color: '#8A5A3C', weight: 800 });
+    ink(ctx, it.packs ? `${it.packs.k} packs of ${it.packs.m}` : `${it.ordered} ${cfg.noun}`, -56, 0, { size: it.packs ? 15 : 17, serif: true, weight: 800 });
+    ink(ctx, 'signed for on arrival', -56, 19, { size: 9, color: '#6B5A48', weight: 600 });
+    ctx.restore();
+  },
+};
 
-  const end = () => {
-    if (st.done) return;
-    st.done = true;
-    stop();
-    /* Skill in, wage out — measured against THIS level's par, so a harder level is a
-       challenge and never a bigger payday — and sim.doJob clamps it at both ends. */
-    st.quality = st.score / par();
-    st.best = sim.setJobBest(K(), jobId, st.score);
-    /* §1.4 · a job pays once a day; a second shift is practice, and its card says so */
-    st.capped = !!(K().jobs && K().jobs[jobId] === dayIndex(Date.now()));
-    st.won = sim.doJob(K(), jobId, st.quality);
-    /* §1.7 · the owner's level rule for a shift too: offered on the card, never applied by itself */
-    st.offer = levelOffer(st.tier, st.quality);
-    /* G9 · goals are a record: ticked here, and they pay nothing */
-    st.goals = earnGoals(K(), jobId, jobGoals(jobId), Object.assign({ tier: st.tier }, spec.summary()));
-    if (R.s) sim.save(R.s);
-    if (st.won > 0) sfx.coin();
-    R.render();
-  };
-  /* The game says it is over; the shell plays the flourish, then pays. */
-  const finish = () => {
-    if (st.over || st.done) return;
-    st.over = true; st.overT = 0;
-    FX.coins(W / 2, H / 2 - 10, 12);
-    FX.burst(W / 2, H / 2 - 10, { n: 26, colors: ['#F0B429', '#FFF3C4', '#5CCB7E', '#3FBCC8'], speed: 0.3 });
-    sfx.level();
-  };
-  st.end = finish;
-  const takeOffer = () => {
-    const o = st.offer; if (!o || o.taken || !setTier(K(), jobId, o.to)) return;
-    st.offer = Object.assign({}, o, { taken: true });
-    if (R.s) sim.save(R.s);
-    sfx.click(); R.render();
-  };
-  const offerHtml = () => {
-    const o = st.offer; if (!o) return '';
-    if (o.taken) return `<p class="small lvloffer" data-dir="${o.dir}">Next shift is on <b>${TIER_NAME[o.to]}</b>.</p>`;
-    const line = o.dir === 'up' ? `Well over par on ${TIER_NAME[st.tier]}. Ready for ${TIER_NAME[o.to]}?`
-      : `That one was hard on ${TIER_NAME[st.tier]}. ${TIER_NAME[o.to]} is there if you want it: your choice.`;
-    return `<div class="lvloffer" data-dir="${o.dir}"><p class="small">${esc(line)}</p>
-      <button class="btn ghost sm" data-act="jgLevel" data-arg="${o.to}">L · ${TIER_NAME[o.to]} next shift</button></div>`;
-  };
-  const pick = (t) => { if (!st.picking || !TIER_IDS.includes(t)) return; retier(t); setTier(K(), jobId, t); sfx.click(); R.render(); };
-  const begin = () => { if (!st.picking) return; st.picking = false; setTier(K(), jobId, st.tier); if (R.s) sim.save(R.s); sfx.click(); R.render(); };
+/* ── change · the fewest coins and notes ── */
+const GOODS = {
+  counter: ['a tin of beans', 'a loaf', 'a jar of honey', 'a bag of rice', 'a bar of soap', 'a pot of jam'],
+  runner: ['two teas', 'a lunch box', 'a plate of samosas', 'a sandwich', 'a bowl of soup', 'three buns'],
+  board: ['a melon', 'six eggs', 'a bunch of bananas', 'a bag of onions', 'a punnet of plums', 'a cabbage'],
+};
+const CHANGE = {
+  make(r, kn, cfg, jobId) {
+    const P = tillPieces(kn.coins), D = P.map((p) => p[0]);
+    let change = 1 + int(r, kn.max);
+    for (let k = 0; k < 6 && kn.coins > 3 && fewest(change, D).length < 2; k++) change = 1 + int(r, kn.max);
+    const notes = [10, 20, 50, 100].filter((n) => n > change);
+    const note = notes[int(r, Math.min(2, notes.length))];
+    const price = note - change;
+    let paid = note, extra = 0;
+    /* Tricky: "can you give me 15 back?" — they add the odd coin so the change comes out round */
+    if (kn.odd && r() < 0.45) { const e = price % 5; if (e && D.includes(e)) { extra = e; paid = note + extra; change += extra; } }
+    return { price, paid, note, extra, change, D, P, best: fewest(change, D), goods: pick(r, GOODS[jobId] || GOODS.counter), who: personOf(r) };
+  },
+  check(it, tray) { const s = sum(tray); return { right: s === it.change && tray.length === it.best.length, over: s > it.change }; },
+  solve: (it) => it.best.slice(),
+  random(it, r) { const n = 1 + int(r, 5); return Array.from({ length: n }, () => pick(r, it.D)); },
+  explain(it, tray) {
+    const s = sum(tray), base = `${money(it.paid)} − ${money(it.price)} = ${money(it.change)} back: ${it.best.map((v) => money(v)).join(' + ')}`;
+    if (s === it.change) return `${base}. The right amount, but ${it.best.length} piece${it.best.length > 1 ? 's do' : ' does'} it, not ${tray.length}.`;
+    return `${base}. You gave ${money(s)}${s > it.change ? ': too much' : ': not enough'}.`;
+  },
+  praise: (it) => `${money(it.change)} back in ${it.best.length}`,
+  describe: (it) => `A customer buys ${it.goods} for ${money(it.price)} and pays ${money(it.paid)}.`,
+  prompt: (it) => `${esc(it.goods.replace(/^./, (c) => c.toUpperCase()))}: <b>${money(it.price)}</b>. They pay <b>${money(it.paid)}</b>. Give the change, <b>fewest pieces</b>.`,
+  controls: (it, st, busy) => `<div class="shiftopts coins" role="group" aria-label="The till">${it.P.map(([v, k], i) =>
+      `<button class="btn ghost shiftopt coin ${k === 'n' ? 'note' : ''}" data-act="jgCoin" data-arg="${v}"${busy ? ' disabled' : ''}><span class="tk">${i + 1}</span>${money(v)}</button>`).join('')}</div>
+    <div class="row shiftgive"><span class="grow small" aria-live="polite">In the tray: <b class="tabnum">${money(sum(st.tray))}</b> in ${st.tray.length} piece${st.tray.length === 1 ? '' : 's'}</span>
+      <button class="btn ghost sm" data-act="jgUndo"${busy || !st.tray.length ? ' disabled' : ''}>Undo</button>
+      <button class="btn sm" data-act="jgGive"${busy || !st.tray.length ? ' disabled' : ''}>Give change</button></div>`,
+  hint: 'Tap coins and notes, then Give. Or press 1–5 to add, Backspace to take one back, Enter to give.',
+  key(e, it, api) {
+    const d = +e.key;
+    if (e.key.length === 1 && d >= 1 && d <= it.D.length) api.coin(it.D[d - 1]);
+    else if (e.key === 'Backspace' || e.key === 'Delete') api.undo();
+    else if (e.key === 'Enter') api.give();
+  },
+  act(n, arg, it, api) { if (n === 'jgCoin') api.coin(+arg); else if (n === 'jgUndo') api.undo(); else if (n === 'jgGive') api.give(); },
+  draw(ctx, it, st) {
+    /* a shop wall: shelves behind, the customer, the counter in front */
+    ctx.fillStyle = dark() ? 'rgba(60,40,24,.55)' : 'rgba(150,104,60,.5)';
+    for (const y of [70, 120]) ctx.fillRect(176, y, 176, 5);
+    for (let k = 0; k < 7; k++) { ctx.fillStyle = SHIRT[k % SHIRT.length]; rr(ctx, 184 + k * 24, 52, 15, 18, 3); ctx.fill(); rr(ctx, 188 + k * 24, 100, 13, 20, 3); ctx.fill(); }
+    person(ctx, 92, 196, it.who);
+    ctx.fillStyle = '#8F6236'; rr(ctx, 0, 190, W, 12, 3); ctx.fill();
+    ctx.fillStyle = '#A8763F'; ctx.fillRect(0, 202, W, 98);
+    ctx.fillStyle = 'rgba(255,230,190,.25)'; ctx.fillRect(0, 191, W, 2);
+    ctx.strokeStyle = 'rgba(70,40,10,.3)'; ctx.lineWidth = 2; ctx.strokeRect(14, 214, 150, 74); ctx.strokeRect(196, 214, 150, 74);
+    /* what they pay with, held out over the counter */
+    cash(ctx, 150, 168, it.note, 'n', 1.15);
+    if (it.extra) { const k = (PIECES[currency()] || PIECES.INR).find((p) => p[0] === it.extra); cash(ctx, 150, 196, it.extra, k ? k[1] : 'c'); }
+    /* the price tag on the thing they are buying */
+    paper(ctx, 196, 146, 92, 38, 0.05);
+    ctx.save(); ctx.translate(242, 165); ctx.rotate(0.05);
+    ink(ctx, it.goods.length > 14 ? it.goods.slice(0, 13) + '…' : it.goods, 0, -8, { size: 9.5, align: 'center', color: '#6B5A48', weight: 650 });
+    ink(ctx, money(it.price), 0, 8, { size: 16, align: 'center', serif: true, weight: 800 });
+    ctx.restore();
+    /* the tray: what you have counted out so far */
+    ctx.fillStyle = 'rgba(40,24,8,.28)'; rr(ctx, 186, 216, 162, 72, 12); ctx.fill();
+    ctx.fillStyle = dark() ? '#3B3226' : '#E8D9BC'; rr(ctx, 190, 220, 154, 64, 10); ctx.fill();
+    const tray = st.hold ? it.best : st.tray;
+    if (!tray.length) ink(ctx, 'the tray', 267, 252, { size: 11, align: 'center', color: dark() ? '#BFAE90' : '#8A7A60', weight: 650 });
+    const kind = (v) => ((PIECES[currency()] || PIECES.INR).find((p) => p[0] === v) || [0, 'c'])[1];
+    tray.slice(0, 10).forEach((v, k) => cash(ctx, 210 + (k % 5) * 29, 238 + Math.floor(k / 5) * 28, v, kind(v), 0.8));
+    if (tray.length > 10) ink(ctx, `+${tray.length - 10}`, 336, 276, { size: 11, align: 'right' });
+    if (st.hold) label(ctx, 'the fewest', 267, 210, { size: 11, color: '#11663A' });
+  },
+};
 
-  const paint = () => {
-    const amb = still() ? 0 : T;
-    const after = FX.begin(ctx);
-    ctx.clearRect(0, 0, W, H);
-    draw(ctx, { img, T: amb, FX });
-    after();
-    FX.draw(ctx, W, H);
-    meter(ctx, st.score, par(), spec.unit);
-    if (spec.hud) spec.hud(ctx);
-    if (st.picking) {
-      ctx.fillStyle = 'rgba(20,24,36,.28)'; ctx.fillRect(0, 0, W, H);
-      label(ctx, TIER_NAME[st.tier], W / 2, H / 2 - 12, { size: 30, serif: true });
-      label(ctx, `par ${par()} · pick a level below`, W / 2, H / 2 + 18, { size: 12 });
+/* ── ledger · the running balance, and the line that does not add up ── */
+const LINES = {
+  books: { plus: ['Sold teas', 'Sold samosas', 'A tab paid', 'Sold a cake', 'Sold biscuits'], minus: ['Milk', 'Sugar', 'Gas for the stove', 'Paper cups', 'Tea leaves'] },
+  nets: { plus: ['Sold a net', 'Mended a net', 'Sold floats', 'A skipper paid'], minus: ['Twine', 'Rope', 'Tar', 'A new needle', 'Cork'] },
+  mend: { plus: ['Mended an umbrella', 'New spokes fitted', 'A handle glued', 'Sold a brolly'], minus: ['Spokes', 'Cloth', 'Thread', 'Glue', 'Handles'] },
+};
+const LEDGER = {
+  makeAll(r, kn, cfg, jobId) {
+    const L = LINES[jobId] || LINES.books, out = [];
+    const checkAt = new Set(kn.checks >= 3 ? [3, 7, 11] : kn.checks === 2 ? [5, 11] : [11]);
+    let bal = kn.open; const book = [];
+    for (let i = 0; i < SHIFT_ITEMS; i++) {
+      if (checkAt.has(i)) {
+        /* last week's page: one line where the written balance does not follow */
+        let prev = kn.open + int(r, kn.amt * 2);
+        const start = prev, wrong = int(r, 4), lines = [];
+        for (let j = 0; j < 4; j++) {
+          let sign = r() < 0.55 ? 1 : -1; const amt = 1 + int(r, kn.amt);
+          if (sign < 0 && amt > prev) sign = 1;
+          let shown = prev + sign * amt;
+          const right = shown;
+          if (j === wrong) {
+            if (sign < 0 && r() < 0.35) shown = prev + amt;     /* taken away, but added */
+            else { let d = 1 + int(r, 9); if (r() < 0.5 && shown - d >= 0) d = -d; shown += d; }
+          }
+          lines.push({ desc: pick(r, sign > 0 ? L.plus : L.minus), sign, amt, prev, shown, right });
+          prev = shown;
+        }
+        out.push({ mode: 'check', start, lines, wrong, choices: 4 });
+      } else {
+        let sign = r() < 0.55 ? 1 : -1; const amt = 1 + int(r, kn.amt);
+        if (sign < 0 && amt > bal) sign = 1;
+        const line = { mode: 'type', desc: pick(r, sign > 0 ? L.plus : L.minus), sign, amt, prev: bal, answer: bal + sign * amt, open: kn.open, before: book.slice(-3) };
+        out.push(line); book.push(line); bal = line.answer;
+      }
+    }
+    return out;
+  },
+  check(it, v) { return it.mode === 'check' ? { right: v === it.wrong, spot: v === it.wrong } : { right: v === it.answer }; },
+  solve: (it) => (it.mode === 'check' ? it.wrong : it.answer),
+  random(it, r) { return it.mode === 'check' ? int(r, 4) : int(r, it.prev + it.amt * 2 + 1); },
+  explain(it, v) {
+    if (it.mode === 'check') { const l = it.lines[it.wrong];
+      return `Line ${LETTERS[it.wrong]}: ${money(l.prev)} ${l.sign > 0 ? '+' : '−'} ${money(l.amt)} is ${money(l.right)}, not ${money(l.shown)}.`; }
+    return `${money(it.prev)} ${it.sign > 0 ? '+' : '−'} ${money(it.amt)} = ${money(it.answer)}${v != null && !Number.isNaN(v) ? `, not ${money(v)}` : ''}.`;
+  },
+  praise: (it) => (it.mode === 'check' ? `line ${LETTERS[it.wrong]} was out` : `${money(it.answer)} carried`),
+  describe: (it) => (it.mode === 'check' ? `Last week's page: four lines, A to D. ${it.lines.map((l, j) => `${LETTERS[j]}: ${l.desc}, ${l.sign > 0 ? 'plus' : 'minus'} ${l.amt}, balance ${l.shown}.`).join(' ')}`
+    : `Balance ${it.prev}. New line: ${it.desc}, ${it.sign > 0 ? 'plus' : 'minus'} ${it.amt}.`),
+  prompt: (it) => (it.mode === 'check' ? 'Last week\'s page. <b>Which line does not add up?</b>'
+    : `${esc(it.desc)}: <b>${it.sign > 0 ? '+' : '−'}${money(it.amt)}</b>. <b>What is the balance now?</b>`),
+  controls(it, st, busy) {
+    if (it.mode === 'check') return `<div class="shiftopts" role="group" aria-label="Which line">${it.lines.map((l, j) =>
+      `<button class="btn ghost shiftopt" data-act="jgPick" data-arg="${j}"${busy ? ' disabled' : ''}><span class="tk">${LETTERS[j]}</span>Line ${LETTERS[j]}</button>`).join('')}</div>`;
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'ok'];
+    return `<div class="row shiftentry"><span class="grow small">Balance:</span><b class="tabnum shiftval" aria-live="polite">${st.entry ? money(+st.entry) : '…'}</b></div>
+      <div class="shiftpad" role="group" aria-label="Number pad">${keys.map((k) => k === 'del'
+        ? `<button class="btn ghost" data-act="jgDel"${busy ? ' disabled' : ''} aria-label="Delete">⌫</button>`
+        : k === 'ok' ? `<button class="btn" data-act="jgEnter"${busy || !st.entry ? ' disabled' : ''}>Write it</button>`
+        : `<button class="btn ghost" data-act="jgDigit" data-arg="${k}"${busy ? ' disabled' : ''}>${k}</button>`).join('')}</div>`;
+  },
+  hint: 'Type the balance and press Enter, or use the pad. On last week\'s page, press A–D or tap the line.',
+  key(e, it, api) {
+    if (it.mode === 'check') { const k = e.key.toLowerCase(), j = 'abcd'.indexOf(k) >= 0 ? 'abcd'.indexOf(k) : '1234'.indexOf(k); if (k.length === 1 && j >= 0) api.answer(j); return; }
+    if (e.key.length === 1 && e.key >= '0' && e.key <= '9') api.digit(e.key);
+    else if (e.key === 'Backspace' || e.key === 'Delete') api.del();
+    else if (e.key === 'Enter') api.enter();
+  },
+  act(n, arg, it, api) {
+    if (n === 'jgPick' && it.mode === 'check') api.answer(+arg);
+    else if (n === 'jgDigit') api.digit(String(arg));
+    else if (n === 'jgDel') api.del();
+    else if (n === 'jgEnter') api.enter();
+  },
+  /* a tap on a line of last week's page */
+  point(x, y, it, api) { if (it.mode !== 'check') return; const j = Math.floor((y - 116) / 34); if (j >= 0 && j < 4 && x > 16 && x < 344) api.answer(j); },
+  draw(ctx, it, st) {
+    paper(ctx, 14, 36, 332, 240, 0);
+    ctx.strokeStyle = 'rgba(196,69,60,.45)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(44, 40); ctx.lineTo(44, 272); ctx.stroke();
+    ctx.strokeStyle = 'rgba(46,127,168,.22)'; ctx.lineWidth = 1;
+    for (let y = 82; y < 272; y += 34) { ctx.beginPath(); ctx.moveTo(18, y); ctx.lineTo(342, y); ctx.stroke(); }
+    const col = (x) => { ctx.strokeStyle = 'rgba(120,90,50,.25)'; ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x, 272); ctx.stroke(); };
+    col(232); col(272);
+    ink(ctx, it.mode === 'check' ? "LAST WEEK'S PAGE" : 'THE BOOK', 52, 62, { size: 10, color: '#8A5A3C', weight: 800 });
+    ink(ctx, 'in/out', 252, 62, { size: 9, align: 'center', color: '#8A5A3C' });
+    ink(ctx, 'balance', 336, 62, { size: 9, align: 'right', color: '#8A5A3C' });
+    const row = (j, desc, signed, bal, { hi = null, tag = '' } = {}) => {
+      const y = 99 + j * 34;
+      if (hi) { ctx.fillStyle = hi; ctx.fillRect(18, y - 16, 324, 32); }
+      if (tag) ink(ctx, tag, 30, y, { size: 13, align: 'center', weight: 800, color: '#2E5F7A' });
+      ink(ctx, desc.length > 21 ? desc.slice(0, 20) + '…' : desc, 52, y, { size: 12, weight: 650 });
+      if (signed) ink(ctx, signed, 266, y, { size: 12, align: 'right', color: signed[0] === '+' ? '#11663A' : '#A3342C', weight: 800 });
+      ink(ctx, bal, 336, y, { size: 13, align: 'right', weight: 800 });
+    };
+    if (it.mode === 'check') {
+      row(0, 'Brought forward', '', money(it.start));
+      it.lines.forEach((l, j) => {
+        const show = st.hold || st.flash > 0;
+        row(j + 1, l.desc, `${l.sign > 0 ? '+' : '−'}${l.amt}`, money(l.shown), { tag: LETTERS[j], hi: show && j === it.wrong ? 'rgba(210,69,58,.18)' : null });
+        if (show && j === it.wrong) ink(ctx, `should be ${money(l.right)}`, 226, 99 + (j + 1) * 34 + 11, { size: 9, align: 'right', color: '#A3342C' });
+      });
       return;
     }
-    CD.draw(ctx, W, H);
+    const lines = it.before;
+    row(0, lines.length ? 'Carried' : 'Opening balance', '', money(lines.length ? lines[0].prev : it.open));
+    lines.forEach((l, j) => row(j + 1, l.desc, `${l.sign > 0 ? '+' : '−'}${l.amt}`, money(l.answer)));
+    const j = lines.length + 1, y = 99 + j * 34;
+    const blink = still() || Math.floor(st.T / 500) % 2 === 0;
+    const val = st.hold ? money(it.answer) : st.entry ? money(+st.entry) + (blink ? '▏' : ' ') : (blink ? '?' : ' ');
+    ctx.fillStyle = st.hold ? 'rgba(210,69,58,.14)' : 'rgba(240,180,41,.22)'; ctx.fillRect(18, y - 16, 324, 32);
+    row(j, it.desc, `${it.sign > 0 ? '+' : '−'}${it.amt}`, val);
+  },
+};
+
+/* ── route · fare against the clock, then walk it ── */
+const MODES = {
+  walk: { name: 'Walk', min: [14, 40], fare: [0, 0], col: '#8A5A3C', dash: [2, 6], w: 3.5 },
+  bus:  { name: 'Bus', min: [6, 15], fare: [2, 5], col: '#C4453C', dash: [], w: 5 },
+  bike: { name: 'Hire a bike', min: [8, 17], fare: [3, 7], col: '#178A4C', dash: [8, 5], w: 4 },
+  cab:  { name: 'Cab', min: [4, 9], fare: [9, 15], col: '#D9962A', dash: [], w: 5 },
+  tram: { name: 'Tram', min: [5, 12], fare: [3, 6], col: '#2E7FA8', dash: [12, 4], w: 5 },
+};
+const STOPS = {
+  flyers: ['No. 3, Kiln Lane', 'No. 14, Well Street', 'No. 27, the Crescent', 'No. 8, Mill Row', 'No. 40, Hill Road', 'No. 19, Ferry Lane'],
+  errands: ['the bank', 'the post office', 'the clocktower', 'the tailor', 'the library', 'the station'],
+  sweep: ['the fountain', 'the fish stalls', 'the far end of the Row', 'the spice stalls', 'the well', 'the bandstand'],
+  lamplight: ['the pier lamp', 'the boathouse', 'the harbour steps', 'the lighthouse path', 'the net sheds', 'the slipway'],
+};
+const legText = (l) => `${MODES[l.m].name} ${l.min} min${l.fare ? ` (${money(l.fare)})` : ''}`;
+const ROUTE = {
+  walks: true,
+  make(r, kn, cfg, jobId) {
+    const modes = ['bus', 'bike', 'cab'].concat(kn.tram ? ['tram'] : []);
+    const leg = (m, nl) => { const M = MODES[m], k = nl > 1 ? 0.6 : 1;
+      return { m, min: Math.max(2, Math.round((M.min[0] + int(r, M.min[1] - M.min[0] + 1)) * k)), fare: M.fare[0] + int(r, M.fare[1] - M.fare[0] + 1) }; };
+    for (let attempt = 0; attempt < 400; attempt++) {
+      const opts = [{ legs: [leg('walk', 1)] }];
+      while (opts.length < kn.opts) {
+        const nl = 1 + int(r, kn.legs), legs = [];
+        for (let k = 0; k < nl; k++) legs.push(leg(nl > 1 && k === 0 && r() < 0.6 ? 'walk' : pick(r, modes), nl));
+        opts.push({ legs });
+      }
+      opts.forEach((o) => { o.min = sum(o.legs.map((l) => l.min)); o.fare = sum(o.legs.map((l) => l.fare)); });
+      if (new Set(opts.map((o) => o.min)).size < opts.length || new Set(opts.map((o) => o.fare)).size < opts.length) continue;
+      const mins = opts.map((o) => o.min).sort((a, b) => a - b);
+      const k = 1 + int(r, opts.length - 2);
+      if (mins[k + 1] - mins[k] < 2) continue;
+      const due = mins[k] + 1 + int(r, mins[k + 1] - mins[k] - 1);
+      const on = opts.filter((o) => o.min <= due);
+      const best = on.reduce((b, o) => (o.fare < b.fare ? o : b), on[0]);
+      const cheapest = opts.reduce((b, o) => (o.fare < b.fare ? o : b), opts[0]);
+      const fastest = opts.reduce((b, o) => (o.min < b.min ? o : b), opts[0]);
+      /* the free walk is usually too slow, and the quickest is usually not the cheapest on time:
+         so neither "always walk" nor "always the fastest" is a way to play this */
+      if (cheapest.min <= due && r() > 0.2) continue;
+      if (fastest === best && r() > 0.2) continue;
+      shuffle(r, opts);
+      return { opts, due, answer: opts.indexOf(best), dest: pick(r, STOPS[jobId] || STOPS.errands), choices: opts.length };
+    }
+    /* never reached in practice (the tests replay thousands); a plain, valid item if it were */
+    const opts = [{ legs: [{ m: 'walk', min: 30, fare: 0 }] }, { legs: [{ m: 'bus', min: 10, fare: 3 }] }, { legs: [{ m: 'cab', min: 6, fare: 12 }] }, { legs: [{ m: 'bike', min: 25, fare: 4 }] }].slice(0, kn.opts);
+    opts.forEach((o) => { o.min = o.legs[0].min; o.fare = o.legs[0].fare; });
+    return { opts, due: 20, answer: 1, dest: 'the bank', choices: opts.length };
+  },
+  check(it, v) { const o = it.opts[v]; return { right: v === it.answer, late: !!o && o.min > it.due }; },
+  solve: (it) => it.answer,
+  random: (it, r) => int(r, it.choices),
+  explain(it, v) {
+    const o = it.opts[v], a = it.opts[it.answer];
+    const tail = `${LETTERS[it.answer]} is the cheapest that is on time: ${a.min} min, ${a.fare ? money(a.fare) : 'free'}.`;
+    if (!o) return tail;
+    return o.min > it.due ? `${LETTERS[v]} takes ${o.min} min: late. ${tail}` : `${LETTERS[v]} is on time, but costs ${money(o.fare)}. ${tail}`;
+  },
+  praise: (it) => { const a = it.opts[it.answer]; return `on time for ${a.fare ? money(a.fare) : 'nothing'}`; },
+  describe: (it) => `Be at ${it.dest} within ${it.due} minutes. ${it.opts.map((o, j) => `${LETTERS[j]}: ${o.legs.map(legText).join(', then ')}; ${o.min} minutes, ${o.fare ? money(o.fare) : 'free'}.`).join(' ')}`,
+  prompt: (it) => `Be at <b>${esc(it.dest)}</b> within <b>${it.due} min</b>. <b>The cheapest way that is on time?</b>`,
+  controls: (it, st, busy) => `<div class="shiftroutes" role="group" aria-label="Ways to go">${it.opts.map((o, j) =>
+    `<button class="btn ghost shiftroute" data-act="jgPick" data-arg="${j}"${busy ? ' disabled' : ''}><span class="tk">${LETTERS[j]}</span>
+      <span class="grow">${o.legs.map((l) => esc(legText(l))).join(', then ')}</span><b class="tabnum">${o.min} min · ${o.fare ? money(o.fare) : 'free'}</b></button>`).join('')}</div>`,
+  hint: 'Tap a way, or press A–E (or 1–5). Cross out the late ones first; then the cheapest left.',
+  key(e, it, api) { const k = e.key.toLowerCase(), j = 'abcde'.indexOf(k) >= 0 ? 'abcde'.indexOf(k) : '12345'.indexOf(k); if (k.length === 1 && j >= 0 && j < it.choices) api.answer(j); },
+  act(n, arg, it, api) { if (n === 'jgPick') api.answer(+arg); },
+  point(x, y, it, api) { const g = routeGeo(it); let bj = -1, bd = 26; g.forEach((c, j) => { const d = Math.hypot(x - c.bx, y - c.by); if (d < bd) { bd = d; bj = j; } }); if (bj >= 0) api.answer(bj); },
+  draw(ctx, it, st) {
+    const g = routeGeo(it), S = ROUTE_S, E = ROUTE_E;
+    /* the map: a park-green sheet with two roads, laid on the place */
+    ctx.fillStyle = dark() ? 'rgba(30,48,40,.72)' : 'rgba(214,232,196,.82)'; rr(ctx, 8, 34, W - 16, 258, 14); ctx.fill();
+    ctx.strokeStyle = dark() ? 'rgba(255,255,255,.08)' : 'rgba(120,140,100,.25)'; ctx.lineWidth = 9;
+    for (const y of [92, 244]) { ctx.beginPath(); ctx.moveTo(12, y); ctx.lineTo(W - 12, y); ctx.stroke(); }
+    const at = (c, t) => ({ x: (1 - t) * (1 - t) * S.x + 2 * (1 - t) * t * 180 + t * t * E.x, y: (1 - t) * (1 - t) * S.y + 2 * (1 - t) * t * c.cy + t * t * E.y });
+    const show = st.hold || st.flash > 0 || st.anim;
+    g.forEach((c, j) => {
+      const o = it.opts[j]; let t0 = 0;
+      const dim = show && st.anim && st.anim.input !== j ? 0.35 : 1;
+      ctx.save(); ctx.globalAlpha = dim;
+      for (const l of o.legs) {
+        const t1 = t0 + l.min / o.min, M = MODES[l.m];
+        ctx.strokeStyle = M.col; ctx.lineWidth = M.w; ctx.setLineDash(M.dash); ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let s = 0; s <= 16; s++) { const p = at(c, t0 + (t1 - t0) * (s / 16)); if (s) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); }
+        ctx.stroke(); t0 = t1;
+      }
+      ctx.setLineDash([]); ctx.restore();
+    });
+    /* start and destination pins */
+    const pin = (p, text, col) => { shadow(ctx, p.x, p.y + 10, 22, 0.25); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(p.x, p.y - 6, 9, Math.PI, 0); ctx.lineTo(p.x, p.y + 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y - 6, 3.5, 0, Math.PI * 2); ctx.fill(); label(ctx, text, p.x + (p.x > W / 2 ? 14 : -14), p.y + 20, { size: 10, align: p.x > W / 2 ? 'right' : 'left' }); };
+    pin(S, 'you', '#2E5F7A'); pin(E, it.dest.replace(/^the /, '').split(',')[0].slice(0, 14), '#C4453C');
+    /* each way's tag: its letter, its minutes and its fare — late ones marked once you have chosen */
+    g.forEach((c, j) => {
+      const o = it.opts[j], late = o.min > it.due, txt = `${LETTERS[j]} ${o.min}m ${o.fare ? money(o.fare) : 'free'}`;
+      ctx.font = '800 11px Sono, ui-monospace, monospace'; const w = ctx.measureText(txt).width + 14;
+      ctx.fillStyle = show && j === it.answer ? '#2FA866' : show && late ? 'rgba(160,160,170,.92)' : (dark() ? 'rgba(10,14,24,.88)' : 'rgba(255,252,245,.96)');
+      rr(ctx, c.bx - w / 2, c.by - 10, w, 20, 10); ctx.fill();
+      ctx.fillStyle = show && (j === it.answer || late) ? '#fff' : (dark() ? '#FFF6DA' : '#1C2A2E');
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, c.bx, c.by + .5);
+      if (show && late) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(c.bx - w / 2 + 6, c.by); ctx.lineTo(c.bx + w / 2 - 6, c.by); ctx.stroke(); }
+    });
+    /* the clock you have to beat */
+    const due = `be there in ${it.due} min`;
+    ctx.font = '800 12px Sono, ui-monospace, monospace'; const dw = ctx.measureText(due).width + 18;
+    ctx.fillStyle = '#2E5F7A'; rr(ctx, W / 2 - dw / 2, 40, dw, 22, 11); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(due, W / 2, 51.5);
+    /* then walk it: you, along the way you chose */
+    if (st.anim) {
+      const k = st.anim.dur ? Math.min(1, st.anim.t / st.anim.dur) : 1, p = at(g[st.anim.input], ease.inOut(k));
+      ctx.fillStyle = '#F0B429'; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#3A2400'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  },
+};
+const ROUTE_S = { x: 36, y: 168 }, ROUTE_E = { x: 324, y: 168 };
+function routeGeo(it) {
+  const n = it.opts.length, gap = n >= 5 ? 44 : 52;
+  return it.opts.map((o, j) => { const apex = (j - (n - 1) / 2) * gap, cy = ROUTE_S.y + apex * 2; return { cy, bx: 180, by: ROUTE_S.y + apex }; });
+}
+
+export const TEMPLATES = { count: COUNT, change: CHANGE, ledger: LEDGER, route: ROUTE };
+
+/* the job's own end-card words, and the grade's mood (Pip's pose, never a face) */
+const FINISH = {
+  count: ['Nothing got past you. A shop that is shorted and never notices pays for goods it never had.', 'Count by rows, then read the slip again. Short is money, even when it is only one.'],
+  change: ['The fewest coins, every time: that is a till that balances at closing.', 'Count up from the price to what they paid, then use the biggest coin that fits first.'],
+  ledger: ['A book that balances is a book you can trust, and Nana will.', 'One line at a time: add it or take it away, and the balance moves with it.'],
+  route: ['You spent only what each trip needed. Time costs, and so does a fare: you weighed both.', 'Cross out the ways that arrive late first. Then the cheapest one left.'],
+};
+function grade(right) {
+  return right >= SHIFT_ITEMS ? ['🏅', 'A perfect shift'] : right >= 10 ? ['cheer', 'A cracking shift'] : right >= 8 ? ['cheer', 'A good shift']
+    : right >= 5 ? ['point', 'Got it done'] : ['think', 'Hard going'];
+}
+const POSES = ['wave', 'think', 'point', 'cheer', 'oops', 'sleep'];
+
+/* ══ the frame: one engine for every template ═════════════════════════ */
+function newSeed() { return ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1; }
+
+function shift(jobId, quit, opts = {}) {
+  const cfg = JOB_GAME[jobId], kind = cfg.kind, T = TEMPLATES[kind];
+  const job = JOBS.find((j) => j.id === jobId) || { name: 'Work', who: 'the town' };
+  const FX = fx(), img = plate((K() && K().world) || 0);
+  const seed = opts.seed != null ? (opts.seed >>> 0) || 1 : newSeed();
+  const st = { seed, items: [], i: 0, right: 0, answered: 0, results: [], run: 0, bestRun: 0, left: SHIFT_MS,
+    hold: null, flash: 0, anim: null, tray: [], entry: '', flagged: 0, overs: 0, late: 0, spotted: 0,
+    over: false, overT: 0, done: false, T: 0 };
+  st.tier = TIER_IDS.includes(opts.tier) ? opts.tier : tierOf(K(), jobId);
+  st.picking = !TIER_IDS.includes(opts.tier);
+  /* the content is the seed and the level, nothing else: the same pair replays exactly */
+  const build = () => {
+    const r = rng(seed ^ (TIER_IDS.indexOf(st.tier) + 1) * 0x9E3779B1);
+    const kn = jobKnobs(jobId, st.tier);
+    st.items = T.makeAll ? T.makeAll(r, kn, cfg, jobId) : Array.from({ length: SHIFT_ITEMS }, (_, i) => T.make(r, kn, cfg, jobId, i));
+    st.checks = st.items.filter((x) => x.mode === 'check').length;
+  };
+  build();
+  const par = () => jobPar(jobId);
+  const cur = () => st.items[Math.min(st.i, SHIFT_ITEMS - 1)];
+  const live = () => !st.picking && !st.over && !st.done;
+  const ready = () => live() && !st.hold && !st.anim && !(st.flash > 0);
+  let raf = 0, last = 0, ctx = null, cv = null, dpr = 1, shownSec = -1;
+  const stop = () => { if (raf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(raf); raf = 0; };
+  const render = () => { if (R.render) R.render(); };
+
+  const summary = () => ({ finished: st.answered === SHIFT_ITEMS, right: st.right, of: SHIFT_ITEMS, answered: st.answered, bestRun: st.bestRun,
+    flagged: st.flagged, over: st.overs, late: st.late, spotted: st.spotted, checks: st.checks || 0 });
+  const end = () => {
+    if (st.done) return;
+    st.done = true; stop();
+    const c = K();
+    /* accuracy in, wage out: right answers of twelve, against par, and doJob clamps it.
+       Nothing right is nothing done (K2) — the floor is for a shift done badly. */
+    st.accuracy = st.right / SHIFT_ITEMS;
+    st.quality = st.right / par();
+    st.capped = !!(c && c.jobs && c.jobs[jobId] === dayIndex(Date.now()));
+    st.best = sim.setJobBest(c, jobId, st.right);
+    st.won = sim.doJob(c, jobId, st.quality);
+    st.goals = earnGoals(c, jobId, jobGoals(jobId), Object.assign({ tier: st.tier }, summary()));
+    /* §1.7 · the level rule, offered on the card and never applied by itself: under half of par
+       offers one level down; a shift with all twelve right (1.5× par, the most a shift can show)
+       offers the level above */
+    st.offer = levelOffer(st.tier, st.right === SHIFT_ITEMS ? PERFECT : st.right / par());
+    if (R.s) sim.save(R.s);
+    if (st.won > 0) sfx.coin();
+    render();
+  };
+  const finish = () => {
+    if (st.over || st.done) return;
+    st.over = true; st.overT = 0; st.hold = null; st.anim = null; st.flash = 0;
+    FX.coins(W / 2, H / 2 - 10, 10);
+    FX.burst(W / 2, H / 2 - 10, { n: 22, colors: ['#F0B429', '#FFF3C4', '#5CCB7E', '#3FBCC8'], speed: 0.3 });
+    sfx.level(); render();
+  };
+  st.end = finish;
+  const next = () => {
+    if (st.done || st.over) return;
+    st.hold = null; st.flash = 0; st.tray = []; st.entry = '';
+    st.i++;
+    if (st.i >= SHIFT_ITEMS) { finish(); return; }
+    render();
+  };
+  const resolve = (input, res) => {
+    const it = cur();
+    st.answered++; st.results[st.i] = !!res.right; it.given = input;
+    if (res.over) st.overs++;
+    if (res.late) st.late++;
+    if (res.right) {
+      st.right++; st.run++; st.bestRun = Math.max(st.bestRun, st.run);
+      if (res.flag) st.flagged++;
+      if (res.spot) st.spotted++;
+      st.flash = FLASH_MS;
+      FX.pop(W / 2, 150, 'Right!', { color: '#11663A', size: 20 }); FX.coins(W / 2, 150, 4);
+      sfx.good();
+    } else {
+      st.run = 0;
+      st.hold = { t: 0, why: T.explain(it, input, cfg) };
+      FX.shake(6, 240); sfx.bad();
+    }
+    render();
+  };
+  const answer = (input) => {
+    if (!ready()) return;
+    const res = T.check(cur(), input);
+    /* a route is walked before it is judged: you see the way you chose, then the verdict */
+    if (T.walks) { st.anim = { t: 0, input, res, dur: still() ? 0 : WALK_MS }; if (!st.anim.dur) { st.anim = null; resolve(input, res); } else render(); return; }
+    resolve(input, res);
+  };
+  const api = {
+    answer,
+    coin(v) { if (!ready() || st.tray.length >= 12) return; st.tray.push(v); sfx.click(); render(); },
+    undo() { if (!ready() || !st.tray.length) return; st.tray.pop(); render(); },
+    give() { if (!ready() || !st.tray.length) return; answer(st.tray.slice()); },
+    digit(d) { if (!ready() || st.entry.length >= 5) return; st.entry = (st.entry === '0' ? '' : st.entry) + d; render(); },
+    del() { if (!ready()) return; st.entry = st.entry.slice(0, -1); render(); },
+    enter() { if (!ready() || !st.entry) return; answer(+st.entry); },
+  };
+
+  /* one slice of wall-clock time: the frame loop and a headless driver share it */
+  const advance = (dt) => {
+    if (st.done || st.picking) return;
+    st.T += dt;
+    if (st.over) { st.overT += dt; if (st.overT >= (still() ? 500 : 1300)) end(); return; }
+    if (st.anim) { st.anim.t += dt; if (st.anim.t >= st.anim.dur) { const a = st.anim; st.anim = null; resolve(a.input, a.res); } }
+    /* the clock waits while a correction is read — for at most HOLD_MS, so every shift ends */
+    if (st.hold) { st.hold.t += dt; if (st.hold.t >= HOLD_MS) next(); return; }
+    if (st.flash > 0) { st.flash -= dt; if (st.flash <= 0) next(); }
+    if (st.over || st.done) return;
+    st.left -= dt;
+    if (st.left <= 0) { st.left = 0; finish(); }
+  };
+
+  const paint = () => {
+    ctx.clearRect(0, 0, W, H);
+    const after = FX.begin(ctx);
+    backdrop(ctx, W, H, img, { veil: kind === 'route' ? 0.2 : 0.32 });
+    T.draw(ctx, cur(), st, cfg);
+    night(ctx, 0.12);
+    after();
+    FX.draw(ctx, W, H);
+    dots(ctx, st.results, st.i);
+    const w = pill(ctx, clockText(st.left), W - 8, 8, { warn: st.left < 15000 && !st.picking });
+    pill(ctx, `${Math.min(st.i + 1, SHIFT_ITEMS)}/${SHIFT_ITEMS}`, W - 14 - w, 8);
+    if (st.picking) {
+      ctx.fillStyle = 'rgba(20,24,36,.32)'; ctx.fillRect(0, 0, W, H);
+      label(ctx, TIER_NAME[st.tier], W / 2, H / 2 - 12, { size: 30, serif: true });
+      label(ctx, `${SHIFT_ITEMS} to do · pick a level below`, W / 2, H / 2 + 18, { size: 12 });
+      return;
+    }
     if (st.over) {
       const k = Math.min(1, st.overT / 380), s = ease.back(k);
-      ctx.save();
-      ctx.fillStyle = `rgba(20,24,36,${0.38 * k})`; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.fillStyle = `rgba(20,24,36,${0.38 * k})`; ctx.fillRect(0, 0, W, H);
       ctx.translate(W / 2, H / 2 - 8); ctx.scale(s, s); ctx.rotate(-0.04);
       ctx.fillStyle = '#F0B429'; rr(ctx, -128, -34, 256, 68, 16); ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = '#8A5B00'; rr(ctx, -128, -34, 256, 68, 16); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.3)'; rr(ctx, -118, -28, 236, 10, 5); ctx.fill();
-      ctx.restore();
-      ctx.save(); ctx.translate(W / 2, H / 2 - 8); ctx.scale(s, s); ctx.rotate(-0.04);
-      label(ctx, 'SHIFT DONE!', 0, -6, { size: 32, serif: true, color: '#3A2400', stroke: '#FFF3C4' });
-      label(ctx, `${st.score} ${spec.unit} · par ${par()}`, 0, 20, { size: 12, color: '#3A2400', stroke: '#FFE7A0' });
+      label(ctx, 'SHIFT DONE!', 0, -6, { size: 30, serif: true, color: '#3A2400', stroke: '#FFF3C4' });
+      label(ctx, `${st.right} of ${SHIFT_ITEMS} right`, 0, 20, { size: 12, color: '#3A2400', stroke: '#FFE7A0' });
       ctx.restore();
     }
   };
-
-  /* one slice of the shift's time — the frame loop and a headless driver share it */
-  const advance = (dt) => {
-    if (st.done || st.picking) return;
-    const was = CD.done;
-    CD.step(dt);          /* stepped every frame so the GO! can fade out */
-    if (!was) {
-      cdT += dt;
-      const n = CD.done ? 0 : Math.ceil((2400 - cdT) / 800);
-      if (n < said) { said = n; sfx.click(); }
-    } else if (!st.over) { for (let left = dt; left > 0.0001 && !st.over; left -= 50) step(Math.min(50, left), finish, FX); }
-    else { st.overT += dt; if (st.overT >= (still() ? 500 : 1500)) end(); }
+  const syncClock = () => {
+    const s = Math.ceil(st.left / 1000);
+    if (s === shownSec || typeof document === 'undefined') return;
+    shownSec = s;
+    const el = document.getElementById('shiftClock');
+    if (el) { el.textContent = clockText(st.left); el.classList.toggle('warn', st.left < 15000); }
   };
-  const loop = (ts) => {
+  const loop = () => {
     if (st.done) return;
-    /* the wall's clock, not the frame rate's (audit v4); the shift's logic runs in slices of
-       at most 50 ms so nothing falls through a catcher on a slow frame */
-    const dt = Math.min(1000, ts - (last || ts)); last = ts;
-    T += dt;
+    /* the wall's clock (performance.now), never the frame count */
+    const t = now(), dt = Math.min(1000, t - (last || t)); last = t;
     advance(dt);
     if (st.done) return;
     FX.step(dt);
-    /* a drawing fault must never stop the shift: the clock keeps running */
+    syncClock();
     if (ctx) { try { paint(); } catch (e) { if (ctx.reset) { ctx.reset(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); } } }
     raf = requestAnimationFrame(loop);
   };
+  /* a hidden tab is not time worked: the gap is not counted when it comes back */
+  const onVis = () => { last = 0; };
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', onVis);
+
+  const takeLevel = (t) => {
+    const o = st.offer; if (!st.done || !o || o.taken || o.to !== t || !setTier(K(), jobId, t)) return;
+    o.taken = true; if (R.s) sim.save(R.s); sfx.click(); render();
+  };
+  const pickTier = (t) => { if (!st.picking || !TIER_IDS.includes(t)) return; st.tier = t; build(); setTier(K(), jobId, t); sfx.click(); render(); };
+  const begin = () => { if (!st.picking) return; st.picking = false; setTier(K(), jobId, st.tier); if (R.s) sim.save(R.s); sfx.click(); last = 0; render(); };
+
+  const hudBits = () => [`<span class="tierchip" data-tier="${st.tier}">${TIER_NAME[st.tier]}</span>`,
+    `<span data-hud="item" data-v="${Math.min(st.i + 1, SHIFT_ITEMS)}">${Math.min(st.i + 1, SHIFT_ITEMS)} of ${SHIFT_ITEMS}</span>`,
+    `<span data-hud="right" data-v="${st.right}">${st.right} right</span>`,
+    `<span data-hud="clock" id="shiftClock" class="${st.left < 15000 && !st.picking ? 'warn' : ''}">${clockText(st.left)}</span>`];
 
   return {
     id: 'job:' + jobId,
-    /* A read-only snapshot, so a headless driver can PLAY the game rather
-       than mash keys at it — the only way to find out how long a competent
-       run actually takes, which is the number that decides whether any of
-       this is worth a child's evening. `go` is false during the countdown. */
-    __st: () => Object.assign(spec.probe(), { go: live(), over: !!st.over, done: !!st.done, tier: st.tier, picking: !!st.picking, par: par() }),
-    /* the same slice of time the frame loop runs, for a headless player in node */
+    kind,
+    /* a read-only snapshot, so a headless player can PLAY the shift (the solver reads
+       the item, as a careful child reads the slip) — and the tests can see the HUD */
+    __st: () => ({ kind, go: live(), ready: ready(), over: !!st.over, done: !!st.done, tier: st.tier, picking: !!st.picking, par: par(),
+      i: st.i, right: st.right, answered: st.answered, left: st.left, hold: !!st.hold, anim: !!st.anim, seed: st.seed,
+      item: cur(), solution: T.solve(cur()) }),
     __tick: (dt) => advance(dt),
-    __key: (k) => { if (live()) onKey({ key: k }); },
-    __point: (x, y) => { if (live() && onPoint) onPoint(x, y); },
-    /* one frame painted onto a given context, faults NOT swallowed — so a test can see them */
+    __key: (k) => this_key({ key: k }),
+    __point: (x, y) => { if (ready() && T.point) T.point(x, y, cur(), api); },
+    __answer: (input) => answer(input),
+    __random: (r) => T.random(cur(), r),
     __paint: (c2) => { const keep = ctx; ctx = c2; try { paint(); } finally { ctx = keep; } },
     st,
     mount() {
@@ -291,1040 +786,96 @@ function shell(spec) {
       cv.width = W * dpr; cv.height = H * dpr;
       ctx = cv.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!st.done) { last = 0; stop(); raf = requestAnimationFrame(loop); }
-      /* Touch is not an afterthought: the canvas itself is a control. */
+      shownSec = -1;
+      if (!st.done) { stop(); raf = requestAnimationFrame(loop); }
       const at = (e) => { const r = cv.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H]; };
-      if (onPoint) cv.onpointerdown = (e) => { if (live()) onPoint(...at(e)); };
-      if (onDrag) cv.onpointermove = (e) => { if (live() && (e.buttons || e.pointerType === 'touch')) onDrag(...at(e)); };
+      cv.onpointerdown = (e) => { if (st.hold) { next(); return; } if (ready() && T.point) T.point(...at(e), cur(), api); };
     },
-    stop,
-    key(e) {
-      if (st.done) { if (e.key === 'Enter') { spec.quit(); R.render(); } else if ((e.key === 'l' || e.key === 'L') && st.offer) takeOffer(); return; }
-      if (st.picking) {
-        /* the level picker by keyboard: 1 2 3, or ← →, then Enter or space to start */
-        const i = TIER_IDS.indexOf(st.tier);
-        if (e.key >= '1' && e.key <= '3' && e.key.length === 1) pick(TIER_IDS[+e.key - 1]);
-        else if (e.key === 'ArrowLeft') pick(TIER_IDS[Math.max(0, i - 1)]);
-        else if (e.key === 'ArrowRight') pick(TIER_IDS[Math.min(2, i + 1)]);
-        else if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); begin(); }
-        return;
-      }
-      if (live()) onKey(e);
-      else if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && e.preventDefault) e.preventDefault();
-    },
+    stop() { stop(); if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', onVis); },
+    key: (e) => this_key(e),
     act(n, arg) {
-      if (n === 'jgTier') { pick(arg); return; }
+      if (n === 'jgTier') { pickTier(arg); return; }
+      if (n === 'jgLevel') { takeLevel(arg); return; }
       if (n === 'jgStart') { begin(); return; }
-      if (n === 'jgLevel') { if (st.done && st.offer && arg === st.offer.to) takeOffer(); return; }
-      if (spec.onAct && live()) spec.onAct(n, arg);
+      if (n === 'jgNext') { if (st.hold) next(); return; }
+      if (live()) T.act(n, arg, cur(), api);
     },
     view() {
       const chip = `<span class="tierchip" data-tier="${st.tier}">${TIER_NAME[st.tier]}</span>`;
-      if (st.done) {
-        /* the grade's mood is Pip's pose, never a face (audit v4, N4) */
-        const grade = st.quality >= 1.45 ? ['🏅', 'A cracking shift']
-          : st.quality >= 1 ? ['cheer', 'A good shift']
-          : st.quality >= 0.7 ? ['point', 'Got it done']
-          : ['think', 'Hard going'];
-        return `<div class="stack">${hud([esc(job.name), chip])}
-          ${endCard(grade[0], grade[1], `${st.score} ${spec.unit} · par ${par()} on ${TIER_NAME[st.tier]}${st.best ? ' · <b>new personal best</b>' : ''}`,
-            st.won, finishLine(st), job.whoArt || 'pip',
-            /* §1.4 · the job's OWN practised line and its own capped notice — never the last arcade game's */
-            { id: null, practised: JOB_PRACTISED[cfg.kind], capped: st.capped, offer: offerHtml(),
-              capLine: `Paid shift used for today: ${job.name} pays once a day. This one is practice, and it still counts toward your goals.` })}
-          ${goalList(jobGoals(jobId), K(), jobId, st.goals)}</div>`;
-      }
+      if (st.done) return endView(chip);
+      const it = cur(), busy = !ready();
+      const body = st.picking ? `<div class="jgpick">
+          ${tierPicker(st.tier, 'jgTier', '', JOB_TIER_SAYS[kind])}
+          <p class="small muted tierpar">${SHIFT_ITEMS} to do, or ${SHIFT_MS / 1000} seconds. Pay is how many you get right: ${par()} right is a good shift on every level.</p>
+          ${goalList(jobGoals(jobId), K(), jobId)}
+          <button class="btn wide" data-act="jgStart" style="min-height:48px">Start the shift →</button>
+          <p class="hint">1 2 3 or ← → to pick a level, Enter to start. Or tap.</p></div>`
+        : st.over ? `<p class="shiftq" aria-live="polite"><b>Shift done.</b> ${st.right} of ${SHIFT_ITEMS} right.</p>`
+        : st.hold ? `<div class="fb hold bad shiftfb" role="status"><b>Not this time.</b> ${esc(st.hold.why)}</div>
+            <button class="btn wide" data-act="jgNext" style="min-height:48px">Continue →</button>
+            <p class="hint">Enter or space to go on. The clock waits while you read.</p>`
+        : `<p class="shiftq" aria-live="polite">${st.flash > 0 ? `<b class="good">Right</b>: ${esc(T.praise(it, cfg))}.` : T.prompt(it, cfg)}</p>
+          ${T.controls(it, st, busy)}
+          <p class="hint">${esc(T.hint)}</p>`;
       return `<div class="stack">
-        ${hud([chip].concat(spec.boxes()))}
-        <div class="stage jobstage" style="min-height:0;padding:12px">
+        ${hud(st.picking ? [chip] : hudBits())}
+        <div class="stage jobstage shift" data-kind="${kind}" style="min-height:0;padding:12px">
           <div class="row" style="gap:8px">
             <span class="grow"><b style="font-size:15px">${esc(cfg.verb)}</b>
-              <div class="small muted">for ${esc(job.who)}</div></span>
-            <span class="pill">best ${sim.jobBest(K(), jobId)}</span>
+              <div class="small muted">${esc(job.name)} · for ${esc(job.who)}</div></span>
+            <span class="pill">best ${sim.jobBest(K(), jobId)}/${SHIFT_ITEMS}</span>
           </div>
-          <canvas id="jobCanvas" role="img" aria-label="${esc(cfg.verb)} — ${esc(hint)}" style="width:100%;max-width:400px;margin:0 auto;height:auto;
-            aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:none;box-shadow:0 6px 18px rgba(20,24,36,.18)"></canvas>
-          ${st.picking ? `<div class="jgpick">
-            ${tierPicker(st.tier, 'jgTier', '', JOB_TIER_SAYS[cfg.kind])}
-            <p class="small muted tierpar">Par on ${TIER_NAME[st.tier]}: <b>${par()}</b>. Pay is measured against it, so every level pays the same for the same care.</p>
-            ${goalList(jobGoals(jobId), K(), jobId)}
-            <button class="btn wide" data-act="jgStart" style="min-height:48px">Start the shift →</button>
-            <p class="hint">1 2 3 or ← → to pick a level, Enter to start. Or tap.</p>
-          </div>` : `${controls()}
-          <p class="hint">${esc(hint)}</p>`}
+          <canvas id="jobCanvas" role="img" aria-label="${esc(cfg.verb)}. ${esc(st.picking ? KIND_WORD[kind] : T.describe(it, cfg))}" style="width:100%;max-width:400px;margin:0 auto;height:auto;
+            aspect-ratio:${W}/${H};border-radius:var(--r-md);display:block;touch-action:manipulation;box-shadow:0 6px 18px rgba(20,24,36,.18)"></canvas>
+          ${body}
         </div></div>`;
     },
   };
-}
 
-/* ── stack ────────────────────────────────────────────────────────────────
-   A crate swings from the crane; you drop it. Whatever hangs over the edge
-   falls off and the pile gets narrower. Land it within a hand's width and it
-   snaps square ("Perfect!") and keeps its width. Miss the pile altogether and
-   the scaffold wobbles — three wobbles and the shift is over, so one bad drop
-   is a lesson, not the end. The shift is sixteen crates or a minute. */
-const STACK_LOOK = { crates: 'crate', haul: 'sack', counter: 'carton' };
-const STACK_TINT = {
-  crate: ['#C98A46', '#B9773A', '#D49B57', '#A86B34', '#C2813F'],
-  sack: ['#CDB07A', '#BFA06A', '#D8BD88', '#C4A572'],
-  carton: ['#D9A866', '#C9955A', '#E0B575', '#CF9F60'],
-};
-function cargoBox(ctx, look, x, y, w, h, tint) {
-  /* a wide layer is a row of separate pieces, not one long plank */
-  const n = Math.max(1, Math.round(w / 46));
-  if (n > 1) { const pw = w / n; for (let i = 0; i < n; i++) cargoOne(ctx, look, x + i * pw, y, pw, h, i % 2 ? shade(tint) : tint); return; }
-  cargoOne(ctx, look, x, y, w, h, tint);
-}
-function shade(hex) {
-  const v = parseInt(hex.slice(1), 16), f = (c) => Math.max(0, Math.min(255, Math.round(c * 0.92)));
-  return '#' + [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((c) => f(c).toString(16).padStart(2, '0')).join('');
-}
-function cargoOne(ctx, look, x, y, w, h, tint) {
-  if (w < 6) { ctx.fillStyle = tint; ctx.fillRect(x, y, Math.max(0, w), h); return; }
-  if (look === 'sack') {
-    ctx.fillStyle = tint; rr(ctx, x, y + 1, w, h - 1, Math.min(9, w / 3)); ctx.fill();
-    ctx.strokeStyle = 'rgba(90,64,30,.7)'; ctx.lineWidth = 1.6; rr(ctx, x + 0.8, y + 1.8, w - 1.6, h - 2.6, Math.min(9, w / 3)); ctx.stroke();
-    ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(90,64,30,.45)';
-    ctx.beginPath(); ctx.moveTo(x + 4, y + h / 2 + 1); ctx.lineTo(x + w - 4, y + h / 2 + 1); ctx.stroke(); ctx.setLineDash([]);
-    if (w > 22) { ctx.fillStyle = 'rgba(90,64,30,.55)'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 3, 4, 2.4, 0, 0, Math.PI * 2); ctx.fill(); }
-    ctx.fillStyle = 'rgba(255,245,220,.35)'; rr(ctx, x + 3, y + 3, w - 6, 3, 2); ctx.fill();
-  } else if (look === 'carton') {
-    ctx.fillStyle = tint; rr(ctx, x, y, w, h, 2); ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(x + w * 0.72, y, w * 0.28, h);
-    ctx.strokeStyle = 'rgba(100,66,26,.6)'; ctx.lineWidth = 1.4; rr(ctx, x + 0.7, y + 0.7, w - 1.4, h - 1.4, 2); ctx.stroke();
-    if (w > 10) { ctx.fillStyle = 'rgba(240,226,190,.8)'; ctx.fillRect(x + w / 2 - 3, y, 6, h); }
-    if (w > 34) {
-      ctx.fillStyle = '#FFF8E8'; rr(ctx, x + 6, y + 5, 18, h - 10, 2); ctx.fill();
-      ctx.fillStyle = '#C4453C'; ctx.beginPath(); ctx.arc(x + 11, y + h / 2, 2.4, 0, Math.PI * 2); ctx.arc(x + 19, y + h / 2, 2.4, 0, Math.PI * 2); ctx.fill();
+  function this_key(e) {
+    if (st.done) { if ((e.key === 'l' || e.key === 'L') && st.offer && st.offer.dir) takeLevel(st.offer.to); else if (e.key === 'Enter') { quit(); render(); } return; }
+    if (st.picking) {
+      const i = TIER_IDS.indexOf(st.tier);
+      if (e.key >= '1' && e.key <= '3' && e.key.length === 1) pickTier(TIER_IDS[+e.key - 1]);
+      else if (e.key === 'ArrowLeft') pickTier(TIER_IDS[Math.max(0, i - 1)]);
+      else if (e.key === 'ArrowRight') pickTier(TIER_IDS[Math.min(2, i + 1)]);
+      else if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); begin(); }
+      return;
     }
-  } else crate(ctx, x, y, w, h, tint);
-}
-
-function stackGame(jobId, quit, lvl) {
-  const c = K(), t = tier(c);
-  const look = STACK_LOOK[jobId] || 'crate', tints = STACK_TINT[look];
-  const SHIFT = 16, CLOCK = 60000, CH = 26, BASEW = 120, BASEX = (W - BASEW) / 2, BASEY = H - 42, HOOK = 66;
-  let kn = jobKnobs(jobId, 'standard');
-  const st = { score: 0, landed: 0, done: false, w: BASEW, x: 0, dir: 1, pile: [], falling: null, msg: '', lives: 3, combo: 0,
-    left: CLOCK, cam: 0, debris: [], land: 0, misses: 0, squares: 0, bestCombo: 0 };
-  const top = () => (st.pile.length ? st.pile[st.pile.length - 1] : { x: BASEX, w: BASEW });
-  const speed = () => (0.11 + t * 0.015 + st.landed * 0.007) * kn.speed;
-  const topScreen = () => BASEY - st.pile.length * CH + st.cam;
-
-  const drop = () => {
-    if (st.done || st.over || st.falling) return;
-    st.falling = { x: st.x, w: st.w, y: HOOK, vy: 0.12, tint: tints[(st.pile.length + st.misses) % tints.length] };
-  };
-  const land = (FX) => {
-    const f = st.falling; st.falling = null;
-    const tp = top(), ty = topScreen();
-    if (Math.abs(f.x - tp.x) <= kn.snap) {
-      /* a square drop wins back a little width, so care keeps a run alive */
-      const nw = Math.min(BASEW, tp.w + 8), nx = clamp(tp.x - (nw - tp.w) / 2, 0, W - nw);
-      st.pile.push({ x: nx, w: nw, tint: f.tint });
-      st.w = nw;
-      /* square pays four: the skill is the score */
-      st.combo++; st.score += 4; st.landed++; st.land = 1; st.squares++; st.bestCombo = Math.max(st.bestCombo, st.combo);
-      st.msg = st.combo >= 3 ? `${st.combo} square in a row` : 'Dead square!';
-      FX.pop(tp.x + tp.w / 2, ty - CH - 10, st.combo >= 3 ? `Perfect x${st.combo} +4` : 'Perfect! +4', { color: '#8A5B00', size: 18 });
-      FX.coins(tp.x + tp.w / 2, ty - CH, 4 + Math.min(4, st.combo));
-      sfx.good();
-    } else {
-      const l = Math.max(f.x, tp.x), r = Math.min(f.x + f.w, tp.x + tp.w), overlap = r - l;
-      if (overlap <= 8) {
-        st.lives--; st.combo = 0; st.misses++; st.score = Math.max(0, st.score - 3);
-        st.msg = st.lives > 0 ? 'Wobble! −3' : 'Off the pile';
-        st.debris.push({ x: f.x, w: f.w, y: ty - CH, vx: (f.x + f.w / 2 < tp.x + tp.w / 2 ? -1 : 1) * 0.12, vy: -0.1, rot: 0, vr: (Math.random() - 0.5) * 0.012, tint: f.tint });
-        FX.shake(9, 320); FX.flash('#E0483E', 200);
-        FX.pop(f.x + f.w / 2, ty - CH - 12, st.lives > 0 ? 'Wobble! −3' : 'Off the pile!', { color: '#C4453C', size: 18 });
-        sfx.bad();
-        if (st.lives <= 0) { st.end(); return; }
-      } else {
-        st.pile.push({ x: l, w: overlap, tint: f.tint });
-        const cut = f.w - overlap;
-        if (cut > 0.5) st.debris.push({ x: f.x < tp.x ? f.x : r, w: cut, y: ty - CH, vx: (f.x < tp.x ? -1 : 1) * 0.08, vy: -0.05, rot: 0, vr: (f.x < tp.x ? -1 : 1) * 0.006, tint: f.tint });
-        /* close pays two, rough pays one — and the pile is narrower either way */
-        const pts = cut / f.w < 0.1 ? 2 : 1;
-        st.w = overlap; st.combo = 0; st.score += pts; st.landed++; st.land = 1;
-        st.msg = pts > 1 ? 'Close' : '';
-        FX.pop(l + overlap / 2, ty - CH - 10, pts > 1 ? 'Close +2' : 'Rough +1', { color: pts > 1 ? '#1C2A2E' : '#8A5A3C', size: 17 });
-        FX.burst(l + overlap / 2, ty, { n: 8, colors: ['#D8C29A', '#B9A684'], speed: 0.12, size: 3 });
-        sfx.click();
-      }
-    }
-    /* the next crate starts from a side, never where the last one landed */
-    st.dir = st.pile.length % 2 ? -1 : 1;
-    st.x = st.dir > 0 ? 0 : W - st.w;
-    if (st.landed >= SHIFT) { st.msg = 'Shift done'; st.end(); }
-  };
-
-  let FXref = null;
-  return shell({
-    jobId, st, quit, unit: 'points', tier: lvl,
-    retier: (k) => { kn = jobKnobs(jobId, k); },
-    summary: () => ({ finished: st.landed >= SHIFT, squares: st.squares, bestCombo: st.bestCombo, misses: st.misses }),
-    step(dt, _fin, fxo) {
-      if (!FXref) FXref = fxo;
-      st.left -= dt;
-      if (st.left <= 0) { st.left = 0; st.end(); return; }
-      if (st.land > 0) st.land = Math.max(0, st.land - dt / 220);
-      st.cam += (Math.max(0, (st.pile.length - 4) * CH) - st.cam) * Math.min(1, dt * 0.006);
-      for (let i = st.debris.length - 1; i >= 0; i--) {
-        const d = st.debris[i]; d.vy += 0.0012 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.rot += d.vr * dt;
-        if (d.y > H + 60) st.debris.splice(i, 1);
-      }
-      if (st.falling) {
-        const f = st.falling; f.vy += 0.0022 * dt; f.y += f.vy * dt;
-        if (f.y + CH >= topScreen()) { f.y = topScreen() - CH; if (FXref) land(FXref); }
-        return;
-      }
-      st.x += st.dir * speed() * dt;
-      if (st.x <= 0) { st.x = 0; st.dir = 1; }
-      if (st.x + st.w >= W) { st.x = W - st.w; st.dir = -1; }
-    },
-    draw(ctx, { img, T, FX }) {
-      FXref = FX;
-      backdrop(ctx, W, H, img, { veil: 0.3, shift: Math.sin(T / 4000) * 4 });
-      const cam = st.cam, by = BASEY + cam;
-      /* ground and the base the pile stands on */
-      if (by < H) cobbles(ctx, by + 22, H - by);
-      if (look === 'crate') {
-        /* scaffold poles either side, reaching up out of frame */
-        ctx.fillStyle = '#7A5230';
-        for (const px of [BASEX - 22, BASEX + BASEW + 14]) {
-          ctx.fillRect(px, 0, 8, by + 22);
-          ctx.fillStyle = 'rgba(255,230,190,.25)'; ctx.fillRect(px + 1, 0, 2, by + 22); ctx.fillStyle = '#7A5230';
-        }
-        ctx.strokeStyle = 'rgba(122,82,48,.75)'; ctx.lineWidth = 4;
-        for (let yy = (by + 22) % 88 - 88; yy < by + 22; yy += 88) {
-          ctx.beginPath(); ctx.moveTo(BASEX - 18, yy); ctx.lineTo(BASEX + BASEW + 18, yy + 70); ctx.stroke();
-        }
-        if (by < H + 30) {
-          ctx.fillStyle = '#8F6236'; ctx.fillRect(BASEX - 6, by, BASEW + 12, 8);
-          ctx.fillStyle = '#6E4826'; for (let i = 0; i < 4; i++) ctx.fillRect(BASEX + i * 38, by + 8, 10, 14);
-          ctx.fillStyle = '#8F6236'; ctx.fillRect(BASEX - 6, by + 18, BASEW + 12, 5);
-        }
-      } else if (look === 'sack') {
-        if (by < H + 40) {
-          shadow(ctx, W / 2, by + 34, BASEW + 50, 0.22);
-          ctx.strokeStyle = '#6E4826'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(BASEX + BASEW, by + 6); ctx.lineTo(BASEX + BASEW + 46, by - 10); ctx.stroke();
-          ctx.lineCap = 'butt';
-          ctx.fillStyle = '#9A6A3A'; rr(ctx, BASEX - 8, by, BASEW + 16, 10, 3); ctx.fill();
-          ctx.fillStyle = '#7C532C'; ctx.fillRect(BASEX - 8, by + 7, BASEW + 16, 3);
-          for (const wx of [BASEX + 20, BASEX + BASEW - 20]) {
-            const rot = (st.x / 30);
-            ctx.fillStyle = '#4A3420'; ctx.beginPath(); ctx.arc(wx, by + 22, 13, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#C9A06A'; ctx.beginPath(); ctx.arc(wx, by + 22, 9, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#4A3420'; ctx.lineWidth = 2;
-            for (let k = 0; k < 4; k++) { const a = rot + (k * Math.PI) / 4; ctx.beginPath(); ctx.moveTo(wx - Math.cos(a) * 9, by + 22 - Math.sin(a) * 9); ctx.lineTo(wx + Math.cos(a) * 9, by + 22 + Math.sin(a) * 9); ctx.stroke(); }
-            ctx.fillStyle = '#4A3420'; ctx.beginPath(); ctx.arc(wx, by + 22, 3, 0, Math.PI * 2); ctx.fill();
-          }
-        }
-      } else {
-        /* the shop: a shelf unit behind, a counter under the pile */
-        ctx.save(); ctx.globalAlpha = 0.75;
-        ctx.fillStyle = 'rgba(122,82,48,.55)';
-        for (let yy = (by % 54) - 54; yy < by; yy += 54) ctx.fillRect(8, yy, 40, 5), ctx.fillRect(W - 48, yy, 40, 5);
-        for (let yy = (by % 54) - 54; yy < by; yy += 54) {
-          for (let k = 0; k < 3; k++) {
-            ctx.fillStyle = ['#C4453C', '#2E7FA8', '#178A4C'][(k + Math.round(yy)) % 3 < 0 ? 0 : (k + Math.abs(Math.round(yy / 54))) % 3];
-            rr(ctx, 12 + k * 12, yy - 14, 9, 14, 2); ctx.fill(); rr(ctx, W - 44 + k * 12, yy - 14, 9, 14, 2); ctx.fill();
-          }
-        }
-        ctx.restore();
-        if (by < H + 30) {
-          ctx.fillStyle = '#8F6236'; rr(ctx, BASEX - 30, by, BASEW + 60, 10, 3); ctx.fill();
-          ctx.fillStyle = '#A8763F'; ctx.fillRect(BASEX - 24, by + 10, BASEW + 48, 40);
-          ctx.strokeStyle = 'rgba(70,40,10,.35)'; ctx.lineWidth = 2; ctx.strokeRect(BASEX - 14, by + 16, (BASEW + 28) / 2 - 4, 26); ctx.strokeRect(W / 2 + 4, by + 16, (BASEW + 28) / 2 - 4, 26);
-        }
-      }
-      /* the pile — the top one squashes as it lands */
-      st.pile.forEach((p, i) => {
-        const y = by - (i + 1) * CH;
-        if (y > H || y < -CH) return;
-        if (i === st.pile.length - 1 && st.land > 0) {
-          const k = st.land, sx = 1 + 0.14 * k, sy = 1 - 0.2 * k;
-          ctx.save(); ctx.translate(p.x + p.w / 2, y + CH); ctx.scale(sx, sy);
-          cargoBox(ctx, look, -p.w / 2, -CH, p.w, CH, p.tint); ctx.restore();
-        } else cargoBox(ctx, look, p.x, y, p.w, CH, p.tint);
-      });
-      /* the crane: a beam, a trolley over the crate, a rope and a hook */
-      ctx.fillStyle = '#5B3C22'; ctx.fillRect(0, 34, W, 9);
-      ctx.fillStyle = 'rgba(255,230,190,.3)'; ctx.fillRect(0, 35, W, 2);
-      ctx.fillStyle = '#3E2914'; for (let x = 12; x < W; x += 40) { ctx.beginPath(); ctx.arc(x, 38.5, 1.8, 0, Math.PI * 2); ctx.fill(); }
-      const f = st.falling, cx = (f ? f.x + f.w / 2 : st.x + st.w / 2);
-      const sway = f ? 0 : (still() ? 0 : -st.dir * Math.min(0.09, speed() * 0.35) + Math.sin(T / 260) * 0.015);
-      ctx.fillStyle = '#2E3A40'; rr(ctx, cx - 10, 30, 20, 12, 3); ctx.fill();
-      ctx.fillStyle = '#6B7A80'; ctx.beginPath(); ctx.arc(cx - 5, 43, 3, 0, Math.PI * 2); ctx.arc(cx + 5, 43, 3, 0, Math.PI * 2); ctx.fill();
-      /* the aiming shadow on the top of the pile */
-      const tp = top(), ty = topScreen();
-      if (!f && !st.over) {
-        const good = Math.abs(st.x - tp.x) <= kn.snap;
-        ctx.save(); ctx.globalAlpha = good ? 0.5 : 0.22; ctx.fillStyle = good ? '#2FA866' : '#1C2A2E';
-        ctx.beginPath(); ctx.ellipse(st.x + st.w / 2, ty - 1, st.w / 2, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-        ctx.save(); ctx.setLineDash([3, 5]); ctx.strokeStyle = dark() ? 'rgba(255,246,218,.35)' : 'rgba(28,42,46,.25)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(st.x + st.w / 2, HOOK + CH + 4); ctx.lineTo(st.x + st.w / 2, ty - 5); ctx.stroke(); ctx.restore();
-      }
-      if (f) {
-        ctx.strokeStyle = '#3B2A1A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 42); ctx.lineTo(cx, HOOK - 6); ctx.stroke();
-        const sy = 1 + Math.min(0.14, f.vy * 0.12), sx = 1 / sy;
-        ctx.save(); ctx.translate(f.x + f.w / 2, f.y + CH / 2); ctx.scale(sx, sy);
-        cargoBox(ctx, look, -f.w / 2, -CH / 2, f.w, CH, f.tint); ctx.restore();
-      } else if (!st.over) {
-        ctx.save(); ctx.translate(cx, 42); ctx.rotate(sway);
-        ctx.strokeStyle = '#3B2A1A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, HOOK - 48); ctx.stroke();
-        ctx.strokeStyle = '#59656B'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, HOOK - 45, 4, -Math.PI * 0.1, Math.PI * 1.1); ctx.stroke();
-        ctx.strokeStyle = 'rgba(59,42,26,.8)'; ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(0, HOOK - 44); ctx.lineTo(-st.w / 2 + 3, HOOK - 42); ctx.moveTo(0, HOOK - 44); ctx.lineTo(st.w / 2 - 3, HOOK - 42); ctx.stroke();
-        cargoBox(ctx, look, -st.w / 2, HOOK - 42, st.w, CH, tints[(st.pile.length + st.misses) % tints.length]);
-        ctx.restore();
-      }
-      st.debris.forEach((d) => {
-        ctx.save(); ctx.translate(d.x + d.w / 2, d.y + CH / 2); ctx.rotate(d.rot);
-        cargoBox(ctx, look, -d.w / 2, -CH / 2, d.w, CH, d.tint); ctx.restore();
-      });
-      night(ctx);
-    },
-    hud(ctx) {
-      const w = pill(ctx, `${Math.ceil(st.left / 1000)}s`, W - 8, 8, { warn: st.left < 10000 });
-      lives(ctx, st.lives, 3, W - 14 - w, 8);
-      pill(ctx, `${st.landed}/${SHIFT}`, W - 8, 32);
-      if (st.combo >= 2) label(ctx, `Square x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#B57E10' });
-    },
-    probe: () => { const tp = top();
-      return { kind: 'stack', x: st.x, w: st.w, topX: tp.x, topW: tp.w, falling: !!st.falling, score: st.score, landed: st.landed, lives: st.lives, left: st.left, dir: st.dir, v: speed() }; },
-    onKey(e) { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') { if (e.preventDefault) e.preventDefault(); drop(); } },
-    onPoint() { drop(); },
-    onAct(n) { if (n === 'jgDrop') drop(); },
-    controls: () => `<button class="btn wide" data-act="jgDrop" style="margin-top:8px">Drop it</button>`,
-    hint: 'Space, or tap anywhere. Square pays 4, close pays 2, rough pays 1 — and what hangs over falls off. A wobble costs 3; three and the shift is over.',
-    boxes: () => [`${st.landed}/${SHIFT} ${look === 'sack' ? 'sacks' : look === 'carton' ? 'boxes' : 'crates'}`, hearts(st.lives), st.msg || ' '],
-    finishLine: (s) => s.quality >= 1.4
-      ? 'Nobody stacks that square by accident. That is a skill, and it is worth more per hour than the sweeping.'
-      : 'Every one you land square makes the next one easier. That is most jobs, really.',
-  });
-}
-
-/* ── trim ─────────────────────────────────────────────────────────────────
-   Weight arrives on the crane; you send it port or starboard. The boat leans.
-   Two buttons, no right answer written anywhere, and it gets faster.
-
-   A shift has a length. Without one a competent player keeps the boat level
-   for ever and the job never ends — which a headless run doing exactly that
-   for 141 seconds is how we found out. Work finishes; that is what makes it
-   work rather than a screensaver. Lean too far, or let the deck pile up, and
-   the boat lurches — three lurches and the shift is over. */
-const TRIM_LOOKS = { cargo: ['crate', 'barrel'], nets: ['net', 'basket'], books: ['ledger', 'ledger'] };
-function load(ctx, kind, cx, by, w) {
-  /* a load of weight w, its bottom-centre at cx,by */
-  const s = 16 + Math.min(5, w) * 4;
-  if (kind === 'barrel') {
-    ctx.fillStyle = '#9A5F2C'; rr(ctx, cx - s * 0.4, by - s, s * 0.8, s, s * 0.22); ctx.fill();
-    ctx.fillStyle = '#5E3A1A'; ctx.fillRect(cx - s * 0.42, by - s * 0.78, s * 0.84, 2.4); ctx.fillRect(cx - s * 0.42, by - s * 0.3, s * 0.84, 2.4);
-    ctx.fillStyle = 'rgba(255,230,190,.3)'; ctx.fillRect(cx - s * 0.22, by - s + 3, 2.5, s - 6);
-  } else if (kind === 'net') {
-    ctx.fillStyle = '#5F8F7A'; ctx.beginPath(); ctx.ellipse(cx, by - s * 0.42, s * 0.55, s * 0.42, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(20,50,40,.55)'; ctx.lineWidth = 1;
-    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(cx + k * s * 0.18 - s * 0.2, by - s * 0.8); ctx.lineTo(cx + k * s * 0.18 + s * 0.2, by - 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx + k * s * 0.18 + s * 0.2, by - s * 0.8); ctx.lineTo(cx + k * s * 0.18 - s * 0.2, by - 2); ctx.stroke(); }
-    ctx.fillStyle = '#E8A33C'; ctx.beginPath(); ctx.arc(cx + s * 0.35, by - s * 0.65, 3, 0, Math.PI * 2); ctx.fill();
-  } else if (kind === 'basket') {
-    ctx.fillStyle = '#B8894C'; ctx.beginPath(); ctx.moveTo(cx - s * 0.5, by - s * 0.7); ctx.lineTo(cx + s * 0.5, by - s * 0.7); ctx.lineTo(cx + s * 0.38, by); ctx.lineTo(cx - s * 0.38, by); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(90,60,20,.55)'; ctx.lineWidth = 1.2;
-    for (let k = 1; k < 3; k++) { ctx.beginPath(); ctx.moveTo(cx - s * 0.46, by - s * 0.7 + k * s * 0.23); ctx.lineTo(cx + s * 0.46, by - s * 0.7 + k * s * 0.23); ctx.stroke(); }
-    ctx.fillStyle = '#9FB8C4'; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.ellipse(cx + k * s * 0.22, by - s * 0.76, s * 0.14, s * 0.07, 0.3, 0, Math.PI * 2); ctx.fill(); }
-  } else if (kind === 'ledger') {
-    const cols = ['#2E7FA8', '#C4453C', '#178A4C', '#8A5B00'];
-    const n = 1 + Math.min(4, w), bh = s / n;
-    for (let k = 0; k < n; k++) {
-      ctx.fillStyle = cols[(k + w) % cols.length]; rr(ctx, cx - s * 0.48 + (k % 2) * 2, by - (k + 1) * bh, s * 0.94, bh - 1, 1.5); ctx.fill();
-      ctx.fillStyle = '#FFF6DA'; ctx.fillRect(cx - s * 0.48 + (k % 2) * 2 + s * 0.8, by - (k + 1) * bh + 1, s * 0.12, bh - 3);
-    }
-  } else crate(ctx, cx - s * 0.5, by - s * 0.8, s, s * 0.8, ['#C98A46', '#B9773A', '#D49B57'][w % 3]);
-}
-function weightTag(ctx, x, y, w) {
-  ctx.fillStyle = '#FFF6DA'; ctx.strokeStyle = '#5B3C22'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#3A2400'; ctx.font = '800 10px Sono, ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(String(w), x, y + 0.5);
-}
-
-function trimGame(jobId, quit, lvl) {
-  const c = K(), t = tier(c);
-  const SHIFT = 20, PX = W / 2, PY = 202, HANG = 74;
-  const kinds = TRIM_LOOKS[jobId] || TRIM_LOOKS.cargo;
-  let kn = jobKnobs(jobId, 'standard');
-  const st = { score: 0, loads: 0, done: false, tilt: 0, shown: 0, queue: [], spawn: 600, t: 0, msg: '', limit: 42, lives: 3, combo: 0,
-    deck: [], flying: [], swing: 0, wrong: 0, lurches: 0, bestCombo: 0 };
-  const gap = () => Math.max(560, 1350 - t * 90 - st.loads * 40) * kn.gap;
-  const ang = () => (st.shown / st.limit) * 0.34;
-  /* where on deck a load of this side sits, in the boat's own frame */
-  const slot = (side, i) => ({ x: side * (30 + (i % 3) * 34 + Math.floor(i / 3) * 14), y: -20 - Math.floor(i / 3) * 20 });
-  const toScreen = (lx, ly, a) => ({ x: PX + lx * Math.cos(a) - ly * Math.sin(a), y: PY + lx * Math.sin(a) + ly * Math.cos(a) });
-  let FX = null;
-
-  const lurch = (why) => {
-    st.lives--; st.combo = 0; st.msg = why; st.score = Math.max(0, st.score - 3); st.lurches++;
-    if (FX) { FX.shake(10, 340); FX.flash('#E0483E', 200); FX.pop(PX, 120, why, { color: '#C4453C', size: 18 }); }
-    sfx.bad();
-    if (st.lives <= 0) { st.end(); return true; }
-    return false;
-  };
-  const send = (side) => {
-    if (st.done || st.over || !st.queue.length) return;
-    const box = st.queue.shift();
-    /* the score is the decision: the side that leaves her nearer level pays two,
-       the other side costs two, and a lurch costs three */
-    const right = Math.abs(st.tilt + side * box.w * 4) <= Math.abs(st.tilt - side * box.w * 4);
-    st.tilt += side * box.w * 4;
-    st.loads++;
-    const n = st.deck.filter((d) => d.side === side).length + st.flying.filter((d) => d.side === side).length;
-    st.flying.push({ side, w: box.w, kind: box.kind, t: 0, i: Math.min(5, n) });
-    if (Math.abs(st.tilt) > st.limit) {
-      /* she lurches; the crew heave the last load over the side and she rights a little */
-      const sign = Math.sign(st.tilt); st.tilt = sign * st.limit * 0.5;
-      if (lurch('Whoa — she lurched!')) return;
-    } else if (right) {
-      st.score += 2; st.combo++; st.bestCombo = Math.max(st.bestCombo, st.combo); st.msg = st.combo >= 3 ? `Good trim x${st.combo}` : 'Good trim';
-      if (FX) { FX.pop(PX + side * 60, 110, st.combo >= 3 ? `Trim x${st.combo} +2` : 'Good trim +2', { color: '#178A4C', size: 17 }); FX.coins(PX + side * 60, 120, 3 + Math.min(4, st.combo)); }
-      sfx.coin();
-    } else {
-      st.combo = 0; st.msg = 'Wrong side'; st.score = Math.max(0, st.score - 2); st.wrong++;
-      if (FX) FX.pop(PX + side * 60, 110, 'Wrong side −2', { color: '#C4453C', size: 15 });
-      sfx.click();
-    }
-    if (st.loads >= SHIFT) { st.msg = 'Shift done'; st.end(); }
-  };
-
-  return shell({
-    jobId, st, quit, unit: 'points', tier: lvl,
-    retier: (k) => { kn = jobKnobs(jobId, k); st.limit = kn.limit; },
-    summary: () => ({ finished: st.loads >= SHIFT, wrong: st.wrong, lurches: st.lurches, bestCombo: st.bestCombo }),
-    step(dt, _fin, fxo) {
-      if (!FX) FX = fxo;
-      st.t += dt; st.spawn -= dt;
-      if (st.spawn <= 0 && st.queue.length < 4) {
-        st.spawn = gap();
-        st.queue.push({ w: 1 + Math.floor(Math.random() * Math.max(1, 3 + t + kn.heavy)), kind: kinds[Math.floor(Math.random() * kinds.length)] });
-        st.swing = 1;
-      }
-      /* The sea does not wait: an unattended boat drifts back towards even,
-         slowly, so standing still is neither a win nor instant death. */
-      st.tilt *= 0.9997 ** dt;
-      st.shown += (st.tilt - st.shown) * Math.min(1, dt * 0.007);
-      st.swing = Math.max(0, st.swing - dt / 900);
-      for (let i = st.flying.length - 1; i >= 0; i--) {
-        const f = st.flying[i]; f.t += dt / 380;
-        if (f.t >= 1) {
-          st.flying.splice(i, 1);
-          const mine = st.deck.filter((d) => d.side === f.side);
-          if (mine.length >= 6) st.deck.splice(st.deck.indexOf(mine[0]), 1);
-          st.deck.push({ side: f.side, w: f.w, kind: f.kind, land: 1 });
-          const p = toScreen(slot(f.side, Math.min(5, mine.length)).x, -14, ang());
-          if (FX) FX.burst(p.x, PY + 8, { n: 10, colors: ['#FFFFFF', '#BFE3F2', '#6EB6D8'], speed: 0.16, size: 3 });
-        }
-      }
-      st.deck.forEach((d) => { if (d.land > 0) d.land = Math.max(0, d.land - dt / 220); });
-      if (st.queue.length >= 4) {
-        /* a full deck: the oldest load goes in the drink */
-        st.queue.shift();
-        if (FX) FX.burst(PX, PY, { n: 16, colors: ['#FFFFFF', '#BFE3F2'], speed: 0.2 });
-        lurch('Splash — too slow!');
-      }
-    },
-    draw(ctx, { img, T, FX: fxl }) {
-      FX = fxl;
-      backdrop(ctx, W, H, img, { veil: 0.22 });
-      /* the sea */
-      const sea = ctx.createLinearGradient(0, PY - 40, 0, H);
-      sea.addColorStop(0, dark() ? '#1E3A5A' : '#5FA8C8'); sea.addColorStop(1, dark() ? '#0E2238' : '#2E7FA8');
-      ctx.fillStyle = sea; ctx.fillRect(0, PY - 40, W, H - PY + 40);
-      ctx.fillStyle = 'rgba(255,255,255,.18)';
-      for (let k = 0; k < 7; k++) { const x = (k * 61 + T * 0.012) % (W + 40) - 20; ctx.fillRect(x, PY - 32 + (k % 3) * 8, 18, 1.5); }
-      const wave = (y0, amp, ph, col) => {
-        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H);
-        for (let x = 0; x <= W; x += 8) ctx.lineTo(x, y0 + Math.sin(x * 0.045 + T * 0.0022 + ph) * amp + Math.sin(x * 0.11 + T * 0.003) * amp * 0.3);
-        ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
-      };
-      wave(PY - 16, 4, 0, dark() ? 'rgba(30,70,110,.9)' : 'rgba(70,140,185,.9)');
-      /* the boat, rocking a little on its own and leaning with the load */
-      const a = ang() + Math.sin(T / 700) * 0.018, bob = Math.sin(T / 520) * 2;
-      ctx.save(); ctx.translate(PX, PY + bob); ctx.rotate(a);
-      /* mast and sails */
-      ctx.fillStyle = '#6E4826'; ctx.fillRect(-3, -112, 6, 100);
-      const bil = Math.sin(T / 600) * 5;
-      ctx.fillStyle = '#F4EAD5'; ctx.beginPath(); ctx.moveTo(4, -108); ctx.quadraticCurveTo(52 + bil, -70, 62 + bil * 0.5, -24); ctx.lineTo(4, -22); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(120,90,50,.45)'; ctx.lineWidth = 1.2; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(4, -80); ctx.lineTo(42 + bil * 0.6, -80); ctx.moveTo(4, -52); ctx.lineTo(56 + bil * 0.6, -52); ctx.stroke();
-      ctx.fillStyle = '#E9DCC0'; ctx.beginPath(); ctx.moveTo(-4, -100); ctx.quadraticCurveTo(-34 - bil * 0.6, -62, -48, -26); ctx.lineTo(-4, -26); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#C4453C'; ctx.beginPath(); ctx.moveTo(3, -112); ctx.lineTo(20, -108 + Math.sin(T / 160) * 2); ctx.lineTo(3, -103); ctx.closePath(); ctx.fill();
-      /* cargo on deck */
-      st.deck.forEach((d) => {
-        const mine = st.deck.filter((x) => x.side === d.side), i = mine.indexOf(d), p = slot(d.side, i);
-        if (d.land > 0) { ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1 + 0.15 * d.land, 1 - 0.2 * d.land); load(ctx, d.kind, 0, 0, d.w); ctx.restore(); }
-        else load(ctx, d.kind, p.x, p.y, d.w);
-      });
-      /* the hull: planks, a rail, a stripe */
-      ctx.beginPath(); ctx.moveTo(-124, -16); ctx.lineTo(124, -16);
-      ctx.quadraticCurveTo(116, 22, 82, 30); ctx.lineTo(-82, 30); ctx.quadraticCurveTo(-116, 22, -124, -16); ctx.closePath();
-      ctx.fillStyle = '#8A4B2A'; ctx.fill();
-      ctx.save(); ctx.clip();
-      ctx.strokeStyle = 'rgba(50,25,10,.4)'; ctx.lineWidth = 1.4;
-      for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-124, -16 + k * 11); ctx.quadraticCurveTo(0, -10 + k * 11, 124, -16 + k * 11); ctx.stroke(); }
-      ctx.fillStyle = '#0E6B78'; ctx.fillRect(-130, -4, 260, 5);
-      ctx.restore();
-      ctx.fillStyle = '#C98A46'; rr(ctx, -128, -20, 256, 7, 3); ctx.fill();
-      ctx.fillStyle = 'rgba(255,240,200,.45)'; ctx.fillRect(-124, -19, 248, 1.5);
-      ctx.fillStyle = '#FFF6DA'; for (const px of [-70, 70]) { ctx.beginPath(); ctx.arc(px, 6, 4, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#5B3C22'; ctx.lineWidth = 1.4; ctx.stroke(); }
-      ctx.restore();
-      wave(PY + 12, 5, 1.7, dark() ? 'rgba(20,52,86,.82)' : 'rgba(46,127,168,.78)');
-      ctx.fillStyle = 'rgba(255,255,255,.35)';
-      for (let x = -10; x < W; x += 26) { const y = PY + 12 + Math.sin(x * 0.045 + T * 0.0022 + 1.7) * 5; ctx.beginPath(); ctx.ellipse(x + 8, y + 1, 7, 1.6, 0, 0, Math.PI * 2); ctx.fill(); }
-      /* the crane, the next load hanging, the others waiting on the quay */
-      ctx.fillStyle = '#4A5960'; ctx.fillRect(PX - 2, 28, 4, 10); ctx.fillRect(PX - 70, 26, 220, 6);
-      ctx.fillRect(W - 24, 26, 6, 70);
-      ctx.fillStyle = '#7A6A50'; rr(ctx, W - 92, 92, 92, 10, 2); ctx.fill();
-      if (st.queue.length) {
-        const nx = st.queue[0], sw = still() ? 0 : Math.sin(T / 180) * 0.1 * st.swing + Math.sin(T / 700) * 0.03;
-        ctx.save(); ctx.translate(PX, 32); ctx.rotate(sw);
-        ctx.strokeStyle = '#3B2A1A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, HANG - 26); ctx.stroke();
-        load(ctx, nx.kind, 0, HANG - 2, nx.w);
-        weightTag(ctx, 0, HANG + 8, nx.w);
-        ctx.restore();
-        st.queue.slice(1).forEach((q, i) => { load(ctx, q.kind, W - 76 + i * 26, 92, Math.min(2, q.w)); weightTag(ctx, W - 76 + i * 26, 82 - 10 - Math.min(2, q.w) * 3, q.w); });
-      }
-      /* loads in flight, arcing to their side of the deck */
-      st.flying.forEach((f) => {
-        const p = slot(f.side, f.i), dst = toScreen(p.x, p.y, ang()), k = ease.inOut(Math.min(1, f.t));
-        const x = PX + (dst.x - PX) * k, y = 32 + HANG + (dst.y - 32 - HANG) * k - Math.sin(k * Math.PI) * 30;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(f.side * k * 0.3); load(ctx, f.kind, 0, 0, f.w); ctx.restore();
-      });
-      night(ctx, 0.16);
-      /* the spirit level */
-      const lx = 40, lw = W - 80, ly = H - 22;
-      ctx.fillStyle = dark() ? 'rgba(10,14,24,.75)' : 'rgba(255,252,245,.9)'; rr(ctx, lx - 6, ly - 6, lw + 12, 20, 10); ctx.fill();
-      ctx.fillStyle = 'rgba(196,69,60,.35)'; rr(ctx, lx, ly - 1, lw * 0.12, 10, 5); ctx.fill(); rr(ctx, lx + lw * 0.88, ly - 1, lw * 0.12, 10, 5); ctx.fill();
-      ctx.fillStyle = 'rgba(47,168,102,.3)'; ctx.fillRect(PX - lw * (8 / st.limit) / 2, ly - 1, lw * (8 / st.limit), 10);
-      const k = clamp(st.shown / st.limit, -1, 1), danger = Math.abs(st.shown) > st.limit * 0.75;
-      ctx.fillStyle = danger ? '#C4453C' : '#2FA866'; ctx.beginPath(); ctx.ellipse(PX + k * (lw / 2 - 8), ly + 4, 9, 6, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(PX + k * (lw / 2 - 8) - 3, ly + 2, 3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
-      label(ctx, 'PORT', lx - 2, ly - 12, { size: 9, align: 'left', weight: 700 });
-      label(ctx, 'STARBOARD', lx + lw + 2, ly - 12, { size: 9, align: 'right', weight: 700 });
-    },
-    hud(ctx) {
-      const w = pill(ctx, `${st.loads}/${SHIFT}`, W - 8, 8);
-      lives(ctx, st.lives, 3, W - 14 - w, 8);
-      if (st.combo >= 2) label(ctx, `Trim x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#178A4C' });
-      if (st.queue.length >= 3) label(ctx, 'Deck filling up!', PX, 150, { size: 13, color: '#C4453C' });
-    },
-    probe: () => ({ kind: 'trim', tilt: st.tilt, queue: st.queue.length, next: st.queue.length ? st.queue[0].w : 0, score: st.score, loads: st.loads, lives: st.lives }),
-    onKey(e) {
-      if (e.key === 'ArrowLeft') send(-1);
-      else if (e.key === 'ArrowRight') send(1);
-    },
-    onPoint(x) { send(x < W / 2 ? -1 : 1); },
-    onAct(n) { if (n === 'jgPort') send(-1); else if (n === 'jgStar') send(1); },
-    controls: () => `<div class="choices" style="margin-top:8px">
-      <button class="btn" data-act="jgPort">← Port</button>
-      <button class="btn" data-act="jgStar">Starboard →</button></div>`,
-    hint: 'Arrows, the two buttons, or tap a side of the boat. The side that brings her back towards level pays 2, the other costs 2 — and a lurch costs 3.',
-    boxes: () => [`${st.loads}/${SHIFT} aboard`, hearts(st.lives), st.msg || ' '],
-    finishLine: (s) => s.quality >= 1.4
-      ? 'That is the whole job, and it is the same shape as a budget: it is not what you take on, it is whether it balances.'
-      : 'Weight is easy. Weight on one side is the problem — and you can feel it coming before it goes.',
-  });
-}
-
-/* ── sweep ────────────────────────────────────────────────────────────────
-   Move, collect, chain. The one with a clock on it. Things drift down over
-   Market Row — leaves and litter for the sweeper, sparks for the lamplighter,
-   spools and patches for the mender — and you catch them before they land.
-   The lamps light, or the bunting is stitched, as you go: the job you are
-   doing is drawn as done. */
-const SWEEP_LOOK = { sweep: 'sweep', lamplight: 'lamp', mend: 'mend' };
-function fallingThing(ctx, look, v, x, y, rot, s = 1) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
-  if (look === 'lamp') {
-    const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 16);
-    g.addColorStop(0, 'rgba(255,214,110,.9)'); g.addColorStop(1, 'rgba(255,170,60,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
-    ctx.rotate(-rot);
-    ctx.fillStyle = '#F07A28'; ctx.beginPath(); ctx.moveTo(0, -11); ctx.quadraticCurveTo(8, 0, 0, 8); ctx.quadraticCurveTo(-8, 0, 0, -11); ctx.fill();
-    ctx.fillStyle = '#FFE08A'; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(4, 2, 0, 6); ctx.quadraticCurveTo(-4, 2, 0, -5); ctx.fill();
-  } else if (look === 'mend') {
-    if (v % 2) {
-      /* a spool of thread */
-      ctx.fillStyle = '#C9A06A'; ctx.fillRect(-8, -10, 16, 3); ctx.fillRect(-8, 7, 16, 3);
-      ctx.fillStyle = ['#C4453C', '#2E7FA8', '#178A4C'][v % 3]; ctx.fillRect(-6, -7, 12, 14);
-      ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1; for (let k = -5; k < 7; k += 3) { ctx.beginPath(); ctx.moveTo(-6, k); ctx.lineTo(6, k + 1); ctx.stroke(); }
-    } else {
-      /* a patch of cloth, ready to sew */
-      ctx.fillStyle = ['#E8A33C', '#7A5CC4', '#2FA866'][v % 3]; rr(ctx, -9, -9, 18, 18, 2); ctx.fill();
-      ctx.setLineDash([2.5, 2.5]); ctx.strokeStyle = '#FFF6DA'; ctx.lineWidth = 1.3; rr(ctx, -6, -6, 12, 12, 1); ctx.stroke(); ctx.setLineDash([]);
-    }
-  } else {
-    if (v % 3 === 0) {
-      /* a leaf */
-      ctx.fillStyle = ['#D9822B', '#C4453C', '#8FA83A', '#E8A33C'][v % 4];
-      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(0, -9, 10, 0); ctx.quadraticCurveTo(0, 9, -10, 0); ctx.fill();
-      ctx.strokeStyle = 'rgba(70,40,10,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(9, 0); ctx.stroke();
-    } else if (v % 3 === 1) {
-      /* a scrap of paper */
-      ctx.fillStyle = '#F6F1E4'; ctx.beginPath(); ctx.moveTo(-8, -7); ctx.lineTo(7, -9); ctx.lineTo(9, 6); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(80,80,90,.4)'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-5, -3); ctx.lineTo(5, -4); ctx.moveTo(-4, 1); ctx.lineTo(6, 0); ctx.stroke();
-    } else {
-      /* a banana peel */
-      ctx.strokeStyle = '#E8C23C'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(0, -6); ctx.quadraticCurveTo(-9, 0, -7, 8); ctx.moveTo(0, -6); ctx.quadraticCurveTo(9, 0, 7, 8); ctx.moveTo(0, -6); ctx.lineTo(0, 7); ctx.stroke();
-      ctx.lineCap = 'butt'; ctx.fillStyle = '#6E4826'; ctx.fillRect(-1.5, -9, 3, 4);
-    }
+    if (st.hold) { if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); next(); } return; }
+    if (!live()) return;
+    if (e.key === 'Backspace' && e.preventDefault) e.preventDefault();
+    T.key(e, cur(), api);
   }
-  ctx.restore();
-}
 
-function sweepGame(jobId, quit, lvl) {
-  const c = K(), t = tier(c);
-  const look = SWEEP_LOOK[jobId] || 'sweep';
-  const CY = H - 62, GROUND = 204, LAMPS = 5, FLAGS = 9;
-  let kn = jobKnobs(jobId, 'standard');
-  const st = { score: 0, done: false, x: W / 2, target: W / 2, vx: 0, bits: [], spawn: 400, left: 36000, chain: 0, msg: '', ground: [], swish: 0, caught: 0, n: 0, glow: [],
-    misses: 0, bestChain: 0 };
-  const posX = (b) => clamp(b.x + Math.sin(b.age * 0.0021 + b.ph) * b.amp, 12, W - 12);
-  const done = () => Math.min(look === 'lamp' ? LAMPS : FLAGS, Math.floor((st.score * (look === 'lamp' ? LAMPS : FLAGS)) / jobPar(jobId, st.tier || 'standard')));
-  let FX = null;
-  const move = (d) => { st.target = clamp(st.target + d, 20, W - 20); };
-
-  return shell({
-    jobId, st, quit, unit: 'points', tier: lvl,
-    retier: (k) => { kn = jobKnobs(jobId, k); },
-    summary: () => ({ finished: st.left <= 0, misses: st.misses, caught: st.caught, bestChain: st.bestChain }),
-    step(dt, _fin, fxo) {
-      if (!FX) FX = fxo;
-      st.left -= dt;
-      if (st.left <= 0) { st.left = 0; st.end(); return; }
-      st.spawn -= dt;
-      if (st.spawn <= 0 && st.bits.length < 8) {
-        st.spawn = Math.max(480, 620 - t * 30) * kn.spawn;
-        st.bits.push({ x: 30 + Math.random() * (W - 60), y: 30, vy: (0.08 + Math.random() * 0.03 + t * 0.004) * kn.fall, age: 0,
-          ph: Math.random() * 6, amp: 8 + Math.random() * 12, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.006, v: st.n++ });
-      }
-      const ox = st.x;
-      /* the catcher has a top speed, so reading what lands next is the skill */
-      const dx = st.target - st.x, cap = kn.cap * dt;
-      st.x += Math.max(-cap, Math.min(cap, dx * Math.min(1, 0.02 * dt)));
-      st.vx = (st.x - ox) / Math.max(1, dt);
-      st.swish += Math.abs(st.vx) * dt * 0.05;
-      for (let i = st.bits.length - 1; i >= 0; i--) {
-        const b = st.bits[i];
-        b.age += dt; b.y += b.vy * dt; b.rot += b.vr * dt;
-        const bx = posX(b);
-        if (b.y >= CY - 16 && b.y <= CY + 12 && Math.abs(bx - st.x) < kn.reach) {
-          st.bits.splice(i, 1); st.chain++; const pts = st.chain % 5 === 0 ? 2 : 1; st.score += pts; st.caught++; st.bestChain = Math.max(st.bestChain, st.chain);
-          st.msg = st.chain >= 5 ? st.chain + ' in a row' : '';
-          const before = st.glow.length; while (st.glow.length < done()) st.glow.push(1);
-          if (FX) {
-            FX.pop(bx, CY - 30, pts > 1 ? `Chain of ${st.chain}! +2` : `+${pts}`, { color: pts > 1 ? '#B57E10' : '#1C2A2E', size: pts > 1 ? 18 : 16 });
-            if (look === 'sweep') FX.burst(bx, CY, { n: 8, colors: ['#C9B48A', '#A89268'], speed: 0.12, size: 3 });
-            else FX.burst(bx, CY, { n: 8, colors: look === 'lamp' ? ['#FFE08A', '#F07A28'] : ['#FFF6DA', '#E8A33C'], speed: 0.14, size: 3 });
-            if (st.chain % 5 === 0) FX.coins(bx, CY - 10, 5);
-            if (st.glow.length > before) FX.coins(W / 2, 60, 3);
-          }
-          sfx.click();
-        } else if (b.y > H - 14) {
-          st.bits.splice(i, 1);
-          /* a miss costs two, and breaks the chain */
-          st.score = Math.max(0, st.score - 2); st.misses++;
-          if (FX) FX.pop(bx, H - 40, st.chain >= 3 ? 'Chain broken −2' : '−2', { color: '#C4453C', size: 14 });
-          st.chain = 0; st.msg = 'Missed one';
-          if (look === 'sweep') st.ground.push({ x: bx, y: H - 10 - Math.random() * 8, v: b.v, rot: b.rot, a: 1 });
-          if (FX) { FX.shake(4, 180); FX.flash('#E0483E', 120); }
-          sfx.bad();
-        }
-      }
-      st.ground.forEach((g) => { g.a -= dt / 4000; });
-      st.ground = st.ground.filter((g) => g.a > 0).slice(-8);
-      st.glow = st.glow.map((g) => Math.max(0, g - dt / 600));
-    },
-    draw(ctx, { img, T, FX: fxl }) {
-      FX = fxl;
-      backdrop(ctx, W, H, img, { veil: look === 'lamp' ? 0.2 : 0.3 });
-      if (look === 'lamp') { ctx.fillStyle = dark() ? 'rgba(8,10,30,.45)' : 'rgba(40,40,90,.38)'; ctx.fillRect(0, 0, W, H); }
-      /* Market Row: stalls along the back */
-      const stalls = [{ x: 4, c: '#C4453C' }, { x: 124, c: '#2E7FA8' }, { x: 244, c: '#178A4C' }];
-      stalls.forEach((s, k) => {
-        const w = 112, top = 104;
-        ctx.fillStyle = '#6E4826'; ctx.fillRect(s.x + 6, top, 5, GROUND - top); ctx.fillRect(s.x + w - 11, top, 5, GROUND - top);
-        ctx.fillStyle = '#A8763F'; ctx.fillRect(s.x + 2, GROUND - 34, w - 4, 30);
-        ctx.fillStyle = 'rgba(70,40,10,.25)'; ctx.fillRect(s.x + 2, GROUND - 34, w - 4, 4);
-        const goods = [['#E8A33C', '#C4453C', '#8FA83A'], ['#F6F1E4', '#D9B97A', '#B57E10'], ['#7A5CC4', '#E8A33C', '#2FA866']][k];
-        for (let g = 0; g < 7; g++) { ctx.fillStyle = goods[g % 3]; ctx.beginPath(); ctx.arc(s.x + 14 + g * 13, GROUND - 38, 5.5, 0, Math.PI * 2); ctx.fill(); }
-        /* the striped, scalloped awning */
-        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#FFF6DA' : s.c; ctx.fillRect(s.x + i * (w / 8), top - 18, w / 8 + 0.5, 18); }
-        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#FFF6DA' : s.c; ctx.beginPath(); ctx.arc(s.x + i * (w / 8) + w / 16, top, w / 16, 0, Math.PI); ctx.fill(); }
-        ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(s.x, top - 18, w, 3);
-      });
-      cobbles(ctx, GROUND, H - GROUND);
-      if (look === 'lamp') {
-        /* lamp posts between the stalls, lit as the work gets done */
-        const lit = done();
-        for (let i = 0; i < LAMPS; i++) {
-          const lx = 30 + i * 75, ly = 70;
-          ctx.fillStyle = '#2E3A40'; ctx.fillRect(lx - 2, ly, 4, GROUND - ly); ctx.fillRect(lx - 7, GROUND - 6, 14, 6);
-          const on = i < lit, part = i === lit ? Math.min(1, (st.score * LAMPS) / jobPar(jobId, st.tier || 'standard') - lit) : 0;
-          if (part > 0) {
-            /* the next lamp warms as you get closer to it */
-            const g = ctx.createRadialGradient(lx, ly - 8, 1, lx, ly - 8, 24);
-            g.addColorStop(0, `rgba(255,200,100,${0.6 * part})`); g.addColorStop(1, 'rgba(255,180,60,0)');
-            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx, ly - 8, 24, 0, Math.PI * 2); ctx.fill();
-          }
-          if (on) {
-            const pulse = 1 + (st.glow[i] || 0) * 0.6 + Math.sin(T / 300 + i) * 0.04;
-            const g = ctx.createRadialGradient(lx, ly - 8, 2, lx, ly - 8, 46 * pulse);
-            g.addColorStop(0, 'rgba(255,220,120,.85)'); g.addColorStop(1, 'rgba(255,180,60,0)');
-            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx, ly - 8, 46 * pulse, 0, Math.PI * 2); ctx.fill();
-          }
-          ctx.fillStyle = on ? '#FFE08A' : '#5A6670'; rr(ctx, lx - 7, ly - 18, 14, 16, 3); ctx.fill();
-          ctx.strokeStyle = '#2E3A40'; ctx.lineWidth = 2; rr(ctx, lx - 7, ly - 18, 14, 16, 3); ctx.stroke();
-          ctx.fillStyle = '#2E3A40'; ctx.beginPath(); ctx.moveTo(lx - 9, ly - 18); ctx.lineTo(lx, ly - 25); ctx.lineTo(lx + 9, ly - 18); ctx.fill();
-        }
-      } else if (look === 'mend') {
-        /* bunting across the Row: torn flags stitched whole as you go */
-        const fixed = done(), cols = ['#C4453C', '#E8A33C', '#2E7FA8', '#178A4C', '#7A5CC4'];
-        ctx.strokeStyle = '#5B3C22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, 48);
-        ctx.quadraticCurveTo(W / 2, 74, W, 48); ctx.stroke();
-        for (let i = 0; i < FLAGS; i++) {
-          const fx0 = 14 + i * ((W - 28) / FLAGS), u = (fx0 + 14) / W, fy = 48 + 4 * 26 * u * (1 - u) * 0.98;
-          const sway = Math.sin(T / 500 + i) * 1.5, ok = i < fixed;
-          ctx.save(); ctx.translate(fx0 + 14, fy); ctx.rotate(sway * 0.03);
-          ctx.fillStyle = cols[i % cols.length];
-          if (ok) { ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(13, 0); ctx.lineTo(0, 26); ctx.closePath(); ctx.fill(); }
-          else {
-            /* torn: the point ripped off, a ragged edge, one half hanging loose */
-            ctx.globalAlpha = 0.8;
-            ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(0, 0); ctx.lineTo(-2, 5); ctx.lineTo(1, 9); ctx.lineTo(-3, 13); ctx.lineTo(-6, 13); ctx.closePath(); ctx.fill();
-            ctx.save(); ctx.translate(1, 0); ctx.rotate(0.35 + sway * 0.05);
-            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(12, 0); ctx.lineTo(5, 12); ctx.lineTo(3, 8); ctx.lineTo(4, 4); ctx.closePath(); ctx.fill();
-            ctx.restore(); ctx.globalAlpha = 1;
-            ctx.strokeStyle = 'rgba(60,30,20,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-2, 5); ctx.lineTo(1, 9); ctx.lineTo(-3, 13); ctx.stroke();
-          }
-          if (ok) {
-            ctx.strokeStyle = '#FFF6DA'; ctx.lineWidth = 1.2; ctx.beginPath();
-            for (let k = 0; k < 6; k++) ctx.lineTo(-6 + k * 2.4, 8 + (k % 2) * 3);
-            ctx.stroke();
-            if (st.glow[i] > 0) { ctx.globalAlpha = st.glow[i]; ctx.fillStyle = '#FFF3C4'; ctx.beginPath(); ctx.arc(0, 10, 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
-          }
-          ctx.restore();
-        }
-      }
-      /* litter that landed, fading */
-      st.ground.forEach((g) => { ctx.globalAlpha = g.a * 0.7; fallingThing(ctx, look, g.v, g.x, g.y, g.rot, 0.85); ctx.globalAlpha = 1; });
-      /* what is falling */
-      st.bits.forEach((b) => fallingThing(ctx, look, b.v, posX(b), b.y, look === 'lamp' ? 0 : b.rot));
-      /* the catcher */
-      const x = st.x, lean = clamp(st.vx * 1.4, -0.5, 0.5);
-      shadow(ctx, x, H - 22, 72, 0.22);
-      if (look === 'sweep') {
-        const sw = still() ? 0 : Math.sin(st.swish) * 0.25;
-        ctx.save(); ctx.translate(x, CY + 16); ctx.rotate(-lean + sw);
-        ctx.strokeStyle = '#8F6236'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(18, -62); ctx.stroke(); ctx.lineCap = 'butt';
-        ctx.fillStyle = '#C4453C'; rr(ctx, -16, -8, 32, 7, 2); ctx.fill();
-        ctx.fillStyle = '#D9B04A'; ctx.beginPath(); ctx.moveTo(-17, -2); ctx.lineTo(17, -2); ctx.lineTo(26, 18); ctx.lineTo(-26, 18); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(120,80,20,.55)'; ctx.lineWidth = 1.2;
-        for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(k * 4, 0); ctx.lineTo(k * 6, 18); ctx.stroke(); }
-        ctx.restore();
-      } else if (look === 'lamp') {
-        ctx.save(); ctx.translate(x, H - 18); ctx.rotate(-lean * 0.5);
-        ctx.strokeStyle = '#5B3C22'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, CY - (H - 18) + 10); ctx.stroke();
-        const g = ctx.createRadialGradient(0, CY - (H - 18), 2, 0, CY - (H - 18), 30);
-        g.addColorStop(0, 'rgba(255,220,120,.7)'); g.addColorStop(1, 'rgba(255,180,60,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, CY - (H - 18), 30, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#2E3A40'; ctx.beginPath(); ctx.moveTo(-18, CY - (H - 18) - 8); ctx.lineTo(18, CY - (H - 18) - 8); ctx.lineTo(10, CY - (H - 18) + 8); ctx.lineTo(-10, CY - (H - 18) + 8); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#FFE08A'; ctx.beginPath(); ctx.ellipse(0, CY - (H - 18) - 8, 15, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-      } else {
-        ctx.save(); ctx.translate(x, CY + 6); ctx.rotate(-lean * 0.4);
-        ctx.fillStyle = '#B8894C'; ctx.beginPath(); ctx.moveTo(-30, -8); ctx.lineTo(30, -8); ctx.lineTo(22, 24); ctx.lineTo(-22, 24); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(90,60,20,.55)'; ctx.lineWidth = 1.4;
-        for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-28 + k * 1.5, -2 + k * 7); ctx.lineTo(28 - k * 1.5, -2 + k * 7); ctx.stroke(); }
-        ctx.fillStyle = '#8F6236'; rr(ctx, -32, -11, 64, 6, 3); ctx.fill();
-        ctx.strokeStyle = '#B0BEC5'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(14, -10); ctx.lineTo(26, -34); ctx.stroke();
-        ctx.strokeStyle = '#C4453C'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(25, -32); ctx.quadraticCurveTo(36, -20, 22, -14); ctx.stroke();
-        ctx.restore();
-      }
-      night(ctx, look === 'lamp' ? 0.1 : 0.2);
-    },
-    hud(ctx) {
-      pill(ctx, `${Math.ceil(st.left / 1000)}s`, W - 8, 8, { warn: st.left < 10000 });
-      if (st.chain >= 3) label(ctx, `Chain x${st.chain}`, 10, 52, { align: 'left', size: 12, color: '#B57E10' });
-    },
-    probe: () => {
-      /* the nearest thing that will reach the catch line soonest */
-      let n = null, best = 1e9;
-      st.bits.forEach((b) => { const eta = (CY - b.y) / b.vy; if (eta > -50 && eta < best) { best = eta; n = posX(b); } });
-      return { kind: 'sweep', x: st.x, nearest: n, score: st.score, left: st.left, chain: st.chain };
-    },
-    onKey(e) {
-      if (e.key === 'ArrowLeft') move(-46);
-      else if (e.key === 'ArrowRight') move(46);
-    },
-    onPoint(x) { st.target = clamp(x, 20, W - 20); },
-    onDrag(x) { st.target = clamp(x, 20, W - 20); },
-    onAct(n) {
-      if (n === 'jgLeft') move(-46);
-      else if (n === 'jgRight') move(46);
-    },
-    controls: () => `<div class="choices" style="margin-top:8px">
-      <button class="btn ghost" data-act="jgLeft">←</button>
-      <button class="btn ghost" data-act="jgRight">→</button></div>`,
-    hint: look === 'lamp' ? 'Arrows, the buttons, or drag along the Row. Catch the sparks to light the lamps — a miss costs 2, every fifth in a row counts double.'
-      : look === 'mend' ? 'Arrows, the buttons, or drag along the Row. Catch the thread and patches to mend the bunting — a miss costs 2, every fifth in a row counts double.'
-      : 'Arrows, the buttons, or drag along the Row. Catch it all before it lands — a miss costs 2, every fifth in a row counts double.',
-    boxes: () => [`${st.score}`, `${Math.ceil(st.left / 1000)}s`, st.msg || ' '],
-    finishLine: (s) => s.quality >= 1.4
-      ? 'Fast and tidy. The chain is where the money is, and that is true of the real one too.'
-      : 'Every one you let land broke the chain. Steady beats frantic here.',
-  });
-}
-
-/* ── runner ───────────────────────────────────────────────────────────────
-   Three lanes of pavement under a row of house fronts. Run past a drop-off
-   in your lane and the post flies in; run into the dog and you lose a heart.
-   A round is thirty-five seconds of street, so it always ends. */
-const RUN_DROP = { flyers: 'letterbox', errands: 'basket', runner: 'bell', board: 'chalk' };
-const HOUSES = ['#E0A85C', '#C9785A', '#7FA8B8', '#D9C27A', '#9DBF8A', '#C99AB8', '#E6D3B0'];
-function house(ctx, x, i, lit) {
-  const w = 76 + Math.floor(hash(i) * 22), h = 64 + Math.floor(hash(i + 9) * 22), y = 112 - h;
-  ctx.fillStyle = HOUSES[i % HOUSES.length]; ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(x + w - 6, y, 6, h);
-  ctx.fillStyle = ['#8A4B2A', '#5B3C22', '#6E2E28'][i % 3];
-  ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + w / 2, y - 18 - hash(i + 3) * 8); ctx.lineTo(x + w + 4, y); ctx.closePath(); ctx.fill();
-  /* windows */
-  for (let k = 0; k < 2; k++) {
-    const wx = x + 10 + k * (w - 34);
-    ctx.fillStyle = dark() ? '#FFD98A' : '#BFE3F2'; ctx.fillRect(wx, y + 12, 14, 14);
-    ctx.strokeStyle = '#FFF6DA'; ctx.lineWidth = 2; ctx.strokeRect(wx, y + 12, 14, 14);
+  /* §1.4 · the shift's own end card: its own practised line and its own capped notice */
+  function endView(chip) {
+    const c = K(), [mood, title] = grade(st.right), pose = POSES.includes(mood) ? mood : 'cheer';
+    const best = sim.jobBest(c, jobId);
+    const paid = st.won > 0 ? `Earned ${money(st.won)} from ${esc(job.who)}, straight into your wallet. Paid by how many you got right.`
+      : st.capped ? `Paid shift used for today: this one is practice, and it still counts toward your goals. ${esc(job.name)} pays once a day, so tomorrow it pays again.`
+      : 'Nothing right this shift, so nothing paid. A wage is for work done right; the next shift is a fresh start.';
+    return `<div class="stack">${hud([esc(job.name), chip])}
+      <div class="stage endcard shiftend" data-kind="${kind}" style="justify-content:center;text-align:center">
+        <div class="endfig">${pipPose(pose, 104)}<span class="endav">${kidBadge(c, 56)}</span></div>
+        <h2>${esc(title)}</h2>
+        <p class="shiftscore"><b class="tabnum">${st.right} of ${SHIFT_ITEMS}</b> right (${Math.round(st.accuracy * 100)}%) on ${TIER_NAME[st.tier]}${st.answered < SHIFT_ITEMS ? ` · ${SHIFT_ITEMS - st.answered} not reached before the clock` : ''}</p>
+        <p class="endbest">${st.best ? 'A new best for you' : 'Your best'}: <b class="tabnum">${best} of ${SHIFT_ITEMS}</b></p>
+        ${say(job.whoArt || 'pip', FINISH[kind][st.right >= 10 ? 0 : 1])}
+        <p class="practised"><b>You practised:</b> ${esc(SHIFT_PRACTISED[kind])}</p>
+        ${goalList(jobGoals(jobId), c, jobId, st.goals)}
+        <p class="small muted shiftpaid">${paid}</p>
+        ${st.offer && st.offer.dir ? (st.offer.taken ? `<p class="small lvloffer" data-dir="${st.offer.dir}">Next shift is on <b>${TIER_NAME[st.offer.to]}</b>.</p>`
+          : `<p class="small lvloffer" data-dir="${st.offer.dir}">${st.offer.dir === 'up' ? `Every one right on ${TIER_NAME[st.tier]}. Ready for ${TIER_NAME[st.offer.to]}?` : `A hard one. ${TIER_NAME[st.offer.to]} is there if you want it.`}
+            <button class="btn ghost sm" data-act="jgLevel" data-arg="${st.offer.to}">Try ${TIER_NAME[st.offer.to]} next time (L)</button></p>`) : ''}
+        <button class="btn wide" data-act="gquit">Back</button></div></div>`;
   }
-  /* the door, its step, its letter slot; lit when its post has come */
-  const dx = x + w / 2 - 9;
-  ctx.fillStyle = ['#0E6B78', '#C4453C', '#178A4C', '#2E3A40'][i % 4]; rr(ctx, dx, 112 - 30, 18, 30, 8); ctx.fill();
-  ctx.fillStyle = '#D9B04A'; ctx.fillRect(dx + 5, 112 - 18, 8, 2); ctx.beginPath(); ctx.arc(dx + 14, 112 - 13, 1.6, 0, Math.PI * 2); ctx.fill();
-  if (lit > 0) { ctx.globalAlpha = lit; ctx.fillStyle = '#FFF3C4'; rr(ctx, dx - 3, 112 - 33, 24, 36, 10); ctx.fill(); ctx.globalAlpha = 1; }
-  return w + 6;
-}
-function dropPoint(ctx, kind, x, y) {
-  shadow(ctx, x, y + 14, 26, 0.25);
-  if (kind === 'chalk') {
-    ctx.strokeStyle = '#8F6236'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(x - 12, y + 14); ctx.lineTo(x - 6, y - 16); ctx.moveTo(x + 12, y + 14); ctx.lineTo(x + 6, y - 16); ctx.stroke();
-    ctx.fillStyle = '#2E3A40'; rr(ctx, x - 11, y - 18, 22, 24, 2); ctx.fill();
-    ctx.strokeStyle = '#8F6236'; ctx.lineWidth = 2; rr(ctx, x - 11, y - 18, 22, 24, 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 6, y - 11); ctx.lineTo(x + 5, y - 11); ctx.moveTo(x - 6, y - 5); ctx.lineTo(x + 2, y - 5); ctx.stroke();
-    return;
-  }
-  ctx.fillStyle = '#5B3C22'; ctx.fillRect(x - 2, y - 4, 4, 18);
-  if (kind === 'basket') {
-    ctx.fillStyle = '#B8894C'; ctx.beginPath(); ctx.moveTo(x - 12, y - 14); ctx.lineTo(x + 12, y - 14); ctx.lineTo(x + 9, y - 2); ctx.lineTo(x - 9, y - 2); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#8F6236'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 14, 9, Math.PI, 0); ctx.stroke();
-    ctx.fillStyle = '#E8A33C'; ctx.beginPath(); ctx.arc(x - 4, y - 15, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#8FA83A'; ctx.beginPath(); ctx.arc(x + 3, y - 16, 3, 0, Math.PI * 2); ctx.fill();
-  } else if (kind === 'bell') {
-    ctx.fillStyle = '#2E7FA8'; rr(ctx, x - 11, y - 20, 22, 18, 3); ctx.fill();
-    ctx.fillStyle = '#D9B04A'; ctx.beginPath(); ctx.arc(x, y - 20, 5, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = '#FFF6DA'; ctx.fillRect(x - 6, y - 13, 12, 5);
-  } else {
-    ctx.fillStyle = '#C4453C'; rr(ctx, x - 11, y - 22, 22, 20, 8); ctx.fill();
-    ctx.fillStyle = '#2E3A40'; ctx.fillRect(x - 6, y - 15, 12, 2.5);
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(x - 8, y - 20, 3, 14);
-  }
-}
-function dog(ctx, x, y, T) {
-  const step = Math.sin(T / 70), wag = Math.sin(T / 60) * 0.5;
-  shadow(ctx, x, y + 15, 36, 0.25);
-  ctx.save(); ctx.translate(x, y + Math.abs(step) * -1.5);
-  ctx.strokeStyle = '#7A4E2A'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(-8 + step * 4, 14); ctx.moveTo(-4, 4); ctx.lineTo(-4 - step * 4, 14);
-  ctx.moveTo(8, 4); ctx.lineTo(8 - step * 4, 14); ctx.moveTo(12, 4); ctx.lineTo(12 + step * 4, 14); ctx.stroke();
-  ctx.save(); ctx.translate(16, -2); ctx.rotate(-0.6 + wag); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(6, -6, 4, -12); ctx.stroke(); ctx.restore();
-  ctx.lineCap = 'butt';
-  ctx.fillStyle = '#A8693A'; ctx.beginPath(); ctx.ellipse(2, 0, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#F2D3A8'; ctx.beginPath(); ctx.ellipse(0, 3, 9, 4, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#A8693A'; ctx.beginPath(); ctx.arc(-14, -7, 8, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-21, -4, 5, 3.6, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#2B1A10'; ctx.beginPath(); ctx.arc(-25, -5, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(-15, -9, 1.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#6E3E1E'; ctx.beginPath(); ctx.ellipse(-9, -9, 3.5, 6, 0.5 + step * 0.15, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#C4453C'; ctx.fillRect(-11, -2, 6, 2.5);
-  ctx.restore();
-}
-function runnerFigure(ctx, x, y, T, shirt, hurt) {
-  const ph = T / 85, leg = Math.sin(ph), bob = Math.abs(Math.cos(ph)) * 2.5;
-  shadow(ctx, x, y + 18, 26, 0.28);
-  ctx.save(); ctx.translate(x, y - bob);
-  if (hurt > 0 && Math.floor(T / 80) % 2) ctx.globalAlpha = 0.45;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#2E3A40'; ctx.lineWidth = 4.5;
-  ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(leg * 7, 18); ctx.moveTo(0, 4); ctx.lineTo(-leg * 7, 18); ctx.stroke();
-  ctx.strokeStyle = '#8B5A3C'; ctx.lineWidth = 3.5;
-  ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(-leg * 7, 0); ctx.stroke();
-  ctx.fillStyle = shirt; rr(ctx, -6, -12, 12, 18, 5); ctx.fill();
-  ctx.strokeStyle = '#7A5230'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-5, -11); ctx.lineTo(7, 2); ctx.stroke();
-  ctx.fillStyle = '#B8894C'; rr(ctx, 3, -2, 10, 9, 2); ctx.fill();
-  ctx.fillStyle = '#FFF6DA'; ctx.fillRect(5, -4, 6, 3);
-  ctx.strokeStyle = '#8B5A3C'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(leg * 7, -1); ctx.stroke();
-  ctx.fillStyle = '#8B5A3C'; ctx.beginPath(); ctx.arc(1, -19, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#2E3A40'; ctx.beginPath(); ctx.arc(1, -21, 7.2, Math.PI * 1.05, Math.PI * 2.05); ctx.fill();
-  ctx.fillRect(1, -23, 10, 3);
-  ctx.fillStyle = '#1C2A2E'; ctx.beginPath(); ctx.arc(5, -18, 1.2, 0, Math.PI * 2); ctx.fill();
-  ctx.lineCap = 'butt'; ctx.restore();
-}
-
-function runnerGame(jobId, quit, lvl) {
-  const c = K(), t = tier(c);
-  const drop = RUN_DROP[jobId] || 'letterbox';
-  const LANES = 3, LY = [146, 196, 246], RX = 36, CLOCK = 35000;
-  let kn = jobKnobs(jobId, 'standard');
-  const st = { score: 0, done: false, lane: 1, ly: LY[1], things: [], spawn: 500, dist: 0, lives: 3, msg: '', left: CLOCK, combo: 0, hurt: 0, posts: [], doorGlow: {},
-    dogs: 0, missed: 0, posted: 0, bestCombo: 0 };
-  const speed = () => (0.16 + t * 0.025 + st.dist / 26000) * kn.speed;
-  let FX = null, houseAt = [];
-
-  return shell({
-    jobId, st, quit, unit: 'points', tier: lvl,
-    retier: (k) => { kn = jobKnobs(jobId, k); },
-    summary: () => ({ finished: st.left <= 0, dogs: st.dogs, missed: st.missed, posted: st.posted, bestCombo: st.bestCombo }),
-    step(dt, _fin, fxo) {
-      if (!FX) FX = fxo;
-      st.left -= dt;
-      if (st.left <= 0) { st.left = 0; st.end(); return; }
-      st.dist += speed() * dt;
-      st.ly += (LY[st.lane] - st.ly) * Math.min(1, dt * 0.02);
-      st.hurt = Math.max(0, st.hurt - dt);
-      st.spawn -= dt;
-      if (st.spawn <= 0) {
-        /* one drop-off per stretch of street, so every one can be reached —
-           and sometimes a dog in another lane, so getting there takes care */
-        st.spawn = Math.max(560, 900 - t * 50) * kn.spawn;
-        const lane = Math.floor(Math.random() * LANES);
-        if (Math.random() < 0.82) st.things.push({ lane, x: W + 20, bad: false });
-        if (Math.random() < (0.38 + t * 0.03) * kn.dog) st.things.push({ lane: (lane + 1 + Math.floor(Math.random() * 2)) % LANES, x: W + 20, bad: true });
-      }
-      for (let i = st.things.length - 1; i >= 0; i--) {
-        const o = st.things[i];
-        o.x -= speed() * dt;
-        if (o.x < 54 && o.x > 18 && o.lane === st.lane) {
-          st.things.splice(i, 1);
-          if (o.bad) {
-            st.lives--; st.dogs++; st.combo = 0; st.hurt = 700; st.msg = 'Woof! −3'; st.score = Math.max(0, st.score - 3); sfx.bad();
-            if (FX) { FX.shake(9, 300); FX.flash('#E0483E', 200); FX.pop(RX + 20, LY[o.lane] - 30, 'Woof! −3', { color: '#C4453C', size: 18 }); }
-            if (st.lives <= 0) { st.end(); return; }
-          } else {
-            st.combo++; st.posted++; st.bestCombo = Math.max(st.bestCombo, st.combo); const pts = st.combo % 5 === 0 ? 2 : 1; st.score += pts; st.msg = st.combo >= 3 ? `Combo x${st.combo}` : ''; sfx.click();
-            /* the post flies up to the nearest door ahead */
-            const door = houseAt.find((h) => h.dx > RX + 10) || { dx: RX + 60, i: -1 };
-            st.posts.push({ x0: RX, y0: st.ly - 10, x1: door.dx, y1: 96, t: 0, i: door.i });
-            if (FX) { FX.pop(RX + 24, LY[o.lane] - 34, pts > 1 ? `Combo x${st.combo} +2` : '+1', { color: pts > 1 ? '#B57E10' : '#1C2A2E', size: 17 }); if (pts > 1) FX.coins(RX + 20, LY[o.lane] - 20, 5); }
-          }
-        } else if (o.x < -24) {
-          st.things.splice(i, 1);
-          if (!o.bad) { st.missed++; st.msg = 'Missed a door'; st.score = Math.max(0, st.score - 1); if (FX) FX.pop(40, LY[o.lane] - 20, 'Missed −1', { color: '#C4453C', size: 13 }); st.combo = 0; }
-        }
-      }
-      for (let i = st.posts.length - 1; i >= 0; i--) {
-        const p = st.posts[i]; p.t += dt / 420; p.x1 -= speed() * 0.55 * dt;
-        if (p.t >= 1) { st.posts.splice(i, 1); if (p.i >= 0) st.doorGlow[p.i] = 1; if (FX) FX.burst(p.x1, p.y1, { n: 8, colors: ['#FFF3C4', '#F0B429'], speed: 0.12, size: 3 }); }
-      }
-      for (const k in st.doorGlow) { st.doorGlow[k] -= dt / 900; if (st.doorGlow[k] <= 0) delete st.doorGlow[k]; }
-    },
-    draw(ctx, { img, T, FX: fxl }) {
-      FX = fxl;
-      const d = st.dist;
-      backdrop(ctx, W, H, img, { veil: 0.25, shift: -(d * 0.05) % 30 });
-      /* far hills, slow */
-      ctx.fillStyle = dark() ? 'rgba(40,60,70,.7)' : 'rgba(120,160,120,.6)';
-      ctx.beginPath(); ctx.moveTo(0, 112);
-      for (let x = 0; x <= W; x += 10) ctx.lineTo(x, 70 + Math.sin((x + d * 0.15) * 0.02) * 10 + Math.sin((x + d * 0.15) * 0.047) * 6);
-      ctx.lineTo(W, 112); ctx.closePath(); ctx.fill();
-      /* house fronts at half speed */
-      const hs = d * 0.55;
-      houseAt = [];
-      /* walk houses from a fixed origin so each house keeps its look */
-      let x, i = 0, acc = 0;
-      while (acc < hs - 200) { acc += 76 + Math.floor(hash(i) * 22) + 6; i++; }
-      x = acc - hs - 100;
-      while (x < W + 10) {
-        const w = 76 + Math.floor(hash(i) * 22) + 6;
-        houseAt.push({ dx: x + (w - 6) / 2, i });
-        house(ctx, x, i, st.doorGlow[i] || 0);
-        x += w; i++;
-      }
-      /* kerb and pavement */
-      ctx.fillStyle = '#8C8478'; ctx.fillRect(0, 112, W, 8);
-      ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(0, 112, W, 2);
-      /* paving slabs, one band per lane */
-      ctx.fillStyle = '#A99A80'; ctx.fillRect(0, 120, W, H - 120);
-      LY.forEach((ly, k) => {
-        const y0 = k === 0 ? 120 : ly - 25, y1 = ly + 25, sw = 46, off = ((-(d % sw)) + (k % 2) * 23) - sw;
-        for (let x = off; x < W + sw; x += sw) {
-          ctx.fillStyle = (Math.floor((x + d) / sw) + k) % 3 ? '#D3C7AC' : '#CBBEA2';
-          rr(ctx, x + 1.5, y0 + 1.5, sw - 3, y1 - y0 - 3, 3); ctx.fill();
-        }
-      });
-      ctx.strokeStyle = 'rgba(255,252,240,.55)'; ctx.lineWidth = 2; ctx.setLineDash([14, 16]); ctx.lineDashOffset = d % 30;
-      for (const y of [LY[0] + 25, LY[1] + 25]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-      ctx.setLineDash([]); ctx.lineDashOffset = 0;
-      /* lane highlight */
-      ctx.fillStyle = 'rgba(255,240,180,.16)'; ctx.fillRect(0, LY[st.lane] - 24, W, 49);
-      /* what's coming, drawn back to front */
-      [...st.things].sort((a, b) => a.lane - b.lane).forEach((o) => { if (o.bad) dog(ctx, o.x, LY[o.lane], T || 1); else dropPoint(ctx, drop, o.x, LY[o.lane]); });
-      runnerFigure(ctx, RX, st.ly, still() ? 0 : T, '#0E6B78', st.hurt);
-      /* post in flight */
-      st.posts.forEach((p) => {
-        const k = ease.out(Math.min(1, p.t)), px = p.x0 + (p.x1 - p.x0) * k, py = p.y0 + (p.y1 - p.y0) * k - Math.sin(k * Math.PI) * 30;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(k * 6);
-        ctx.fillStyle = '#FFF6DA'; rr(ctx, -7, -5, 14, 10, 1.5); ctx.fill();
-        ctx.strokeStyle = '#8A5B00'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7, -5); ctx.lineTo(0, 1); ctx.lineTo(7, -5); ctx.stroke();
-        ctx.restore();
-      });
-      night(ctx, 0.18);
-    },
-    hud(ctx) {
-      const w = pill(ctx, `${Math.ceil(st.left / 1000)}s`, W - 8, 8, { warn: st.left < 10000 });
-      lives(ctx, st.lives, 3, W - 14 - w, 8);
-      if (st.combo >= 2) label(ctx, `Combo x${st.combo}`, 10, 52, { align: 'left', size: 13, color: '#B57E10' });
-    },
-    probe: () => {
-      const soon = st.things.filter((o) => o.x > 40 && o.x < 200).sort((a, b) => a.x - b.x);
-      const good = soon.find((o) => !o.bad);
-      const danger = soon.find((o) => o.bad && o.lane === st.lane && o.x < 120);
-      let want = good ? good.lane : null;
-      if (danger) want = [0, 1, 2].find((l) => l !== st.lane && !soon.some((o) => o.bad && o.lane === l));
-      return { kind: 'runner', lane: st.lane, want: want === undefined ? null : want, score: st.score, lives: st.lives, left: st.left };
-    },
-    onKey(e) {
-      if (e.key === 'ArrowUp') st.lane = Math.max(0, st.lane - 1);
-      else if (e.key === 'ArrowDown') st.lane = Math.min(LANES - 1, st.lane + 1);
-    },
-    onPoint(x, y) { st.lane = clamp(Math.round((y - LY[0]) / (LY[1] - LY[0])), 0, LANES - 1); },
-    onAct(n, arg) { if (n === 'jgLane') st.lane = clamp(+arg, 0, LANES - 1); },
-    controls: () => `<div class="choices" style="grid-template-columns:repeat(3,1fr);margin-top:8px">
-      ${[0, 1, 2].map((i) => `<button class="btn ${st.lane === i ? '' : 'ghost'}" data-act="jgLane" data-arg="${i}"
-        aria-label="lane ${i + 1}">${i + 1}</button>`).join('')}</div>`,
-    hint: 'Up and down, or tap a lane. Every drop-off pays 1 and every fifth in a row pays 2; a missed one costs 1 and the dog costs 3.',
-    boxes: () => [`${st.score} done`, hearts(st.lives), st.msg || ' '],
-    finishLine: (s) => s.quality >= 1.4
-      ? 'You can move. That is worth actual money on the Row — the fast runner gets asked back.'
-      : 'The doors come in a rhythm once you stop chasing every one of them.',
-  });
 }
 
 /* startJobGame(id, quit) opens on the level picker, lit at the child's last level for
-   this job; pass { tier } to start straight away on that level (tests, replays). */
+   this job; pass { tier } to start straight away on that level, and { seed } to replay. */
 export function startJobGame(id, quit, opts = {}) {
   const cfg = JOB_GAME[id];
-  if (!cfg) return null;
-  const f = { stack: stackGame, trim: trimGame, sweep: sweepGame, runner: runnerGame }[cfg.kind];
-  const lvl = opts && TIER_IDS.includes(opts.tier) ? opts.tier : undefined;
-  return f ? f(id, quit, lvl) : null;
+  if (!cfg || !TEMPLATES[cfg.kind]) return null;
+  return shift(id, quit, opts || {});
 }

@@ -43,17 +43,15 @@ ok(Object.keys(AR.TIERLESS).length === 0 && arcadeIds.length === AR.GAMES.length
 }
 {
   const kinds = Object.keys(JT.JOB_TIERS);
-  ok(kinds.sort().join() === 'runner,stack,sweep,trim', 'every job mechanic has a level table');
+  ok(kinds.sort().join() === 'change,count,ledger,route', 'every Shift template has a level table');
   const bad = Object.keys(JT.JOB_GAME).filter((id) => T.some((t) => !(JT.jobPar(id, t) > 0) || !JT.jobKnobs(id, t) || !JT.JOB_TIER_SAYS[JT.JOB_GAME[id].kind][t]));
-  ok(!bad.length, `every job (${Object.keys(JT.JOB_GAME).length}) has three levels, each with its own par`, bad.join(','));
-  ok(Object.keys(JT.JOB_GAME).every((id) => JT.jobPar(id, 'standard') === JT.JOB_GAME[id].par), 'a job\'s Standard par is the par it always had');
+  ok(!bad.length, `every job (${Object.keys(JT.JOB_GAME).length}) has three levels, each with its par and a line saying what changes`, bad.join(','));
+  /* a shift is paid by accuracy, so the par is the same number of right answers on every level */
+  ok(Object.keys(JT.JOB_GAME).every((id) => T.every((t) => JT.jobPar(id, t) === JT.JOB_PAR)) && JT.JOB_PAR > 0 && JT.JOB_PAR < JT.SHIFT_ITEMS, 'a job\'s par is the same on every level: eight right of twelve');
 }
 
 /* ── Standard is the game as it was ─────────────────────────────────────── */
 const same = (a, b) => Object.keys(b).every((k) => a[k] === b[k]);
-ok(same(JT.JOB_TIERS.stack.standard, { speed: 1, snap: 5 }) && same(JT.JOB_TIERS.trim.standard, { gap: 1, heavy: 0, limit: 42 })
-  && same(JT.JOB_TIERS.sweep.standard, { fall: 1, spawn: 1, cap: 0.34, reach: 24 }) && same(JT.JOB_TIERS.runner.standard, { speed: 1, spawn: 1, dog: 1 }),
-  'the job mechanics\' Standard knobs are today\'s numbers');
 const S = (id) => AR.ARCADE_TIERS[id].standard;
 ok(same(S('cr'), { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55 }) && same(S('nw'), { n: 0, clock: 0 }) && same(S('ss'), { n: 0, clock: 0 })
   && same(S('bb'), { pot: 1, first: null }) && same(S('cc'), { charge: 1, target: 420 }) && same(S('sr'), { spawn: 1, patience: 9000 })
@@ -77,26 +75,36 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
 
 /* ── every knob has an effect (a number the game ignores is worse than a wrong one) ── */
 {
-  const v = {};
-  for (const t of T) { const g = startJobGame('crates', () => {}, { tier: t }); v[t] = g.__st().v; }
-  ok(v.easy < v.standard && v.standard < v.tricky && Math.abs(v.standard - 0.11) < 1e-9, 'stack: the swing is slower on Easy, faster on Tricky, and Standard\'s is today\'s', JSON.stringify(v));
   const shift = startJobGame('crates', () => {});
-  ok(shift.__st().picking && !shift.__st().go, 'a shift opened the ordinary way waits on the level picker before its 3-2-1');
+  ok(shift.__st().picking && !shift.__st().go, 'a shift opened the ordinary way waits on the level picker before it starts');
   shift.act('jgTier', 'tricky'); ok(shift.__st().tier === 'tricky' && K().tiers.crates === 'tricky', 'picking a level on the shift sets it, and remembers it on the child');
   shift.key({ key: '1' }); ok(shift.__st().tier === 'easy', 'the picker answers the keyboard: 1 is Easy');
   shift.key({ key: 'ArrowRight' }); ok(shift.__st().tier === 'standard', '→ steps a level up');
-  shift.key({ key: 'Enter' }); for (let i = 0; i < 200; i++) shift.__tick(16);
-  ok(!shift.__st().picking && shift.__st().go, 'Enter starts the shift: the 3-2-1 runs and then it is live');
-  /* trim: a lean that lurched on Standard does not on Easy (the limit is the level's) */
-  const lim = {};
-  for (const t of T) { const g = startJobGame('cargo', () => {}, { tier: t }); lim[t] = g.st.limit; }
-  ok(lim.easy > lim.standard && lim.standard > lim.tricky && lim.standard === 42, 'trim: how far she leans before she lurches follows the level', JSON.stringify(lim));
-  /* sweep and runner: count what arrives in the same ten seconds */
-  const arrive = (id, t, field) => { reseed(9); const g = startJobGame(id, () => {}, { tier: t }); for (let i = 0; i < 3000 / 16 + 160; i++) g.__tick(16); return field(g.st); };
-  const fall = T.map((t) => arrive('sweep', t, (s) => s.bits.reduce((m, b) => Math.max(m, b.vy), 0)));
-  ok(fall[0] < fall[1] && fall[1] < fall[2], 'sweep: things fall slower on Easy and faster on Tricky', fall.map((x) => x.toFixed(3)).join(' / '));
-  const pace = T.map((t) => arrive('flyers', t, (s) => s.dist));
-  ok(pace[0] < pace[1] && pace[1] < pace[2], 'runner: the street runs slower on Easy and faster on Tricky', pace.map((x) => Math.round(x)).join(' / '));
+  const left0 = shift.__st().left; for (let i = 0; i < 50; i++) shift.__tick(16);
+  ok(shift.__st().left === left0, 'the clock does not run while the level is being picked');
+  shift.key({ key: 'Enter' }); for (let i = 0; i < 50; i++) shift.__tick(16);
+  ok(!shift.__st().picking && shift.__st().go && shift.__st().left < left0, 'Enter starts the shift: it is live and the clock runs');
+  /* the Shift templates: every knob on every level changes what arrives (the same seeds, three levels) */
+  const items = (id, t) => { const out = []; for (let s = 1; s <= 40; s++) out.push(...startJobGame(id, () => {}, { tier: t, seed: s }).st.items); return out; };
+  const max = (a, f) => Math.max(...a.map(f)), min = (a, f) => Math.min(...a.map(f));
+  const C = T.map((t) => items('crates', t));
+  ok(max(C[0], (x) => x.ordered) <= 10 && max(C[1], (x) => x.ordered) <= 16 && max(C[2], (x) => x.ordered) > 16 && min(C[2], (x) => x.ordered) >= 12 && min(C[1], (x) => x.ordered) >= 8,
+    'count: bigger orders level by level (min and max)', T.map((t, i) => `${min(C[i], (x) => x.ordered)}–${max(C[i], (x) => x.ordered)}`).join(' / '));
+  ok(T.every((t, i) => max(C[i], (x) => x.short) === JT.JOB_TIERS.count[t].short && C[i].every((x) => x.choices === JT.JOB_TIERS.count[t].short + 1)), 'count: how much can be short, and the answers offered, follow the level');
+  ok(C[0].every((x) => x.pos.every((p) => p.w === 34 && p.h === 28)) && C[2].some((x) => x.pos.some((p, j) => j && x.pos[j - 1].x === p.x)), 'count: laid out in fives on Easy, stacked on Tricky');
+  ok(C[2].some((x) => x.packs) && !C[0].concat(C[1]).some((x) => x.packs), 'count: only Tricky\'s slip says it in packs');
+  const G = T.map((t) => items('counter', t));
+  ok(T.every((t, i) => new Set(G[i].flatMap((x) => x.D)).size === Math.min(5, JT.JOB_TIERS.change[t].coins)) && max(G[0], (x) => x.change) <= 9 && max(G[1], (x) => x.change) <= 30 && max(G[2], (x) => x.change) > 30,
+    'change: more kinds of coin and bigger change, level by level', T.map((t, i) => `${new Set(G[i].flatMap((x) => x.D)).size} kinds, up to ${max(G[i], (x) => x.change)}`).join(' / '));
+  ok(G[2].some((x) => x.extra) && !G[0].concat(G[1]).some((x) => x.extra), 'change: only on Tricky does a customer add a coin for round change');
+  const L = T.map((t) => items('books', t));
+  ok(T.every((t, i) => max(L[i].filter((x) => x.mode === 'type'), (x) => x.amt) <= JT.JOB_TIERS.ledger[t].amt) && max(L[2].filter((x) => x.mode === 'type'), (x) => x.amt) > 30
+    && T.every((t, i) => L[i].filter((x) => x.mode === 'check').length === 40 * JT.JOB_TIERS.ledger[t].checks) && T.every((t, i) => L[i].filter((x) => x.mode === 'type' && !x.before.length).every((x) => x.prev === JT.JOB_TIERS.ledger[t].open)),
+    'ledger: the opening balance, the size of a line and the checks per shift all follow the level');
+  const Q = T.map((t) => items('errands', t));
+  ok(T.every((t, i) => Q[i].every((x) => x.opts.length === JT.JOB_TIERS.route[t].opts) && max(Q[i], (x) => max(x.opts, (o) => o.legs.length)) === JT.JOB_TIERS.route[t].legs),
+    'route: more ways to go and more legs in a way, level by level', T.map((t, i) => `${Q[i][0].opts.length} ways, ≤${max(Q[i], (x) => max(x.opts, (o) => o.legs.length))} legs`).join(' / '));
+  ok(Q[2].some((x) => x.opts.some((o) => o.legs.some((l) => l.m === 'tram'))) && !Q[0].concat(Q[1]).some((x) => x.opts.some((o) => o.legs.some((l) => l.m === 'tram'))), 'route: the tram runs only on Tricky');
 }
 {
   /* Change Rush: the same seed, three levels — amounts, coins and speed all differ */
@@ -145,10 +153,14 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
     try {
       g.act('jgTier', t); g.__paint(ctx);
       g.act('jgStart'); for (let i = 0; i < 400; i++) { g.__tick(16); if (i % 50 === 0) g.__paint(ctx); }
-      g.st.score = 7; g.st.end(); g.__tick(16); g.__paint(ctx);
+      /* a wrong answer (walked first, on a route) and its held correction */
+      const p = g.__st(), w = p.kind === 'change' ? [p.item.D[0]] : p.kind === 'ledger' ? (p.item.mode === 'check' ? (p.solution + 1) % 4 : p.solution + 1) : (p.solution + 1) % p.item.choices;
+      g.__answer(w); for (let i = 0; i < 40; i++) { g.__tick(16); if (i % 10 === 0) g.__paint(ctx); }
+      g.act('jgNext'); g.__answer(g.__st().solution); g.__tick(16); g.__paint(ctx);
+      g.st.end(); g.__tick(16); g.__paint(ctx);
     } catch (e) { faults.push(`${id}/${t}: ${e.message}`); }
   }
-  ok(!faults.length, 'every job paints without a fault at every level — on the picker, mid-shift and on SHIFT DONE', faults.slice(0, 3).join(' | '));
+  ok(!faults.length, 'every job paints without a fault at every level — on the picker, mid-shift, walking, holding a correction and on SHIFT DONE', faults.slice(0, 3).join(' | '));
 }
 
 /* ── Main Street: a level is the life everyone pays for, and the wage scales back ── */
@@ -212,47 +224,32 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   ok(fm > fh, 'Compound Climb: on the game\'s own seed (8821) the middle beats the high charge too', `${fm.toFixed(0)} vs ${fh.toFixed(0)}`);
 }
 
-/* ── pay is measured against the level's own par ────────────────────────── */
+/* ── pay is measured against the par, and the par is the same on every level ── */
 {
   for (const t of T) {
     const g = startJobGame('crates', () => {}, { tier: t });
-    for (let i = 0; i < 200; i++) g.__tick(16);
-    g.st.score = JT.jobPar('crates', t); g.st.end();
+    for (let i = 0; i < 20; i++) g.__tick(16);
+    g.st.right = JT.jobPar('crates', t); g.st.end();
     for (let i = 0; i < 200 && !g.st.done; i++) g.__tick(16);
     ok(g.st.done && Math.abs(g.st.quality - 1) < 1e-9, `a shift at exactly par on ${t} is quality 1 — the same pay as par on any level`, `par ${JT.jobPar('crates', t)}`);
   }
 }
 
-/* ── the careful player lands near 1.6× par on every level (replayed, seeded) ── */
+/* ── the careful player lands at 1.5× par on every level; a careless one well under it ── */
 {
-  const gauss = () => { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); };
-  const play = (id, tier) => {
-    const g = startJobGame(id, () => {}, { tier });
-    let armed = false, e = 0, wait = 0, head = -1, t = 0, next = 0;
-    for (let i = 0; i < 6000; i++) {
-      const p = g.__st(); if (p.done) break; t += 16;
-      if (p.go) {
-        if (p.kind === 'stack') {
-          if (p.falling) armed = false;
-          else { if (!armed) { armed = true; e = gauss() * 14; } const d = (p.x - (p.topX + p.dir * p.v * e)) * p.dir; if (d >= 0 && d < p.v * 24 + 0.01) g.__key(' '); }
-        } else if (p.kind === 'trim') {
-          if (p.queue > 0) {
-            if (head !== p.loads) { head = p.loads; wait = Math.max(120, 300 + gauss() * 80); }
-            wait -= 16;
-            if (wait <= 0) { g.__key(p.tilt > 0 ? 'ArrowLeft' : p.tilt < 0 ? 'ArrowRight' : 'ArrowLeft'); head = -1; }
-          }
-        } else if (p.kind === 'sweep') { if (t >= next) { next = t + 90; if (p.nearest != null) g.__point(p.nearest + gauss() * 3, 200); } }
-        else if (p.kind === 'runner') {
-          if (t >= next) { next = t + 150; if (p.want != null) while (p.want !== g.__st().lane) { const l = g.__st().lane; g.__key(p.want < l ? 'ArrowUp' : 'ArrowDown'); if (g.__st().lane === l) break; } }
-        }
-      }
+  const play = (id, tier, care) => {
+    const g = startJobGame(id, () => {}, { tier, seed: 300 + Math.floor(Math.random() * 1e6) });
+    for (let i = 0; i < 20000 && !g.st.done; i++) {
+      const p = g.__st();
+      if (p.hold) g.key({ key: 'Enter' });
+      else if (p.ready) g.__answer(Math.random() < care ? p.solution : g.__random(Math.random));
       g.__tick(16);
     }
-    return g.st.score / JT.jobPar(id, tier);
+    return g.st.right / JT.jobPar(id, tier);
   };
-  for (const id of ['crates', 'cargo', 'sweep', 'flyers']) {
-    const r = T.map((t) => { reseed(7); let s = 0; for (let k = 0; k < 6; k++) s += play(id, t); return s / 6; });
-    ok(r.every((x) => x >= 1.3 && x <= 1.95), `${JT.JOB_GAME[id].kind}: a careful shift is ~1.6× par on Easy, Standard and Tricky alike`, r.map((x) => x.toFixed(2) + '×').join(' / '));
+  for (const id of ['crates', 'counter', 'books', 'flyers']) {
+    const r = T.map((t) => { reseed(7); let s = 0, h = 0; for (let k = 0; k < 6; k++) { s += play(id, t, 1); h += play(id, t, 0.5); } return [s / 6, h / 6]; });
+    ok(r.every(([c, h]) => Math.abs(c - 1.5) < 1e-9 && h > 0.4 && h < 1.25), `${JT.JOB_GAME[id].kind}: a careful shift is 1.5× par on Easy, Standard and Tricky alike, a half-careful one well under it`, r.map(([c, h]) => `${c.toFixed(2)}× / ${h.toFixed(2)}×`).join(' · '));
   }
 }
 
@@ -261,12 +258,12 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   const tables = arcadeIds.map((id) => [id, AR.ARCADE_GOALS[id]]).concat(Object.keys(JT.JOB_GOALS).map((k) => ['job:' + k, JT.JOB_GOALS[k]]));
   const bad = tables.filter(([, t]) => !t || t.length !== 3 || new Set(t.map((g) => g.id)).size !== 3 || t.some((g) => !g.name || typeof g.check !== 'function'));
   ok(!bad.length, `every game (${tables.length} tables) has exactly three named goals, each with a check`, bad.map((b) => b[0]).join(','));
-  ok(Object.keys(JT.JOB_GAME).every((id) => JT.jobGoals(id).length === 3), 'every job reaches its mechanic\'s three goals');
+  ok(Object.keys(JT.JOB_GAME).every((id) => JT.jobGoals(id).length === 3), 'every job reaches its template\'s three goals');
   /* no goal is met by doing nothing */
   const nothing = { right: 0, n: 8, exact: 0, overpays: 0, firstRun: 0, finished: false, needWrong: 8, wantWrong: 8, scamWrong: 5, safeWrong: 5,
     mustMissed: 5, left: 0, pot: 100, reached: false, years: 3, falls: 2, maxCharge: 100, profit: 0, lost: 4, wrong: 0, served: 0, held: false, maxPanic: 100,
     spreadWeeks: 0, weeks: 6, churn: 400, beatBella: false, weeklyWrong: 3, compareRight: false, simple: 2, longWrong: 2,
-    bestCombo: 0, squares: 0, misses: 3, lurches: 3, bestChain: 0, caught: 0, dogs: 3, missed: 20, posted: 0, won: false, owned: 0, sold: 3 };
+    of: 12, answered: 0, bestRun: 0, flagged: 0, over: 0, late: 0, spotted: 0, checks: 3, won: false, owned: 0, sold: 3 };
   const free = tables.flatMap(([id, t]) => t.filter((g) => g.check(nothing)).map((g) => id + '.' + g.id));
   ok(!free.length, 'no goal is ticked by a run where nothing went right', free.join(','));
   const c = K(), wallet = c.money.wallet, xp = c.learn.xp;
