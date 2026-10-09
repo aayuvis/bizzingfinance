@@ -492,7 +492,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
   /* G10 · every game answers the keyboard AND a tap (tester mode opens them all) */
   {
-    const KEY = { cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1' };
+    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1' };
     await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
     const bad = [], painted = [];
     for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
@@ -1199,6 +1199,64 @@ async function deckChecks() {
   await ctx.close();
 }
 
+/* ══ Stall of My Own (docs/12 §2.1) · plan, market day, ledger — keyboard AND touch ══
+   A season played in the built app on a phone and a desktop, light and dark: the plan
+   answers keys and taps, Enter opens the stall, a key serves the customer at the front,
+   R restocks and every serve button is disabled while it does (SA4 on screen), and the
+   ledger page carries the five lines. STALL_SHOTS=dir keeps a picture of each page. */
+async function stallChecks(label, vp, isMobile, scheme) {
+  const ctx = await browser.newContext({ viewport: vp, isMobile, hasTouch: isMobile, deviceScaleFactor: isMobile ? 2 : 1, colorScheme: scheme });
+  const p = await ctx.newPage();
+  const errors = []; p.on('pageerror', (e) => errors.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const SH = process.env.STALL_SHOTS || '';
+  if (SH) mkdirSync(SH, { recursive: true });
+  const shot = (n) => SH && p.screenshot({ path: `${SH}/stall-${n}-${vp.width}-${scheme}.png`, fullPage: n === 'plan' });
+  const wide = () => p.evaluate((W) => document.scrollingElement.scrollWidth <= W + 1, vp.width);
+  await p.goto(URL0 + '?demo'); await p.waitForSelector('[data-bz=next]');
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); B.fire('game', 'so'); B.fire('gbegin', 'so'); });
+  await p.waitForSelector('.gplay [data-act="soGoal"]');
+  await p.keyboard.press('1');
+  await p.waitForSelector('.gplay .so-buy');
+  const plan = await p.evaluate(() => ({ rows: document.querySelectorAll('.so-buy').length, strip: document.querySelectorAll('.so-strip .so-cell').length,
+    why: /The week ahead/.test(document.querySelector('.gplay').textContent), cover: /url\(/.test(getComputedStyle(document.querySelector('.gplay .stage'), '::before').backgroundImage) }));
+  ok(`stall ${label}: the plan opens on Market Row's painting — the week ahead, a wholesaler row and a demand strip per product`, plan.rows >= 2 && plan.strip === plan.rows * 5 && plan.why && plan.cover, JSON.stringify(plan));
+  /* keyboard: ↓ to the first product, → buys one */
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowRight'); await p.keyboard.press('ArrowRight');
+  const byKey = await p.evaluate(() => +document.querySelector('.so-buy .so-n').textContent);
+  /* touch: + on the second product */
+  const plus = p.locator('.gplay [data-act="soBuy"][data-arg$=":1"]').nth(1);
+  if (isMobile) await plus.tap(); else await plus.click();
+  const byTap = await p.evaluate(() => +document.querySelectorAll('.so-buy .so-n')[1].textContent);
+  ok(`stall ${label}: the plan answers the keyboard (↓ →) and a ${isMobile ? 'tap' : 'click'}`, byKey === 2 && byTap === 1, `${byKey} by key, ${byTap} by ${isMobile ? 'tap' : 'click'}`);
+  /* stock the stall properly for the day (the same taps, fired) */
+  await p.evaluate(() => { const B = window.BZF, s = B.R.game.season; Object.keys(s.draft.buy).forEach((id) => { for (let i = 0; i < 8; i++) B.fire('soBuy', id + ':1'); }); });
+  ok(`stall ${label}: nothing runs off the screen on the plan`, await wide());
+  await shot('plan');
+  await p.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
+  await p.keyboard.press('Enter');
+  await p.waitForSelector('.gplay .so-counter');
+  await p.waitForSelector('.gplay .so-front[data-want]', { timeout: 6000 });
+  const want = await p.evaluate(() => { const w = document.querySelector('.so-front').dataset.want; return Object.keys(window.BZF.R.game.season.day.prices).indexOf(w) + 1; });
+  await p.keyboard.press(String(want)); await p.waitForTimeout(120);
+  const served = await p.evaluate(() => window.BZF.R.game.day.st.served);
+  ok(`stall ${label}: Enter opens the stall, and a number key serves the customer at the front`, served === 1, `served ${served}`);
+  await shot('market');
+  ok(`stall ${label}: nothing runs off the screen on market day`, await wide());
+  await p.keyboard.press('r'); await p.waitForTimeout(80);
+  const rs = await p.evaluate(() => ({ busy: window.BZF.R.game.day.st.restock > 0, dis: [...document.querySelectorAll('.gplay [data-act="soServe"]')].every((b) => b.disabled), msg: (document.querySelector('.so-restock') || {}).textContent || '' }));
+  ok(`stall ${label}: R restocks, and every serve button is disabled until it is done`, (rs.busy && rs.dis && /Restocking/.test(rs.msg)) || !rs.busy, JSON.stringify(rs).slice(0, 120));
+  /* the rest of the day, on the wall's clock — then the ledger page */
+  await p.evaluate(() => window.BZF.R.game.day.advance(61000));
+  await p.waitForSelector('.gplay .so-ledger', { timeout: 4000 });
+  const led = await p.evaluate(() => document.querySelector('.gplay').textContent);
+  ok(`stall ${label}: the ledger page separates takings, what it cost, unsold and spoiled, profit and the jar — margin said in coins`,
+    ['Takings', 'What it cost', 'Unsold and spoiled', 'Profit', 'Cart jar'].every((w) => led.includes(w)) && /kept from every|nothing kept/.test(led), '');
+  ok(`stall ${label}: nothing runs off the screen on the ledger page`, await wide());
+  await shot('ledger');
+  ok(`stall ${label}: nothing threw`, !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1209,6 +1267,10 @@ await safely('kit', kitChecks);
 await safely('deck', deckChecks);
 await safely('a6-desktop', () => a6Checks('a6-desktop', { width: 1280, height: 860 }, false));
 await safely('a6-phone', () => a6Checks('a6-phone', { width: 390, height: 844 }, true));
+await safely('stall-phone', () => stallChecks('phone', { width: 390, height: 844 }, true, 'light'));
+await safely('stall-phone-dark', () => stallChecks('phone-dark', { width: 390, height: 844 }, true, 'dark'));
+await safely('stall-desktop', () => stallChecks('desktop', { width: 1280, height: 860 }, false, 'light'));
+await safely('stall-desktop-dark', () => stallChecks('desktop-dark', { width: 1280, height: 860 }, false, 'dark'));
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

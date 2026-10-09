@@ -75,6 +75,13 @@ export const SOURCES = {
     where: 'content.js · STOCK',
     says: 'Chai, umbrellas, ice golas and rope at prices chosen so a stall in the town can make a profit or a loss you can see. They are Bizzington\'s, not any real market\'s.',
   },
+  stall: {
+    kind: 'own',
+    what: "Market Row's wholesale prices, and how many people want what",
+    value: () => "the town's own prices, weather and footfall",
+    where: 'stallsim.js · PRODUCTS, WEATHER, LEVELS',
+    says: 'What the wholesaler charges for chai, ice golas, rope and umbrellas, how many people walk past wanting one, how the weather moves them and what a pitch costs a week are dials of this town, chosen so a careful season makes a profit and a careless one loses money. They are Bizzington\'s, not any real market\'s.',
+  },
 };
 
 export function source(k) { return SOURCES[k] || null; }

@@ -3,6 +3,9 @@
    playing one needs arcade.js (and board.js and the canvas kit behind it), so that is
    loaded on demand and the first screen does not carry it. */
 export const GAMES = [
+  /* a flagship (docs/12 §2.1): a season of eight weeks, so it gets the big cover at the top */
+  { id: 'so', em: '🛒', name: 'Stall of My Own', keys: '1–4 · R · ⏎', kind: 'flagship', needs: 'c3',
+    blurb: 'Eight weeks on Market Row: buy the stock, set the prices, save for a better cart — and find out that busy is not the same as profitable.' },
   { id: 'cr', em: '🪙', name: 'Change Rush', keys: '← →', kind: 'action', needs: null,
     blurb: 'Coins are falling and you need exactly the right amount. Catch one too many and you have overpaid.' },
   { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', kind: 'action', needs: null,
@@ -31,6 +34,8 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSk
   'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
   'crLane', 'crGo', 'stSell', 'stPlan', 'stGo',
   'ccHold', 'ccRelease', 'srServe', 'srStock',
+  /* Stall of My Own (stall.js) */
+  'soGoal', 'soBuy', 'soStep', 'soJar', 'soOffer', 'soOpen', 'soAuto', 'soServe', 'soStock', 'soNext', 'soNew', 'soSel',
   'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
   /* the job games (jobgames.js) — a job is a game now, not a button */
   'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart'];

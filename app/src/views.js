@@ -23,7 +23,7 @@ import { canSay } from './ui.js';
 import { COVERS } from './covers-gen.js';
 import { lessonBlock } from './lessonplayer.js';
 import { companionCard, companionFigure } from './companionview.js';
-import { overnightCard, receiptSlip } from './keepsakes.js';
+import { overnightCard, keepsakeSlip } from './keepsakes.js';
 import * as co from './companion.js';
 import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount, hintFor,
@@ -1993,7 +1993,7 @@ export function viewCollection({ bare = false } = {}) {
     <div class="card">
       <div class="eyebrow">Keepsakes</div>
       ${(c.keepsakes || []).length
-        ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => receiptSlip(k)).join('')}</div>`
+        ? `<div class="stack" style="gap:10px;margin-top:10px">${c.keepsakes.map((k) => keepsakeSlip(k)).join('')}</div>`
         : `<p class="small muted" style="margin-top:4px">Your first purchase goes here, with the shifts that paid for it. Nothing here is given — it's earned.</p>`}
     </div>
     <div class="card">

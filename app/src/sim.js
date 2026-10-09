@@ -76,6 +76,7 @@ export function newChild(name, band, cur, avatar) {
     postbox: { day: dayIndex(now), idx: 0, answered: false, log: [], fuses: [] },
     companion: null,
     keepsakes: [], overnight: null, deeds: [], puzzle: null, maths: null, answers: [],
+    stall: null,                      /* Stall of My Own: the season under way (stall.js) */
     shop: { owned: [], cooling: {} },
     /* the family layer (FAMILY-STANDARD §1, §7, §8): faces and worlds bought with
        Bizzing coins, the chosen world and cosmetics. Never town money. */
@@ -959,6 +960,27 @@ function keepReceipt(c, it, p) {
     weeks: Math.max(1, Math.ceil((Date.now() - from) / (7 * DAY))), who: c.name, level: c.learn.level };
   c.keepsakes.push(k);
   badge(c, 'first-receipt');
+  return k;
+}
+
+/* ── a season of the stall, kept (Stall of My Own, docs/12 §2.1) ─────────
+   A season finished WITH its goal is kept on the Collection shelf: the goal,
+   the weeks, what the stall took and what it kept — every number summed from
+   the season's own ledger rows, never guessed and never given for showing up.
+   A season without its goal keeps nothing; one season keeps at most one. */
+export function keepSeason(c, season) {
+  if (!season || !Array.isArray(season.ledger) || season.ledger.length < 8 || !season.owned) return null;
+  if (!c.keepsakes) c.keepsakes = [];
+  const key = 'season:' + season.seed + ':' + season.tier;
+  if (c.keepsakes.some((k) => k.kind === 'season' && k.key === key)) return null;
+  const rows = season.ledger, sum = (f) => rows.reduce((t, r) => t + (r[f] || 0), 0);
+  const takings = sum('takings'), costs = sum('costs');
+  const n = c.keepsakes.filter((k) => k.kind === 'season').length + 1;
+  const k = { id: 'k' + Date.now().toString(36) + n, kind: 'season', key, t: Date.now(), n,
+    goal: season.goal, tier: season.tier, weeks: rows.length, goalWeek: (season.boughtWeek == null ? null : season.boughtWeek + 1),
+    takings, costs, kept: takings - costs, sold: sum('soldN'), spoiled: sum('spoiledVal'), credit: !!season.credit,
+    brokeWeeks: rows.filter((r) => r.broke).length, who: c.name, level: c.learn.level };
+  c.keepsakes.push(k);
   return k;
 }
 

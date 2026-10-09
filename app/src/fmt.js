@@ -42,6 +42,14 @@ export function moneyExact(n) {
   const c = CURRENCIES[cur];
   return c.sign + new Intl.NumberFormat(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n));
 }
+/* Stall of My Own keeps its season in rupee-scale whole numbers (one town unit is ten of
+   them, always even), so a ledger converts EXACTLY into the child's currency and still adds
+   up: ₹40 is $1.00, £0.80, €1.00, 4 dirham. Whole amounts show whole; the rest to the cent. */
+export function stallMoney(n) {
+  const v = convert(n, 'INR', cur), r = Math.round(v * 100) / 100;
+  if (Number.isInteger(r)) return money(r);
+  return (r < 0 ? '−' : '') + moneyExact(Math.abs(r));
+}
 export function pct(n) { return Math.round(n * 100) + '%'; }
 export const DAY = 86400000;
 export function dayIndex(ts) { return Math.floor((ts - new Date(ts).getTimezoneOffset() * 60000) / DAY); }

@@ -1,5 +1,5 @@
 {
-  "total": 1801,
+  "total": 1803,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,8 +12,8 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 8,
-    "game": 11,
+    "figure": 9,
+    "game": 12,
     "quest": 13,
     "medal": 48,
     "exchange": 10,
@@ -43,7 +43,7 @@
   "byLevel": {
     "chapter 1": 134,
     "chapter 2": 153,
-    "chapter 3": 236,
+    "chapter 3": 238,
     "chapter 4": 203,
     "chapter 5": 159,
     "chapter 6": 165,
@@ -68,7 +68,7 @@
       "level": 3,
       "chapter": "c3",
       "title": "Making a plan",
-      "n": 236
+      "n": 238
     },
     {
       "level": 4,

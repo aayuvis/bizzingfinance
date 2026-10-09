@@ -24,18 +24,21 @@ import { GAMES, GAME_ACTS } from './gamelist.js';
 const K = () => sim.kid(R.s);
 
 export { GAMES };
+/* Stall of My Own absorbs Stall Rush, so until it has a painting of its own it wears the stall's */
+const COVER_OF = { so: 'sr' };
+const coverOf = (id) => COVERS[id] || COVERS[COVER_OF[id]] || null;
 
 export function viewArcade() {
   if (R.gameIntro) return introView(R.gameIntro);
   /* the game's own painting sits behind its play screen */
-  if (R.game) { const art = current && COVERS[current]; return `<div class="gplay"${art ? ` style="--cover:url(${art.src})"` : ''}>${R.game.view()}</div>`; }
+  if (R.game) { const art = current && coverOf(current); return `<div class="gplay"${art ? ` style="--cover:url(${art.src})"` : ''}>${R.game.view()}</div>`; }
   const c = K();
   /* a cover per game — a painting when tools/art has drawn it, the game's
      own tint until then — with the words on a veil across the bottom */
   const cover = (g, o = {}) => {
     const open = o.open != null ? o.open : gameOpen(c, g);
     const ch = g.needs && CHAPTERS.find((x) => x.id === g.needs);
-    const art = COVERS[g.id];
+    const art = coverOf(g.id);
     return `<button class="cover${o.big ? ' big' : ''}${open ? '' : ' locked'}" data-act="${open ? (o.act || 'game') : 'lockedGame'}" data-arg="${o.arg || g.id}"
       style="${art ? `--cover:url(${art.src});` : ''}--ja:${o.tint || 'var(--action)'}">
       <span class="cv-art"></span><span class="cv-veil"></span>
@@ -57,6 +60,8 @@ export function viewArcade() {
     ${hero({ eyebrow: 'The Arcade · practise it', title: 'Play', who: 'pip',
       line: 'Game wages go into your one wallet. There\'s no second, magic money.' })}
     ${m40open ? m40 : ''}
+    <div class="sect"><b>A season of your own</b><i></i></div>
+    ${GAMES.filter((g) => g.kind === 'flagship').map((g) => cover(g, { big: true, tint: 'var(--grow)' })).join('')}
     <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
     ${GAMES.filter((g) => g.kind === 'board').map((g) => cover(g, { big: true, tint: 'var(--treasure)' })).join('')}
     <div class="sect"><b>A few minutes each</b><i></i></div>
@@ -71,6 +76,7 @@ export function viewArcade() {
 /* F3 · every game opens on a title card: the painting, three lines of how,
    the keys, and Start — and closes on what it practised. */
 export const HOW = {
+  so: ['Eight weeks on Market Row. Each week: plan, then sixty seconds of market day.', 'Buy the stock, set the prices, save for a better cart or a sign.', 'Plan with ↑↓ ←→ and ⏎. Serve 1–4, R to restock. Or tap.'],
   cr: ['Coins fall. Catch exactly the amount asked for.', 'One too many is overpaying.', 'Move with ← → or drag.'],
   nw: ['A thing appears. Is it a need or a want?', 'Some can be both — those are the interesting ones.', 'Tap a side, or press ← →.'],
   ss: ['A message arrives. Real, or a trap?', 'Traps rush you, flatter you, or want a secret kept.', 'Tap a side, or press ← →.'],
@@ -84,6 +90,7 @@ export const HOW = {
   sn: ['Guess where compounding lands.', 'Nobody guesses high enough — try anyway.', 'Tap an answer, or press 1–4.'],
 };
 export const PRACTISED = {
+  so: 'running a stall over weeks: stock, prices and waste — and that busy is not the same as profitable',
   cr: 'paying exact amounts and counting change', nw: 'telling needs from wants', ss: 'spotting the shape of a scam',
   bb: 'paying bills first and living inside a month', cc: 'how compounding grows — and why greed crashes it', sr: 'pricing and serving under time pressure',
   st: 'doing nothing on a red day', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
@@ -98,6 +105,14 @@ export const PRACTISED = {
    par is that set, and the pay is the share of it you got right.
  */
 export const ARCADE_TIERS = {
+  /* Stall of My Own: the level is the season's (stallsim.js LEVELS). par: a week's decision
+     score (out of ten) that earns the plain wage — the same on every level, because the
+     score already measures each decision against that level's own week */
+  so: {
+    easy:     { par: 6.5, says: 'Two things to sell, steady prices, and nothing goes off.' },
+    standard: { par: 6.5, says: 'Three things, the weather, prices that move, and chai and golas go off.' },
+    tricky:   { par: 6.5, says: 'Four things, a rival stall opposite, and a cart offered on credit.' },
+  },
   /* fall: coin speed · spawn: time between coins · coins: how many coin sizes · min/max: coins in an amount ·
      help: how often a coin that fits is sent · par: a careful round's score */
   cr: {
@@ -178,6 +193,11 @@ export const TIERLESS = {};
 /* Three goals per game, each a decision you can choose to make. They read the run's
    summary when it ends, tick a record on the child, and pay nothing at all. */
 export const ARCADE_GOALS = {
+  so: [
+    { id: 'goal', name: 'A season with its goal reached by week 8', check: (r) => r.soComplete === true && r.soGoal === true },
+    { id: 'buffer', name: 'A whole season, never broke on a market morning', check: (r) => r.soComplete === true && r.soBroke === 0 && r.soSold > 0 },
+    { id: 'waste', name: 'A whole season with less than a tenth of the stock wasted', check: (r) => r.soComplete === true && r.soWaste < 0.1 && r.soSold > 0 },
+  ],
   cr: [
     { id: 'exact3', name: 'Exact three times in a round', check: (r) => r.exact >= 3 },
     { id: 'clean', name: 'A whole round without overpaying', check: (r) => r.finished && r.overpays === 0 && r.exact >= 2 },
@@ -268,7 +288,7 @@ const endGoals = () => (lastGoals && lastGoals.id === current && R.game && R.gam
   ? goalList(ARCADE_GOALS[current], K(), current, lastGoals.list) : '');
 
 export function introView(id) {
-  const g = GAMES.find((x) => x.id === id) || { name: id, keys: '' }, art = COVERS[id], how = HOW[id] || [];
+  const g = GAMES.find((x) => x.id === id) || { name: id, keys: '' }, art = coverOf(id), how = HOW[id] || [];
   const c = K(), tiers = ARCADE_TIERS[id], tier = tierOf(c, id);
   const says = tiers ? Object.fromEntries(TIER_IDS.map((t) => [t, tiers[t].says])) : null;
   return `<div class="stack">
@@ -309,7 +329,29 @@ export function startGame(id, seed, tier) {
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
     mc: marketCup, mn: () => mainStreet({ baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, onFinish: (run) => goalsFor('mn', run) }) }[id];
+  if (id === 'so') return startStall(seed);
   if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = seed != null ? f(seed) : f(); sfx.click(); }
+}
+/* Stall of My Own is a season, not a round, and it loads on its own (stall.js): the arcade
+   hands it the four things every game shares — the level, the one pay path, the HUD and
+   the goals — so the stall never pays or ticks anything any other way. */
+export function stallCtx() {
+  return {
+    tier: curTier,
+    payout: (units) => { const paid = payout(units, 'Stall of My Own'); return { paid, capped: lastCapped }; },
+    hud, goals: (run) => goalsFor('so', run), endGoals, quit: quitGame,
+  };
+}
+function startStall(seed) {
+  if (R.game && R.game.stop) R.game.stop();
+  const wait = { id: 'so', loading: true, view: () => `<div class="stack">${hud(['Market Row'])}<div class="stage" style="justify-content:center;text-align:center"><p class="small muted">Opening the stall…</p></div></div>`, act() {}, key() {} };
+  R.game = wait;
+  return import('./stall.js').then((m) => {
+    if (R.game !== wait) return R.game;
+    R.game = m.stallGame(stallCtx(), seed);
+    sfx.click(); R.render();
+    return R.game;
+  });
 }
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; }
 /* the level chip every game's HUD carries */

@@ -350,3 +350,85 @@ html[data-bz-dark] .town.more-right::after{background:linear-gradient(90deg,tran
   .printsheet{position:absolute;left:0;top:0;width:100%;grid-template-columns:repeat(3,1fr);gap:8mm}
   .printsheet .avc{break-inside:avoid;box-shadow:none;border-style:dashed}
 }
+
+/* ── Stall of My Own (stall.js) ─────────────────────────────────────────
+   The stage is Market Row's own painting (gamefx plateSrc); every panel on it is
+   paper lifted off the place, rows inside, never a box in a box. */
+.so-stage{gap:10px}
+.so-card{background:rgb(255 252 245 / .95);color:var(--ink);border-radius:var(--r-md);padding:12px 13px;box-shadow:0 10px 26px rgb(40 25 5 / .2);display:flex;flex-direction:column;gap:7px}
+html[data-bz-dark] .so-card{background:rgb(28 32 46 / .95);color:#F4EEE4}
+.so-card p{margin:0}
+.so-card .eyebrow{background:none !important;padding:0 !important}
+.so-title{margin:2px 0 4px;font-size:22px}
+.so-row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:8px}
+.so-card > .so-row:first-of-type,.so-card.so-row{border-top:0}
+.so-row{flex-wrap:wrap}
+.so-card.so-row{flex-direction:row}
+.so-row .grow{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.so-row .grow > .small{display:block}
+.so-row.sel{box-shadow:0 0 0 2.5px var(--action) inset;background:color-mix(in srgb,var(--action) 8%,transparent)}
+.so-row.now{background:color-mix(in srgb,var(--treasure) 18%,transparent)}
+.so-ic{position:relative;flex:0 0 auto;width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:color-mix(in srgb,var(--treasure) 16%,transparent)}
+.so-k{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:6px;font:800 11px/1 var(--mono,monospace);background:rgb(0 0 0 / .12);color:inherit;margin-right:4px}
+.so-ic .so-k{position:absolute;right:-6px;bottom:-6px;margin:0;background:var(--ink);color:var(--surface)}
+.so-why{color:var(--spend);font-weight:650}
+html[data-bz-dark] .so-why{color:#F2A49B}
+.so-step{flex:0 0 auto;display:flex;align-items:center;gap:4px;margin-left:auto}
+.so-pm{min-width:44px;min-height:44px;padding:0;font-size:18px;font-weight:800}
+.so-n{min-width:46px;text-align:center;font-size:15px}
+.so-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:4px 0 2px;max-width:280px}
+.so-cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:46px;border-radius:7px;overflow:hidden;background:color-mix(in srgb,var(--line) 45%,transparent);font-size:10.5px;line-height:1.15}
+.so-cell i{position:absolute;left:0;right:0;bottom:0;height:var(--h);background:color-mix(in srgb,var(--grow) 34%,transparent)}
+.so-cell b,.so-cell span{position:relative}
+.so-cell span{font-weight:800;font-size:12px}
+.so-cell.on{box-shadow:0 0 0 2px var(--action) inset}
+.so-cell.on i{background:color-mix(in srgb,var(--action) 45%,transparent)}
+.so-sum{gap:2px}
+.so-line{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px}
+.so-line i{flex:1;border-bottom:1px dotted var(--line);min-width:16px;align-self:flex-end;margin-bottom:5px}
+.so-line.total{border-top:1px dashed var(--line);font-weight:800;margin-top:3px;padding-top:7px}
+.so-neg{color:var(--spend)}
+.so-warn{color:var(--spend);font-weight:700}
+html[data-bz-dark] .so-warn,html[data-bz-dark] .so-neg{color:#F2A49B}
+.so-btns{display:flex;flex-direction:column;gap:8px}
+.so-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.so-goal{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;min-height:44px;border-radius:var(--r-md);border:0;cursor:pointer;font:inherit;color:inherit;background:color-mix(in srgb,var(--grow) 12%,transparent);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--grow) 40%,transparent) inset}
+.so-goal:hover,.so-goal:focus-visible{box-shadow:0 0 0 2.5px var(--grow) inset}
+.so-offer{box-shadow:0 0 0 2px var(--treasure) inset,0 10px 26px rgb(40 25 5 / .2)}
+.so-h{display:flex;align-items:center;gap:8px}
+.so-ways{display:grid;gap:4px;font-size:14px}
+.so-tick{flex:0 0 auto;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--line) 60%,transparent);font-weight:800}
+.so-tick.on{background:var(--grow);color:#fff}
+.so-pay{align-self:center;text-align:center;background:rgb(255 252 245 / .9);color:var(--ink);border-radius:999px;padding:5px 14px}
+html[data-bz-dark] .so-pay{background:rgb(20 24 36 / .88);color:#F4EEE4}
+.so-slip{font-size:13px;max-width:none}
+.so-slip .slip-line{padding:5px 0}
+.so-slip .slip-line>:last-child{white-space:nowrap;flex:0 0 auto}
+.so-slip .slip-line>span:first-child{flex:0 1 auto}
+.so-slip .slip-line.sub{padding:1px 0 1px 14px;font-size:12px;color:var(--muted)}
+/* market day */
+.so-mkt{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.so-stall{width:min(38%,150px);height:auto;filter:drop-shadow(0 8px 12px rgb(40 25 5 / .3))}
+.so-queue{display:flex;flex-direction:column;gap:7px}
+.so-front{background:rgb(255 252 245 / .96);color:var(--ink);border-radius:var(--r-md);padding:10px 12px;box-shadow:0 10px 24px rgb(40 25 5 / .22);display:flex;flex-direction:column;gap:5px;min-height:92px;justify-content:center}
+html[data-bz-dark] .so-front{background:rgb(28 32 46 / .95);color:#F4EEE4}
+.so-want{display:flex;align-items:center;gap:10px;font-size:18px}
+.so-want .pill{margin-left:auto}
+.so-pat{height:6px}
+.so-pat i{background:var(--treasure);transition:none}
+.so-line-up{display:flex;gap:6px;align-items:center;min-height:40px;flex-wrap:wrap}
+.so-cust.sm{display:flex;flex-direction:column;align-items:center;gap:3px;width:48px;padding:5px;border-radius:10px;background:rgb(255 252 245 / .9)}
+html[data-bz-dark] .so-cust.sm{background:rgb(28 32 46 / .9)}
+.so-cust.sm .so-pat{width:36px;height:4px}
+.so-more{background:rgb(255 252 245 / .9);color:var(--ink);border-radius:999px;padding:3px 9px}
+.so-msg{align-self:center;text-align:center;font-weight:700;background:rgb(255 252 245 / .92);color:var(--grow);border-radius:999px;padding:4px 12px;margin:0}
+.so-msg.bad{color:var(--spend)}
+html[data-bz-dark] .so-msg{background:rgb(20 24 36 / .9)}
+.so-counter{display:grid;gap:8px}
+.so-serve{flex-direction:column;gap:2px;padding:9px 4px 8px;font-size:11.5px;line-height:1.15;border-radius:16px;min-width:0;min-height:78px}
+.so-serve b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.so-serve .tabnum{font-size:10.5px;opacity:.85}
+.so-serve[disabled]{opacity:.55}
+.so-restock{min-height:48px;gap:8px}
+.so-restock .bar{flex:1;height:6px;max-width:120px}
+.so-restock.busy{background-image:repeating-linear-gradient(-45deg,rgb(240 180 41 / .28) 0 10px,transparent 10px 20px) !important}

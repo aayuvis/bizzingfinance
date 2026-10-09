@@ -36,6 +36,9 @@ export const SYNC_KEYS = [
   /* audit v4: the level picked per game, the games' goals met, the sprint's best — game
      records, nothing about the child */
   'tiers', 'goals', 'sprint',
+  /* v15: Stall of My Own — the season under way (its seed, its ledger, its stock): a game
+     record, nothing about the child */
+  'stall',
 ];
 /* Named so the omission is deliberate and greppable rather than an oversight. */
 export const NEVER_SYNCED = ['name', 'answers'];

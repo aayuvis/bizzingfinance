@@ -14,7 +14,7 @@ import * as co from './companion.js';
 import { companionFigure } from './companionview.js';
 import { ico } from './art.js';
 import { esc, nWord } from './ui.js';
-import { money, shortDate } from './fmt.js';
+import { money, shortDate, stallMoney } from './fmt.js';
 
 /* ── the receipt: paper, because it is paper ──────────────────────────── */
 export function receiptSlip(k, big) {
@@ -31,6 +31,23 @@ export function receiptSlip(k, big) {
     <div class="slip-foot">${esc(k.who)} · level ${k.level} · the first receipt</div>
   </div>`;
 }
+
+/* ── a season of the stall: kept when it reached its goal (sim.keepSeason) ── */
+const SEASON_GOAL = { cart: ['cart', '🛒', 'A better cart'], sign: ['sign', '🪧', 'A painted sign'] };
+export function seasonSlip(k, big) {
+  const g = SEASON_GOAL[k.goal] || SEASON_GOAL.cart;
+  return `<div class="slip season${big ? ' big' : ''}" data-keepsake="season">
+    <div class="slip-head"><span>Market Row · season ${k.n || 1}</span><span>${shortDate(k.t)}</span></div>
+    <div class="slip-line"><span>${ico(g[0], g[1], 18)} ${esc(g[2])}</span><i></i><b>week ${k.goalWeek || k.weeks}</b></div>
+    <div class="slip-line"><span>Takings, ${k.weeks} weeks</span><i></i><b class="tabnum">${stallMoney(k.takings)}</b></div>
+    <div class="slip-line"><span>What it cost</span><i></i><b class="tabnum">${stallMoney(k.costs)}</b></div>
+    <div class="slip-line total"><span>Kept</span><i></i><b class="tabnum">${stallMoney(k.kept)}</b></div>
+    <p class="small">${k.sold} sold${k.brokeWeeks ? '' : ', and never broke on a market morning'}${k.credit ? '. The goal came on credit, paid off in the season' : ''}.</p>
+    <div class="slip-foot">${esc(k.who)} · level ${k.level} · a season of my own stall</div>
+  </div>`;
+}
+/* the shelf shows each keepsake as its own kind of paper */
+export function keepsakeSlip(k, big) { return k && k.kind === 'season' ? seasonSlip(k, big) : receiptSlip(k, big); }
 
 const cap = (w) => String(w).charAt(0).toUpperCase() + String(w).slice(1);
 

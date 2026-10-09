@@ -8,7 +8,7 @@ import { hashPin } from './pin.js';
 const KEY = 'bzf_profile';
 const OLD = 'bzf_v1';
 const DEV = 'bzf_device';
-export const SCHEMA = 14;
+export const SCHEMA = 15;
 
 function read(k, fallback) {
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; }
@@ -63,6 +63,7 @@ export function migrate(blob) {
     else if (blob.v === 11) blob = v11_to_v12(blob);
     else if (blob.v === 12) blob = v12_to_v13(blob);
     else if (blob.v === 13) blob = v13_to_v14(blob);
+    else if (blob.v === 14) blob = v14_to_v15(blob);
     else break;
   }
   return blob;
@@ -245,6 +246,14 @@ function v12_to_v13(old) {
 function v13_to_v14(old) {
   old.kids.forEach((k) => { if (k.avatar === 'teapot') k.avatar = 'pip'; });
   old.v = 14;
+  return old;
+}
+
+/* v15: Stall of My Own (docs/12 §2.1). A season runs over sessions, so it lives on the
+   child: null until one is started — "is there a season?" has one answer. */
+function v14_to_v15(old) {
+  old.kids.forEach((k) => { if (k.stall === undefined) k.stall = null; });
+  old.v = 15;
   return old;
 }
 
