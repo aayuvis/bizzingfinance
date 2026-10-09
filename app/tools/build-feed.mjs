@@ -293,7 +293,9 @@ for (const [term, mean, more] of GLOSSARY) {
 }
 
 /* 5 · figures — only the register in sources.js. Each sits with the chapter whose tool runs on it. */
-const FIGURE_CHAPTER = { grow: 'c7', bank: 'c5', loan: 'c6', inflation: 'c7', market: 'c7', wages: 'c2', homes: 'c3', stock: 'c8', stall: 'c3' };
+const FIGURE_CHAPTER = { grow: 'c7', bank: 'c5', loan: 'c6', inflation: 'c7', market: 'c7', wages: 'c2', homes: 'c3', stock: 'c8', stall: 'c3',
+  /* Save or Borrow?'s dials sit with the Bank's chapter, which opens the game */
+  sbprices: 'c5', sbloans: 'c5', sbwages: 'c5', sbsurprise: 'c5' };
 for (const [key, s] of Object.entries(SOURCES)) {
   add({ kind: 'figure', src: `figure:${key}`, level: chLevel(FIGURE_CHAPTER[key]), topics: ['figure', 'ch:' + FIGURE_CHAPTER[key]],
     badge: { id: s.kind, label: s.kind === 'own' ? 'A dial of this town' : 'Cited' }, title: s.what, body: [s.value(), s.says],

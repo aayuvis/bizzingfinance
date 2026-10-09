@@ -61,6 +61,46 @@ export const CAL = {
   shockWeeks: 30,
 };
 
+/* Save or Borrow? (docs/12 §2.10) — the dials of the table at the Bank. Every price,
+   fee, discount and wage the game shows is one of these, said in coins by sim.js
+   (sbRound) and registered in sources.js. They are BIZZINGTON'S OWN, like everything
+   above: no real lender's rate is being described, and the app says so. Prices and
+   pay are in units (fmt.js price()), so the table re-prices in every currency. */
+export const SB = {
+  weeks: 12,                 /* the calendar strip: twelve weeks, every path side by side */
+  /* the things a child might want, what a week of a town job pays towards them (a job in
+     content.js JOBS, so many shifts a week), and the verb for "having it" on the card */
+  things: [
+    { id: 'bike',   name: 'a bicycle',          icon: 'bicycle',    units: 120, job: 'errands', shifts: 2, having: 'riding',
+      invest: { job: 'the delivery round', units: 25 } },
+    { id: 'cart',   name: 'a handcart',         icon: 'cart',       units: 90,  job: 'flyers',  shifts: 3, having: 'hauling',
+      invest: { job: 'hauling for the Row', units: 20 } },
+    { id: 'kite',   name: 'a fighter kite and a spool', icon: 'kite', units: 40, job: 'sweep', shifts: 2, having: 'flying' },
+    { id: 'paints', name: 'a big box of paints', icon: 'crayon',    units: 50,  job: 'crates',  shifts: 1, having: 'painting' },
+    { id: 'phones', name: 'a pair of headphones', icon: 'headphones', units: 70, job: 'nets',   shifts: 2, having: 'listening' },
+    { id: 'boots',  name: 'football boots',     icon: 'shoe',       units: 60,  job: 'mend',    shifts: 1, having: 'playing' },
+    { id: 'lamp',   name: 'a reading lamp',     icon: 'lantern',    units: 45,  job: 'crates',  shifts: 1, having: 'reading' },
+  ],
+  flatFee: 0.2,              /* Standard's loan: one flat fee, a fifth of the price, spread over the weeks */
+  weeklyFee: 0.025,          /* Tricky's loan A: a fee in every repayment, a fortieth of the price a week */
+  oneOffFee: 0.15,           /* Tricky's loan B: one fee, paid with the last repayment */
+  loanWeeks: [4, 12],        /* how long a loan may run: the shortest the wage can carry, within the strip */
+  usedPrice: 0.6,            /* second-hand: three-fifths of the new price */
+  repair: 0.25,              /* a repair, when one is needed: a quarter of the new price */
+  repairChance: 0.5,         /* how often a second-hand one needs it (decided by the round's seed) */
+  repairAfter: 2,            /* weeks after buying that it shows up */
+  saleOff: 0.2,              /* the sale takes a fifth off */
+  saleWeek: [5, 8],          /* the week the sale arrives */
+  surprise: [0.7, 1.3],      /* a surprise costs about a week's wage, give or take */
+  surpriseWeek: [3, 7],
+  tinStep: 1,                /* the cushion's weekly amount is rounded up to whole units, so it is a coin you can hold */
+  surprises: [
+    { what: 'a birthday present for a friend', icon: 'cake' },
+    { what: 'the school trip', icon: 'bus' },
+    { what: 'a new umbrella in the monsoon', icon: 'parasol' },
+  ],
+};
+
 /* The path is computed once from the seed and cached. A pure (seed, week) ->
    state lookup would be nicer, but inflation and the rate have memory: today
    depends on last week. So we walk it forwards once and index into it, which

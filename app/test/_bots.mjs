@@ -61,6 +61,19 @@ export function play(id, seed = 1, tier = 'standard', how = 'best') {
     if (!bad) { for (let i = 0; i < 4; i++) g.act('mcAdj', 'basket:10'); ['grain', 'chai', 'rocket'].forEach((k) => { g.act('mcAdj', k + ':10'); g.act('mcAdj', k + ':10'); }); }
     else g.act('mcAdj', 'rocket:10');
     for (let w = 0; w < 6; w++) g.act('mcNext');
+  } else if (id === 'sb') {
+    /* Save or Borrow?: type the totals (or a wrong one), first path, keep a cushion, read the card */
+    const st = g.st;
+    for (let guard = 0; !st.done && guard < 400; guard++) {
+      const G = st.round.goals[st.gi], l = st.log[st.gi];
+      if (st.step === 'predict') {
+        if (st.held) g.act('sbCheck');
+        else { for (const d of String(bad ? 1 : G.asks[st.ai].want)) g.act('sbKey', d); g.act('sbCheck'); }
+      } else if (st.step === 'choose') g.act('sbPath', G.paths[0].id);
+      else if (st.step === 'cushion') g.act('sbCushion', bad ? '0' : '1');
+      else if (st.step === 'live') g.act('sbSkip');
+      else if (st.step === 'card') { if (l.ans == null) g.act('sbAns', bad ? G.paths[0].id : l.cmp.question.answer); else g.act('sbNext'); }
+    }
   } else if (id === 'mn') {
     withQueue((q) => {
       for (let i = 0; i < 20000 && !g.g.done; i++) {

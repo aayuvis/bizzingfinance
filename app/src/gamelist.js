@@ -26,6 +26,8 @@ export const GAMES = [
     blurb: 'The board game. Buy the shops, collect the rent, and win when your street pays for your life — nobody goes bankrupt.' },
   { id: 'tt', em: '🗓️', name: 'Times Twelve', keys: '1–4', kind: 'drill', needs: 'c4',
     blurb: 'Small monthly numbers, turned into the number that is actually true.' },
+  { id: 'sb', em: '🏦', name: 'Save or Borrow?', keys: '0–9 · 1–4', kind: 'decision', needs: 'c5',
+    blurb: 'Three things you want, a wage, and a few ways to get each. What does borrowing cost in all — and when is it worth it?' },
   { id: 'sn', em: '❄️', name: 'The Snowball', keys: '1–4', kind: 'drill', needs: 'c6',
     blurb: 'Guess where compounding lands. Nobody guesses high enough.' },
 ];
@@ -38,4 +40,6 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'tcNext', 'bbP
   'soGoal', 'soBuy', 'soStep', 'soJar', 'soOffer', 'soOpen', 'soAuto', 'soServe', 'soStock', 'soNext', 'soNew', 'soSel',
   'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
   /* the job games (jobgames.js) — a job is a game now, not a button */
-  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart', 'jgLevel'];
+  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart', 'jgLevel',
+  /* Save or Borrow? (saveborrow.js) */
+  'sbKey', 'sbCheck', 'sbPath', 'sbCushion', 'sbSkip', 'sbAns', 'sbNext'];

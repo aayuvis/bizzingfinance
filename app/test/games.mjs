@@ -128,6 +128,7 @@ console.log('\nThe games · docs/12 §1, §2.6–2.9\n' + '─'.repeat(56));
     else if (id === 'sr') { for (let i = 0; i < 600; i++) g.advance(16); out = g.st.q.map((c) => c.want).concat(g.st.lost); }
     else if (id === 'st') { for (let i = 0; i < 900; i++) g.advance(16); out = [g.st.shoutN, g.st.shout && g.st.shout[1], Math.round(g.st.val)]; }
     else if (id === 'mc') { for (let i = 0; i < 4; i++) g.act('mcAdj', 'rocket:10'); for (let w = 0; w < 6; w++) g.act('mcNext'); out = g.st.log; }
+    else if (id === 'sb') out = g.st.round.goals.map((x) => [x.thing.id, x.price, x.paths.map((q) => q.id).join('/')]);
     else if (id === 'mn') { const rolls = []; withQueue((q) => { for (let i = 0; i < 400 && !g.g.done; i++) { if (q.length) { q.shift()(); continue; } if (g.g.phase === 'roll') { g.act('mnRoll'); rolls.push(g.g.die); } else if (g.g.phase === 'decide') g.act('mnBuy'); else if (g.g.phase === 'card') g.act('mnCard', 0); else break; } }); out = rolls.slice(0, 12); }
     AR.quitGame();
     return JSON.stringify(out);

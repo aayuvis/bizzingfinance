@@ -195,8 +195,10 @@ console.log(`\nBizzington · ${YEARS} years × ${SEEDS.length} seeds\n${'─'.re
   /* played: a careful round of every game, in INR, through the game's own controls */
   const rows = [];
   /* Stall of My Own is a season, not a round: test/stall.mjs plays it week by week and holds
-     each week's wage to this same norm through payout() (SA7) */
-  for (const id of ids.filter((x) => x !== 'so')) {
+     each week's wage to this same norm through payout() (SA7). Save or Borrow? is three typed
+     sums and a reading, played by test/saveborrow.mjs, which holds a whole round to exactly
+     price(10) through payout() into the one wallet. */
+  for (const id of ids.filter((x) => x !== 'so' && x !== 'sb')) {
     let best = { units: -1 };
     for (const seed of [1, 7, 42]) {
       const c = fresh(), w0 = c.money.wallet;

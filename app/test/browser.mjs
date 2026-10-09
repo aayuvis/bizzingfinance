@@ -492,7 +492,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
   /* G10 · every game answers the keyboard AND a tap (tester mode opens them all) */
   {
-    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1' };
+    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1', sb: '1' };
     await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
     const bad = [], painted = [];
     for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
@@ -1366,6 +1366,89 @@ async function gameChecks() {
   await ctx.close();
 }
 
+/* ══ Save or Borrow? (docs/12 §2.10) · every step on a phone, by touch, light and dark ══
+   From the Play tab and from the Bank's own counter; the typed step held on a miss; the
+   strip fast-forwarding on the wall's clock; the card answered; the round finished. */
+async function sbChecks(label, scheme) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, colorScheme: scheme });
+  const p = await ctx.newPage(); const errors = []; p.on('pageerror', (e) => errors.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  /* a phone's screen (390×844), scrolled to what the step is about */
+  const shot = async (n, sel) => { if (!SHOTS) return; if (sel) await p.evaluate((q) => { const e = document.querySelector(q); if (e) e.scrollIntoView({ block: 'center' }); }, sel); await p.waitForTimeout(120); await p.screenshot({ path: `${SHOTS}/sb-${n}-${scheme}.png` }); };
+  const wide = () => p.evaluate(() => document.documentElement.scrollWidth > 390);
+  const st = () => p.evaluate(() => { const s = window.BZF.R.game && window.BZF.R.game.st; return s && { step: s.step, gi: s.gi, ai: s.ai, week: s.week, done: s.done, held: !!s.held, typed: s.typed,
+    want: s.round.goals[s.gi].asks[s.ai] && s.round.goals[s.gi].asks[s.ai].want, n: s.round.goals[s.gi].paths.length, H: s.round.goals[s.gi].weeks,
+    answer: s.log[s.gi].cmp && s.log[s.gi].cmp.question.answer, ans: s.log[s.gi].ans, points: s.points }; });
+  await p.goto(URL0 + '?demo'); await p.waitForSelector('[data-bz=next]');
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); location.hash = '#/play'; });
+  await p.waitForSelector('.cover[data-arg="sb"]');
+  const cover = await p.evaluate(() => { const el = document.querySelector('.cover[data-arg="sb"]'); return { act: el.dataset.act, art: /url\(/.test(getComputedStyle(el).getPropertyValue('--cover')) }; });
+  ok(`${label}: Save or Borrow? is on the Play tab, open, with its painting`, cover.act === 'game' && cover.art, JSON.stringify(cover));
+  await p.tap('.cover[data-arg="sb"]'); await p.waitForSelector('.gintro');
+  ok(`${label}: it opens on its title card with three levels and three goals`, await p.evaluate(() => document.querySelectorAll('.gintro li').length === 3 && document.querySelectorAll('.tierbtn').length === 3 && document.querySelectorAll('.gilevel .goals li').length === 3));
+  await shot('0-intro');
+  await p.tap('[data-act="gbegin"]'); await p.waitForSelector('.sbstage .sbpad');
+  await p.waitForTimeout(300);
+  const paint = await p.evaluate(() => { const b = getComputedStyle(document.querySelector('.sbstage'), '::before'); return /url\(/.test(b.backgroundImage) && !!document.querySelector('.sbbank').naturalWidth; });
+  ok(`${label}: the stage is Clocktower Square, with the Bank drawn on the goal`, paint);
+  await shot('1-predict', '.sbask');
+  /* a miss holds, with the sum */
+  let s = await st();
+  for (const d of String(s.want + 1)) await p.tap(`.sbpad [data-act="sbKey"][data-arg="${d}"]`);
+  await p.tap('.sbpad [data-act="sbCheck"]'); await p.waitForSelector('.sbhold');
+  const hold = await p.evaluate(() => ({ text: document.querySelector('.sbhold').textContent, pad: !!document.querySelector('.sbpad') }));
+  ok(`${label}: a typed miss holds and writes out the sum, the pad put away`, /×/.test(hold.text) && /=/.test(hold.text) && !hold.pad, hold.text.trim().slice(0, 80));
+  await shot('1b-hold', '.sbhold');
+  await p.tap('.sbstage [data-act="sbCheck"]');
+  s = await st();
+  /* Tricky asks twice; Standard (the level a game opens on) once */
+  while (s.step === 'predict') { for (const d of String(s.want)) await p.tap(`.sbpad [data-act="sbKey"][data-arg="${d}"]`); await p.tap('.sbpad [data-act="sbCheck"]'); await p.tap('.sbstage [data-act="sbCheck"]'); s = await st(); }
+  await p.waitForSelector('[data-act="sbPath"]');
+  const same = await p.evaluate(() => new Set([...document.querySelectorAll('[data-act="sbPath"]')].map((b) => b.className)).size === 1);
+  ok(`${label}: step 2 offers every path as the same button, none labelled`, same && !(await wide()));
+  await shot('2-choose', '.sbpaths');
+  await p.locator('[data-act="sbPath"]').last().tap();
+  await p.waitForSelector('[data-act="sbCushion"]'); await shot('2b-cushion', '.sbpaths');
+  await p.tap('[data-act="sbCushion"][data-arg="1"]');
+  await p.waitForSelector('.sbstrip');
+  const w0 = (await st()).week; await p.waitForTimeout(1300); const w1 = (await st()).week;
+  ok(`${label}: the calendar strip fast-forwards the weeks, every path side by side`, w1 > w0 && await p.evaluate(() => document.querySelectorAll('.sbrow').length) === s.n, `week ${w0} → ${w1}`);
+  /* re-drawn each week, the card is dealt once: a pop on every week was a blank, flickering stage */
+  const anim = await p.evaluate(() => getComputedStyle(document.querySelector('.sbstrip').closest('.gcard')).animationName);
+  ok(`${label}: the strip's card does not re-deal itself each week`, anim === 'none', anim);
+  await shot('3-live', '.sbstrip');
+  await p.waitForFunction(() => window.BZF.R.game.st.week >= window.BZF.R.game.st.round.goals[window.BZF.R.game.st.gi].weeks, null, { timeout: 8000 });
+  await p.waitForSelector('.sbsum');
+  ok(`${label}: at week 12 each path says what it cost, how long you had it and the surprise`, await p.evaluate(() => [...document.querySelectorAll('.sbsum')].every((e) => /Paid/.test(e.textContent) && /had it/.test(e.textContent))) && !(await wide()));
+  await shot('3b-strip', '.sbstrip');
+  await p.tap('[data-act="sbSkip"]'); await p.waitForSelector('.sbcard');
+  ok(`${label}: the comparison card says it in coins`, await p.evaluate(() => /cost .*and you were .* from week \d+/.test(document.querySelector('.sbcard').textContent)));
+  await shot('4-card', '.sbcard');
+  s = await st();
+  await p.tap(`[data-act="sbAns"][data-arg="${s.answer}"]`); await p.waitForSelector('.sbhold.ok');
+  await shot('4b-answer', '.sbhold');
+  /* the rest by keyboard: the same round answers keys too */
+  for (let i = 0; i < 200; i++) {
+    s = await st(); if (!s || s.done) break;
+    if (s.step === 'predict') { if (s.held) await p.keyboard.press('Enter'); else { for (const d of String(s.want)) await p.keyboard.press(d); await p.keyboard.press('Enter'); } }
+    else if (s.step === 'choose') await p.keyboard.press('1');
+    else if (s.step === 'cushion') await p.keyboard.press('2');
+    else if (s.step === 'live') await p.keyboard.press('Enter');
+    else if (s.step === 'card') { if (s.ans == null) { const n = await p.evaluate(() => { const g = window.BZF.R.game.st; return g.round.goals[g.gi].paths.findIndex((x) => x.id === g.log[g.gi].cmp.question.answer) + 1; }); await p.keyboard.press(String(n)); } else await p.keyboard.press('Enter'); }
+    await p.waitForTimeout(40);
+  }
+  s = await st();
+  ok(`${label}: the round finishes, scored on the decisions (one miss typed: 18 of 24)`, s && s.done && s.points === 18 && await p.evaluate(() => /You practised:/.test(document.querySelector('.endcard').textContent)), JSON.stringify(s && { done: s.done, points: s.points }));
+  await shot('5-end');
+  /* and from the Bank's own counter */
+  await p.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); window.BZF.fire('sub', 'bank'); });
+  await p.waitForSelector('[data-focus="game:sb"] [data-act="game"]');
+  await shot('6-bank', '[data-focus="game:sb"]');
+  await p.tap('[data-focus="game:sb"] [data-act="game"]'); await p.waitForSelector('.gintro');
+  ok(`${label}: the Bank offers it at its counter, and it opens on the title card`, await p.evaluate(() => /Save or Borrow/.test(document.querySelector('.gintro h1').textContent)));
+  ok(`${label}: nothing threw`, !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1375,6 +1458,8 @@ await safely('demo', demo);
 await safely('kit', kitChecks);
 await safely('deck', deckChecks);
 await safely('games', gameChecks);
+await safely('sb-light', () => sbChecks('sb-light', 'light'));
+await safely('sb-dark', () => sbChecks('sb-dark', 'dark'));
 await safely('a6-desktop', () => a6Checks('a6-desktop', { width: 1280, height: 860 }, false));
 await safely('a6-phone', () => a6Checks('a6-phone', { width: 390, height: 844 }, true));
 await safely('stall-phone', () => stallChecks('phone', { width: 390, height: 844 }, true, 'light'));

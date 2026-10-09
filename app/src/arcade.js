@@ -17,16 +17,18 @@ import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
-import { fx as makeFx, countdown, plate, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
+import { fx as makeFx, countdown, plate, plateSrc, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
+import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
 
 import { GAMES, GAME_ACTS } from './gamelist.js';
 
 const K = () => sim.kid(R.s);
 
 export { GAMES };
-/* Stall of My Own absorbs Stall Rush, so until it has a painting of its own it wears the stall's */
+/* Stall of My Own absorbs Stall Rush, so until it has a painting of its own it wears the stall's;
+   Save or Borrow?, which has no cover yet, wears the square the Bank stands on */
 const COVER_OF = { so: 'sr' };
-const coverOf = (id) => COVERS[id] || COVERS[COVER_OF[id]] || null;
+const coverOf = (id) => COVERS[id] || COVERS[COVER_OF[id]] || (id === 'sb' ? { src: plateSrc(2) } : null);
 
 export function viewArcade() {
   if (R.gameIntro) return introView(R.gameIntro);
@@ -68,6 +70,8 @@ export function viewArcade() {
     <div class="covers">${GAMES.filter((g) => g.kind === 'action').map((g) => cover(g)).join('')}</div>
     <div class="sect"><b>Quick drills · no reflexes required</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === 'drill').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
+    <div class="sect"><b>Think it through · at the Bank</b><i></i></div>
+    <div class="covers">${GAMES.filter((g) => g.kind === 'decision').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
     ${m40open ? '' : `<div class="sect"><b>Later on</b><i></i></div>${m40}`}
     ${c.market.best ? `<p class="small muted cupbest" style="padding:0 6px">Best Market Cup: <b>${esc(c.market.best)}</b>${Array.isArray(c.market.cups) && c.market.cups.length > 1
       ? ` · last cups <span class="tabnum">${c.market.cups.slice(-5).join(' → ')}</span>, ${cupTrendWord(c.market.cups)}` : ''}</p>` : ''}
@@ -89,6 +93,7 @@ export const HOW = {
   mn: ['The board game: buy shops, collect rent.', 'Win when your street pays for your life.', 'Enter to roll, Y or N to buy.'],
   tt: ['Monthly numbers, turned into yearly ones.', 'Times twelve, in your head.', 'Tap an answer, or press 1–4.'],
   sn: ['Guess where compounding lands.', 'Nobody guesses high enough — try anyway.', 'Tap an answer, or press 1–4.'],
+  sb: ['Three things you want, a wage, and a few ways to get each one.', 'Type what borrowing costs in all, pick a path, then watch the weeks.', 'Number keys and Enter, or tap.'],
 };
 export const PRACTISED = {
   so: 'running a stall over weeks: stock, prices and waste — and that busy is not the same as profitable',
@@ -96,6 +101,7 @@ export const PRACTISED = {
   bb: 'paying bills first and living inside a month', cc: 'how compounding grows — and why greed crashes it', sr: 'pricing and serving under time pressure',
   st: 'doing nothing on a red day', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
   tt: 'turning monthly costs into yearly ones', sn: 'how big compounding really gets',
+  sb: 'what borrowing really costs in all, and keeping a cushion for surprises',
 };
 /* ── G8 · three levels, G9 · three goals ──────────────────────────────────
    A level turns the mechanic's own knobs and nothing else. Each level has its
@@ -189,6 +195,7 @@ ARCADE_TIERS.mn = {
   standard: { baseExp: 24, par: 24, says: 'The board as it comes.' },
   tricky:   { baseExp: 30, par: 30, says: 'A dearer life: it takes a bigger street to pay for it.' },
 };
+ARCADE_TIERS.sb = SB_TIERS;
 export const TIERLESS = {};
 
 /* Three goals per game, each a decision you can choose to make. They read the run's
@@ -199,6 +206,7 @@ export const ARCADE_GOALS = {
     { id: 'buffer', name: 'A whole season, never broke on a market morning', check: (r) => r.soComplete === true && r.soBroke === 0 && r.soSold > 0 },
     { id: 'waste', name: 'A whole season with less than a tenth of the stock wasted', check: (r) => r.soComplete === true && r.soWaste < 0.1 && r.soSold > 0 },
   ],
+  sb: SB_GOALS,
   cr: [
     { id: 'exact3', name: 'Exact three times in a round', check: (r) => r.exact >= 3 },
     { id: 'clean', name: 'A whole round without overpaying', check: (r) => r.finished && r.overpays === 0 && r.exact >= 2 },
@@ -288,6 +296,7 @@ export const SHARE = {
   st: (r) => (r.held ? PERFECT : PERFECT * 3 / 14),
   mc: (r, par) => r.total / Math.max(1, r.par || par),   /* r.par: Bella on this round's own season */
   mn: (r) => PERFECT * Math.min(1, Math.max(0, r.indep)),
+  sb: (r) => PERFECT * r.points / Math.max(1, r.par),   /* r.par: the round's points out of (saveborrow.js SB_PAR) */
 };
 export function shareOf(id, run, tier = 'standard') {
   const t = ARCADE_TIERS[id], par = (t[tier] || t.standard).par || t.standard.par;
@@ -415,7 +424,7 @@ export function startGame(id, seed, tier) {
   curSeed = seed != null ? seed : playSeed();
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
-    mc: marketCup, mn: (sd) => mainStreet({ seed: sd, baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, foot: (won) => endFoot(won), endKey,
+    mc: marketCup, sb: (sd) => saveBorrow(sbKit(), sd), mn: (sd) => mainStreet({ seed: sd, baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, foot: (won) => endFoot(won), endKey,
       /* Main Street pays through the same door as every other game (§1.1, §2.9): the cap counts it */
       onFinish: (run) => roundEnd('mn', run, 'Main Street') }) }[id];
   if (id === 'so') return startStall(curSeed);
@@ -442,6 +451,11 @@ function startStall(seed) {
     return R.game;
   });
 }
+/* what Save or Borrow? borrows from the arcade, handed over rather than imported back */
+const sbKit = () => ({ tier: curTier, K, hud, endCard, tierChip, payout, quit: quitGame,
+  /* the one door every finish goes through (§1.1, §1.7): pay, the decision score, the level offer */
+  finish: (run) => roundEnd('sb', run, 'Save or Borrow?'),
+  parScale: () => parScale('sb'), goals: (run) => goalsFor('sb', run) });
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; lastOffer = null; }
 /* the level chip every game's HUD carries */
 const tierChip = () => `<span class="tierchip" data-tier="${curTier}">${TIER_NAME[curTier]}</span>`;

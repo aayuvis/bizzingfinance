@@ -1,5 +1,5 @@
 {
-  "total": 1803,
+  "total": 1807,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,7 +12,7 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 9,
+    "figure": 13,
     "game": 12,
     "quest": 13,
     "medal": 48,
@@ -45,7 +45,7 @@
     "chapter 2": 153,
     "chapter 3": 238,
     "chapter 4": 203,
-    "chapter 5": 159,
+    "chapter 5": 163,
     "chapter 6": 165,
     "chapter 7": 203,
     "chapter 8": 120,
@@ -80,7 +80,7 @@
       "level": 5,
       "chapter": "c5",
       "title": "Keeping it safe",
-      "n": 159
+      "n": 163
     },
     {
       "level": 6,
@@ -154,6 +154,7 @@
     "word:Cost ≈ card:c8a#teach",
     "word:Value ≈ lesson:c1d#beat2",
     "word:Scam#more ≈ card:c5c#teach",
+    "game:sb ≈ tryit:c6b",
     "badge:first-coin ≈ lesson:c1c#beats0-1",
     "badge:rainy-day ≈ word:Emergency fund",
     "class:index ≈ word:Share",

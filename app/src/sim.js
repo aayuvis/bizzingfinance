@@ -8,7 +8,8 @@ import { DEFAULT_AVATAR } from './avatars.js';
 import { Store } from './store.js';
 import { CLASSES, byId as classById, marketPath, classesFor } from './assetclasses.js';
 import * as biz from './business.js';
-import { worldAt, explain as explainWorld, WEEKS_PER_YEAR } from './world.js';
+import { worldAt, explain as explainWorld, WEEKS_PER_YEAR, SB } from './world.js';
+import { rng } from './ui.js';
 import { price, money, setCurrency, dayIndex, DAY, convert } from './fmt.js';
 import { tester, levelAtLeast, levelFor, rankFor, LEVELS, makeSeries, ASSETS, STOCK, WEATHER, JOBS, HOMES,
   WORLDS, QUESTS, FIXES, SHOP, CHAPTERS, UNLOCKS, fixesIn, chapterDone, chapterOpened, worldOpen, isOpen } from './content.js';
@@ -1151,3 +1152,147 @@ export function ventureDraw(c, amt) {
   return a;
 }
 export const ventureLib = biz;
+
+/* ══ Save or Borrow? (docs/12 §2.10) ═════════════════════════════════════
+   A goal, a price, a calendar and the true cost of each path. Every sum the game
+   shows or checks is made here — the predicted totals, every week of every path,
+   the comparison card — so the view (saveborrow.js) only says them (SB1). Every
+   price, fee and wage comes from the dials in world.js SB (registered in sources.js,
+   SB3) and is said in coins once, through price(); after that it is whole-coin
+   arithmetic, so a sum the child types is exactly a sum on the screen in every
+   currency. The seed decides the content and nothing else: no reward is random. */
+export const SB_LEVELS = ['easy', 'standard', 'tricky'];
+const sbIn = (r, [lo, hi]) => lo + Math.min(hi - lo, Math.floor(r() * (hi - lo + 1)));
+const sbJob = (id) => JOBS.find((j) => j.id === id);
+/* a loan's repayments: the fewest weeks the wage can carry with the tin filled too,
+   preferring a week count that divides the sum so the weekly is clean */
+function sbLoan(kind, P, units, I, k) {
+  const fee = kind === 'flat' ? price(units * SB.flatFee) : Math.max(1, price(units * SB.weeklyFee));
+  const per = (n) => (kind === 'flat' ? Math.ceil((P + fee) / n) : Math.ceil(P / n) + fee);
+  const [lo, hi] = SB.loanWeeks;
+  let n0 = null;
+  for (let n = lo; n <= hi; n++) if (per(n) + k <= I) { n0 = n; break; }
+  if (n0 == null) return null;
+  let n = n0;
+  for (let m = n0; m <= Math.min(hi, n0 + 2); m++) if ((kind === 'flat' ? P + fee : P) % m === 0) { n = m; break; }
+  const r = per(n), total = r * n;
+  return { kind, weekly: r, n, fee, oneOff: 0, total, cost: total - P };
+}
+function sbGoalAt(spec, level, extra) {
+  const t = spec.thing, job = sbJob(t.job), shifts = t.shifts + extra;
+  const P = price(t.units), I = price(job.units * shifts);
+  const X = Math.max(1, price(job.units * shifts * spec.sMul));
+  const step = Math.max(1, price(SB.tinStep));
+  const k = Math.ceil(X / spec.sWeek / step) * step;
+  const paths = [{ id: 'save', kind: 'save', name: 'Save up', price: P }];
+  const sale = { id: 'sale', kind: 'sale', name: 'Wait for the sale', price: price(t.units * (1 - SB.saleOff)), week: spec.saleWeek };
+  const used = { id: 'used', kind: 'used', name: 'Buy second-hand', price: price(t.units * SB.usedPrice), repair: price(t.units * SB.repair),
+    repairs: spec.repairs, after: SB.repairAfter };
+  if (level === 'easy') paths.push(sale);
+  else if (level === 'standard') {
+    const L = sbLoan('flat', P, t.units, I, k); if (!L) return null;
+    paths.push({ id: 'borrow', name: 'Borrow now', ...L }, spec.useSale ? sale : used);
+  } else {
+    const A = sbLoan('weekly', P, t.units, I, k); if (!A) return null;
+    /* the two loans run the same number of weeks, so the fee is the only difference */
+    const B = { kind: 'oneoff', weekly: Math.ceil(P / A.n), n: A.n, fee: price(t.units * SB.oneOffFee) };
+    B.oneOff = B.fee; B.total = B.weekly * B.n + B.fee; B.cost = B.total - P;
+    if (B.weekly + k > I) return null;
+    paths.push(used, { id: 'loanA', name: 'Borrow: a fee every week', ...A }, { id: 'loanB', name: 'Borrow: one fee at the end', ...B });
+  }
+  const asks = level === 'easy'
+    ? [{ path: 'save', kind: 'saved', a: I, b: spec.saleWeek, extra: 0, want: I * spec.saleWeek }]
+    : paths.filter((p) => p.n).map((p) => ({ path: p.id, kind: 'loan', a: p.weekly, b: p.n, extra: p.oneOff || 0, want: p.total }));
+  const sp = SB.surprises[spec.surprise];
+  return {
+    thing: { id: t.id, name: t.name, icon: t.icon, having: t.having }, level,
+    price: P, income: I, job: job.name, shifts, weeks: SB.weeks,
+    cushion: k, surprise: { what: sp.what, icon: sp.icon, week: spec.sWeek, cost: X },
+    invest: spec.invest && t.invest ? { job: t.invest.job, pay: price(t.invest.units) } : null,
+    question: spec.q, paths, asks,
+  };
+}
+/* every week of one path: income in, the tin filled, the path's own payments, the surprise */
+export function sbPath(g, p, cushion) {
+  const H = g.weeks, k = cushion ? g.cushion : 0, weeks = [];
+  let purse = 0, tin = 0, own = false, from = null, paid = 0, job = 0, broke = null, short = 0, repaired = 0;
+  const pay = (amt, fromTin) => {
+    if (fromTin) { const t = Math.min(tin, amt); tin -= t; amt -= t; }
+    purse -= amt;
+  };
+  for (let w = 1; w <= H; w++) {
+    const ev = [];
+    let inn = g.income;
+    if (own && g.invest) { inn += g.invest.pay; job += g.invest.pay; ev.push('job'); }
+    purse += inn;
+    if (k) { purse -= k; tin += k; }
+    if (p.n) {
+      if (w === 1) { own = true; from = 1; ev.push('get'); }
+      if (w <= p.n) { pay(p.weekly); paid += p.weekly; ev.push('repay'); }
+      if (p.oneOff && w === p.n) { pay(p.oneOff); paid += p.oneOff; ev.push('fee'); }
+    } else if (!own && purse >= p.price && (p.kind !== 'sale' || w >= p.week)) {
+      pay(p.price); paid += p.price; own = true; from = w; ev.push('buy');
+    } else if (p.kind === 'used' && own && p.repairs && w === from + p.after) {
+      pay(p.repair, true); paid += p.repair; repaired = p.repair; ev.push('repair');
+    }
+    if (w === g.surprise.week) { pay(g.surprise.cost, true); ev.push('surprise'); }
+    if (purse < 0) { if (broke == null) broke = w; short += -purse; purse = 0; ev.push('short'); }
+    weeks.push({ w, purse, tin, has: purse + tin, own, ev });
+  }
+  return { id: p.id, name: p.name, kind: p.kind || p.id, weeks, from, owned: from ? H - from + 1 : 0, cost: paid,
+    fee: p.n ? paid - g.price : 0, repaired, job, end: purse + tin, broke, short };
+}
+/* the strip: every path, lived side by side, on the one cushion the child chose */
+export function sbLive(g, cushion) { return g.paths.map((p) => sbPath(g, p, cushion)); }
+/* a goal the game may ask: with the tin, every path is bought inside the strip and none
+   breaks (so keeping a buffer is always possible, whatever the path — the path is never
+   scored); the costs differ, so "which cost the most" has one answer; and the investment
+   loan, where there is one, pays for itself (SB4) */
+export function sbGoalOk(g) {
+  if (!g) return false;
+  for (const cu of [true, false]) {
+    const rows = sbLive(g, cu);
+    if (rows.some((x) => !x.from || x.from > g.weeks - 1)) return false;
+    if (cu && rows.some((x) => x.broke != null)) return false;
+    if (new Set(rows.map((x) => x.cost)).size !== rows.length) return false;
+    if (g.invest) { const s = rows.find((x) => x.id === 'save'); if (rows.some((x) => x.fee > 0 && !(x.end > s.end))) return false; }
+  }
+  return g.asks.every((a) => a.want > 0);
+}
+export function sbRound(seed, level = 'standard') {
+  if (!SB_LEVELS.includes(level)) level = 'standard';
+  const r = rng(((seed >>> 0) * 7 + SB_LEVELS.indexOf(level) * 7919 + 13) >>> 0);
+  const pool = SB.things.slice(), out = [];
+  const investAt = level === 'tricky' ? Math.floor(r() * 3) : -1;
+  for (let i = 0; i < 3; i++) {
+    const cands = pool.filter((t) => (i === investAt ? !!t.invest : level !== 'tricky' || !t.invest));
+    const t = cands[Math.floor(r() * cands.length) % cands.length];
+    pool.splice(pool.indexOf(t), 1);
+    const spec = { thing: t, invest: i === investAt, sWeek: sbIn(r, SB.surpriseWeek), sMul: SB.surprise[0] + r() * (SB.surprise[1] - SB.surprise[0]),
+      surprise: Math.floor(r() * SB.surprises.length) % SB.surprises.length, saleWeek: sbIn(r, SB.saleWeek),
+      repairs: r() < SB.repairChance, useSale: r() * 2 < 1, q: r() * 2 < 1 ? 'most' : 'least' };
+    let g = null;
+    for (let extra = 0; extra <= 12 && !sbGoalOk(g); extra++) g = sbGoalAt(spec, level, extra);
+    out.push(g);
+  }
+  return { seed, level, goals: out };
+}
+/* Step 1: the typed prediction, checked against the sum made here */
+export function sbCheck(ask, typed) {
+  const n = parseInt(String(typed == null ? '' : typed).replace(/[^0-9]/g, ''), 10);
+  return { ok: n === ask.want, typed: Number.isFinite(n) ? n : null, want: ask.want };
+}
+/* Step 4: the comparison card, in coins. Every number on it is one of these. */
+export function sbCompare(g, rows) {
+  const save = rows.find((x) => x.id === 'save');
+  const lines = rows.map((x) => ({ id: x.id, name: x.name, kind: x.kind, cost: x.cost, from: x.from, owned: x.owned, fee: x.fee,
+    repaired: x.repaired, job: x.job, end: x.end, broke: x.broke, short: x.short,
+    pct: x.fee > 0 ? Math.round((x.fee * 100) / g.price) : 0,
+    dCost: x.cost - save.cost, dWeeks: save.from - x.from, dJob: x.job - save.job, dEnd: x.end - save.end,
+    /* said both ways round, so the card never does a sum of its own */
+    more: Math.max(0, x.cost - save.cost), less: Math.max(0, save.cost - x.cost),
+    sooner: Math.max(0, save.from - x.from), later: Math.max(0, x.from - save.from),
+    ahead: Math.max(0, x.end - save.end), behind: Math.max(0, save.end - x.end) }));
+  const by = rows.slice().sort((a, b) => (g.question === 'most' ? b.cost - a.cost : a.cost - b.cost));
+  return { lines, save: lines.find((x) => x.id === 'save'), question: { kind: g.question, answer: by[0].id } };
+}

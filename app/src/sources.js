@@ -16,7 +16,7 @@
               a card that states a real-world figure without one.
 
    A number with neither is a bug, and the lint says so by name. */
-import { CAL } from './world.js';
+import { CAL, SB } from './world.js';
 
 export const SOURCES = {
   grow: {
@@ -81,6 +81,40 @@ export const SOURCES = {
     value: () => "the town's own prices, weather and footfall",
     where: 'stallsim.js · PRODUCTS, WEATHER, LEVELS',
     says: 'What the wholesaler charges for chai, ice golas, rope and umbrellas, how many people walk past wanting one, how the weather moves them and what a pitch costs a week are dials of this town, chosen so a careful season makes a profit and a careless one loses money. They are Bizzington\'s, not any real market\'s.',
+  },
+  /* Save or Borrow? (docs/12 §2.10): every dial its table uses, named by `dials`, so
+     test/saveborrow.mjs can hold the register to covering all of world.js SB (SB3) */
+  sbprices: {
+    kind: 'own',
+    what: 'What the things at the Bank\'s table cost, new, in the sale and second-hand',
+    value: () => SB.things.map((t) => t.name).join(', ') + `, at the town's own prices · the sale takes ${Math.round(SB.saleOff * 100)} in every 100 off from week ${SB.saleWeek[0]}–${SB.saleWeek[1]} · second-hand is ${Math.round(SB.usedPrice * 100)} in every 100 of the price, and ${Math.round(SB.repairChance * 100)} in every 100 need a repair of ${Math.round(SB.repair * 100)} in every 100, ${SB.repairAfter} weeks in`,
+    where: 'world.js · SB.things, SB.saleOff, SB.saleWeek, SB.usedPrice, SB.repair, SB.repairChance, SB.repairAfter',
+    dials: ['things', 'saleOff', 'saleWeek', 'usedPrice', 'repair', 'repairChance', 'repairAfter', 'weeks'],
+    says: 'Bizzington\'s own prices for a game, in units that re-price in the child\'s currency. They are not a claim about what a bicycle or a pair of boots costs anywhere real.',
+  },
+  sbloans: {
+    kind: 'own',
+    what: 'What the loans at the Bank\'s table charge',
+    value: () => `a flat fee of ${Math.round(SB.flatFee * 100)} coins in every 100 of the price · or ${(SB.weeklyFee * 100).toFixed(1)} in every 100 every week · or one fee of ${Math.round(SB.oneOffFee * 100)} in every 100 with the last repayment · over ${SB.loanWeeks[0]}–${SB.loanWeeks[1]} weeks`,
+    where: 'world.js · SB.flatFee, SB.weeklyFee, SB.oneOffFee, SB.loanWeeks',
+    dials: ['flatFee', 'weeklyFee', 'oneOffFee', 'loanWeeks'],
+    says: 'Dials of this town, shown in the game as coins a week. They are not any real lender\'s rate, and no real loan is being described. The total is always worked out before you choose.',
+  },
+  sbwages: {
+    kind: 'own',
+    what: 'What a week of work pays at the Bank\'s table',
+    value: () => 'shifts of the town\'s own jobs · and, once you have the thing, ' + SB.things.filter((t) => t.invest).map((t) => t.invest.job).join(' or ') + ', at the town\'s own pay',
+    where: 'world.js · SB.things (job, shifts, invest) and content.js · JOBS',
+    dials: [],
+    says: 'The wages are Bizzington\'s jobs, so many shifts a week; the delivery round and the hauling are the town\'s too. Not a claim about what real work pays.',
+  },
+  sbsurprise: {
+    kind: 'own',
+    what: 'The surprises at the Bank\'s table',
+    value: () => `about a week's wage (${SB.surprise[0]}–${SB.surprise[1]} of one), in week ${SB.surpriseWeek[0]}–${SB.surpriseWeek[1]}: ` + SB.surprises.map((x) => x.what).join(', ') + ` · the tin fills in steps of ${SB.tinStep} unit`,
+    where: 'world.js · SB.surprise, SB.surpriseWeek, SB.surprises',
+    dials: ['surprise', 'surpriseWeek', 'surprises', 'tinStep'],
+    says: 'Chosen so a plan with nothing kept back can come up short, the way a real month can. The sizes are the town\'s.',
   },
 };
 

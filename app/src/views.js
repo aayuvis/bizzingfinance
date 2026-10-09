@@ -27,7 +27,7 @@ import { overnightCard, keepsakeSlip } from './keepsakes.js';
 import * as co from './companion.js';
 import { chapterLocked, levelAtLeast, tester, CHAPTERS, ALL_CARDS, SHOP, ASSETS, BADGES, GLOSSARY, STOCK, WEATHER, HOMES,
   WORLDS, QUESTS, FIXES, rankFor, rankObj, RANKS, shuffledDrill, drillCount, hintFor,
-  chapterDone, isOpen as chapterOpen, needFor, worldOpen, WORD_ICON } from './content.js';
+  chapterDone, isOpen as chapterOpen, needFor, worldOpen, WORD_ICON, gameOpen } from './content.js';
 import * as sim from './sim.js';
 import * as ledger from './ledger.js';
 import { STRANDS } from './objectives.js';
@@ -1322,6 +1322,14 @@ function viewBank() {
       <button class="btn wide" style="margin-top:12px" data-act="loan">Take the loan</button>
       <p class="small muted" style="margin-top:8px">You see the full cost before you agree. Better trust makes the same loan cheaper.</p>
     </div>`}
+
+    ${(() => { const g = GAMES.find((x) => x.id === 'sb'); return g && gameOpen(c, g) ? `<div class="card" data-focus="game:sb">
+      <div class="row" style="gap:12px;align-items:center">${ico('handshake', '🤝', 30)}<div class="grow">
+        <div class="eyebrow">At this counter · a game</div>
+        <h3 style="font-size:18px;margin:2px 0 4px">${esc(g.name)}</h3></div></div>
+      <p class="small muted">Three things you want, a week's wage, and a few ways to get each. Work out what borrowing costs in all, then watch every path's weeks side by side.</p>
+      <button class="btn ghost wide" style="margin-top:10px" data-act="game" data-arg="sb">Play ${esc(g.name)}</button>
+    </div>` : ''; })()}
 
     <div class="card">
       <div class="eyebrow">The snowball, on this balance</div>
