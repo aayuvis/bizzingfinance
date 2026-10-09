@@ -335,10 +335,17 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
 {
   const { storm } = await import('./_bots.mjs');
   const SM = await import('../src/storm.js');
-  const { STORM } = await import('../src/world.js');
+  const { STORM } = SM;
   /* the storms themselves: one in five stops, a fine one never falls by half, the headline says so */
   const defs = Array.from({ length: 1000 }, (_, i) => SM.stormFor(i + 1));
   const stops = defs.filter((d) => d.stops), fine = defs.filter((d) => !d.stops);
+  /* the figures on the sources page are the dials the games use (rule six) */
+  { const { SOURCES } = await import('../src/sources.js'); const BD0 = await import('../src/board.js'); const CUP0 = await import('../src/cup.js');
+    const sv = SOURCES.storm.value(), mv = SOURCES.mainstreet.value(), cv = SOURCES.cup.value();
+    ok('sources.js states the storm, the Cup and Main Street dials as the games use them',
+      sv.includes(`${Math.round(STORM.fall[0] * 100)}–${Math.round(STORM.fall[1] * 100)} in every 100`) && sv.includes(`${Math.round(STORM.stops * 100)} storms in 100`)
+      && mv.includes(`adds ${BD0.MN.rates} to a bill`) && mv.includes(`${Math.round(BD0.MN.repair * 100)} in every 100`)
+      && cv.startsWith('eight kinds of six weeks') && CUP0.CUP_SERIES.length === 8 && CUP0.CUP_WEEKS === 6, `${sv} | ${mv} | ${cv}`); }
   ok('about one storm in five is a company that really stops making money (drawn from the seed)', stops.length > 150 && stops.length < 250, `${stops.length} of 1000`);
   const floor = Math.min(...fine.map((d) => Math.min(...Array.from({ length: 201 }, (_, k) => SM.stormValue(d, k / 200))))) - SM.WOBBLE / 2;
   ok('a storm where the company is fine never falls as far as half, so "if it falls by half" only fires on real trouble', floor > SM.HALF, `lowest ${Math.round(floor)} vs half ${SM.HALF}`);

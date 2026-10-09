@@ -8,9 +8,25 @@
 
    Everything here is a pure function of the play's seed and what the child did, so the
    arcade's screen, the headless bots in test/_bots.mjs and the tests share one truth.
-   The dials are the town's own (world.js STORM, registered in sources.js 'storm'). */
+   The dials are the town's own (STORM below, registered in sources.js 'storm'). */
 import { rng } from './ui.js';
-import { STORM } from './world.js';
+
+/* Market Storm (docs/12 §2.5) — the storm's dials. A storm is a fall in one fictional
+   company's price; in most the company is fine and the fall is the market's mood, and in
+   `stops` of them the company really does stop making money and a headline says so.
+   BIZZINGTON'S OWN, registered in sources.js ('storm'; test/games.mjs holds the two to each other). They live
+   here, not in world.js, so the first screen does not carry them: no real market's falls are being
+   described, and the storm says so on its end card. Shares are of what you paid. */
+export const STORM = {
+  len: 42000,                /* the storm, in ms of wall time */
+  stops: 0.2,                /* one storm in five: the company has stopped making money */
+  fall: [0.22, 0.42],        /* a fine company's worst fall: never as far as half */
+  factAt: [0.36, 0.58],      /* when the "stopped making money" headline lands, through the storm */
+  stopEnd: [0.24, 0.36],     /* where a company that stopped ends the storm */
+  stopAfter: [0.18, 0.3],    /* and where it is a few months later */
+  back: [1.04, 1.18],        /* where a fine company is a few months later */
+  newsEvery: 6000,           /* ms between headlines */
+};
 
 export const START = 1000, HALF = START / 2;
 
