@@ -192,7 +192,6 @@ export function viewMarketGame() {
 function hall(body, front) {
   const plate = plateFor((WORLDS[3] || {}).id || 'exchange', !!R.dark);
   return `<div class="m40hall${front ? ' front' : ''}" style="--hall:url(${plate})">
-    ${front && BLD.exchange ? `<div class="m40door"><img src="${BLD.exchange.src}" alt="" aria-hidden="true" width="${BLD.exchange.w}" height="${BLD.exchange.h}"></div>` : ''}
     ${body}</div>`;
 }
 
@@ -222,6 +221,7 @@ export const HOWTO = [
 function viewPick(g) {
   return `<div class="stack">
     <button class="btn ghost m40leave" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    ${BLD.exchange ? `<div class="m40door"><img src="${BLD.exchange.src}" alt="" aria-hidden="true" width="${BLD.exchange.w}" height="${BLD.exchange.h}"></div>` : ''}
     <h1 class="m40title">The Market Game</h1>
     <section class="card m40how" aria-labelledby="m40how-h">
       <div class="eyebrow" id="m40how-h">How to play</div>

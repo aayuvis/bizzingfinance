@@ -322,7 +322,7 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
   /* the buy card says what buying leaves beside what a bad week costs */
   fresh(); AR.startGame('mn', 9, 'standard'); { const gm = R.game; gm.g.phase = 'decide'; gm.g.sq = 18; gm.g.players[0].cash = 280;
     const thin = gm.view(); gm.g.players[0].cash = 600; const fat = gm.view();
-    ok('the buy card says what buying leaves, and warns when one bill would force a half-price sale', /Leaves you 20\. A bad week costs about \d+: one bill and you sell a shop at half price/.test(thin) && /Enough for a bad week/.test(fat), (thin.match(/Leaves you[^<]*/) || [])[0]);
+    ok('the buy card says what buying leaves, and warns when one bill would force a half-price sale', /Leaves 20; a bad week is \d+\. A bill could force a half-price sale/.test(thin) && /Leaves 340; a bad week is \d+\.</.test(fat), (thin.match(/Leaves [^<]*/) || [])[0]);
     AR.quitGame(); }
   AR.startGame('mn', 9, 'standard'); const v = R.game.view();
   ok('a token on the board is a face (an avatar or the cast\'s portrait), not a coloured dot', /class="mstok"[^>]*><img [^>]*alt="You"/.test(v) && /alt="Mags"/.test(v), (v.match(/class="mstok"[^>]*>[^]{0,80}/) || [])[0]);

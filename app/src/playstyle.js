@@ -65,15 +65,15 @@ html[data-bz-dark] .gplay .stage .cupseason{color:#F4EEE4;background:rgb(20 24 3
   box-shadow:0 18px 40px rgb(60 40 10 / .22),inset 0 0 0 1px rgb(255 255 255 / .22)}
 html[data-bz-dark] .m40hall{background:linear-gradient(180deg,rgb(10 14 26 / .6) 0%,rgb(10 14 26 / .3) 28%,rgb(10 14 26 / .7) 100%),var(--hall) center top/cover no-repeat,#141824}
 .m40hall .card{background:color-mix(in srgb,var(--surface) 94%,transparent);border:0;box-shadow:0 10px 26px rgb(40 25 5 / .2)}
-.m40hall .m40door{display:flex;justify-content:center;margin:2px auto -6px}
-.m40hall .m40door img{width:min(62%,300px);height:auto;filter:drop-shadow(0 10px 16px rgb(40 25 5 / .35))}
+.m40hall .m40door{display:flex;justify-content:center;margin:-4px auto -10px}
+.m40hall .m40door img{width:min(52%,260px);height:auto;filter:drop-shadow(0 10px 16px rgb(40 25 5 / .35))}
 .m40hall .m40title{text-align:center;font-size:30px;color:#fff;text-shadow:0 2px 12px rgb(0 0 0 / .55)}
 .m40hall .m40leave{background:rgb(255 252 245 / .9);color:var(--ink)}
 html[data-bz-dark] .m40hall .m40leave{background:rgb(20 24 36 / .9);color:#F4EEE4}
 .m40how ol{margin:6px 0 8px;padding-left:20px;display:grid;gap:5px;font-size:14.5px}
 .m40head{border-left:4px solid var(--action) !important}
 .m40steps{list-style:none;margin:0;padding:0;display:flex;justify-content:center;gap:12px}
-.m40steps button{width:44px;height:44px;border-radius:50%;border:2px solid rgb(255 255 255 / .9);background:rgb(255 252 245 / .92);color:var(--ink);font-weight:800;font-size:16px;box-shadow:0 4px 12px rgb(40 25 5 / .25)}
+.m40steps button{display:grid;place-items:center;padding:0;width:44px;height:44px;border-radius:50%;border:2px solid rgb(255 255 255 / .9);background:rgb(255 252 245 / .92);color:var(--ink);font-weight:800;font-size:16px;box-shadow:0 4px 12px rgb(40 25 5 / .25)}
 .m40steps li.on button{background:var(--action);color:var(--action-ink,#fff);border-color:var(--action)}
 .m40steps li.done:not(.on) button{background:var(--grow);color:#fff;border-color:var(--grow)}
 html[data-bz-dark] .m40steps button{background:rgb(20 24 36 / .92);color:#F4EEE4}

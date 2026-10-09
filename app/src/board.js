@@ -561,10 +561,9 @@ export function mainStreet(opts = {}) {
           return `<div class="msbuy" style="background:var(--surface);border-radius:9px;padding:10px;text-align:center">
             <div class="sqico">${ico(sq.em, sq.em, 26)}</div>
             <b style="font-size:13px">${esc(sq.n)}</b>
-            <p class="small muted" style="margin:3px 0 4px">${sq.cost} now · ${sq.inc} every lap, forever</p>
-            ${left >= 0 ? `<p class="small mscush${left < need ? ' thin' : ''}" style="margin:0 0 7px">Leaves you ${left}. ${left < need
-              ? `A bad week costs about ${need}: one bill and you sell a shop at half price.`
-              : `Enough for a bad week (about ${need}).`}</p>` : '<p class="small muted" style="margin:0 0 7px">Not enough cash, and nothing lends to you here.</p>'}
+            <p class="small muted" style="margin:2px 0 3px">${sq.cost} now · ${sq.inc} a lap</p>
+            ${left >= 0 ? `<p class="small mscush${left < need ? ' thin' : ''}" style="margin:0 0 7px">Leaves ${left}; a bad week is ${need}.${left < need
+              ? ' A bill could force a half-price sale.' : ''}</p>` : '<p class="small muted" style="margin:0 0 7px">Not enough cash, and nothing lends to you here.</p>'}
             <div class="row" style="gap:6px">
               <button class="btn sm grow" data-act="mnBuy" ${p.cash < sq.cost ? 'disabled' : ''}>Buy · Y</button>
               <button class="btn ghost sm grow" data-act="mnPass">Pass · N</button></div></div>`;
