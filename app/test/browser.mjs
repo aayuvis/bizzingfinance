@@ -156,11 +156,12 @@ async function run(label, vp, isMobile, scheme) {
 
   /* F3 · a game opens on its title card; Start plays it over its painting; an answer moves */
   await goto('#/arcade');
-  await page.click('.cover[data-arg="nw"]'); await page.waitForTimeout(250);
+  await page.click('.cover[data-arg="sc"]'); await page.waitForTimeout(250);
   const intro = await page.evaluate(() => ({ h: (document.querySelector('.gintro h1') || {}).textContent, n: document.querySelectorAll('.gintro li').length, art: !!getComputedStyle(document.querySelector('.gintro') || document.body).getPropertyValue('--cover') }));
-  ok(`${label}: a game opens on a title card with its painting and three lines of how`, intro.h === 'Needs vs Wants' && intro.n === 3 && intro.art, JSON.stringify(intro));
+  ok(`${label}: a game opens on a title card with its painting and three lines of how`, intro.h === 'Smart Choices' && intro.n === 3 && intro.art, JSON.stringify(intro));
   await page.click('[data-act="gbegin"]'); await page.waitForTimeout(250);
-  await page.click('[data-act="nwNeed"]'); await page.waitForTimeout(60);
+  await page.click('[data-act="scMode"][data-arg="nw"]'); await page.waitForTimeout(150);
+  await page.click('[data-act="scSide"][data-arg="need"]'); await page.waitForTimeout(60);
   const moved = await page.evaluate(() => ({ flash: document.documentElement.dataset.flash || '', stage: !!document.querySelector('.gplay .stage') }));
   ok(`${label}: playing over the painting, and an answer moves the stage`, moved.stage && /^(ok|no)$/.test(moved.flash), JSON.stringify(moved));
   await page.click('[data-act="gquit"]').catch(() => {}); await page.waitForTimeout(150);
@@ -492,7 +493,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
   /* G10 · every game answers the keyboard AND a tap (tester mode opens them all) */
   {
-    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: '1', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1', sb: '1' };
+    const KEY = { so: '1', cr: 'ArrowLeft', sc: '1', mp: '1', cc: ' ', sr: '1', st: '1', mc: 'ArrowDown', mn: 'Enter', sb: '1' };
     await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
     const bad = [], painted = [];
     for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
@@ -648,7 +649,7 @@ async function demo() {
   /* deep links open ONE thing (owner, 3 Oct 2026): each route lands on, or opens, its own object */
   const DEEP = [['#/medals/cool-head', 'focus', /Cool head/], ['#/town/fix/fountain', 'focus', /dry fountain/i], ['#/store/handcart', 'focus', /handcart/i],
     ['#/atlas/chapter/c3', 'focus', /In, out/], ['#/letter/l3', 'sheet', /YOU HAVE WON/], ['#/market40/company/bigbox', 'sheet', /Fictional/],
-    ['#/play/nw', 'intro', /Needs vs Wants/], ['#/words/Interest', 'h1', /Money Words/]];
+    ['#/play/nw', 'intro', /Smart Choices/], ['#/play/tt', 'intro', /Month Planner/], ['#/words/Interest', 'h1', /Money Words/]];
   const missed = [];
   for (const [r, how, re] of DEEP) {
     await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(200);
@@ -1034,16 +1035,18 @@ async function kitChecks() {
   ok('drill: a right answer bursts coins from the option chosen (the fx layer appears)', await kp.evaluate(() => window.__fx) > 0);
   await kp.waitForFunction(() => !document.querySelector('.fxlayer'), null, { timeout: 5000 }).catch(() => {});
   ok('drill: the fx layer clears itself when it has nothing left to draw', await kp.evaluate(() => !document.querySelector('.fxlayer')));
-  /* the drill games share it: Times Twelve, right by its own key */
+  /* the drill games share it: Smart Choices, right by its own key */
   /* settle on Play first: a hash change that lands after a game starts quits it */
   await kp.evaluate(() => { window.BZF.fire('closeCard'); location.hash = '#/play'; });
-  await kp.waitForSelector('.cover[data-arg="tt"]');
-  await kp.evaluate(() => { window.__fx = 0; const B = window.BZF; B.fire('game', 'tt'); B.fire('gbegin', 'tt'); });
-  await kp.waitForSelector('.gplay [data-act="ttPick"]');
+  await kp.waitForSelector('.cover[data-arg="sc"]');
+  await kp.evaluate(() => { window.__fx = 0; const B = window.BZF; B.fire('game', 'sc'); B.fire('gbegin', 'sc'); });
+  await kp.waitForSelector('.gplay [data-act="scMode"]');
+  await kp.keyboard.press('1'); await kp.waitForSelector('.gplay [data-act="scSide"]');
   const tt0 = await kp.evaluate(() => window.__fx);
-  await kp.keyboard.press(String(await kp.evaluate(() => window.BZF.R.game.qs[0].a + 1)));
+  await kp.keyboard.press(await kp.evaluate(() => ({ need: 'ArrowLeft', both: 'ArrowDown', want: 'ArrowRight' })[window.BZF.R.game.st.deck[0].a]));
+  if (await kp.evaluate(() => window.BZF.R.game.st.step === 'reason')) await kp.keyboard.press(String(await kp.evaluate(() => window.BZF.R.game.st.deck[0].reason + 1)));
   await kp.waitForFunction(() => window.__fx > 0, null, { timeout: 3000 }).catch(() => {});
-  ok('drill game: Times Twelve bursts on a right answer and not before', tt0 === 0 && await kp.evaluate(() => window.__fx) > 0, `${tt0} → ${await kp.evaluate(() => window.__fx)}`);
+  ok('drill game: Smart Choices bursts on a right answer and not before', tt0 === 0 && await kp.evaluate(() => window.__fx) > 0, `${tt0} → ${await kp.evaluate(() => window.__fx)}`);
   await kp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); });
   ok('kit: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await kctx.close();
@@ -1323,8 +1326,8 @@ async function gameChecks() {
   });
   res.stEnd = await endContrast();
   await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
-  /* Budget Blitz's end card, dark */
-  await start('bb'); await p.evaluate(() => { const g = window.BZF.R.game; for (let i = 0; i < 12 && !g.st.done; i++) g.decide(false); });
+  /* the Month Planner's end card (Budget Blitz rebuilt), dark */
+  await start('mp'); await p.evaluate(() => { const g = window.BZF.R.game; for (let i = 0; i < 60 && !g.st.done; i++) { if (g.st.step === 'yearly') { g.act('mpKey', '1'); g.act('mpCheck'); g.act('mpCheck'); } else if (g.st.step === 'month') g.act('mpNext'); else g.act('mpSkip'); } });
   await p.waitForTimeout(200); res.bbEnd = await endContrast();
   await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
   /* Compound Climb's charge: hold 800 ms of wall time, let go between frames */
@@ -1343,7 +1346,7 @@ async function gameChecks() {
   ok('clocks at 4 fps run at 1.0× wall time (±5%): Change Rush, Market Storm, the Sweep job', near(res.cr) && near(res.st) && near(res.sweep), JSON.stringify({ cr: res.cr, st: res.st, sweep: res.sweep }));
   ok('Compound Climb\'s charge at 4 fps is the time actually held, to the moment of letting go (±5%)', res.cc.got > res.cc.want * 0.95 && res.cc.got < res.cc.want * 1.05, JSON.stringify(res.cc));
   ok('a hidden tab pauses the game, and it carries on when the tab is back', res.hidden.held === 0 && res.hidden.after > 500, JSON.stringify(res.hidden));
-  ok('dark mode: Budget Blitz\'s and Market Storm\'s end-card sentence reads (contrast ≥ 4.5)', res.stEnd >= 4.5 && res.bbEnd >= 4.5, `storm ${res.stEnd} · blitz ${res.bbEnd}`);
+  ok('dark mode: the Month Planner\'s and Market Storm\'s end-card sentence reads (contrast ≥ 4.5)', res.stEnd >= 4.5 && res.bbEnd >= 4.5, `storm ${res.stEnd} · planner ${res.bbEnd}`);
   /* §1.8 · the Market Cup's steppers are thumb-sized */
   await start('mc');
   const step = await p.evaluate(() => [...document.querySelectorAll('.gplay .stepper button')].map((b) => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }));
@@ -1532,6 +1535,37 @@ async function shiftChecks(label, vp, isMobile, scheme) {
   await ctx.close();
 }
 
+/* T16 · the Play tab is ten cards in three groups (docs/12 §3): Flagships (Stall of My Own and
+   the Market Game) · Train (Smart Choices, Month Planner, Compound Climb, Save or Borrow?) ·
+   Play (Change Rush, Market Storm, the Market Cup, Main Street) — and no retired card */
+async function playTabChecks() {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage(); const errors = []; p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto(URL0 + '?demo#/play'); await p.waitForSelector('.cover');
+  const t = await p.evaluate(() => {
+    const groups = [...document.querySelectorAll('.sect[data-group]')].map((x) => x.dataset.group);
+    const names = [...document.querySelectorAll('main .cover b')].map((b) => b.textContent.trim());
+    return { groups, names, wide: document.scrollingElement.scrollWidth <= innerWidth + 1 };
+  });
+  const want = ['Stall of My Own', 'The Market Game', 'Smart Choices', 'Month Planner', 'Compound Climb', 'Save or Borrow?', 'Change Rush', 'Market Storm', 'The Market Cup', 'Main Street'];
+  ok('T16: Play shows ten cards in three groups — Flagships · Train · Play — and no retired card',
+    t.names.length === 10 && JSON.stringify(t.groups) === '["flagship","train","play"]' && want.every((n) => t.names.includes(n))
+    && !t.names.some((n) => /Stall Rush|Needs vs Wants|Scam Spotter|Budget Blitz|Times Twelve|The Snowball/.test(n)) && t.wide, JSON.stringify(t));
+  await p.goto(URL0 + '?demo#/play/sr'); await p.waitForTimeout(500);
+  ok('an old link to a retired card opens the one that absorbed it (#/play/sr → Stall of My Own)', await p.evaluate(() => /Stall of My Own/.test((document.querySelector('.gintro') || document.body).textContent)));
+  /* Market Storm on a phone: the way out is in reach when the storm starts, not below the fold */
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); B.fire('game', 'st'); B.fire('gbegin', 'st'); });
+  await p.waitForSelector('.gplay [data-act="stRule"]');
+  await p.keyboard.press('1'); await p.keyboard.press('1'); await p.keyboard.press('Enter');
+  await p.waitForSelector('.gplay [data-act="stSell"]', { timeout: 8000 });
+  const reach = await p.evaluate(() => { const b = document.querySelector('.gplay [data-act="stSell"]').getBoundingClientRect(), t = document.querySelector('[data-bz=tabbar]');
+    return { bottom: Math.round(b.bottom), limit: Math.round(t && getComputedStyle(t).display !== 'none' ? t.getBoundingClientRect().top : innerHeight) }; });
+  ok('Market Storm on a phone: SELL is on screen, above the tab bar, the moment the storm starts', reach.bottom <= reach.limit, JSON.stringify(reach));
+  await p.evaluate(() => window.BZF.fire('gquit'));
+  ok('Play tab: nothing threw', !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1540,6 +1574,7 @@ await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, 
 await safely('demo', demo);
 await safely('kit', kitChecks);
 await safely('deck', deckChecks);
+await safely('playtab', playTabChecks);
 await safely('games', gameChecks);
 await safely('sb-light', () => sbChecks('sb-light', 'light'));
 await safely('sb-dark', () => sbChecks('sb-dark', 'dark'));

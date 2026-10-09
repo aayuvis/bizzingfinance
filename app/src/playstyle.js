@@ -8,6 +8,16 @@ const CSS = `
    series, Main Street's drawn street and the Market Game's Exchange hall. Light and dark. */
 
 /* ── Market Storm · the plan is the game (docs/12 §2.5) ── */
+.gplay .stacts{display:grid;gap:8px}
+/* on a phone the way out sits right under the price, above the news and the shouting: the SELL
+   button must be in reach the moment the storm starts, not below the fold */
+@media (max-width:640px){
+  .gplay .ststage > div:first-child{order:0}
+  .gplay .ststage .stchart{order:1}
+  .gplay .ststage .stacts{order:2}
+  .gplay .ststage .stnews,.gplay .ststage .stshout,.gplay .ststage .stplan{order:3}
+  .gplay .ststage .hint,.gplay .ststage > .grow{order:4}
+}
 .gplay .stcard{text-align:left;display:grid;gap:8px;padding:14px 16px;border-radius:var(--r-lg,16px)}
 .gplay .stfacts{margin:0;padding-left:18px;display:grid;gap:3px;font-size:14px;font-weight:600;color:var(--ink)}
 .gplay .stq{display:grid;gap:7px;padding:10px;border-radius:var(--r-md,12px);background:rgb(255 252 245 / .9);box-shadow:0 6px 16px rgb(40 25 5 / .14)}

@@ -191,6 +191,15 @@ console.log(`\nBizzington · ${YEARS} years × ${SEEDS.length} seeds\n${'─'.re
   ok('every game\'s maximum wage per round is within 1.5× of the norm', top.every(([, max, perf]) => max <= 1.5 * NORM && perf >= NORM / 1.5 && max >= perf),
      top.map(([id, max]) => `${id} ${max}`).join(' · ') + ` (norm ${NORM} units)`);
   ok('a nonsense score pays nothing, never a negative or NaN wage', ids.every((id) => AR.wageUnits(id, -5) === 0 && AR.wageUnits(id, NaN) === 0));
+  /* the Market Game pays a decade on its reading (docs/12 §4): the norm for every sheet read
+     right, nothing for none, through the same daily cap — never on the money it made */
+  { const c = fresh(), w0 = c.money.wallet;
+    const all = AR.payReading('m40', 'The Market Game', 3, 3), none = AR.payReading('m40', 'The Market Game', 0, 3), w1 = c.money.wallet;
+    AR.payReading('m40', 'The Market Game', 3, 3); AR.payReading('m40', 'The Market Game', 3, 3);   /* paid plays two and three (a nothing-read decade used none) */
+    const capped = AR.payReading('m40', 'The Market Game', 3, 3);
+    ok('the Market Game pays a decade on its reading: the norm for three of three, nothing for none, and the fourth paid play of a day is practice',
+      all.paid === price(NORM) && none.paid === 0 && w1 - w0 === all.paid && capped.paid === 0 && capped.capped && capped.line === AR.CAPPED_LINE,
+      `3/3 ${all.paid} · 0/3 ${none.paid} · capped ${capped.paid}`); }
 
   /* played: a careful round of every game, in INR, through the game's own controls */
   const rows = [];
@@ -198,14 +207,16 @@ console.log(`\nBizzington · ${YEARS} years × ${SEEDS.length} seeds\n${'─'.re
      each week's wage to this same norm through payout() (SA7). Save or Borrow? is three typed
      sums and a reading, played by test/saveborrow.mjs, which holds a whole round to exactly
      price(10) through payout() into the one wallet. */
-  for (const id of ids.filter((x) => x !== 'so' && x !== 'sb')) {
+  /* Smart Choices is three tables on one card: each is a round of its own, so each is a row */
+  const runs = ids.filter((x) => x !== 'so' && x !== 'sb').flatMap((id) => (id === 'sc' ? ['nw', 'ss', 'bb'].map((mode) => [id, mode]) : [[id, null]]));
+  for (const [id, mode] of runs) {
     let best = { units: -1 };
     for (const seed of [1, 7, 42]) {
       const c = fresh(), w0 = c.money.wallet;
-      const g = play(id, seed, 'standard');
+      const g = play(id, seed, 'standard', 'best', { mode });
       const p = AR.lastPay();
       const delta = c.money.wallet - w0;
-      if (p.units > best.units) best = Object.assign({ id, delta, finished: g.st ? g.st.done : g.g.done }, p);
+      if (p.units > best.units) best = Object.assign({ id: mode ? id + ':' + mode : id, delta, finished: g.st ? g.st.done : g.g.done }, p);
     }
     rows.push(best);
   }
@@ -214,7 +225,7 @@ console.log(`\nBizzington · ${YEARS} years × ${SEEDS.length} seeds\n${'─'.re
      rows.map((r) => `${r.id} ${r.units}u=₹${r.delta}`).join(' · '));
   ok('each pays exactly price(units): one price(), never a second on money already converted', rows.every((r) => r.delta === price(r.units) && r.paid === r.delta),
      rows.filter((r) => r.delta !== price(r.units)).map((r) => `${r.id}: paid ${r.delta}, price ${price(r.units)}`).join(' · '));
-  const perfect = rows.filter((r) => ['cr', 'nw', 'ss', 'tt', 'sn', 'bb', 'st', 'sr'].includes(r.id));
+  const perfect = rows.filter((r) => ['cr', 'sc:nw', 'sc:ss', 'sc:bb', 'mp', 'cc', 'st', 'sr'].includes(r.id));
   ok('a perfect round of the scored games pays about the norm (within 1.5× either way)', perfect.every((r) => r.units >= NORM / 1.5),
      perfect.map((r) => `${r.id} ${r.units}`).join(' · '));
 

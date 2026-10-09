@@ -37,7 +37,7 @@ import { BLD } from './buildings-gen.js';
 import { WALKS } from './walks-gen.js';
 import { CO } from './companions-gen.js';
 import { HOMES, gameOpen } from './content.js';
-import { GAMES as GAME_DEFS } from './gamelist.js';
+import { GAMES as GAME_DEFS, COVER_ALIAS } from './gamelist.js';
 
 /* ── more on each card (owner, 3 Oct 2026) ─────────────────────────────────
    The builder gives every card its provenance line (source) and an exact route.
@@ -55,8 +55,8 @@ const topicVal = (it, k) => ((it.topics || []).find((t) => t.startsWith(k + ':')
    companion itself — and when nothing specific exists it shows none. Never a plate. */
 const src = (o) => (o && o.src) || null;
 export function artFor(it) {
-  const k = it.kind, m = /^#\/play\/(\w+)/.exec(it.route || '');
-  if (m && COVERS[m[1]] && ['game', 'needwant', 'scamspot', 'chance'].includes(k)) return src(COVERS[m[1]]);
+  const k = it.kind, m = /^#\/play\/(\w+)/.exec(it.route || ''), cov = m && (COVERS[m[1]] || COVERS[COVER_ALIAS[m[1]]]);
+  if (cov && ['game', 'needwant', 'scamspot', 'chance'].includes(k)) return src(cov);
   if (['lesson', 'tryit', 'yourturn'].includes(k)) return ART['cast-' + topicVal(it, 'who')] || null;
   if (['cast', 'castline'].includes(k) && !topicVal(it, 'letter')) return ART['cast-' + topicVal(it, 'who')] || null;
   if (k === 'chapter') { const w = worldOfChapter(it.level); return w ? src(WALKS[w.id]) : null; }

@@ -244,8 +244,9 @@ ok(mean(results.easy.overWaste) === 0, 'Easy: nothing goes off, as the level say
 /* ── the arcade knows it ──────────────────────────────────────────────── */
 {
   const g = GAMES.find((x) => x.id === 'so');
-  ok(g && g.kind === 'flagship' && g.needs === GAMES.find((x) => x.id === 'sr').needs, 'it is in the arcade as a flagship, behind the chapter Stall Rush needs');
-  ok(GAMES.some((x) => x.id === 'sr'), 'Stall Rush is still there (a later change retires it)');
+  ok(g && g.kind === 'flagship' && g.needs === 'c3' && !GAMES.some((x) => x.id === 'sr'), 'it is in the arcade as a flagship, behind the chapter Stall Rush needed — and Stall Rush\'s own card is gone, folded into it (docs/12 §3)');
+  { const { RETIRED } = await import('../src/gamelist.js');
+    ok(!GAMES.some((x) => x.id === 'sr') && RETIRED.sr === 'so', 'Stall Rush is retired into it: its card is gone, and an old #/play/sr link opens Stall of My Own'); }
   ok(['soServe', 'soStock', 'soBuy', 'soOpen'].every((a) => GAME_ACTS.includes(a)), 'its taps are wired through the arcade\'s action table');
   ok(TIERS.every((t) => AR.ARCADE_TIERS.so[t].par > 0 && AR.ARCADE_TIERS.so[t].says) && AR.ARCADE_GOALS.so.length === 3, 'three levels, each with a par, and three goals');
   const L = S.LEVELS;

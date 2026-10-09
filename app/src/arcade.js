@@ -22,15 +22,23 @@ import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
 import { seasonFor, cupRows, bellaCup, cupScore, CUP_SERIES, CUP_WEEKS } from './cup.js';
 import './playstyle.js';   /* the Play games' styles load with the games, not on the first screen */
 import { stormFor, stormValue, stormScore, planWords, RULES, START as STORM_START, HALF as STORM_HALF, STORM_PAR, WOBBLE } from './storm.js';
+import { smartChoices, SC_TIERS, SC_GOALS, SC_PRACTISED } from './smartchoices.js';
+import { monthPlanner, MP_TIERS, MP_GOALS } from './monthplanner.js';
+import { NEEDS, SS_EXAMPLES } from './smartsim.js';
+import { CC, CC_MAX, ccYear, ccBands, ccClose, ccScore } from './climbsim.js';
+import { trainStyle } from './trainstyle.js';
 
-import { GAMES, GAME_ACTS } from './gamelist.js';
+import { GAMES, GAME_ACTS, COVER_ALIAS, GROUP } from './gamelist.js';
 
 const K = () => sim.kid(R.s);
 
-export { GAMES };
+export { GAMES, SC_PRACTISED };
+/* the written cards My Feed reads (tools/feed-corpus.mjs): Smart Choices' needs-and-wants pool,
+   and ten messages from its scam generator */
+export const NW = NEEDS, SS = SS_EXAMPLES;
 /* Stall of My Own absorbs Stall Rush, so until it has a painting of its own it wears the stall's;
    Save or Borrow?, which has no cover yet, wears the square the Bank stands on */
-const COVER_OF = { so: 'sr' };
+const COVER_OF = Object.assign({ so: 'sr' }, COVER_ALIAS);
 const coverOf = (id) => COVERS[id] || COVERS[COVER_OF[id]] || (id === 'sb' ? { src: plateSrc(2) } : null);
 
 export function viewArcade() {
@@ -61,21 +69,19 @@ export function viewArcade() {
      best thing here was not for them. Open, it leads; locked, it waits at
      the bottom with the level that opens it. */
   const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level ' + M40_LEVEL });
+  /* ten cards, three groups (docs/12 §3): the flagships first — the Market Game waits there,
+     locked, with the level that opens it — then Train and Play, in the catalogue's order */
+  const of = (grp) => GAMES.filter((g) => GROUP[g.id] === grp);
   return `<div class="stack">
     ${hero({ eyebrow: 'The Arcade · practise it', title: 'Play', who: 'pip',
       line: 'Game wages go into your one wallet. There\'s no second, magic money.' })}
-    ${m40open ? m40 : ''}
-    <div class="sect"><b>A season of your own</b><i></i></div>
-    ${GAMES.filter((g) => g.kind === 'flagship').map((g) => cover(g, { big: true, tint: 'var(--grow)' })).join('')}
-    <div class="sect"><b>The board game · nobody goes bankrupt</b><i></i></div>
-    ${GAMES.filter((g) => g.kind === 'board').map((g) => cover(g, { big: true, tint: 'var(--treasure)' })).join('')}
-    <div class="sect"><b>A few minutes each</b><i></i></div>
-    <div class="covers">${GAMES.filter((g) => g.kind === 'action').map((g) => cover(g)).join('')}</div>
-    <div class="sect"><b>Quick drills · no reflexes required</b><i></i></div>
-    <div class="covers">${GAMES.filter((g) => g.kind === 'drill').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
-    <div class="sect"><b>Think it through · at the Bank</b><i></i></div>
-    <div class="covers">${GAMES.filter((g) => g.kind === 'decision').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
-    ${m40open ? '' : `<div class="sect"><b>Later on</b><i></i></div>${m40}`}
+    <div class="sect" data-group="flagship"><b>Flagships · a season, and forty years</b><i></i></div>
+    ${of('flagship').map((g) => cover(g, { big: true, tint: 'var(--grow)' })).join('')}
+    ${m40}
+    <div class="sect" data-group="train"><b>Train · think it through, no reflexes required</b><i></i></div>
+    <div class="covers">${of('train').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
+    <div class="sect" data-group="play"><b>Play · a few minutes each</b><i></i></div>
+    <div class="covers">${of('play').map((g) => cover(g, { tint: g.kind === 'board' ? 'var(--treasure)' : undefined })).join('')}</div>
     ${c.market.best ? `<p class="small muted cupbest" style="padding:0 6px">Best Market Cup: <b>${esc(c.market.best)}</b>${Array.isArray(c.market.cups) && c.market.cups.length > 1
       ? ` · last cups <span class="tabnum">${c.market.cups.slice(-5).join(' → ')}</span>, ${cupTrendWord(c.market.cups)}` : ''}</p>` : ''}
   </div>`;
@@ -86,24 +92,20 @@ export function viewArcade() {
 export const HOW = {
   so: ['Eight weeks on Market Row. Each week: plan, then sixty seconds of market day.', 'Buy the stock, set the prices, save for a better cart or a sign.', 'Plan with ↑↓ ←→ and ⏎. Serve 1–4, R to restock. Or tap.'],
   cr: ['Coins fall. Catch exactly the amount asked for.', 'One too many is overpaying.', 'Move with ← → or drag.'],
-  nw: ['A thing appears. Is it a need or a want?', 'Some can be both — those are the interesting ones.', 'Tap a side, or press ← →.'],
-  ss: ['A message arrives. Real, or a trap?', 'Traps rush you, flatter you, or want a secret kept.', 'Tap a side, or press ← →.'],
-  bb: ['A month of money. Bills arrive one at a time.', 'Pay what you must, keep what you can.', 'Tap a choice, or press 1 or 2.'],
-  cc: ['Hold to let your money grow, let go to bank it.', 'Grow too greedily and a crash can wipe it out.', 'Hold space, or press and hold.'],
+  sc: ['Three tables: Needs and Wants, Scam Spotter, Better Buy. Pick one.', '"Both" needs its reason; a trap needs its giveaway; a shelf needs its price of one.', 'Number keys and arrows, or tap. Enter goes on.'],
+  mp: ['Three months of money, and the bills one at a time.', 'Pay the needs, keep a little back. A need you skip moves to next month.', 'Press 1 or 2, type with the keys or the pad — or tap.'],
+  cc: ['Hold to let your money grow, let go to bank it. Grow too greedily and a crash can wipe it out.', 'Every five years, drag the marker to where a steady charge would take you.', 'Hold space, or press and hold. ↑ ↓ and Enter for the marker.'],
   sr: ['Sixty seconds of customers at your stall.', 'Serve the right thing at the right price.', 'Tap, or press 1–4 and R.'],
   st: ['Before the storm, write your plan: when you would sell, and why you bought.', 'Then the price falls, everyone shouts, the news arrives. Nothing sells unless you do.', '1 2 3 to plan, Space re-reads it, SELL is the only way out.'],
   mc: ['A season of the Exchange, a week at a time.', 'Spread your money and keep your nerve.', 'Arrows to choose, Enter to confirm.'],
   mn: ['The board game: buy shops, collect rent.', 'Win when your street pays for your life.', 'Enter to roll, Y or N to buy.'],
-  tt: ['Monthly numbers, turned into yearly ones.', 'Times twelve, in your head.', 'Tap an answer, or press 1–4.'],
-  sn: ['Guess where compounding lands.', 'Nobody guesses high enough — try anyway.', 'Tap an answer, or press 1–4.'],
   sb: ['Three things you want, a wage, and a few ways to get each one.', 'Type what borrowing costs in all, pick a path, then watch the weeks.', 'Number keys and Enter, or tap.'],
 };
 export const PRACTISED = {
   so: 'running a stall over weeks: stock, prices and waste — and that busy is not the same as profitable',
-  cr: 'paying exact amounts and counting change', nw: 'telling needs from wants', ss: 'spotting the shape of a scam',
-  bb: 'paying bills first and living inside a month', cc: 'how compounding grows — and why greed crashes it', sr: 'pricing and serving under time pressure',
+  cr: 'paying exact amounts and counting change', sc: 'choosing well: needs and wants, the shape of a scam, and the price of one',
+  mp: 'paying needs first, keeping a buffer, and what a small bill costs in a year', cc: 'how compounding grows, how to estimate it — and why greed crashes it', sr: 'pricing and serving under time pressure',
   st: 'making a plan before the storm and keeping to it — holding through noise, selling when the news says the business has stopped', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
-  tt: 'turning monthly costs into yearly ones', sn: 'how big compounding really gets',
   sb: 'what borrowing really costs in all, and keeping a cushion for surprises',
 };
 /* ── G8 · three levels, G9 · three goals ──────────────────────────────────
@@ -130,25 +132,9 @@ export const ARCADE_TIERS = {
     standard: { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55, par: 74, says: 'The round as it comes.' },
     tricky:   { fall: 1.25, spawn: 0.85, coins: 5, min: 3, max: 5, help: 0.45, par: 80, says: 'Faster coins and bigger amounts.' },
   },
-  /* n: cards in a round (0 = all) · clock: ms to decide each card (0 = no clock) · par: cards to get right */
-  nw: {
-    easy:     { n: 8, clock: 0, says: 'A shorter round: eight cards.' },
-    standard: { n: 0, clock: 0, says: 'Every card, no clock.' },
-    tricky:   { n: 0, clock: 6000, says: 'Every card, and six seconds to decide each one.' },
-  },
-  ss: {
-    easy:     { n: 6, clock: 0, says: 'A shorter round: six messages.' },
-    standard: { n: 0, clock: 0, says: 'Every message, no clock.' },
-    tricky:   { n: 0, clock: 9000, says: 'Every message, and nine seconds to decide — the way a real one rushes you.' },
-  },
-  /* pot: the month's money, × · first: which bills arrive first · par: the most a month can earn (decision points) */
-  bb: {
-    easy:     { pot: 1.25, first: null, par: 14, says: 'A roomier month.' },
-    standard: { pot: 1, first: null, par: 14, says: 'The month as it comes.' },
-    tricky:   { pot: 0.8, first: 'wants', par: 14, says: 'A tight month, and the treats arrive before the bills.' },
-  },
   /* charge: how fast holding charges · target: the line (the badge and a goal) · par: the pay's
      yardstick — the same on every level, because what a year grows by never depends on the line */
+  /* par: the decision score's ten (climbsim.js CC_MAX) — the same on every level */
   cc: {
     easy:     { charge: 0.75, target: 360, says: 'The charge fills slower, so the middle is easier to hit. The line is lower.' },
     standard: { charge: 1, target: 420, says: 'Fifteen years, the line at 420.' },
@@ -174,24 +160,9 @@ export const ARCADE_TIERS = {
     standard: { shock: 1, crash: 1, says: 'The season as it comes.' },
     tricky:   { shock: 1.5, crash: 1.4, says: 'A wild market with a deeper red week.' },
   },
-  /* set: which numbers · par: questions to get right */
-  tt: {
-    easy:     { set: 'easy', says: 'Round numbers.' },
-    standard: { set: 'standard', says: 'Everyday numbers.' },
-    tricky:   { set: 'tricky', says: 'Awkward numbers, the kind real prices are.' },
-  },
-  sn: {
-    easy:     { set: 'easy', says: 'Shorter times and friendly rates.' },
-    standard: { set: 'standard', says: 'Ten to thirty years.' },
-    tricky:   { set: 'tricky', says: 'Odd rates and long horizons.' },
-  },
 };
 /* the pars that are a fixed set: worked out from the game itself, so they cannot drift */
-ARCADE_TIERS.nw.easy.par = 8; ARCADE_TIERS.nw.standard.par = 12; ARCADE_TIERS.nw.tricky.par = 12;
-ARCADE_TIERS.ss.easy.par = 6; ARCADE_TIERS.ss.standard.par = 10; ARCADE_TIERS.ss.tricky.par = 10;
-ARCADE_TIERS.cc.easy.par = 420; ARCADE_TIERS.cc.standard.par = 420; ARCADE_TIERS.cc.tricky.par = 420;
-ARCADE_TIERS.tt.easy.par = 8; ARCADE_TIERS.tt.standard.par = 8; ARCADE_TIERS.tt.tricky.par = 8;
-ARCADE_TIERS.sn.easy.par = 6; ARCADE_TIERS.sn.standard.par = 6; ARCADE_TIERS.sn.tricky.par = 6;
+ARCADE_TIERS.cc.easy.par = CC_MAX; ARCADE_TIERS.cc.standard.par = CC_MAX; ARCADE_TIERS.cc.tricky.par = CC_MAX;
 /* Main Street: baseExp is everyone's starting expenses a lap (board.js); its pay is scaled by
    Standard's over the level's, so its par is the life it has to pay for */
 ARCADE_TIERS.mn = {
@@ -200,6 +171,10 @@ ARCADE_TIERS.mn = {
   tricky:   { baseExp: 30, par: 30, says: 'A dearer life: it takes a bigger street to pay for it.' },
 };
 ARCADE_TIERS.sb = SB_TIERS;
+/* Smart Choices and the Month Planner: each mode's knobs are smartsim.js / monthsim.js's; every
+   round is scored as a share of its own points (SHARE below), so a level's par is that set */
+ARCADE_TIERS.sc = SC_TIERS;
+ARCADE_TIERS.mp = MP_TIERS;
 export const TIERLESS = {};
 
 /* Three goals per game, each a decision you can choose to make. They read the run's
@@ -216,25 +191,12 @@ export const ARCADE_GOALS = {
     { id: 'clean', name: 'A whole round without overpaying', check: (r) => r.finished && r.overpays === 0 && r.exact >= 2 },
     { id: 'five', name: 'Five exact amounts before a single overpay', check: (r) => r.firstRun >= 5 },
   ],
-  nw: [
-    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
-    { id: 'needs', name: 'Every need called a need', check: (r) => r.needWrong === 0 },
-    { id: 'wants', name: 'Every want called a want', check: (r) => r.wantWrong === 0 },
-  ],
-  ss: [
-    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
-    { id: 'notrap', name: 'Never fell for a trap', check: (r) => r.scamWrong === 0 },
-    { id: 'trust', name: 'Trusted every real message', check: (r) => r.safeWrong === 0 },
-  ],
-  bb: [
-    { id: 'musts', name: 'Every bill you needed, paid', check: (r) => r.mustMissed === 0 },
-    { id: 'spare', name: 'Needs paid, and money left at the end', check: (r) => r.mustMissed === 0 && r.left > 0 },
-    { id: 'quarter', name: 'Needs paid, and a quarter of the month kept', check: (r) => r.mustMissed === 0 && r.left >= r.pot / 4 },
-  ],
+  sc: SC_GOALS,
+  mp: MP_GOALS,
   cc: [
-    { id: 'target', name: 'Over the target line', check: (r) => r.reached },
-    { id: 'nofall', name: 'Fifteen years without one going backwards', check: (r) => r.years >= 15 && r.falls === 0 },
+    { id: 'target', name: 'Over the target line', check: (r) => r.reached === true },
     { id: 'steady', name: 'Never charged past three-quarters', check: (r) => r.years >= 15 && r.maxCharge <= 75 },
+    { id: 'estimate', name: 'Every estimate inside the steady band', check: (r) => r.estimates > 0 && r.estIn === r.estimates },
   ],
   sr: [
     { id: 'profit', name: 'Made a profit', check: (r) => r.profit > 0 },
@@ -251,24 +213,14 @@ export const ARCADE_GOALS = {
     { id: 'nerve', name: 'Kept your nerve: moved 40% or less all cup', check: (r) => r.churn <= 40 },
     { id: 'bella', name: 'Beat Boring Bella on cup score', check: (r) => r.beatBella },
   ],
-  tt: [
-    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
-    { id: 'weekly', name: 'Every weekly one right', check: (r) => r.weeklyWrong === 0 },
-    { id: 'yearly', name: 'Saw through the yearly price', check: (r) => r.compareRight },
-  ],
   mn: [
     { id: 'win', name: 'Your street paid for your life', check: (r) => r.won },
     { id: 'four', name: 'Owned four businesses at the end', check: (r) => r.owned >= 4 },
     { id: 'nosell', name: 'Kept a buffer: never had to sell at half price', check: (r) => r.sold === 0 && r.owned >= 1 },
   ],
-  sn: [
-    { id: 'perfect', name: 'All right first time', check: (r) => r.right === r.n },
-    { id: 'nosimple', name: 'Never picked the adding-up answer', check: (r) => r.simple === 0 },
-    { id: 'long', name: 'Every one over the longest time right', check: (r) => r.longWrong === 0 },
-  ],
 };
 
-let current = null, curTier = 'standard', lastGoals = null, curSeed = null, lastOffer = null;
+let current = null, curTier = 'standard', lastGoals = null, curSeed = null, lastOffer = null, curPractised = null;
 /* the knobs of the game being played, at the level it was started on */
 const knobs = (id) => ARCADE_TIERS[id][curTier] || ARCADE_TIERS[id].standard;
 
@@ -282,6 +234,14 @@ const knobs = (id) => ARCADE_TIERS[id][curTier] || ARCADE_TIERS[id].standard;
    top wage is a little higher — and still inside 1.5× the norm (test/economy.mjs). */
 export const WAGE_NORM = 12, PERFECT = 1.6;
 export const WAGE_SCALE = { mn: 1.4 };
+/* The Market Game (marketgame.js) pays a finished decade on how well the child read the
+   sheets — right answers of those asked, never the money — through the same door and cap */
+export function payReading(id, label, right, asked) {
+  const c = K(), share = PERFECT * right / Math.max(1, asked);
+  sim.questTick(c, 'game', 1);
+  const paid = payout(wageUnits(id, share), label);
+  return { paid, capped: lastCapped, line: CAPPED_LINE };
+}
 export function wageUnits(id, share) {
   const s = Math.max(0, Math.min(PERFECT, Number.isFinite(share) ? share : 0));
   return Math.round(WAGE_NORM * (WAGE_SCALE[id] || 1) * s / PERFECT);
@@ -290,12 +250,11 @@ export function wageUnits(id, share) {
    as a share of a fixed set calls par five in eight right, so a perfect set is 1.6× par. */
 export const SHARE = {
   cr: (r, par) => r.score / par,
-  nw: (r) => PERFECT * r.right / Math.max(1, r.n),
-  ss: (r) => PERFECT * r.right / Math.max(1, r.n),
-  tt: (r) => PERFECT * r.right / Math.max(1, r.n),
-  sn: (r) => PERFECT * r.right / Math.max(1, r.n),
-  bb: (r) => PERFECT * r.points / 14,
-  cc: (r, par) => (r.ruined ? 0 : PERFECT * r.money / par),
+  /* the share of the round's own points: a mode's set (smartsim.js scMax), the month's best plan
+     (monthsim.js mpBest), the climb's ten (climbsim.js) — the decision, never the tower or the leftover */
+  sc: (r) => PERFECT * r.points / Math.max(1, r.max),
+  mp: (r) => PERFECT * r.points / Math.max(1, r.best),
+  cc: (r) => PERFECT * r.points / CC_MAX,
   sr: (r, par) => Math.max(0, r.profitU) / par,
   st: (r) => PERFECT * r.points / STORM_PAR,   /* the plan kept and the news read; never the money */
   mc: (r, par) => r.total / Math.max(1, r.par || par),   /* r.par: Bella on this round's own season */
@@ -422,12 +381,12 @@ if (typeof document !== 'undefined' && document.addEventListener) {
   });
 }
 export function startGame(id, seed, tier) {
-  current = id; lastGoals = null; lastOffer = null; lastCapped = false;
+  current = id; lastGoals = null; lastOffer = null; lastCapped = false; curPractised = null;
   curTier = TIER_IDS.includes(tier) ? tier : (ARCADE_TIERS[id] ? tierOf(K(), id) : 'standard');
   /* §1.2 · a seed per play, kept with the round — or the one given, to replay it */
   curSeed = seed != null ? seed : playSeed();
-  const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
-    cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
+  const f = { cr: changeRush, sc: (sd) => smartChoices(trainKit('sc', 'Smart Choices'), sd), mp: (sd) => monthPlanner(trainKit('mp', 'Month Planner'), sd),
+    cc: compoundClimb, sr: stallRush, st: marketStorm,
     mc: marketCup, sb: (sd) => saveBorrow(sbKit(), sd), mn: (sd) => mainStreet({ seed: sd, baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, foot: (won) => endFoot(won), endKey,
       /* Main Street pays through the same door as every other game (§1.1, §2.9): the cap counts it */
       onFinish: (run) => roundEnd('mn', run, 'Main Street') }) }[id];
@@ -460,6 +419,12 @@ const sbKit = () => ({ tier: curTier, K, hud, endCard, tierChip, payout, quit: q
   /* the one door every finish goes through (§1.1, §1.7): pay, the decision score, the level offer */
   finish: (run) => roundEnd('sb', run, 'Save or Borrow?'),
   parScale: () => parScale('sb'), goals: (run) => goalsFor('sb', run) });
+/* what the Train games (smartchoices.js, monthplanner.js) borrow from the arcade, handed over
+   rather than imported back: the HUD, the end card, the level, and the one door every finish
+   goes through — plus the "You practised" line a mode writes for itself (§1.4) */
+const trainKit = (id, label) => ({ tier: curTier, K, hud, endCard, tierChip, endKey,
+  practised: (text) => { curPractised = text; },
+  finish: (run) => roundEnd(id, run, label) });
 export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; lastOffer = null; }
 /* the level chip every game's HUD carries */
 const tierChip = () => `<span class="tierchip" data-tier="${curTier}">${TIER_NAME[curTier]}</span>`;
@@ -494,7 +459,7 @@ export function payLine(won, capped, capLine = CAPPED_LINE) {
 }
 export function practisedLine(text) { return text ? `<p class="practised"><b>You practised:</b> ${esc(text)}</p>` : ''; }
 function endFoot(won, extra = '') {
-  return `${practisedLine(current && PRACTISED[current])}${offerHtml()}${endGoals()}
+  return `${practisedLine(curPractised || (current && PRACTISED[current]))}${offerHtml()}${endGoals()}
     <p class="small muted endpay">${payLine(won, lastCapped)}${extra ? ' ' + extra : ''}</p>`;
 }
 /* `o` lets a caller that is not an arcade game (a job shift) speak for itself:
@@ -524,403 +489,6 @@ export function endCard(em, title, sub, wage, line, who, o = null) {
     ${o ? `${practisedLine(o.practised)}${o.offer || ''}<p class="small muted endpay">${payLine(wage, o.capped, o.capLine)}</p>` : endFoot(wage)}
     <button class="btn wide" data-act="gquit">Back to Play</button></div>`;
 }
-function shuffle(arr, seed) {
-  const r = rng(seed);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(r() * (i + 1));
-    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-  }
-  return arr;
-}
-/* Two-choice games share a shape: a card, a verdict, a note, a tally. */
-function twoChoice(cfg) {
-  /* G8 · a level is how many cards and whether each one has a clock; the pay is the
-     share right, so a short round is not a cheaper one */
-  const kn = knobs(cfg.id);
-  /* §1.2 · the order is this play's own (cfg.seed is the play's seed) */
-  const all = shuffle(cfg.items.slice(), cfg.seed);
-  const items = kn.n ? all.slice(0, kn.n) : all;
-  const st = { i: 0, right: 0, note: null, done: false, wrong: {}, shown: Date.now(), hold: null, left: kn.clock || 0 };
-  let timer = 0;
-  const stop = () => { if (timer) { clearTimeout(timer); st.left = Math.max(0, st.left - (Date.now() - st.shown)); } timer = 0; };
-  const arm = (ms) => {
-    if (timer) clearTimeout(timer); timer = 0;
-    st.shown = Date.now(); st.left = ms != null ? ms : kn.clock;
-    if (kn.clock && !st.done && !st.hold) timer = setTimeout(() => { timer = 0; pick(null); }, st.left);
-  };
-  const nameOf = (it) => (cfg.nameOf ? cfg.nameOf(it) : it.t);
-  const finishIf = () => {
-    if (st.i < items.length) return false;
-    st.done = true;
-    const run = { right: st.right, n: items.length, needWrong: st.wrong.need || 0, wantWrong: st.wrong.want || 0,
-      scamWrong: st.wrong.scam || 0, safeWrong: st.wrong.safe || 0 };
-    st.won = roundEnd(cfg.id, run, cfg.name);
-    return true;
-  };
-  const pick = (side) => {
-    if (st.done || st.hold) return;
-    if (timer) clearTimeout(timer); timer = 0;
-    const it = items[st.i];
-    const ok = side != null && (it.a === side || it.a === 'both');
-    if (ok) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; st.wrong[it.a] = (st.wrong[it.a] || 0) + 1; sfx.bad(); }
-    st.pop = ok ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
-    /* Specific, never a bare "Yes." (D3): name the thing and the side it belongs on,
-       and, when the item carries one, why. */
-    const named = it.a === 'both' ? `“${nameOf(it)}” can be both: that is the interesting kind.` : `“${nameOf(it)}” is ${cfg.sideWord[it.a]}.`;
-    if (ok) {
-      st.note = { ok, text: it.note ? `${named} ${it.note}` : named };
-      st.i++;
-      if (!finishIf()) arm();
-    } else {
-      /* §1.3 · a wrong answer HOLDS: the same card stays, with its note naming the item
-         and the right side, until Continue. The correction never lands on the next card. */
-      const lead = side == null ? `The clock ran out. ${named}` : ['Not this time.', named, cfg.wrongNote(it)].filter(Boolean).join(' ');
-      st.note = { ok, text: it.note ? `${lead} ${it.note}` : lead };
-      st.hold = { side, right: it.a };
-    }
-    R.render();
-    /* G2 · the kit's verdict from the button pressed (none when the clock ran out) */
-    if (side != null && !st.done) verdict(`.gplay [data-act="${side === cfg.left.side ? cfg.left.act : cfg.right.act}"]`, ok);
-  };
-  const cont = () => {
-    if (!st.hold || st.done) return;
-    st.hold = null; st.note = null; st.i++;
-    if (!finishIf()) arm();
-    R.render();
-  };
-  arm();
-  return {
-    id: cfg.id, st, stop, items, cont,
-    /* back from a hidden tab: the card's clock carries on from where it stopped */
-    resume() { if (!st.done && !st.hold && kn.clock && !timer) arm(st.left); },
-    key(e) {
-      if (st.done) { endKey(e); return; }
-      if (st.hold) { if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); cont(); } return; }
-      if (e.key === 'ArrowLeft') pick(cfg.left.side);
-      else if (e.key === 'ArrowRight') pick(cfg.right.side);
-    },
-    act(n) {
-      if (n === 'tcNext') cont();
-      else if (n === cfg.left.act) pick(cfg.left.side);
-      else if (n === cfg.right.act) pick(cfg.right.side);
-    },
-    view() {
-      if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
-        ${endCard(st.right >= items.length - 1 ? '🏅' : 'think', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
-      const it = items[st.i], h = st.hold;
-      /* the clock is a bar that drains; a re-render picks it up where it was */
-      const clock = kn.clock && !h ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, kn.clock - st.left + (Date.now() - st.shown))}ms"></i></div>` : '';
-      const btn = (s) => {
-        const mark = h ? (s.side === h.right || h.right === 'both' ? ' tcright' : s.side === h.side ? ' tcwrong' : '') : '';
-        return `<button class="btn${mark}" style="background:${s.color}" data-act="${s.act}"${h ? ' disabled' : ''}>${s === cfg.left ? '← ' + s.label : s.label + ' →'}</button>`;
-      };
-      return `<div class="stack">
-        ${hud([tierChip(), `${st.i + 1} / ${items.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}
-        <div class="stage">${st.pop ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
-          ${clock}${cfg.card(it)}
-          ${st.note ? `<div class="tcnote ${st.note.ok ? 'ok' : 'no'}" role="status" style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
-          <div class="grow"></div>
-          <div class="choices">${btn(cfg.left)}${btn(cfg.right)}</div>
-          ${h ? `<button class="btn wide" data-act="tcNext">Continue · Enter</button>` : ''}
-          <p class="hint">${esc(h ? 'Read why, then Continue: Enter, or tap.' : cfg.hint(items))}</p>
-        </div></div>`;
-    },
-  };
-}
-/* ══ 1 · NEEDS vs WANTS ═══════════════════════════════════════════════ */
-export const NW = [
-  { em: '🍚', t: 'Rice for the week', a: 'need' },
-  { em: '🎮', t: 'A new game', a: 'want' },
-  { em: '🧥', t: 'A winter coat', a: 'need' },
-  { em: '☂️', t: 'An umbrella, and it is raining', a: 'both', note: 'Today it is a need. In May it is a want. That is the whole card.' },
-  { em: '🚌', t: 'The bus fare to school', a: 'need' },
-  { em: '🍫', t: 'Chocolate at the till', a: 'want' },
-  { em: '📱', t: 'A phone, and your family shares one', a: 'both', note: 'Depends entirely on the household. There is no universal answer, and pretending there is would be the mistake.' },
-  { em: '👟', t: 'Shoes that still fit', a: 'want', note: 'They still fit. That makes them a want today.' },
-  { em: '💊', t: 'Medicine you were prescribed', a: 'need' },
-  { em: '🎧', t: 'Headphones', a: 'want' },
-  { em: '💧', t: 'Clean water', a: 'need' },
-  { em: '🎂', t: 'A cake for your sister', a: 'both', note: 'Nobody starves without it. It might still be the best thing you buy all month.' },
-];
-function needsWants(seed) {
-  return twoChoice({
-    id: 'nw', name: 'Needs vs Wants', items: NW, seed, who: 'pip',
-    hint: () => 'Arrow keys, or tap. Some are both — either answer counts.',
-    sideWord: { need: 'a need', want: 'a want' },
-    left: { side: 'need', act: 'nwNeed', label: 'Need', color: 'var(--save)' },
-    right: { side: 'want', act: 'nwWant', label: 'Want', color: 'var(--give)' },
-    card: (it) => `<div class="gcard"><span class="em">${ico(it.em, it.em, 44)}</span><span class="nm">${esc(it.t)}</span></div>`,
-    wrongNote: (it) => it.a === 'need' ? 'You would be in trouble without it.' : 'Lovely, but you would survive the week.',
-    outro: () => 'The ones that were <b>both</b> are the point. A list of needs that never changes is a list somebody else wrote for you.',
-  });
-}
-
-/* ══ 2 · SCAM SPOTTER ═════════════════════════════════════════════════
-   Four in ten of these are real and ordinary. A game where everything is a scam
-   teaches suspicion; the skill is telling them apart. */
-export const SS = [
-  { t: 'Your parcel could not be delivered. Pay the £1.99 redelivery fee here to reschedule.', a: 'scam',
-    note: 'A tiny fee is the hook — it is not about the £1.99, it is about your card details.' },
-  { t: 'Hi, it\'s Nani. Are you free on Sunday? Ask your mother and let me know.', a: 'safe',
-    note: 'No money, no hurry, no secret. Just Sunday.' },
-  { t: 'CONGRATULATIONS! You are today\'s selected winner. Claim within 2 hours!', a: 'scam',
-    note: 'A prize you never entered, and a countdown. Reward plus hurry.' },
-  { t: 'Your library book is due back on Friday. No action needed if you have returned it.', a: 'safe',
-    note: '"No action needed" is almost never how a scam opens.' },
-  { t: 'BANK ALERT: suspicious login. Reply with your PIN to secure your account NOW.', a: 'scam',
-    note: 'No real bank ever asks for your PIN. Fright plus hurry plus a secret.' },
-  { t: 'hey it\'s me, new number! lost my phone. can you send 200 quick, don\'t tell mum', a: 'scam',
-    note: 'New number, urgent money, and "don\'t tell". The secrecy is the tell.' },
-  { t: 'Your school trip form is due Monday. Paper copies are at the office.', a: 'safe',
-    note: 'Boring, specific, and asks for nothing but a form.' },
-  { t: 'FREE V-BUCKS GENERATOR — just log in with your username and password!', a: 'scam',
-    note: 'There is no generator. There is a page collecting passwords.' },
-  { t: 'Your order of one pencil case has shipped. Track it in the app you ordered from.', a: 'safe',
-    note: 'It points you back to the app you already use rather than a new link.' },
-  { t: 'INVESTMENT OPPORTUNITY: guaranteed to double in 30 days. Only 5 places left!', a: 'scam',
-    note: 'Guaranteed and doubling do not belong in the same sentence — and there are always exactly five places left.' },
-];
-function scamSpotter(seed) {
-  return twoChoice({
-    id: 'ss', name: 'Scam Spotter', items: SS, seed, who: 'nana',
-    /* §1.8 · a blurb must be true: it counts the round actually dealt */
-    hint: (its) => { const n = its.filter((x) => x.a === 'safe').length;
-      return `Arrow keys, or tap. ${n} of these ${its.length} ${n === 1 ? 'is' : 'are'} perfectly ordinary.`; },
-    sideWord: { scam: 'a trap', safe: 'real' },
-    /* a long message is named by its opening words */
-    nameOf: (it) => { const w = it.t.split(/\s+/); return w.length > 6 ? w.slice(0, 6).join(' ') + '…' : it.t; },
-    left: { side: 'safe', act: 'ssSafe', label: 'Looks fine', color: 'var(--grow)' },
-    right: { side: 'scam', act: 'ssScam', label: 'It\'s a trap', color: 'var(--spend)' },
-    card: (it) => `<div class="gcard" style="text-align:left"><span class="em" style="display:block;text-align:center">${ico('phone', '📱', 44)}</span>
-      <p style="font-size:15px;line-height:1.5;font-weight:650">${esc(it.t)}</p></div>`,
-    wrongNote: (it) => it.a === 'scam' ? '' : 'Suspecting everything is its own kind of expensive.',
-    outro: (r, n) => r === n
-      ? 'All of them. The shape is always the same: a reward or a fright, a hurry, and a secret.'
-      : 'Look for the <b>shape</b>, not the story: a reward or a fright, plus a hurry, plus a secret.',
-  });
-}
-
-/* ══ 3 · BUDGET BLITZ ═════════════════════════════════════════════════ */
-function budgetBlitz(seed) {
-  const c = K(), kn = knobs('bb');
-  const bills = [
-    { n: 'Rent on the stall', u: 14, must: true }, { n: 'Food for the month', u: 22, must: true },
-    { n: 'Bus pass', u: 8, must: true }, { n: 'A film with friends', u: 6, must: false },
-    { n: 'Phone plan', u: 6, must: true }, { n: "Mags's brass button", u: 12, must: false },
-    { n: 'Sister’s birthday cake', u: 5, must: false }, { n: 'New shoes — the old ones leak', u: 10, must: true },
-  ];
-  /* §1.6 · every amount is in the currency's smallest unit and shown by one formatter,
-     so the month on screen adds up to the money on screen in ₹, $, £, € and AED alike */
-  const minor = CURRENCIES[currency()].minor || 1;
-  /* G8 · a tight month is tight, never impossible: every bill you need always fits */
-  const mustSum = bills.filter((b) => b.must).reduce((t, b) => t + minorPrice(b.u), 0);
-  const base = Math.round(sim.weeklyIncome(c) * 4 * minor);
-  const pot = kn.pot >= 1 ? Math.round(base * kn.pot) : Math.max(Math.ceil(mustSum * 1.05), Math.round(base * kn.pot));
-  const shuffled = shuffle(bills.slice(), seed);
-  const order = kn.first === 'wants' ? shuffled.filter((b) => !b.must).concat(shuffled.filter((b) => b.must)) : shuffled;
-  const st = { i: 0, left: pot, missed: [], paid: [], done: false, pot, order };
-  const decide = (payIt) => {
-    if (st.done) return;
-    const b = order[st.i], amt = minorPrice(b.u);
-    if (payIt) {
-      if (amt > st.left) { sfx.bad(); toast('Not enough left — and that is the lesson'); st.missed.push(b); }
-      else { st.left -= amt; st.paid.push(b); sfx.click(); }
-    } else { if (b.must) sfx.bad(); else sfx.good(); st.missed.push(b); }
-    st.i++;
-    if (st.i >= order.length) {
-      st.done = true;
-      st.mustMissed = st.missed.filter((x) => x.must).length;
-      const points = Math.max(0, 10 - st.mustMissed * 4) + (st.left > 0 ? 4 : 0);
-      st.won = roundEnd('bb', { points, mustMissed: st.mustMissed, left: st.left, pot }, 'Budget Blitz');
-    }
-    R.render();
-  };
-  return {
-    id: 'bb', st, decide,
-    key(e) { if (st.done) { endKey(e); return; } if (e.key === '1') decide(true); else if (e.key === '2') decide(false); },
-    act(n) { if (n === 'bbPay') decide(true); else if (n === 'bbSkip') decide(false); },
-    view() {
-      if (st.done) return `<div class="stack">${hud(['Month over', tierChip()])}
-        ${endCard(st.mustMissed === 0 ? '🎯' : 'think', minorMoney(st.left) + ' left over',
-          st.mustMissed === 0 ? 'Everything you actually needed got paid.'
-            : st.mustMissed + ' thing' + (st.mustMissed > 1 ? 's' : '') + ' you needed went unpaid. Those do not disappear — they move to next month.',
-          st.won, 'Leftover money is not a prize. It is the part of the month you get to choose about.', 'nana')}</div>`;
-      const b = order[st.i], amt = minorPrice(b.u);
-      return `<div class="stack">
-        ${hud([tierChip(), `Left ${minorMoney(st.left)}`, `${st.i + 1} / ${order.length}`])}
-        <div class="stage">
-          <div class="gcard"><span class="em">${ico('receipt', '🧾', 44)}</span><span class="nm">${esc(b.n)}</span>
-            <div class="big" style="margin-top:6px">${minorMoney(amt)}</div></div>
-          <div class="bar"><i style="width:${clamp(st.left / pot * 100, 0, 100)}%;background:${st.left > pot * 0.25 ? 'var(--grow)' : 'var(--spend)'}"></i></div>
-          <div class="grow"></div>
-          <div class="choices">
-            <button class="btn" data-act="bbPay">1 · Pay it</button>
-            <button class="btn ghost" data-act="bbSkip">2 · Skip it</button></div>
-          <p class="hint">Keys 1 and 2, or tap. Nothing tells you which ones you truly need.</p>
-        </div></div>`;
-    },
-  };
-}
-
-/* ── quiz-shaped games share a shape too ─────────────────────────────── */
-function quizGame(cfg) {
-  /* G8 · a level is the numbers (cfg.build reads the level's set); the count stays the same */
-  const qs = cfg.build(knobs(cfg.id).set, cfg.seed);
-  const st = { i: 0, right: 0, pick: null, done: false, log: [] };
-  const choose = (n) => {
-    if (st.done || st.pick != null) return;
-    st.pick = n;
-    st.log.push({ q: qs[st.i], pick: n, ok: n === qs[st.i].a });
-    if (n === qs[st.i].a) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; sfx.bad(); }
-    st.pop = n === qs[st.i].a ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
-    R.render();
-    /* G2 · coins out of the option chosen, or a small shake of it — after the verdict is drawn */
-    verdict(`.gplay [data-act="${cfg.pickAct}"][data-arg="${n}"]`, n === qs[st.i].a);
-  };
-  const next = () => {
-    if (st.pick == null) return;
-    st.pick = null; st.i++;
-    if (st.i >= qs.length) {
-      st.done = true;
-      const L = st.log;
-      st.won = roundEnd(cfg.id, { right: st.right, n: qs.length,
-        weeklyWrong: L.filter((x) => x.q.tag === 'weekly' && !x.ok).length,
-        compareRight: L.some((x) => x.q.tag === 'compare' && x.ok),
-        simple: L.filter((x) => x.q.trap != null && x.pick === x.q.trap).length,
-        longWrong: L.filter((x) => x.q.tag === 'long' && !x.ok).length }, cfg.name);
-    }
-    R.render();
-  };
-  return {
-    id: cfg.id, st, qs, choose, next,
-    key(e) {
-      if (st.done) { endKey(e); return; }
-      if (e.key === 'Enter') { next(); return; }
-      const n = parseInt(e.key, 10);
-      if (n >= 1 && n <= qs[st.i].opts.length) choose(n - 1);
-    },
-    act(n, arg) { if (n === cfg.pickAct) choose(+arg); else if (n === cfg.nextAct) next(); },
-    view() {
-      if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
-        ${endCard(st.right >= qs.length - 1 ? '🏅' : 'think', st.right + ' of ' + qs.length, '', st.won, cfg.outro, cfg.who)}</div>`;
-      const q = qs[st.i];
-      return `<div class="stack">
-        ${hud([tierChip(), `${st.i + 1} / ${qs.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}${st.pop && st.pick != null ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
-        <div class="stage">
-          <div class="gcard"><span class="em">${ico(cfg.em, cfg.em, 44)}</span>
-            <p style="font-size:15.5px;line-height:1.45;font-weight:700">${q.q}</p></div>
-          <div class="stack" style="gap:8px">
-            ${q.opts.map((o, i) => {
-              let k = '';
-              if (st.pick != null) k = i === q.a ? ' ok' : (i === st.pick ? ' no' : '');
-              return `<button class="opt${k}" data-act="${cfg.pickAct}" data-arg="${i}" ${st.pick != null ? 'disabled' : ''}>
-                <span class="k">${i + 1}</span>${o}</button>`;
-            }).join('')}
-          </div>
-          ${st.pick != null ? `<div style="background:${st.pick === q.a ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${q.why}</div>
-            <button class="btn wide" data-act="${cfg.nextAct}">Next →</button>` : ''}
-          <p class="hint">Number keys, or tap. Enter for the next one.</p>
-        </div></div>`;
-    },
-  };
-}
-
-/* ══ 4 · TIMES TWELVE ═════════════════════════════════════════════════ */
-/* G8 · number size per level. The yearly price is always the cheaper one, as in Standard. */
-export const TT_SETS = {
-  easy:     { monthly: [10, 20, 30, 40, 50, 5, 25], weekly: [5, 10, 20], compare: [20, 200] },
-  standard: { monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] },
-  tricky:   { monthly: [35, 45, 65, 75, 85, 95, 55], weekly: [17, 23, 35], compare: [65, 740] },
-};
-function timesTwelve(seed) {
-  return quizGame({
-    id: 'tt', name: 'Times Twelve', em: '🗓️', who: 'pip', seed,
-    pickAct: 'ttPick', nextAct: 'ttNext',
-    outro: 'Multiply every monthly thing by twelve <b>before</b> you agree to it. Then cancel the ones you would not buy at that price.',
-    /* §1.6 · every amount is the shown price times a whole number, in the currency's
-       smallest unit, so £1.20 a month is £14.40 a year — never a re-rounded guess */
-    build(set = 'standard', sd = 5150) {
-      const r = rng(sd);
-      const out = [];
-      const N = TT_SETS[set] || TT_SETS.standard;
-      const P = minorPrice, M = minorMoney;
-      const draw = () => Math.floor(r() * 1e6);
-      shuffle(N.monthly.slice(), draw()).slice(0, 4).forEach((m) => {
-        const p = P(m), right = p * 12;
-        const opts = shuffle([right, p * 10, p * 6, right + p], draw());
-        out.push({
-          q: `A club costs <b>${M(p)} a month</b>. What is that in a year?`,
-          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
-          why: `${M(p)} × 12 = <b>${M(right)}</b>. Small monthly numbers are the entire technique.`,
-        });
-      });
-      shuffle(N.weekly.slice(), draw()).forEach((w) => {
-        const p = P(w), right = p * 52;
-        const opts = shuffle([right, p * 12, p * 30, p * 100], draw());
-        out.push({
-          tag: 'weekly',
-          q: `You spend <b>${M(p)} a week</b> on snacks. In a year?`,
-          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
-          why: `${M(p)} × 52 = <b>${M(right)}</b>. A week is a small unit and a year is not.`,
-        });
-      });
-      const pa = P(N.compare[0]), pb = P(N.compare[1]);
-      const cmp = shuffle([0, 1, 2, 3], draw());
-      const words = [M(pa) + ' a month', M(pb) + ' a year', 'They are the same', 'Not enough information'];
-      out.push({
-        tag: 'compare',
-        q: `One shop wants <b>${M(pa)} a month</b>. Another wants <b>${M(pb)} once a year</b>. Which costs less?`,
-        opts: cmp.map((k) => words[k]), a: cmp.indexOf(1),
-        why: `${M(pa)} × 12 = ${M(pa * 12)}, which is more than ${M(pb)}. The yearly one wins — and it is quoted that way precisely because it looks bigger.`,
-      });
-      return out;
-    },
-  });
-}
-
-/* ══ 5 · THE SNOWBALL ═════════════════════════════════════════════════ */
-/* G8 · horizon and rate per level; six rows each, as in Standard */
-export const SN_SETS = {
-  easy: [
-    { p: 100, r: 0.10, y: 5 }, { p: 100, r: 0.10, y: 10 }, { p: 200, r: 0.10, y: 7 },
-    { p: 500, r: 0.05, y: 10 }, { p: 100, r: 0.20, y: 5 }, { p: 1000, r: 0.10, y: 10 },
-  ],
-  standard: [
-    { p: 100, r: 0.10, y: 10 }, { p: 100, r: 0.07, y: 20 }, { p: 500, r: 0.05, y: 10 },
-    { p: 1000, r: 0.10, y: 20 }, { p: 200, r: 0.08, y: 30 }, { p: 100, r: 0.10, y: 30 },
-  ],
-  tricky: [
-    { p: 150, r: 0.06, y: 25 }, { p: 250, r: 0.09, y: 20 }, { p: 400, r: 0.04, y: 35 },
-    { p: 120, r: 0.12, y: 30 }, { p: 800, r: 0.07, y: 40 }, { p: 300, r: 0.11, y: 15 },
-  ],
-};
-function snowball(seed) {
-  return quizGame({
-    id: 'sn', name: 'The Snowball', em: '❄️', who: 'nana', seed,
-    pickAct: 'snPick', nextAct: 'snNext',
-    outro: 'Almost nobody guesses high enough, because we all quietly add instead of multiplying. Time is the ingredient, not the amount.',
-    build(set = 'standard', sd = 700) {
-      const r = rng(sd), draw = () => Math.floor(r() * 1e6);
-      const rows = shuffle((SN_SETS[set] || SN_SETS.standard).slice(), draw());
-      const longest = Math.max(...rows.map((x) => x.y));
-      const M = minorMoney;
-      return rows.map((row) => {
-        /* grown from the price as SHOWN, so the sum on screen is the sum of what is on screen */
-        const p = minorPrice(row.p);
-        const right = Math.round(p * Math.pow(1 + row.r, row.y));
-        const simple = Math.round(p * (1 + row.r * row.y));   // the answer everyone reaches for
-        const opts = shuffle([right, simple, Math.round(p * (1 + row.r * row.y * 0.5)), Math.round(right * 2.1)], draw());
-        return {
-          tag: row.y === longest ? 'long' : '', trap: opts.indexOf(simple),
-          q: `<b>${M(p)}</b> growing <b>${(row.r * 100).toFixed(0)}% a year</b> for <b>${row.y} years</b>. Where does it land?`,
-          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
-          why: `<b>${M(right)}</b>. Adding ${(row.r * 100).toFixed(0)}% ${row.y} times would only reach ${M(simple)} — the extra is growth landing on earlier growth.`,
-        };
-      });
-    },
-  });
-}
-
 /* ══ 6 · THE MARKET CUP ═══════════════════════════════════════════════
    Ranked on cup score, not returns. A leaderboard sorted by return alone
    would tell a child the luckiest single bet was the best decision, which
@@ -1144,22 +712,20 @@ function warmFonts() {
   fontsWarm = true;
   try { ['600 18px Sono', '800 18px "Hanken Grotesk"', '800 24px Fraunces'].forEach((f) => document.fonts.load(f)); } catch (e) { /* the fallbacks still read */ }
 }
-/* Compound Climb's year, as a pure function of the charge (0–1) and one draw in [−1, 1].
-   Rule 3: the game rewards the decision, not the gamble. The expected return rises with
-   the charge and PEAKS in the middle (≈60%), then falls; the swing grows much faster
-   (charge^3.2), so a high charge brings down years and, at full charge, a real chance of
-   being wiped out. A steady middle charge has the best expected tower and the best chance
-   of clearing the line — test/tiers.mjs replays it over hundreds of seeds. */
-export function ccYear(ch, draw) {
-  const mean = 0.36 * ch - 0.30 * ch * ch;      // 0 → 10.8% at 60% → 6% at full
-  const vol = 0.7 * Math.pow(ch, 3.2);          // 1% at 25%, 10% at 55%, 41% at 85%, 70% at full
-  return mean + draw * vol;
-}
+/* Compound Climb's year is climbsim.js's (the retune, kept): the expected return PEAKS in the
+   middle and the swing grows much faster, so a steady middle charge has the best expected tower
+   and the best chance of clearing the line — test/tiers.mjs replays it over hundreds of seeds.
+   §2.4 · the score is the decision (climbsim.js ccScore), and The Snowball lives on as the
+   estimate: every five years, before the climb goes on, drag the marker to where a STEADY
+   charge would take the tower in five more years — scored by closeness, then the bands. */
+export { ccYear };
 function compoundClimb(seed = 8821) {
+  trainStyle();
   const kn = knobs('cc');
-  const YEARS = 15, START = 100, TARGET = kn.target, W = 360, H = 350;
+  const YEARS = CC.YEARS, START = CC.START, TARGET = kn.target, W = 360, H = 350;
   const st = { year: 0, money: START, charge: 0, holding: false, done: false,
-    hist: [START], last: null, ruined: false, peak: START, falls: 0, maxCharge: 0 };
+    hist: [START], last: null, ruined: false, peak: START, falls: 0, maxCharge: 0,
+    charges: [], estimates: [], asking: null, shown: null };
   let raf = 0, prev = 0, ctx = null, cv = null;
   const r = rng(seed);
   /* everything below is drawing — the money is decided in release() and nowhere else */
@@ -1167,7 +733,7 @@ function compoundClimb(seed = 8821) {
   let cd = countdown();
   const look = { disp: START, land: 1, tumble: [], pour: [], pourT: 0, clock: 0, ending: false, endT: 0, fwT: 0, newest: -1 };
   const TX = 196, CW = 66, SL = 6, PLINTH = H - 44, TOPPAD = 58;
-  const scaleTop = () => Math.max(TARGET * 1.15, st.peak * 1.1);
+  const scaleTop = () => Math.max(TARGET * 1.15, st.peak * 1.1, st.asking ? st.asking.from * 2.5 : 0, st.shown && st.year < st.shown.at + CC.AHEAD ? st.shown.hi * 1.08 : 0);
   const yOf = (v) => PLINTH - (v / scaleTop()) * (PLINTH - TOPPAD);
 
   const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
@@ -1176,7 +742,10 @@ function compoundClimb(seed = 8821) {
     st.done = true; stop();
     /* the same par on every level: the line moves the badge and a goal, never the wage */
     if (st.money >= TARGET) sim.badge(K(), 'climbed');
-    st.won = roundEnd('cc', { money: st.money, ruined: st.ruined, reached: st.money >= TARGET && !st.ruined, years: st.year, falls: st.falls, maxCharge: st.maxCharge }, 'Compound Climb');
+    const reached = st.money >= TARGET && !st.ruined;
+    st.score = ccScore({ ruined: st.ruined, years: st.year, reached, charges: st.charges, estimates: st.estimates });
+    st.won = roundEnd('cc', { points: st.score.points, money: st.money, ruined: st.ruined, reached, years: st.year, falls: st.falls, maxCharge: st.maxCharge,
+      estimates: st.estimates.length, estIn: st.estimates.filter((e) => e.inBand).length }, 'Compound Climb');
     sfx.level(); R.render();
   };
   /* the last year lands, the tower is seen, then the card — a beat, never a delay to input */
@@ -1185,12 +754,13 @@ function compoundClimb(seed = 8821) {
     look.ending = true; look.endT = ms; look.fwT = 0;
   };
   const release = () => {
-    if (st.done || look.ending || !st.holding) return;
+    if (st.done || look.ending || !st.holding || st.asking) return;
     /* §1.5 · the charge is the time held, by the wall's clock, to the moment of letting go —
        not to the last frame drawn, which at 4 fps can be a quarter of a second earlier */
     if (st.pressAt != null) st.charge = chargeAt(nowMs());
     st.holding = false; st.pressAt = null;
     st.maxCharge = Math.max(st.maxCharge, st.charge);
+    st.charges.push(st.charge);
     const ch = st.charge / 100;
     const actual = ccYear(ch, r() + r() - 1);
     const before = st.money;
@@ -1219,13 +789,33 @@ function compoundClimb(seed = 8821) {
       fxl.pop(TX, Math.max(76, yOf(st.money) - 58), pct, { color: '#127A43', size: 24, life: 1100, key: 'year' });
       fxl.burst(TX, yOf(st.money), { n: 10 + Math.round(actual * 90), speed: 0.2, colors: ['#FFF3C4', '#F0B429', '#FFFFFF'] });
     }
-    if (st.money < 20) { st.ruined = true; sfx.bad(); endWith(1300); R.render(); return; }
+    if (st.money < CC.RUIN) { st.ruined = true; sfx.bad(); endWith(1300); R.render(); return; }
     if (actual < 0) sfx.bad(); else sfx.coin();
     if (st.year >= YEARS) { endWith(st.money >= TARGET ? 2000 : 1100); }
+    /* every five years, before the climb goes on: where would a steady charge take it? */
+    else if (CC.CHECKS.includes(st.year)) st.asking = { at: st.year, from: st.money, est: Math.round(st.money) };
+    R.render();
+  };
+  /* ── the estimate: a marker on the tower's own scale, dragged, nudged or typed by arrows ── */
+  const estBounds = () => [Math.max(1, Math.round(st.asking.from * 0.5)), Math.round(st.asking.from * 2.4)];
+  const estSet = (v) => {
+    if (!st.asking || st.done) return;
+    const [lo, hi] = estBounds();
+    st.asking.est = Math.round(clamp(v, lo, hi));
+    const el = typeof document !== 'undefined' && document.getElementById('ccEstN');
+    if (el) el.textContent = String(st.asking.est); else R.render();
+  };
+  const estStep = (dir) => { if (st.asking) estSet(st.asking.est + dir * Math.max(1, Math.round(st.asking.from * 0.02))); };
+  const estLock = () => {
+    if (!st.asking || st.done) return;
+    const a = st.asking, b = ccBands(a.from), close = ccClose(a.est, b.mid);
+    const rec = { at: a.at, from: Math.round(a.from), est: a.est, lo: b.lo, mid: b.mid, hi: b.hi, close, inBand: a.est >= b.lo && a.est <= b.hi };
+    st.estimates.push(rec); st.shown = rec; st.asking = null;
+    if (close >= 0.5) sfx.good(); else sfx.click();
     R.render();
   };
   const press = () => {
-    if (st.done || look.ending || st.holding) return;
+    if (st.done || look.ending || st.holding || st.asking) return;
     if (!cd.done) cd = countdown(1);            // a press is a GO: nobody waits on a count they have already beaten
     st.holding = true; st.charge = 0; st.pressAt = nowMs();
   };
@@ -1424,6 +1014,30 @@ function compoundClimb(seed = 8821) {
       ctx.strokeStyle = '#8A5A00'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
     });
 
+    /* the estimate: the bands where a steady charge usually lands, its middle, and the child's marker */
+    const sh = st.shown && !st.asking && st.year < st.shown.at + CC.AHEAD ? st.shown : null;
+    if (sh) {
+      const bx = TX + CW / 2 + 22, yHi = yOf(sh.hi), yLo = yOf(sh.lo), yMid = yOf(sh.mid);
+      ctx.fillStyle = dark ? 'rgba(123,224,166,.28)' : 'rgba(47,191,113,.26)'; rr(ctx, bx, yHi, 64, Math.max(6, yLo - yHi), 8); ctx.fill();
+      ctx.strokeStyle = dark ? '#7BE0A6' : '#127A43'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bx, yMid); ctx.lineTo(bx + 64, yMid); ctx.stroke();
+      label('steady ' + sh.mid, bx + 32, yHi - 10, { size: 10.5, color: dark ? '#7BE0A6' : '#127A43' });
+      const yE = yOf(sh.est);
+      ctx.strokeStyle = '#2F6FD0'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(bx - 10, yE); ctx.lineTo(bx + 74, yE); ctx.stroke(); ctx.setLineDash([]);
+      label('you ' + sh.est, bx + 32, yE + 12, { size: 10.5, color: '#2F6FD0' });
+    }
+    if (st.asking) {
+      const yE = yOf(st.asking.est), x0 = TX - CW / 2 - 6, x1 = W - 34;
+      ctx.save();
+      ctx.shadowColor = 'rgba(47,111,208,.7)'; ctx.shadowBlur = 8;
+      ctx.strokeStyle = '#2F6FD0'; ctx.lineWidth = 3; ctx.setLineDash([10, 6]);
+      ctx.beginPath(); ctx.moveTo(x0, yE); ctx.lineTo(x1, yE); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#2F6FD0'; ctx.beginPath(); ctx.arc(x1, yE, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x1 - 4, yE - 2); ctx.lineTo(x1, yE - 6); ctx.lineTo(x1 + 4, yE - 2); ctx.moveTo(x1 - 4, yE + 2); ctx.lineTo(x1, yE + 6); ctx.lineTo(x1 + 4, yE + 2); ctx.stroke();
+      label('in 5 years: ' + st.asking.est, x1 - 16, yE - 16, { size: 12.5, color: '#2F6FD0', align: 'right' });
+    }
     label(met ? 'over the line!' : 'target ' + TARGET, W - 38, yT - 14, { size: 12.5, color: met ? '#9A6A00' : (dark ? '#7BE0A6' : '#127A43'), align: 'right' });
     /* the number, riding the top of the tower */
     label(String(Math.round(look.disp)), TX - CW / 2 - 12, Math.max(22, realTop + 6), { size: 24, color: ink, align: 'right', font: 'Fraunces, Georgia, serif' });
@@ -1447,6 +1061,9 @@ function compoundClimb(seed = 8821) {
       if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); }
       const hold = (e) => { e.preventDefault(); press(); };
       const let_go = (e) => { if (e) e.preventDefault(); release(); };
+      /* while estimating, the picture is the marker's track: press and drag to place it */
+      const fromY = (e) => { const b = cv.getBoundingClientRect(); const y = (e.clientY - b.top) * (H / Math.max(1, b.height)); return ((PLINTH - y) / (PLINTH - TOPPAD)) * scaleTop(); };
+      let dragging = false;
       const btn = document.getElementById('ccBtn');
       if (btn) {
         btn.onpointerdown = hold;
@@ -1455,38 +1072,64 @@ function compoundClimb(seed = 8821) {
         btn.onpointercancel = () => { if (st.holding) release(); };
       }
       /* the tower itself is a button too: press and hold anywhere on the picture */
-      cv.onpointerdown = hold; cv.onpointerup = let_go;
+      cv.onpointerdown = (e) => { if (st.asking) { e.preventDefault(); dragging = true; if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (x) { /* fine */ } estSet(fromY(e)); return; } hold(e); };
+      cv.onpointermove = (e) => { if (st.asking && dragging) estSet(fromY(e)); };
+      cv.onpointerup = (e) => { if (dragging) { dragging = false; return; } let_go(e); };
       cv.onpointerleave = () => { if (st.holding) release(); };
-      cv.onpointercancel = () => { if (st.holding) release(); };
+      cv.onpointercancel = () => { dragging = false; if (st.holding) release(); };
     },
     stop() { away(); stop(); },
+    /* for the tests and bots: the estimate's own controls */
+    estimate: (v) => { estSet(v); estLock(); },
     key(e) {
       if (st.done) { endKey(e); return; }
+      if (st.asking) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { if (e.preventDefault) e.preventDefault(); estStep(e.shiftKey ? 5 : 1); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { if (e.preventDefault) e.preventDefault(); estStep(e.shiftKey ? -5 : -1); }
+        else if (e.key === 'Enter') { if (e.preventDefault) e.preventDefault(); estLock(); }
+        /* space is the climb's own key: held out of habit, it must not lock in a guess nobody made */
+        else if (e.key === ' ' || e.key === 'Spacebar') { if (e.preventDefault) e.preventDefault(); }
+        return;
+      }
       if ((e.key === ' ' || e.key === 'Spacebar') && e.type === 'keydown') { if (e.preventDefault) e.preventDefault(); press(); }
     },
     keyup(e) { if (e.key === ' ' || e.key === 'Spacebar') release(); },
-    act(n) { if (n === 'ccHold') press(); else if (n === 'ccRelease') release(); },
+    act(n, arg) {
+      if (n === 'ccHold') press(); else if (n === 'ccRelease') release();
+      else if (n === 'ccEstStep') estStep(+arg || 0);
+      else if (n === 'ccEst') estLock();
+    },
     view() {
       if (st.done) {
-        const reached = st.money >= TARGET;
+        const reached = st.money >= TARGET, sc = st.score;
+        const tower = st.ruined ? `Wiped out in year ${st.year}.` : reached ? `${Math.round(st.money)} from ${START}: over the line.` : `${Math.round(st.money)} from ${START}: short of the line, and still ${(st.money / START).toFixed(1)}× what you started with.`;
         return `<div class="stack">${hud(['Fifteen years', tierChip()])}
-          ${endCard(st.ruined ? 'oops' : reached ? '🗼' : '📈',
-            st.ruined ? 'Wiped out in year ' + st.year : Math.round(st.money) + ' from ' + START,
-            st.ruined ? 'Nothing left to compound. That is the half of "high return" nobody puts on the poster.'
-              : reached ? 'Over the line.'
-                : 'Short of the line, and still ' + (st.money / START).toFixed(1) + '× what you started with.',
+          ${endCard(st.ruined ? 'oops' : reached ? '🗼' : '📈', `${sc.points} of ${CC_MAX}`,
+            `<span class="sbendsub">${esc(tower)}<br>Survived: ${sc.survived} · over the line: ${sc.target} · steady: ${sc.steady} · estimates: ${sc.estimate}</span>`,
             st.won,
             st.ruined ? 'Growth needs something left to grow. A swing big enough to double you is big enough to end you.'
               : 'The middle charge usually wins. Not the safe one, not the wild one — the one you can survive fifteen times in a row.',
             'nana')}</div>`;
       }
-      const l = st.last;
+      const l = st.last, a = st.asking, sh = st.shown;
+      const closeWord = (c) => (c >= 0.85 ? 'spot on' : c >= 0.5 ? 'close' : c > 0 ? 'some way off' : 'a long way off');
+      const shownNow = sh && st.year === sh.at ? `<div class="ccyear ccest-said"><b>A steady charge lands about ${sh.mid}</b> in five years — most likely between ${sh.lo} and ${sh.hi}. You said ${sh.est}: ${closeWord(sh.close)}.</div>`
+        : sh && st.year === sh.at + CC.AHEAD ? `<div class="ccyear ccest-said">Five years ago you said ${sh.est}; a steady charge would be about ${sh.mid}. Your tower: <b>${Math.round(st.money)}</b>.</div>` : '';
+      const last5 = a ? st.hist[Math.max(0, st.hist.length - 1 - CC.AHEAD)] : 0;
       return `<div class="stack">
-        ${hud([tierChip(), `Year ${Math.min(YEARS, st.year + 1)} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
+        ${hud([tierChip(), `Year ${Math.min(YEARS, st.year + (a ? 0 : 1))} / ${YEARS}`, `${Math.round(st.money)}`, `target ${TARGET}`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
-          <canvas id="ccCanvas" class="arccv" role="img" aria-label="Your coin tower, the target line and the years so far" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
-          ${l ? `<div class="ccyear ${l.pct >= 0 ? 'up' : 'down'}">
-            Year ${st.year}: <b>${l.pct >= 0 ? '+' : ''}${(l.pct * 100).toFixed(1)}%</b> · ${Math.round(l.before)} → ${Math.round(l.after)}</div>` : ''}
+          <canvas id="ccCanvas" class="arccv" role="img" aria-label="${a ? 'Your coin tower, with the marker for your estimate' : 'Your coin tower, the target line and the years so far'}" style="width:100%;max-width:420px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
+          ${a ? `<div class="gcard ccask"><span class="eyebrow">Year ${a.at} · before the climb goes on</span>
+              <p class="small">Your tower: <b class="tabnum">${Math.round(a.from)}</b> · five years ago: ${last5}.</p>
+              <p class="sbq">Where would a <b>steady</b> charge — about the middle, every year — take it in five more years?</p>
+              <div class="ccest"><button class="btn ghost" data-act="ccEstStep" data-arg="-1" aria-label="Lower">−</button>
+                <b id="ccEstN" class="tabnum" aria-live="polite">${a.est}</b>
+                <button class="btn ghost" data-act="ccEstStep" data-arg="1" aria-label="Higher">+</button></div>
+              <button class="btn wide" data-act="ccEst">Lock it in · Enter</button></div>
+            <p class="hint">Drag the marker on the tower, or ↑ ↓ (Shift for big steps). Enter locks it in.</p>`
+          : `${shownNow || (l ? `<div class="ccyear ${l.pct >= 0 ? 'up' : 'down'}">
+            Year ${st.year}: <b>${l.pct >= 0 ? '+' : ''}${(l.pct * 100).toFixed(1)}%</b> · ${Math.round(l.before)} → ${Math.round(l.after)}</div>` : '')}
           <div>
             <div class="row"><span class="eyebrow grow">This year's growth</span>
               <span class="small muted">longer = more, and wilder</span></div>
@@ -1494,7 +1137,7 @@ function compoundClimb(seed = 8821) {
               <i id="ccCharge" style="width:${st.charge}%;background:linear-gradient(90deg,var(--grow),var(--treasure) 55%,var(--spend))"></i></div>
           </div>
           <button class="btn wide ccbtn" id="ccBtn" style="padding:18px" data-act="noop">HOLD TO GROW</button>
-          <p class="hint">Hold space, the button or the tower; let go to lock the year in. Steady beats spectacular — usually.</p>
+          <p class="hint">Hold space, the button or the tower; let go to lock the year in. Steady beats spectacular — usually.</p>`}
         </div></div>`;
     },
   };
@@ -2271,8 +1914,8 @@ function marketStorm(seed = playSeed()) {
             <p class="stwords">“${esc(words())}”</p>
           </div>
           <div class="grow"></div>
-          <button class="btn wide${st.panic >= 65 ? ' tempt' : ''}" style="background:var(--spend)" data-act="stSell">SELL</button>
-          <button class="btn ghost wide" data-act="stPlan" ${st.calmT > 0 ? 'disabled' : ''}>Re-read my plan · space</button>
+          <div class="stacts"><button class="btn wide${st.panic >= 65 ? ' tempt' : ''}" style="background:var(--spend)" data-act="stSell">SELL</button>
+          <button class="btn ghost wide" data-act="stPlan" ${st.calmT > 0 ? 'disabled' : ''}>Re-read my plan · space</button></div>
           <p class="hint">Nothing sells by itself. Read the news, read your plan, then decide.</p>
         </div></div>`;
     },

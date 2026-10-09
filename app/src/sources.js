@@ -18,6 +18,7 @@
    A number with neither is a bug, and the lint says so by name. */
 import { CAL, SB } from './world.js';
 
+const TRAIN = 'A dial of this town, for a game: your stall\'s and jobs\' Bizzington, never a household\'s, a real shop or a market\'s record.';
 export const SOURCES = {
   grow: {
     kind: 'own',
@@ -127,6 +128,12 @@ export const SOURCES = {
     dials: ['surprise', 'surpriseWeek', 'surprises', 'tinStep'],
     says: 'Chosen so a plan with nothing kept back can come up short, the way a real month can. The sizes are the town\'s.',
   },
+  /* the Train games (docs/12 §2.2–2.4). Their dials live with the games, off the first screen, so
+     each is said in words here and test/smartchoices.mjs, monthplanner.mjs and climb.mjs hold
+     the words to the dials */
+  shelf: { kind: 'own', what: 'Better Buy\'s shelf prices', value: () => 'nine goods in packs, priced so one is always whole coins', where: 'smartsim.js · SHELF', says: TRAIN },
+  month: { kind: 'own', what: 'The Month Planner\'s bills', value: () => '10 needs and 8 wants · keep back 15 in every 100 of the needs', where: 'monthsim.js · MONTH', says: TRAIN },
+  climb: { kind: 'own', what: 'Compound Climb\'s growth', value: () => 'about 11 in every 100 a year at a steady charge', where: 'climbsim.js · CLIMB', says: TRAIN },
 };
 
 export function source(k) { return SOURCES[k] || null; }

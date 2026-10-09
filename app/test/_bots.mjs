@@ -4,6 +4,12 @@
    localStorage shim is in place. */
 const { R } = await import('../src/runtime.js');
 const AR = await import('../src/arcade.js');
+const S = await import('../src/smartsim.js');
+const MS = await import('../src/monthsim.js');
+const CS = await import('../src/climbsim.js');
+const F = await import('../src/fmt.js');
+/* an amount in the smallest coin, as a child would type it in this currency: 35 → "0.35" in $ */
+export const typed = (minor) => { const m = (F.CURRENCIES[F.currency()] || {}).minor || 1; return m > 1 ? (minor / m).toFixed(2) : String(minor); };
 
 /* Change Rush: go for the coin that still fits, never stand under one that overpays */
 export const crLane = (st) => {
@@ -22,31 +28,54 @@ export function withQueue(f) {
   try { return f(q); } finally { globalThis.setTimeout = realST; globalThis.clearTimeout = realCT; }
 }
 
-/* play(id, seed, tier, how) → the finished game object. `how`: 'best' plays carefully,
-   'wrong' answers wrongly where a game has answers (for the level rule and the holds) */
-export function play(id, seed = 1, tier = 'standard', how = 'best') {
+/* play(id, seed, tier, how, opt) → the finished game object. `how`: 'best' plays carefully,
+   'wrong' answers wrongly where a game has answers (for the level rule and the holds),
+   'random' is a coin flip at every choice (T9), 'caps' calls a message a trap when it shouts
+   (Smart Choices), 'skip' skips every bill and 'needs' pays each need it can (the Month Planner).
+   opt.mode: which Smart Choices table (default Needs and Wants); opt.rnd: the coin. */
+export function play(id, seed = 1, tier = 'standard', how = 'best', opt = {}) {
   AR.startGame(id, seed, tier);
   const g = R.game;
   const bad = how === 'wrong';
   if (id === 'cr') {
     for (let i = 0; i < 6000 && !g.st.done; i++) { g.st.lane = bad ? (i >> 4) % 4 : crLane(g.st); g.advance(16); }
-  } else if (id === 'nw' || id === 'ss') {
-    for (let i = 0; i < 40 && !g.st.done; i++) {
-      if (g.st.hold) { g.act('tcNext'); continue; }
-      const it = g.items[g.st.i], L = id === 'nw' ? ['need', 'nwNeed', 'want', 'nwWant'] : ['safe', 'ssSafe', 'scam', 'ssScam'];
-      const right = it.a === 'both' ? L[0] : it.a;
-      const side = bad ? (right === L[0] ? L[2] : L[0]) : right;
-      g.act(side === L[0] ? L[1] : L[3]);
+  } else if (id === 'sc') {
+    /* Smart Choices: one table a round, played through its own acts */
+    const st = g.st, rnd = opt.rnd || Math.random, coin = (n) => Math.floor(rnd() * n) % n;
+    g.act('scMode', opt.mode || 'nw');
+    for (let guard = 0; guard < 600 && !st.done; guard++) {
+      if (st.held) { g.act('scNext'); continue; }
+      const c = st.deck[st.i], rand = how === 'random' || (how === 'caps' && st.step !== 'call');
+      if (st.step === 'side') g.act('scSide', rand ? ['need', 'both', 'want'][coin(3)] : bad ? (c.a === 'need' ? 'want' : 'need') : c.a);
+      else if (st.step === 'reason') g.act('scChip', rand ? coin(c.chips.length) : bad ? (c.reason + 1) % c.chips.length : c.reason);
+      else if (st.step === 'call') g.act('scCall', how === 'caps' ? (S.shouts(c) ? 'scam' : 'safe') : rand ? (coin(2) ? 'scam' : 'safe') : bad ? (c.a === 'scam' ? 'safe' : 'scam') : c.a);
+      else if (st.step === 'tell') g.act('scTell', rand ? coin(c.ph.length) : bad ? c.ph.findIndex((p, k) => !c.tells.includes(k)) : c.tells[0]);
+      else if (st.step === 'shelf') g.act('scShelf', rand ? coin(2) : bad ? 1 - c.answer : c.answer);
+      else if (st.step === 'type') {
+        const t = rand ? String(1 + coin(99)) : bad ? '1' : typed(c.asks[st.choice]);
+        for (const ch of t) g.act('scKey', ch);
+        g.act('scCheck');
+      }
     }
-  } else if (id === 'tt' || id === 'sn') {
-    for (let i = 0; i < 40 && !g.st.done; i++) {
-      const q = g.qs[g.st.i];
-      g.choose(bad ? (q.a + 1) % q.opts.length : q.a); g.next();
+  } else if (id === 'mp') {
+    /* the Month Planner: the yearly step typed, then each bill paid or not */
+    const st = g.st, L = g.ledger, plan = how === 'best' ? MS.mpBest(st.round).plan : null, rnd = opt.rnd || Math.random;
+    for (let guard = 0; guard < 400 && !st.done; guard++) {
+      if (st.step === 'yearly') {
+        if (!L.yearly) { for (const ch of String(bad || opt.yearWrong ? st.round.yearly.want + 1 : st.round.yearly.want)) g.act('mpKey', ch); }
+        g.act('mpCheck');
+      } else if (st.step === 'bill') {
+        const b = MS.mpBill(L);
+        const pay = how === 'skip' || bad ? false : how === 'needs' ? b.need && b.amt <= L.cash : how === 'random' ? (rnd() < 0.5 && b.amt <= L.cash) : plan[L.m].includes(b.key);
+        g.act(pay ? 'mpPay' : 'mpSkip');
+      } else if (st.step === 'month') g.act('mpNext');
     }
-  } else if (id === 'bb') {
-    for (let i = 0; i < 20 && !g.st.done; i++) g.decide(bad ? !g.st.order[g.st.i].must : g.st.order[g.st.i].must);
   } else if (id === 'cc') {
-    while (!g.st.done) { g.st.holding = true; g.st.charge = bad ? 100 : 55; g.release(); }
+    /* Compound Climb: a steady charge, and every estimate at the steady middle (or the wrong ones) */
+    while (!g.st.done) {
+      if (g.st.asking) { g.estimate(bad ? g.st.asking.from : CS.ccBands(g.st.asking.from).mid); continue; }
+      g.st.holding = true; g.st.charge = bad ? 100 : 55; g.release();
+    }
   } else if (id === 'sr') {
     for (let i = 0; i < 5000 && !g.st.done; i++) {
       g.advance(16);

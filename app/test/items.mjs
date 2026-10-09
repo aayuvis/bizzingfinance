@@ -2,7 +2,7 @@
    no hint gives it away, and the mistakes deck brings a miss back after a gap.
 
    Run: node test/items.mjs */
-import { ITEMS, shown, answerOf, check } from '../src/items.js';
+import { ITEMS, shown, answerOf, check, sortPlace, sortContinue } from '../src/items.js';
 import * as M from '../src/mistakes.js';
 import { ALL_CARDS } from '../src/content.js';
 
@@ -76,6 +76,30 @@ ok(shows('Divide 72 by 9 to get 8.', 8) && !shows('About 18 years', 8) && shows(
 /* the sort/order answers never sit in the hint either: no hint quotes a thing or a step whole */
 const quoted = ids.filter((id) => { const it = ITEMS[id]; return (it.things ? it.things.map((t) => t[0]) : it.steps || []).some((x) => it.hint.toLowerCase().includes(x.toLowerCase())); });
 ok(!quoted.length, 'no sort or order hint quotes one of its own things or steps', quoted.join(','));
+
+/* §1.3 (docs/12) · a sort step holds a wrong thing, with its note, until Continue */
+{
+  const sorts = ids.filter((id) => ITEMS[id].kind === 'sort'), bad = [];
+  for (const id of sorts) {
+    const it = ITEMS[id], t = { id };
+    /* the first thing, into the wrong bin */
+    const i = 0, right = it.things[i][1];
+    t.sel = i; const r = sortPlace(t, id, 1 - right);
+    if (!r || r.ok || !t.hold || t.bins[i] !== 1 - right) { bad.push(id + ': a wrong bin did not hold where it was put'); continue; }
+    if (!r.note.includes(it.things[i][0]) || !r.note.includes('goes in ' + it.bins[right])) bad.push(id + ': the note does not name the thing and its bin');
+    t.sel = 1; if (sortPlace(t, id, it.things[1][1])) bad.push(id + ': another thing moved while one was held');
+    if (t.bins[1] != null) bad.push(id + ': placed under a hold');
+    sortContinue(t, id);
+    if (t.hold || t.bins[i] !== right) bad.push(id + ': Continue did not carry it across');
+    for (let k = 1; k < it.things.length; k++) { t.sel = k; sortPlace(t, id, it.things[k][1]); }
+    if (!t.settled || t.right !== false || t.misses !== 1) bad.push(id + ': a sort with a hold settled as right first time');
+    const u = { id }; it.things.forEach((_, k) => { u.sel = k; sortPlace(u, id, it.things[k][1]); });
+    if (!u.settled || !u.right) bad.push(id + ': a clean sort did not settle as right');
+  }
+  ok(sorts.length >= 4 && !bad.length, 'every Your-turn sort holds a wrong thing in the bin it was put in, naming it and its right bin, until Continue — and nothing else moves meanwhile', bad.slice(0, 3).join(' | ') || sorts.length + ' sorts');
+  const views = (await import('node:fs')).readFileSync(new URL('../src/views.js', import.meta.url), 'utf8');
+  ok('the sort step on screen: the held note and its Continue, and no "Check it" or "one more go" for a sort', /ITEMS\.sortNote\(card\.id, h\.i\)/.test(views) && /data-act="itCont"/.test(views) && /done \|\| it\.kind === 'sort' \? ''/.test(views));
+}
 
 /* the deck */
 const c = { mistakes: [] }, t0 = Date.UTC(2026, 9, 1), D = 864e5;

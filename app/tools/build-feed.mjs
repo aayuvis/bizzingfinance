@@ -170,7 +170,7 @@ export function genNeutral(o, seed) {
    which letter-writer, which game — made only of names the corpus already has,
    never new words. */
 const [kindOf, idOfSrc] = [(src) => src.split(':')[0], (src) => src.split(':').slice(1).join(':').split('#')[0]];
-const GAME_OF = { needwant: 'nw', scamspot: 'ss', shout: 'st', chance: 'mn', bot: 'mn' };
+const GAME_OF = { needwant: 'sc', scamspot: 'sc', shout: 'st', chance: 'mn', bot: 'mn' };
 function routeOf(c) {
   const k = kindOf(c.src), id = idOfSrc(c.src), e = encodeURIComponent;
   switch (k) {
@@ -232,7 +232,7 @@ function sourceOf(c) {
     home: () => { const i = HOMES.findIndex((h) => h.id === id); return ['Your place', `rung ${i + 1} of ${HOMES.length}`]; },
     shop: () => ["Mags' General Store"], wardrobe: () => ["The companion's wardrobe"], companion: () => ['The shelter behind the Jar Shed'],
     rank: () => { const r = RANKS.find((x) => x.name === id); return ['Rank', r ? 'from level ' + r.at : null]; },
-    needwant: () => ['From ' + gameName('nw')], scamspot: () => ['From ' + gameName('ss')], shout: () => ['From ' + gameName('st')],
+    needwant: () => ['From ' + gameName('sc'), 'Needs and Wants'], scamspot: () => ['From ' + gameName('sc'), 'Scam Spotter'], shout: () => ['From ' + gameName('st')],
     chance: () => ['From ' + gameName('mn')], bot: () => ['From ' + gameName('mn')],
     era: () => ['The Market Game', 'a decade to play'], company: () => ['The Market Game', 'the register'], event: () => ['The Market Game', 'what happened'],
   }[k];
@@ -295,7 +295,9 @@ for (const [term, mean, more] of GLOSSARY) {
 /* 5 · figures — only the register in sources.js. Each sits with the chapter whose tool runs on it. */
 const FIGURE_CHAPTER = { grow: 'c7', bank: 'c5', loan: 'c6', inflation: 'c7', market: 'c7', wages: 'c2', homes: 'c3', stock: 'c8', stall: 'c3',
   /* Save or Borrow?'s dials sit with the Bank's chapter, which opens the game */
-  sbprices: 'c5', sbloans: 'c5', sbwages: 'c5', sbsurprise: 'c5', storm: 'c7', cup: 'c7', mainstreet: 'c1' };
+  sbprices: 'c5', sbloans: 'c5', sbwages: 'c5', sbsurprise: 'c5', storm: 'c7', cup: 'c7', mainstreet: 'c1',
+  /* the Train games' dials sit with the chapter that opens each game (gamelist.js needs) */
+  shelf: 'c1', month: 'c3', climb: 'c6' };
 for (const [key, s] of Object.entries(SOURCES)) {
   add({ kind: 'figure', src: `figure:${key}`, level: chLevel(FIGURE_CHAPTER[key]), topics: ['figure', 'ch:' + FIGURE_CHAPTER[key]],
     badge: { id: s.kind, label: s.kind === 'own' ? 'A dial of this town' : 'Cited' }, title: s.what, body: [s.value(), s.says],
@@ -374,8 +376,8 @@ SHOP.forEach((s) => add({ kind: 'store', src: `shop:${s.id}`, topics: ['store'],
 WARDROBE.forEach((w) => add({ kind: 'companion', src: `wardrobe:${w.id}`, topics: ['companion'], title: w.name, body: [w.line], route: '#/town', cta: 'The companion' }));
 Object.entries(KINDS).forEach(([id, k]) => add({ kind: 'companion', src: `companion:${id}`, topics: ['companion'], title: k.name, body: [k.line], route: '#/town', cta: 'The shelter' }));
 RANKS.forEach((r) => add({ kind: 'rank', src: `rank:${r.name}`, topics: ['rank'], title: r.name, body: [r.of], route: '#/me', cta: 'My page' }));
-NW.forEach((x, i) => { if (x.note) add({ kind: 'needwant', src: `needwant:${i}`, topics: ['game:nw'], title: 'Need or want?', body: [x.t, x.note], route: '#/play', cta: 'Needs vs Wants' }); });
-SS.forEach((x, i) => add({ kind: 'scamspot', src: `scamspot:${i}`, topics: ['game:ss'], title: 'Real, or a trap?', body: [x.t, x.note], route: '#/play', cta: 'Scam Spotter' }));
+NW.forEach((x, i) => { if (x.note) add({ kind: 'needwant', src: `needwant:${i}`, topics: ['game:sc'], title: 'Need or want?', body: [x.t, x.note], route: '#/play', cta: 'Smart Choices' }); });
+SS.forEach((x, i) => add({ kind: 'scamspot', src: `scamspot:${i}`, topics: ['game:sc'], title: 'Real, or a trap?', body: [x.t, x.note], route: '#/play', cta: 'Smart Choices' }));
 SHOUTS.forEach(([who, t], i) => add({ kind: 'castline', src: `shout:${i}`, topics: ['who:' + who, 'game:st'], title: 'On the Exchange steps', body: [t], route: '#/play', cta: 'Market Storm' }));
 CHANCE.forEach((x) => add({ kind: 'chance', src: `chance:${x.id}`, topics: ['game:mn'], title: x.t, body: [x.body], route: '#/play', cta: 'Main Street' }));
 BOTS.forEach((b, i) => add({ kind: 'castline', src: `bot:${i}`, topics: ['who:' + b.who, 'game:mn'], title: 'Across the Main Street board', body: [b.line], route: '#/play', cta: 'Main Street' }));

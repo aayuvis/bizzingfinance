@@ -892,12 +892,20 @@ function itemBlock(card) {
   const ans = ITEMS.answerOf(card.id);
   let body = '';
   if (it.kind === 'sort') {
-    const shown = ITEMS.shown(card.id), bins = t.bins || {};
-    const chip = (x) => `<button class="ychip${t.sel === x.i ? ' sel' : ''}${done ? (bins[x.i] === it.things[x.i][1] ? ' ok' : ' no') : ''}" data-act="itSel" data-arg="${x.i}" aria-pressed="${t.sel === x.i}" ${done ? 'disabled' : ''}>${esc(x.t)}</button>`;
+    /* §1.3 · each thing is checked as it lands; a wrong one HOLDS in the bin it was put in,
+       marked, with its note, and nothing else moves until Continue carries it across */
+    const shown = ITEMS.shown(card.id), bins = t.bins || {}, h = t.hold, locked = done || !!h;
+    const chip = (x) => {
+      const placed = bins[x.i] != null, wrong = h && h.i === x.i;
+      const mark = wrong ? ' no' : placed ? ' ok' : t.sel === x.i ? ' sel' : '';
+      return `<button class="ychip${mark}" data-act="itSel" data-arg="${x.i}" aria-pressed="${t.sel === x.i}" ${locked || placed ? 'disabled' : ''}>${esc(x.t)}</button>`;
+    };
     body = `<p class="small muted">Tap a thing, then tap the bin it belongs in.</p>
       <div class="ytray">${shown.filter((x) => bins[x.i] == null).map(chip).join('') || '<span class="small muted">All sorted.</span>'}</div>
-      <div class="ybins">${it.bins.map((b, bi) => `<div class="ybin"><button class="ybin-h" data-act="itBin" data-arg="${bi}" ${t.sel == null || done ? 'disabled' : ''} aria-label="Put it in ${esc(b)}">${esc(b)} <span class="small">${bi + 1}</span></button>
-        <div class="ybin-b">${shown.filter((x) => bins[x.i] === bi).map(chip).join('')}</div></div>`).join('')}</div>`;
+      <div class="ybins">${it.bins.map((b, bi) => `<div class="ybin"><button class="ybin-h" data-act="itBin" data-arg="${bi}" ${t.sel == null || locked ? 'disabled' : ''} aria-label="Put it in ${esc(b)}">${esc(b)} <span class="small">${bi + 1}</span></button>
+        <div class="ybin-b">${shown.filter((x) => bins[x.i] === bi).map(chip).join('')}</div></div>`).join('')}</div>
+      ${h ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(ITEMS.sortNote(card.id, h.i))}</div>
+        <button class="btn wide" data-act="itCont">Continue</button>` : ''}`;
   } else if (it.kind === 'order') {
     const shown = ITEMS.shown(card.id), seq = t.seq || [];
     body = `<p class="small muted">Tap the steps in the order they happen.</p>
@@ -919,9 +927,9 @@ function itemBlock(card) {
     <div class="eyebrow">Your turn</div>
     <h3 id="yt-${card.id}" style="font-size:18px;margin:2px 0 8px">${esc(it.title)}</h3>
     ${body}
-    ${held ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(it.hint)}<div style="margin-top:6px;font-weight:700">One more go.</div></div>` : ''}
-    ${done ? `<div class="fb ${t.right ? 'yes' : 'no'}" role="status"><b>${t.right ? (t.tries === 1 ? 'That’s it.' : 'Got it on the second go.') : 'Here is how it goes.'}</b> ${t.right ? '' : it.kind === 'amount' ? 'It is ' + ans + '.' : it.kind === 'order' ? it.steps.join(' → ') : ''}</div>` : ''}
-    ${done ? '' : `<button class="btn ghost wide" data-act="itCheck" data-arg="${card.id}" ${ready ? '' : 'disabled'}>Check it</button>`}
+    ${held && it.kind !== 'sort' ? `<div class="fb hold" role="status"><b>Not this time.</b> ${esc(it.hint)}<div style="margin-top:6px;font-weight:700">One more go.</div></div>` : ''}
+    ${done ? `<div class="fb ${t.right ? 'yes' : 'no'}" role="status"><b>${it.kind === 'sort' ? (t.right ? 'That’s it.' : 'All sorted.') : t.right ? (t.tries === 1 ? 'That’s it.' : 'Got it on the second go.') : 'Here is how it goes.'}</b> ${t.right || it.kind === 'sort' ? '' : it.kind === 'amount' ? 'It is ' + ans + '.' : it.kind === 'order' ? it.steps.join(' → ') : ''}</div>` : ''}
+    ${done || it.kind === 'sort' ? '' : `<button class="btn ghost wide" data-act="itCheck" data-arg="${card.id}" ${ready ? '' : 'disabled'}>Check it</button>`}
   </section>`;
 }
 

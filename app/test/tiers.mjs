@@ -15,6 +15,8 @@ const sim = await import('../src/sim.js');
 const JT = await import('../src/jobtable.js');
 const AR = await import('../src/arcade.js');
 const { startJobGame } = await import('../src/jobgames.js');
+const SCS = await import('../src/smartsim.js'), MSM = await import('../src/monthsim.js'), CLS = await import('../src/climbsim.js');
+const SC_K = SCS.SC_KNOBS;
 
 let pass = 0, fail = 0;
 const ok = (c, label, detail = '') => { if (c) pass++; else fail++; console.log((c ? '  ok  ' : '  FAIL ') + label + (detail ? '   ' + detail : '')); };
@@ -53,13 +55,17 @@ ok(Object.keys(AR.TIERLESS).length === 0 && arcadeIds.length === AR.GAMES.length
 /* ── Standard is the game as it was ─────────────────────────────────────── */
 const same = (a, b) => Object.keys(b).every((k) => a[k] === b[k]);
 const S = (id) => AR.ARCADE_TIERS[id].standard;
-ok(same(S('cr'), { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55 }) && same(S('nw'), { n: 0, clock: 0 }) && same(S('ss'), { n: 0, clock: 0 })
-  && same(S('bb'), { pot: 1, first: null }) && same(S('cc'), { charge: 1, target: 420 }) && same(S('sr'), { spawn: 1, patience: 9000 })
-  && same(S('st'), { every: 3400, shout: 11, drift: 0.0022 }) && same(S('mc'), { shock: 1, crash: 1 }) && S('tt').set === 'standard' && S('sn').set === 'standard' && S('mn').baseExp === 24,
+ok(same(S('cr'), { fall: 1, spawn: 1, coins: 5, min: 2, max: 4, help: 0.55 })
+  && same(S('cc'), { charge: 1, target: 420 }) && same(S('sr'), { spawn: 1, patience: 9000 })
+  && same(S('st'), { every: 3400, shout: 11, drift: 0.0022 }) && same(S('mc'), { shock: 1, crash: 1 }) && S('mn').baseExp === 24,
   'the arcade\'s Standard knobs are today\'s numbers');
-ok(JSON.stringify(AR.TT_SETS.standard) === JSON.stringify({ monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] })
-  && AR.SN_SETS.standard.map((r) => `${r.p}/${r.r}/${r.y}`).join() === '100/0.1/10,100/0.07/20,500/0.05/10,1000/0.1/20,200/0.08/30,100/0.1/30',
-  'the drills\' Standard numbers are the ones they always asked');
+/* the Train games are new (docs/12 §2.2–2.3): their Standard is the spec's own round */
+{
+  const SS = await import('../src/smartsim.js'), MS = await import('../src/monthsim.js');
+  const k = SS.SC_KNOBS.standard, m = MS.MP_KNOBS;
+  ok(k.nw.n === 12 && k.nw.both >= 3 && k.nw.chips === 3 && k.ss.n === 10 && k.bb.n === 6 && m.easy.tight === 0 && m.standard.tight === 1 && m.tricky.tight === 2 && m.standard.months === 3,
+    'Smart Choices\' and the Month Planner\'s Standard: twelve cards with three "both", ten messages, six shelves; one short month in three (Tricky two)');
+}
 ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIERS.mc.standard.par > 0 && T.every((t) => AR.ARCADE_TIERS.mc[t].par > 0),
   'the Market Cup\'s par on every level is Boring Bella\'s own (positive) cup score there', T.map((t) => AR.ARCADE_TIERS.mc[t].par).join('/'));
 
@@ -114,24 +120,31 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   let maxE = 0, minK = 1e9;
   for (let sd = 1; sd < 40; sd++) { AR.startGame('cr', sd, 'easy'); maxE = Math.max(maxE, R.game.st.target); AR.startGame('cr', sd, 'tricky'); minK = Math.min(minK, R.game.st.target); }
   ok(maxE <= 3 * 10 && minK >= 3, 'Change Rush: Easy asks for small amounts from fewer coin kinds, Tricky for at least three coins', `easy max ${maxE}, tricky min ${minK}`);
-  /* the two-choice cards: Easy is a shorter round, Tricky has a clock */
-  AR.startGame('nw', null, 'easy'); const ne = R.game; AR.quitGame();
-  AR.startGame('nw', null, 'standard'); const ns = R.game; AR.quitGame();
-  ok(ne.view().includes('1 / 8') && ns.view().includes('1 / 12'), 'Needs vs Wants: eight cards on Easy, all twelve on Standard');
-  AR.startGame('ss', null, 'tricky'); const nt = R.game;
-  ok(/class="tclock"/.test(nt.view()) && !/class="tclock"/.test(ns.view()), 'Scam Spotter on Tricky shows a draining clock; Standard has none');
+  /* Smart Choices: Easy is a shorter round in every table, Tricky has a clock, more "both", and the judgement shelves */
+  const sc = (t, mode) => { AR.startGame('sc', 5, t); const g = R.game; g.act('scMode', mode); return g; };
+  const [ne, ns, nt] = T.map((t) => sc(t, 'nw')), [se, ss_, st_] = T.map((t) => sc(t, 'ss')), [be, bs, bt] = T.map((t) => sc(t, 'bb'));
   AR.quitGame();
-  /* drills: the numbers change with the level, and every question still has four different answers */
-  const qs = (id, t) => { AR.startGame(id, null, t); const g = R.game; AR.quitGame(); return g.qs; };
-  for (const id of ['tt', 'sn']) {
-    const sets = T.map((t) => qs(id, t));
-    const distinct = sets.every((q) => q.every((x) => new Set(x.opts).size === x.opts.length && x.a >= 0 && x.a < x.opts.length));
-    ok(distinct && sets[0][0].q !== sets[1][0].q && sets[1][0].q !== sets[2][0].q && sets.every((q) => q.length === sets[1].length),
-      `${id}: each level asks different numbers, the same number of questions, and every question has four distinct answers`);
+  ok(ne.view().includes('1 / 8') && ns.view().includes('1 / 12') && se.view().includes('1 / 6') && ss_.view().includes('1 / 10') && be.view().includes('1 / 5') && bs.view().includes('1 / 6'),
+    'Smart Choices: Easy is eight cards, six messages, five shelves; Standard twelve, ten, six');
+  ok(/class="tclock"/.test(nt.view()) && /class="tclock"/.test(st_.view()) && !/class="tclock"/.test(ns.view()) && !/class="tclock"/.test(ss_.view()), 'Smart Choices on Tricky shows a draining clock on cards and messages; Standard has none');
+  ok(T.every((t, i) => [ne, ns, nt][i].st.deck.filter((c) => c.a === 'both').length === SC_K[t].nw.both && [ne, ns, nt][i].st.deck.filter((c) => c.a === 'both').every((c) => c.chips.length === SC_K[t].nw.chips)),
+    'Needs and Wants: how many cards are "both", and how many reasons each offers, follow the level');
+  {
+    const step = (t) => { const sd = []; for (let k = 1; k <= 40; k++) sd.push(...SCS.buyDeck(k, t)); return sd; };
+    const E = step('easy'), Sd = step('standard'), K3 = step('tricky');
+    const round = (d, st) => d.every((sh) => sh.tags.every((x) => (x.price / x.count) % st === 0));
+    ok(round(E, SCS.shelfStep('easy')) && SCS.shelfStep('easy') > SCS.shelfStep('standard') && !round(Sd, SCS.shelfStep('easy')),
+      'Better Buy: Easy prices are round numbers (whole steps of a bigger coin); Standard\'s are not always');
+    ok(!E.concat(Sd).some((sh) => sh.kind === 'waste' || sh.kind === 'bogof') && K3.some((sh) => sh.kind === 'waste') && K3.some((sh) => sh.kind === 'bogof'),
+      'Better Buy: the judgement shelves — waste, half-price offers — only on Tricky');
   }
-  /* Budget Blitz: a tight month is tighter, and still never impossible */
-  const pot = (t) => { AR.startGame('bb', null, t); const g = R.game; AR.quitGame(); return g.st.left; };
-  ok(pot('easy') > pot('standard') && pot('standard') > pot('tricky'), 'Budget Blitz: a roomier month on Easy, a tighter one on Tricky', `${pot('easy')} / ${pot('standard')} / ${pot('tricky')}`);
+  /* the Month Planner: no short month on Easy, one in three on Standard, two in three on Tricky — and only Tricky is short of its needs */
+  {
+    const shape = (t) => { let tight = 0, short = 0, n = 0; for (let k = 1; k <= 60; k++) MSM.mpRound(k, t).months.forEach((M) => { n++; if (M.pot < M.needs + M.wants) tight++; if (M.pot < M.needs + M.keep) short++; }); return [tight / n, short / n]; };
+    const [e, sd, tk] = T.map(shape);
+    ok(e[0] === 0 && Math.abs(sd[0] - 1 / 3) < 1e-9 && Math.abs(tk[0] - 2 / 3) < 1e-9 && e[1] === 0 && sd[1] === 0 && tk[1] > 0.3,
+      'Month Planner: a month smaller than its bills — never on Easy, one in three on Standard, two in three on Tricky; short of its needs only on Tricky', `${e} / ${sd} / ${tk}`);
+  }
   /* Stall Rush and Market Storm: customers wait less, the panic climbs faster */
   const stall = (t) => { AR.startGame('sr', null, t); const g = R.game; for (let i = 0; i < 160; i++) g.advance(16); const p = g.st.q[0] ? g.st.q[0].patience : 1; AR.quitGame(); return p; };
   ok(stall('easy') > stall('standard') && stall('standard') > stall('tricky'), 'Stall Rush: patience runs out slower on Easy, faster on Tricky');
@@ -207,7 +220,10 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
     let sum = 0, tgt = 0, down = 0, ruin = 0;
     for (const sd of seeds) {
       AR.startGame('cc', sd, 'standard'); const g = R.game; let d = false;
-      while (!g.st.done) { g.st.holding = true; g.st.charge = lo + rnd() * (hi - lo); g.release(); if (g.st.last && g.st.last.pct < 0) d = true; }
+      while (!g.st.done) {
+        if (g.st.asking) { g.estimate(CLS.ccBands(g.st.asking.from).mid); continue; }   /* §2.4 · the estimate step, every five years */
+        g.st.holding = true; g.st.charge = lo + rnd() * (hi - lo); g.release(); if (g.st.last && g.st.last.pct < 0) d = true;
+      }
       sum += g.st.money; if (g.st.money >= 420) tgt++; if (d) down++; if (g.st.ruined) ruin++;
       AR.quitGame();
     }
@@ -263,6 +279,7 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   const nothing = { right: 0, n: 8, exact: 0, overpays: 0, firstRun: 0, finished: false, needWrong: 8, wantWrong: 8, scamWrong: 5, safeWrong: 5,
     mustMissed: 5, left: 0, pot: 100, reached: false, years: 3, falls: 2, maxCharge: 100, profit: 0, lost: 4, wrong: 0, served: 0, held: false, maxPanic: 100,
     spreadWeeks: 0, weeks: 6, churn: 400, beatBella: false, weeklyWrong: 3, compareRight: false, simple: 2, longWrong: 2,
+    points: 0, max: 12, bothN: 3, bothRight: 0, scamN: 5, tellRight: 0, pickRight: 0, typedRight: 0, needs: 6, onTime: 0, late: 0, buffers: 3, months: 3, yearlyRight: false, estimates: 2, estIn: 0,
     of: 12, answered: 0, bestRun: 0, flagged: 0, over: 0, late: 0, spotted: 0, checks: 3, won: false, owned: 0, sold: 3 };
   const free = tables.flatMap(([id, t]) => t.filter((g) => g.check(nothing)).map((g) => id + '.' + g.id));
   ok(!free.length, 'no goal is ticked by a run where nothing went right', free.join(','));

@@ -114,7 +114,7 @@ export function netWorth(g) { return g.cash + portfolioValue(g); }
 export function startAct(g, act, seed = freshSeed()) {
   /* §1.2 · every decade started is its own play: its own forty years and its own three sheets,
      the seed kept with the round (c.rounds.m40) so it can be replayed */
-  g.seed = seed;
+  g.seed = seed; g.paidThis = false; g.payNote = null;   /* each decade started is a play, paid once on its reading */
   g.sheets = sheetsFor(seed, act); g.sheet = 0; g.opened = {};
   const c = R.s && sim.kid(R.s);
   if (c) { if (!c.rounds) c.rounds = {}; c.rounds.m40 = { seed, act, t: Date.now() }; }
@@ -418,6 +418,7 @@ function viewReview(g) {
       <h2 style="font-size:24px;margin:4px 0">${g.score.right} of ${g.score.asked} right</h2>
       <div class="goals"><ul>${read}</ul></div>
       <p class="small muted" style="margin-top:8px">This is the number that matters. Whether you could see what would hurt a business is yours.</p>
+      ${g.payNote ? `<p class="small m40pay" style="margin-top:6px;font-weight:700">${g.payNote.capped ? esc(g.payNote.line) : g.payNote.paid ? `Earned ${money(g.payNote.paid)} for how well you read them, straight into your wallet.` : 'Nothing read right this decade, so nothing earned. The next decade is a fresh start.'}</p>` : ''}
     </div>
     <div class="card m40money">
       <div class="eyebrow">The money · second, and partly the decade you were handed</div>

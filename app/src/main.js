@@ -10,7 +10,8 @@ import { companionFigure, shelterView, wardrobeView } from './companionview.js';
 import { receiptSlip } from './keepsakes.js';
 import * as daily from './daily.js';
 import * as quiz from './quiz.js';
-import * as srcs from './sources.js';
+/* sources.js is the register behind 'How we know': loaded when that sheet opens, not with the first screen */
+let srcs = null;
 import * as puz from './dailypuzzle.js';
 import * as placement from './placement.js';
 import * as answers from './answers.js';
@@ -60,7 +61,7 @@ import * as drill from './drill.js';
 import { AVATARS, AVATAR_IDS, guessCurrency } from './avatars.js';
 import { viewOnboard, viewHome, viewLearn, viewMoney, viewStore, viewProgress,
   viewParents, viewCollection as viewMedals, viewWorlds, viewGate, viewReport, aboutSheet, VERSION, viewGlossaryPage, townParts } from './views.js';
-import { GAME_ACTS, GAMES } from './gamelist.js';
+import { GAME_ACTS, GAMES, RETIRED } from './gamelist.js';
 /* the arcade (with Main Street and the canvas kit) loads when Play first needs it */
 let ARC = null;
 const arcadeMod = () => (ARC ? Promise.resolve(ARC) : import('./arcade.js').then((m) => (ARC = m)));
@@ -128,7 +129,9 @@ const ALIAS = { arcade: 'play', worlds: 'town', progress: 'me', atlas: 'learn' }
    opens any fold around it, scrolls it to the middle and pulses it. A thing not
    on screen (a repair in another world) falls back to its section. */
 function focusFor(m) {
-  const [a, b, c2] = m, q = (v) => CSS.escape(decodeURIComponent(v || ''));
+  const [a, b0, c2] = m, q = (v) => CSS.escape(decodeURIComponent(v || ''));
+  /* a link to a retired card (Needs vs Wants, Times Twelve …) opens the one that absorbed it */
+  const b = a === 'play' && RETIRED[b0] ? RETIRED[b0] : b0;
   if (!b) return null;
   if (a === 'play' && GAMES.some((g) => g.id === b)) {
     if (gameOpen(C(), GAMES.find((g) => g.id === b))) R.gameIntro = b;
@@ -876,8 +879,18 @@ on('mkPick', (i) => {
 });
 on('mkNext', () => { R.mk = null; render(); });
 /* "Your turn" items (items.js): sort, order, amount */
-on('itSel', (i) => { const t = R.item || (R.item = {}); t.sel = +i; render(); });
-on('itBin', (b) => { const t = R.item || (R.item = {}); if (t.sel == null) return; (t.bins || (t.bins = {}))[t.sel] = +b; t.sel = null; sfx.click(); render(); });
+on('itSel', (i) => { const t = R.item || (R.item = {}); if (t.hold || t.settled) return; t.sel = +i; render(); });
+/* §1.3 · a sort is checked a thing at a time: a wrong bin holds, with its note, until Continue */
+on('itBin', (b) => {
+  const t = R.item || (R.item = {}); if (t.sel == null || !t.id) return;
+  const r = items.sortPlace(t, t.id, +b); if (!r) return;
+  if (!r.ok) sfx.bad(); else if (r.settled && r.right) { sfx.good(); family.coins(C().name, 'answer'); } else sfx.click();
+  render();
+});
+on('itCont', () => {
+  const t = R.item || {}; const r = items.sortContinue(t, t.id); if (!r) return;
+  sfx.click(); render();
+});
 on('itStep', (i) => { const t = R.item || (R.item = {}); const seq = t.seq || (t.seq = []); if (!seq.includes(+i)) seq.push(+i); sfx.click(); render(); });
 on('itUndo', () => { const t = R.item || {}; if (t.seq) t.seq.pop(); render(); });
 /* E6 · show me how: open the worked method (other numbers) before the first try */
@@ -1597,7 +1610,12 @@ on('mgBuy', mg((arg) => { const [id, amt] = arg.split(':'); const a = MG.buy(G()
 on('mgSell', mg((id) => { const v = MG.sell(G(), id); if (v) { sfx.coin(); toast('Sold for ' + money(v)); } render(); }));
 on('mgPlay', mg(() => { G().phase = 'play'; sfx.level(); render(); window.scrollTo(0, 0); }));
 on('mgNext', mg(() => {
-  const r = MG.advance(G());
+  const g0 = G(), r = MG.advance(g0);
+  /* a decade finished pays once, on the reading (docs/12 §4): never the money it made */
+  if (!r && g0.phase === 'review' && !g0.paidThis) {
+    g0.paidThis = true;
+    arcadeMod().then((m) => { g0.payNote = m.payReading('m40', 'The Market Game', g0.score.right, g0.score.asked); sim.save(R.s); render(); });
+  }
   if (!r) { sfx.level(); confetti(40); } else if (r.after >= r.before) sfx.coin(); else sfx.bad();
   render(); window.scrollTo(0, 0);
 }));
@@ -2056,7 +2074,7 @@ function sourcesSheet(key) {
       : `<p class="small muted" style="margin-top:12px">${srcs.cited().length ? '' : 'Nothing in the app currently states a real-world figure. When one does, its citation appears here before the number appears on screen.'}</p>
          <div class="row" style="margin-top:12px"><span class="grow"></span><button class="btn sm" data-act="closeOv">Done</button></div>`}`;
 }
-on('sources', (key) => { R.overlay = { kind: 'sources', key: key || '' }; sfx.click(); render(); });
+on('sources', (key) => import('./sources.js').then((m) => { srcs = m; R.overlay = { kind: 'sources', key: key || '' }; sfx.click(); render(); }));
 
 
 /* ══ today's till ═════════════════════════════════════════════════════ */

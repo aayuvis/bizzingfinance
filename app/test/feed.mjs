@@ -33,6 +33,7 @@ const GEN = await import('../src/generate.js');
 const FMT = await import('../src/fmt.js');
 const { ART } = await import('../src/art-gen.js');
 const { COVERS } = await import('../src/covers-gen.js');
+const { COVER_ALIAS } = await import('../src/gamelist.js');
 const { BLD } = await import('../src/buildings-gen.js');
 
 /* The sources the feed added for audit V1, resolved HERE, independently of the builder: an
@@ -316,7 +317,7 @@ ok(anyN.every((n) => n >= 1 && n <= 5), 'cards with no level season every sessio
   const own = DATA.filter((x) => FEED.artFor(x)).filter((x) => {
     const a = FEED.artFor(x), who = ((x.topics || []).find((t) => t.startsWith('who:')) || '').slice(4), g = /^#\/play\/(\w+)/.exec(x.route || '');
     if (['lesson', 'tryit', 'yourturn', 'cast', 'castline'].includes(x.kind)) return a !== ART['cast-' + who];
-    if (['game', 'needwant', 'scamspot', 'chance'].includes(x.kind)) return !g || a !== COVERS[g[1]].src;
+    if (['game', 'needwant', 'scamspot', 'chance'].includes(x.kind)) return !g || a !== (COVERS[g[1]] || COVERS[COVER_ALIAS[g[1]]]).src;
     if (['home', 'shopstock', 'exchange'].includes(x.kind)) return !Object.values(BLD).some((b) => b.src === a);
     return !['chapter', 'place', 'companion'].includes(x.kind);
   });

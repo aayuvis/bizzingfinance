@@ -20,7 +20,8 @@ const JT = await import('../src/jobtable.js');
 const { startJobGame, JOB_PRACTISED } = await import('../src/jobgames.js');
 const F = await import('../src/fmt.js');
 const puz = await import('../src/dailypuzzle.js');
-const { play, withQueue } = await import('./_bots.mjs');
+const { play, withQueue, typed } = await import('./_bots.mjs');
+const MS = await import('../src/monthsim.js');
 const { tillCard } = await import('../src/views.js');
 
 let pass = 0, fail = 0;
@@ -65,23 +66,44 @@ console.log('\nThe games · docs/12 §1, §2.6–2.9\n' + '─'.repeat(56));
       if (need !== F.minorMoney(g.st.target) || back(cur, need) !== g.st.target) bad.push(`${cur} cr target ${g.st.target} shown ${need}`);
       AR.quitGame();
     }
-    /* Times Twelve: a year is twelve of the month AS SHOWN — in £ as in ₹ */
-    for (const seed of [1, 2, 3]) {
-      AR.startGame('tt', seed, 'standard'); const g = R.game;
-      g.qs.forEach((q) => {
-        if (q.tag === 'compare') return;
-        const shown = (q.q.match(/<b>([^<]+) a (month|week)<\/b>/) || []);
-        if (!shown[1]) return;
-        const k = shown[2] === 'month' ? 12 : 52;
-        if (back(cur, q.opts[q.a]) !== back(cur, shown[1]) * k) bad.push(`${cur} tt ${shown[1]} ×${k} ≠ ${q.opts[q.a]}`);
-      });
+    /* Better Buy: a tag's price of one is its price AS SHOWN over its count, in whole coins, and
+       the price typed as a child would type it in this currency is checked right */
+    for (const lv of ['easy', 'standard', 'tricky']) for (const seed of [1, 2, 3]) {
+      AR.startGame('sc', seed, lv); const g = R.game; g.act('scMode', 'bb');
+      while (!g.st.done) {
+        const sh = g.st.deck[g.st.i], v = g.view();
+        const shown = [...v.matchAll(/<b class="scprice tabnum">([^<]+)<\/b>/g)].map((m) => back(cur, m[1].replace(/ for 2$/, '')));
+        sh.tags.forEach((t, i) => { if (shown[i] !== t.price || !Number.isInteger(shown[i] / t.count)) bad.push(`${cur} bb tag ${i} shown ${shown[i]} ≠ ${t.price} or not whole over ${t.count}`); });
+        g.act('scShelf', sh.answer); for (const ch of typed(sh.asks[sh.answer])) g.act('scKey', ch); g.act('scCheck');
+        if (!g.st.held || !g.st.held.typedOk) bad.push(`${cur} bb typed ${typed(sh.asks[sh.answer])} not taken as ${sh.asks[sh.answer]}`);
+        g.act('scNext');
+      }
       AR.quitGame();
     }
-    /* Budget Blitz: the month left is the pot less what was paid, as shown */
-    AR.startGame('bb', 5, 'standard'); { const g = R.game; let paid = 0;
-      while (!g.st.done) { const b = g.st.order[g.st.i], amt = back(cur, (g.view().match(/<div class="big"[^>]*>([^<]+)</) || [])[1] || ''); const before = g.st.left; g.decide(true); if (g.st.left !== before) paid += amt; }
-      if (g.st.left !== g.st.pot - paid) bad.push(`${cur} bb ${g.st.pot} − ${paid} ≠ ${g.st.left}`); }
-    AR.quitGame();
+    /* the Month Planner: a year is twelve (or fifty-two) of the bill AS SHOWN, and the money
+       left is the month's money less what was paid, as shown */
+    for (const seed of [1, 2, 3, 4, 5]) {
+      AR.startGame('mp', seed, 'standard'); const g = R.game; let paid = 0;
+      while (!g.st.done) {
+        const L = g.ledger, v = g.view();
+        if (g.st.step === 'yearly') {
+          const each = back(cur, (v.match(/is ([^ ]+) a (month|week)\. What does it cost/) || [])[1] || '') / (F.CURRENCIES[cur].minor || 1);
+          const y = g.st.round.yearly;
+          if (each !== y.each || y.want !== each * (y.per === 'week' ? 52 : 12)) bad.push(`${cur} mp yearly ${each} × ${y.times} ≠ ${y.want}`);
+          for (const ch of String(y.want)) g.act('mpKey', ch); g.act('mpCheck'); g.act('mpCheck');
+        } else if (g.st.step === 'bill') {
+          /* the Month Planner counts in whole coins of the main unit (price()), the parser in the smallest */
+          const amt = back(cur, (v.match(/<div class="big tabnum">([^<]+)</) || [])[1] || '') / (F.CURRENCIES[cur].minor || 1), b = MS.mpBill(L), n0 = L.paid.length + L.late.length;
+          if (amt !== b.amt) bad.push(`${cur} mp bill shown ${amt} ≠ ${b.amt}`);
+          g.act(b.amt <= L.cash ? 'mpPay' : 'mpSkip'); if (L.paid.length + L.late.length > n0) paid += amt;
+        } else if (g.st.step === 'month') {
+          const left = g.st.summary.left, pot = g.st.round.months.slice(0, g.st.summary.m + 1).reduce((t, M) => t + M.pot, 0);
+          if (left !== pot - paid) bad.push(`${cur} mp month ${g.st.summary.m}: ${pot} − ${paid} ≠ ${left}`);
+          g.act('mpNext');
+        }
+      }
+      AR.quitGame();
+    }
     /* Stall Rush: takings are the sum of the prices on the queue's tags */
     AR.startGame('sr', 4, 'standard'); { const g = R.game; let sum = 0;
       for (let i = 0; i < 3000 && !g.st.done; i++) { g.advance(16); const c0 = g.st.q[0]; if (c0 && g.st.stock[c0.want]) { const tag = g.view().match(/<span class="pill">([^<]+)<\/span><\/div>/); const before = g.st.revenue; g.serve(c0.want); if (g.st.revenue !== before && tag) sum += back(cur, tag[1]); } }
@@ -121,9 +143,8 @@ console.log('\nThe games · docs/12 §1, §2.6–2.9\n' + '─'.repeat(56));
     AR.startGame(id, seed, 'standard'); const g = R.game;
     let out;
     if (id === 'cr') { for (let i = 0; i < 300; i++) g.advance(16); out = [g.st.target, g.st.drops.map((d) => d.lane + ':' + d.v)]; }
-    else if (id === 'nw' || id === 'ss') out = g.items.map((x) => x.t);
-    else if (id === 'tt' || id === 'sn') out = g.qs.map((q) => q.q + q.opts.join());
-    else if (id === 'bb') out = g.st.order.map((b) => b.n);
+    else if (id === 'sc') out = [g.deck('nw').map((x) => x.t), g.deck('ss').map((x) => x.t), g.deck('bb').map((x) => x.good.id + x.tags.map((t) => t.count + '/' + t.price).join())];
+    else if (id === 'mp') out = [g.st.round.months.map((M) => M.pot + ':' + M.bills.map((b) => b.n + b.amt).join()), g.st.round.yearly.want];
     else if (id === 'cc') { for (let k = 0; k < 4; k++) { g.st.holding = true; g.st.charge = 60; g.release(); } out = g.st.hist; }
     else if (id === 'sr') { for (let i = 0; i < 600; i++) g.advance(16); out = g.st.q.map((c) => c.want).concat(g.st.lost); }
     else if (id === 'st') { g.act('stRule', 'never'); g.act('stWhy', 'card'); g.act('stGo'); for (let i = 0; i < 900; i++) g.advance(16); out = [g.def.co.id, g.def.stops, g.def.whys.map((w) => w.id).join(''), g.st.news.map((h) => h.text.slice(0, 12)), g.st.shoutN, g.st.shout && g.st.shout[1], Math.round(g.st.val)]; }
@@ -143,50 +164,81 @@ console.log('\nThe games · docs/12 §1, §2.6–2.9\n' + '─'.repeat(56));
   ok('two plays with different seeds differ, in every game — no fixed 7717, 3391 or 60607 any more', !differ.length, differ.join(','));
   /* a play with no seed given draws its own, and keeps it with the round */
   fresh();
-  AR.startGame('nw', null, 'standard'); const s1 = R.game.seed; AR.quitGame();
-  AR.startGame('nw', null, 'standard'); const s2 = R.game.seed; AR.quitGame();
-  const g = play('ss', 4242, 'standard');
-  ok('an ordinary play draws its own seed, and the finished round is kept with its seed and level', s1 && s2 && s1 !== s2 && K().rounds && K().rounds.ss && K().rounds.ss.seed === 4242 && K().rounds.ss.tier === 'standard' && g.st.done,
-    JSON.stringify(K().rounds && K().rounds.ss));
+  AR.startGame('sc', null, 'standard'); const s1 = R.game.seed; AR.quitGame();
+  AR.startGame('sc', null, 'standard'); const s2 = R.game.seed; AR.quitGame();
+  const g = play('sc', 4242, 'standard', 'best', { mode: 'ss' });
+  ok('an ordinary play draws its own seed, and the finished round is kept with its seed and level', s1 && s2 && s1 !== s2 && K().rounds && K().rounds.sc && K().rounds.sc.seed === 4242 && K().rounds.sc.tier === 'standard' && g.st.done,
+    JSON.stringify(K().rounds && K().rounds.sc));
   /* content variety is never a reward: the wage reads the score, not the seed */
-  const pay = [11, 22, 33].map((sd) => { fresh(); play('nw', sd, 'standard'); return AR.lastPay().units; });
+  const pay = [11, 22, 33].flatMap((sd) => ['nw', 'ss', 'bb'].map((mode) => { fresh(); play('sc', sd, 'standard', 'best', { mode }); return AR.lastPay().units; }))
+    .concat([11, 22, 33].map((sd) => { fresh(); play('mp', sd, 'standard'); return AR.lastPay().units; }));
   ok('the seed changes what you see, never what a perfect round pays', pay.every((x) => x === pay[0]), pay.join(','));
 }
 
 /* ── T5 · a wrong answer holds, with its note, until Continue ── */
 {
+  /* Smart Choices' two sorting tables: the wrong card stays, its note naming the thing and the
+     right side; every other key and tap does nothing; Enter (or Continue) moves on */
   const rows = [];
-  for (const id of ['nw', 'ss']) {
-    fresh(); AR.startGame(id, 7, 'standard'); const g = R.game;
-    const it = g.items[0], L = id === 'nw' ? { need: 'nwNeed', want: 'nwWant', other: { need: 'want', want: 'need' } } : { safe: 'ssSafe', scam: 'ssScam', other: { safe: 'scam', scam: 'safe' } };
-    let k = 0; while (g.items[k].a === 'both') k++;
-    /* answer the first card that has one right side, wrongly */
-    for (let i = 0; i < k; i++) g.act(L[g.items[i].a === 'both' ? (id === 'nw' ? 'need' : 'safe') : g.items[i].a]);
-    const card = g.items[k], wrongSide = L.other[card.a];
-    g.act(L[wrongSide]);
-    const v1 = g.view(), held = g.st.i === k && !!g.st.hold;
-    const name = id === 'ss' ? card.t.split(/\s+/).slice(0, 6).join(' ') : card.t;
-    const noteNames = held && g.st.note && g.st.note.text.includes(name.replace(/'/g, '\'')) && /is (a need|a want|a trap|real)/.test(g.st.note.text);
-    const sameCard = v1.includes(esc(card.t)) && /data-act="tcNext"/.test(v1) && /disabled/.test(v1);
-    g.key({ key: 'ArrowLeft' }); g.key({ key: 'ArrowRight' }); g.act(L[card.a]);
-    const stillHeld = g.st.i === k && !!g.st.hold;
+  for (const mode of ['nw', 'ss']) {
+    fresh(); AR.startGame('sc', 7, 'standard'); const g = R.game; g.act('scMode', mode);
+    let k = 0; while (g.st.deck[k].a === 'both') k++;
+    for (let i = 0; i < k; i++) { const c = g.st.deck[i]; if (mode === 'nw') { g.act('scSide', c.a); if (c.a === 'both') g.act('scChip', c.reason); } }
+    const card = g.st.deck[k];
+    if (mode === 'nw') g.act('scSide', card.a === 'need' ? 'want' : 'need'); else g.act('scCall', card.a === 'scam' ? 'safe' : 'scam');
+    const v1 = g.view(), held = g.st.i === k && !!g.st.held;
+    const name = mode === 'ss' ? card.t.split(/\s+/).slice(0, 6).join(' ') : card.t;
+    const noteNames = held && g.st.held.text.includes(name) && /is (a need|a want|a trap|real)/.test(g.st.held.text);
+    const sameCard = v1.includes(esc(card.t.split(/\s+/).slice(0, 3).join(' '))) && /data-act="scNext"/.test(v1) && /disabled/.test(v1);
+    g.key({ key: 'ArrowLeft' }); g.key({ key: 'ArrowRight' }); g.key({ key: '2' });
+    if (mode === 'nw') g.act('scSide', card.a); else g.act('scCall', card.a);
+    const stillHeld = g.st.i === k && !!g.st.held;
     g.key({ key: 'Enter' });
-    const moved = g.st.i === k + 1 && !g.st.hold && !(g.st.note && g.st.note.text.includes(name));
-    rows.push({ id, held, noteNames, sameCard, stillHeld, moved, note: g.st.note });
+    const moved = g.st.i === k + 1 && !g.st.held;
+    rows.push({ mode, held, noteNames, sameCard, stillHeld, moved });
     AR.quitGame();
   }
-  const esc0 = rows.every((r) => r.held && r.noteNames && r.sameCard && r.stillHeld && r.moved);
-  ok('Needs vs Wants and Scam Spotter: a wrong card stays, naming the item and its right side; arrows and taps do nothing; Enter moves on', esc0,
-    JSON.stringify(rows.map((r) => [r.id, r.held, r.noteNames, r.sameCard, r.stillHeld, r.moved])));
+  ok('Smart Choices (Needs and Wants, Scam Spotter): a wrong card stays, naming the thing and its right side; keys and taps do nothing; Enter moves on', rows.every((r) => r.held && r.noteNames && r.sameCard && r.stillHeld && r.moved),
+    JSON.stringify(rows.map((r) => [r.mode, r.held, r.noteNames, r.sameCard, r.stillHeld, r.moved])));
+  /* "both" without its reason is not a point: the wrong chip holds and names the right reason */
+  fresh(); AR.startGame('sc', 7, 'standard'); { const g = R.game; g.act('scMode', 'nw');
+    const k = g.st.deck.findIndex((c) => c.a === 'both');
+    for (let i = 0; i < k; i++) { const c = g.st.deck[i]; g.act('scSide', c.a); }
+    const c = g.st.deck[k]; g.act('scSide', 'both'); const asked = g.st.step === 'reason' && !g.st.held && g.st.points === k;
+    g.act('scChip', (c.reason + 1) % c.chips.length);
+    ok('Needs and Wants: “both” asks for its reason; the wrong reason holds, naming the right one, and scores nothing', asked && g.st.held && g.st.points === k && g.st.held.text.includes(c.why[0].slice(1, 20)), g.st.held && g.st.held.text);
+    AR.quitGame(); }
+  /* the giveaway: after "It's a trap", a wrong phrase holds and lights the real tells */
+  fresh(); AR.startGame('sc', 7, 'standard'); { const g = R.game; g.act('scMode', 'ss');
+    const k = g.st.deck.findIndex((m) => m.a === 'scam');
+    for (let i = 0; i < k; i++) g.act('scCall', 'safe');
+    const m = g.st.deck[k]; g.act('scCall', 'scam');
+    const tellStep = g.st.step === 'tell';
+    const wrong = m.ph.findIndex((p, i) => !m.tells.includes(i)); g.act('scTell', wrong);
+    const v = g.view();
+    ok('Scam Spotter: after "It\'s a trap" comes the giveaway; a wrong phrase holds, with the real tells lit and named', tellStep && g.st.held && g.st.i === k && m.tells.every((i) => g.st.held.text.includes(m.ph[i].t)) && (v.match(/class="opt sctell ok"/g) || []).length === m.tells.length,
+      g.st.held && g.st.held.text);
+    AR.quitGame(); }
+  /* Better Buy: every shelf holds with its working until Continue, right or wrong */
+  fresh(); AR.startGame('sc', 7, 'standard'); { const g = R.game; g.act('scMode', 'bb');
+    const sh = g.st.deck[0]; g.act('scShelf', 1 - sh.answer); for (const ch of '1') g.act('scKey', ch); g.act('scCheck');
+    const v = g.view(); g.act('scShelf', sh.answer); g.key({ key: '1' });
+    ok('Better Buy: a wrong pick and a wrong price hold, with both prices of one worked out, until Continue', g.st.i === 0 && g.st.held && !g.st.held.pickOk && /class="scwork"/.test(v) && /data-act="scNext"/.test(v) && g.st.typed === '1', g.st.typed);
+    AR.quitGame(); }
   /* the clock running out on Tricky holds too, and says so */
-  fresh(); AR.startGame('nw', 7, 'tricky'); { const g = R.game; const realNow = Date.now;
+  fresh(); AR.startGame('sc', 7, 'tricky'); { const g = R.game; g.act('scMode', 'nw');
+    const before = !!g.st.held;
     g.stop(); g.st.left = 0; g.resume(); await new Promise((r) => setTimeout(r, 20));
-    ok('Tricky\'s card clock running out holds the card with its answer, the same as a wrong tap', g.st.hold && g.st.i === 0 && /clock ran out/.test(g.st.note.text), g.st.note && g.st.note.text);
-    AR.quitGame(); Date.now = realNow; }
-  /* the quiz drills hold a wrong pick, with the working, until Next */
-  fresh(); AR.startGame('tt', 3, 'standard'); { const g = R.game, q = g.qs[0];
-    g.choose((q.a + 1) % 4); const v = g.view(); g.choose(q.a);
-    ok('the drills hold a wrong pick with the working shown, until Next', g.st.i === 0 && g.st.pick === (q.a + 1) % 4 && /data-act="ttNext"/.test(v) && v.includes(q.why), `pick ${g.st.pick}`);
+    ok('Tricky\'s card clock running out holds the card with its answer, the same as a wrong tap', !before && g.st.held && g.st.i === 0 && /clock ran out/.test(g.st.held.text), g.st.held && g.st.held.text);
+    AR.quitGame(); }
+  /* the Month Planner's typed year holds a wrong sum with the working and the common slips, until Continue */
+  fresh(); AR.startGame('mp', 3, 'standard'); { const g = R.game, y = g.st.round.yearly;
+    while (g.st.step !== 'yearly') g.act('mpSkip');
+    for (const ch of String(y.each * 10)) g.act('mpKey', ch); g.act('mpCheck');
+    const v = g.view(); g.act('mpPay'); g.act('mpKey', '5');
+    const held = g.st.step === 'yearly' && g.ledger.yearly && !g.ledger.yearly.ok;
+    g.key({ key: 'Enter' });
+    ok('Month Planner: a wrong yearly sum holds with the working and the ×10 / ×4 slips (the one typed marked), until Enter', held && v.includes(`× ${y.times} = `) && /class="mpslips"/.test(v) && /class="small hit"/.test(v) && g.st.step === 'bill', `${y.each} × ${y.times}`);
     AR.quitGame(); }
 }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
@@ -197,7 +249,13 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
   for (const id of IDS) {
     fresh();
     let v = '';
-    for (let k = 0; k < 4; k++) { const g = play(id, 50 + k, 'standard'); v = g.view(); if (k === 0) { const others = IDS.filter((x) => x !== id && AR.PRACTISED[x] && v.includes(esc(AR.PRACTISED[x]))); if (!v.includes(esc(AR.PRACTISED[id])) || others.length) own.push(id); } }
+    for (let k = 0; k < 4; k++) {
+      const mode = ['nw', 'ss', 'bb', 'nw'][k], g = play(id, 50 + k, 'standard', 'best', { mode }); v = g.view();
+      /* Smart Choices writes the line of the table it played (§1.4) */
+      const want = id === 'sc' ? AR.SC_PRACTISED[mode] : AR.PRACTISED[id];
+      const others = IDS.filter((x) => x !== id && AR.PRACTISED[x] && v.includes(esc(AR.PRACTISED[x]))).concat(id === 'sc' ? Object.keys(AR.SC_PRACTISED).filter((m) => m !== mode && v.includes(esc(AR.SC_PRACTISED[m]))) : []);
+      if (!v.includes(esc(want)) || others.length) own.push(id + (id === 'sc' ? ':' + mode : ''));
+    }
     /* the fourth play of a day is practice, and says why */
     if (!v.includes(esc(AR.CAPPED_LINE)) || /Earned ₹0/.test(v)) capped.push(id);
     AR.quitGame();
@@ -216,14 +274,14 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
     && L('easy', 0.1).to === null && L('tricky', 3).to === null && L('easy', 2).to === 'standard' && L('tricky', 0.2).to === 'standard');
   /* played: a bad round on Standard offers Easy, and nothing changes until the child says so */
   fresh();
-  let g = play('nw', 3, 'standard', 'wrong'); let v = g.view();
-  const offeredDown = /data-act="gLevel" data-arg="nw:easy"/.test(v) && JT.tierOf(K(), 'nw') === 'standard';
-  g.key({ key: 'l' }); const took = JT.tierOf(K(), 'nw') === 'easy';
+  let g = play('sc', 3, 'standard', 'wrong'); let v = g.view();
+  const offeredDown = /data-act="gLevel" data-arg="sc:easy"/.test(v) && JT.tierOf(K(), 'sc') === 'standard';
+  g.key({ key: 'l' }); const took = JT.tierOf(K(), 'sc') === 'easy';
   ok('a round under half of par offers Easy on the end card; the level stays Standard until L (or the button) takes it', offeredDown && took, `offered ${offeredDown}, took ${took}`);
   AR.quitGame();
   fresh();
-  g = play('ss', 3, 'standard'); v = g.view();
-  ok('a perfect round offers Tricky — and only offers', /data-arg="ss:tricky"/.test(v) && JT.tierOf(K(), 'ss') === 'standard');
+  g = play('sc', 3, 'standard', 'best', { mode: 'ss' }); v = g.view();
+  ok('a perfect round offers Tricky — and only offers', /data-arg="sc:tricky"/.test(v) && JT.tierOf(K(), 'sc') === 'standard');
   AR.quitGame();
   fresh(); g = play('cr', 5, 'standard'); const sh = K().rounds.cr.share; v = g.view();
   ok('a middling round (between half and 1.6× par) offers nothing', sh < 0.5 || sh >= 1.6 || !/data-act="gLevel"/.test(v), `share ${sh}`);

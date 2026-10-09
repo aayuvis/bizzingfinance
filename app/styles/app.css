@@ -1226,3 +1226,4 @@ html[data-bz-dark] .sbrow{background:rgb(20 24 36 / .6)}
 :root[data-motion="reduced"] .sbcaret{animation:none}
 .sbendsub{display:inline-block;background:rgb(255 252 245 / .92);color:var(--ink);border-radius:12px;padding:6px 12px;font-weight:600}
 html[data-bz-dark] .sbendsub{background:rgb(20 24 36 / .9);color:#F4EEE4}
+

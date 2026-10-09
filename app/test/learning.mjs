@@ -85,7 +85,9 @@ console.log('\nLearning · feedback that holds, rank that moves on learning\n' +
   const how = Object.fromEntries([...src.matchAll(/^  ([a-z]{2}): \[('[^\n]+)\],$/gm)].map((m) => [m[1], m[2].split(/', '/).length]));
   const pr = new Set([...src.matchAll(/([a-z]{2}): '[^']+'/g)].map((m) => m[1]));
   const missing = ids.filter((id) => how[id] !== 3 || !pr.has(id));
-  ok(ids.length >= 11 && !missing.length, 'every game has three lines of how-to and a "you practised" line', missing.join(',') || ids.join(','));
+  /* the regex found every game in the catalogue (Smart Choices and the Month Planner absorbed five cards: docs/12 §3) */
+  const { GAMES } = await import('../src/gamelist.js');
+  ok(ids.length === GAMES.length && ids.length >= 8 && !missing.length, 'every game has three lines of how-to and a "you practised" line', missing.join(',') || ids.join(','));
 }
 
 /* E9 · a jar or bank tap is transfer evidence only with a real alternative on offer */

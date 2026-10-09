@@ -1,5 +1,5 @@
 {
-  "total": 1811,
+  "total": 1812,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,8 +12,8 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 16,
-    "game": 12,
+    "figure": 19,
+    "game": 8,
     "quest": 13,
     "medal": 48,
     "exchange": 10,
@@ -32,8 +32,8 @@
     "store": 7,
     "companion": 11,
     "rank": 4,
-    "needwant": 3,
-    "scamspot": 10,
+    "needwant": 6,
+    "scamspot": 9,
     "chance": 9,
     "market": 4,
     "company": 39,
@@ -41,22 +41,22 @@
     "event": 54
   },
   "byLevel": {
-    "chapter 1": 135,
+    "chapter 1": 136,
     "chapter 2": 153,
     "chapter 3": 238,
-    "chapter 4": 203,
+    "chapter 4": 202,
     "chapter 5": 163,
     "chapter 6": 165,
     "chapter 7": 205,
     "chapter 8": 120,
-    "any": 429
+    "any": 430
   },
   "levels": [
     {
       "level": 1,
       "chapter": "c1",
       "title": "What money even is",
-      "n": 135
+      "n": 136
     },
     {
       "level": 2,
@@ -74,7 +74,7 @@
       "level": 4,
       "chapter": "c4",
       "title": "Sellers and their tricks",
-      "n": 203
+      "n": 202
     },
     {
       "level": 5,
@@ -165,7 +165,8 @@
     "ask:0 ≈ letter:l4",
     "shop:brass ≈ letter:l2",
     "rank:Saver ≈ lesson:c3b#beats0-1",
-    "needwant:3 ≈ card:c1b#eg",
+    "needwant:50 ≈ card:c1b#eg",
+    "scamspot:8 ≈ scamspot:0",
     "company:assetmgr ≈ word:Index fund",
     "gen:CHOOSE-1~1#why ≈ assess:CHOOSE-1#2why",
     "gen:CHOOSE-1~2#why ≈ assess:CHOOSE-1#2why",

@@ -207,3 +207,29 @@ export function check(id, attempt) {
   if (it.kind === 'amount') return Number(String(attempt).replace(/[^\d.-]/g, '')) === a;
   return Array.isArray(attempt) && attempt.length === a.length && attempt.every((v, i) => v === a[i]);
 }
+
+/* §1.3 (docs/12) · a sort places ONE thing at a time, and a thing put in the wrong bin HOLDS:
+   it stays where it was put, marked, with a note naming it and the bin it belongs in, and
+   nothing else can be touched until Continue moves it across. The correction is never left
+   to land on the next thing. `t` is the attempt (R.item): { bins, sel, hold, misses, settled }.
+   A sort settles when every thing is in its right bin; it is right first time if nothing held. */
+export function sortPlace(t, id, bin) {
+  const it = ITEMS[id], i = t.sel, bins = t.bins || (t.bins = {});
+  if (!it || it.kind !== 'sort' || t.settled || t.hold || i == null || (bin !== 0 && bin !== 1) || bins[i] != null) return null;
+  bins[i] = bin; t.sel = null;
+  const right = it.things[i][1];
+  if (bin !== right) { t.hold = { i, right }; t.misses = (t.misses || 0) + 1; return { ok: false, note: sortNote(id, i) }; }
+  return sortContinue(t, id, true);
+}
+/* Continue: the held thing goes across; the sort settles when every thing is in a bin */
+export function sortContinue(t, id, placed) {
+  if (!placed) { if (!t.hold) return null; t.bins[t.hold.i] = t.hold.right; t.hold = null; }
+  if (ITEMS[id].things.some((_, k) => t.bins[k] == null)) return { ok: true };
+  t.settled = true; t.tries = 1; t.right = !t.misses;
+  return { ok: true, settled: true, right: t.right };
+}
+/* the held note: the thing, by name, and the bin it belongs in — plus the idea's hint */
+export function sortNote(id, i) {
+  const it = ITEMS[id], [name, bin] = it.things[i];
+  return `“${name}” goes in ${it.bins[bin]}. ${it.hint}`;
+}
