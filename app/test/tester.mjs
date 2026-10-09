@@ -19,7 +19,7 @@ const snapshot = () => JSON.stringify({ done: c.learn.done, level: c.learn.level
 const before = snapshot();
 
 ok(!tester() && !isOpen(c, 'bank') && !worldOpen(c, 4) && chapterLocked(c, CHAPTERS[7]), 'off: a new child is gated', 'bank closed, world 5 closed, chapter 8 locked');
-ok(!GAMES.every((g) => gameOpen(c, g)), 'off: not every game is open');
+ok(GAMES.every((g) => gameOpen(c, g)), 'off: every game is still open to a new child — games never wait for a chapter (owner, 9 Oct 2026)');
 ok(!PLACES.every((p) => placeOpen(p, c.learn.level)), 'off: the street has locked buildings');
 
 setTester(true);

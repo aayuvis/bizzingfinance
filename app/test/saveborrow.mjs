@@ -65,7 +65,7 @@ const randomBot = { type: () => String(1 + Math.floor(rnd() * 99999)).slice(0, 1
   const g = GAMES.find((x) => x.id === 'sb');
   ok(!!g && g.kind === 'decision' && g.needs === UNLOCKS.bank, 'Save or Borrow? is in the catalogue, a decision game, opened by the Bank\'s own chapter', g && `${g.kind} · needs ${g.needs}`);
   const ch = CHAPTERS.find((x) => x.id === g.needs);
-  ok(ch && ch.lv === 11 && !gameOpen(K(), g), 'it sits where the town says: the Bank\'s chapter is level 11, and a new child finds it shut', ch && `lv ${ch.lv}`);
+  ok(ch && ch.lv === 11 && gameOpen(K(), g), 'it sits with the Bank\'s chapter (level 11), and a new child can play it from day one (owner, 9 Oct 2026)', ch && `lv ${ch.lv}`);
   ok(['sbKey', 'sbCheck', 'sbPath', 'sbCushion', 'sbSkip', 'sbAns', 'sbNext'].every((a) => GAME_ACTS.includes(a)), 'every action it answers is a named arcade action');
   ok(AR.ARCADE_TIERS.sb && LEVELS.every((t) => AR.ARCADE_TIERS.sb[t].par === SBV.SB_PAR && AR.ARCADE_TIERS.sb[t].says) && AR.ARCADE_GOALS.sb.length === 3,
     'three levels with one par (the whole set) and three goals that pay nothing', `par ${SBV.SB_PAR}`);

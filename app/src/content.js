@@ -658,7 +658,11 @@ export function setTester(on) { TESTER = !!on; }
 export function tester() { return TESTER; }
 export function chapterLocked(c, ch) { return !TESTER && c.learn.level < ch.lv && !((c.learn.testedOut || {})[ch.id]); }
 export function levelAtLeast(c, lv) { return TESTER || c.learn.level >= lv; }
-export function gameOpen(c, g) { return TESTER || !g.needs || chapterOpened(c, g.needs); }
+/* Every game is open from the first day (owner, 9 Oct 2026: "the games should be accessible at
+   start — don't need to finish a module to start"). `needs` stays on each game as the chapter it
+   pairs with (the feed files it there, the Play tab can suggest it), never as a lock; a game that
+   needs maths the child has not met shows the same truth another way (ledger.mathsMet). */
+export function gameOpen() { return true; }
 
 export function isOpen(c, key) {
   if (TESTER) return true;

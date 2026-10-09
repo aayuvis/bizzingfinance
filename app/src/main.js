@@ -38,15 +38,6 @@ const mgView = () => MG ? MG.viewMarketGame() : (mgReady(), '<h1>The Market Game
 const mg = (fn) => (...a) => { if (MG) fn(...a); else mgReady(); };
 /* §2.7 · the Market Game opens at level 13 — by the Play cover, the ☰ drawer, search or a
    typed #/market40 alike. The lock lives on the route, so no door can go round it. */
-import { M40_LEVEL } from './shell.js';
-function m40Locked(c) {
-  return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Back to Play</button>
-    <div class="card m40lock"><div class="row" style="gap:10px">${ico('lock', '🔒', 22)}<div class="grow">
-      <div class="eyebrow">Opens at level ${M40_LEVEL}</div><h1 style="margin:2px 0;font-size:22px">The Market Game</h1>
-      <p class="small muted">You are on level ${c.learn.level}. Forty companies and forty years of reading the reports wait for you there — the chapters before it are what make the reports make sense.</p></div></div></div>
-  </div>`;
-}
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
@@ -260,7 +251,7 @@ function render() {
     nav === 'mistakes' ? viewMistakes() :
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
-    nav === 'market40' ? (levelAtLeast(c, M40_LEVEL) ? mgView() : m40Locked(c)) :
+    nav === 'market40' ? mgView() :
     nav === 'story' ? storyView() :
     nav === 'library' ? viewLibrary() :
     nav === 'sprint' ? sprintView() :

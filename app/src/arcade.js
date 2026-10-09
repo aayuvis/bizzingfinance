@@ -16,7 +16,7 @@ import { ASSETS, STOCK, CHAPTERS, chapterDone, gameOpen, levelAtLeast } from './
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
-import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
+import { pipPose, kidBadge } from './shell.js';
 import { fx as makeFx, countdown, plate, plateSrc, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
 import { seasonFor, cupRows, bellaCup, cupScore, CUP_SERIES, CUP_WEEKS } from './cup.js';
@@ -64,11 +64,11 @@ export function viewArcade() {
   };
   const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
     blurb: 'Forty companies that do not exist, forty years of things happening to them. Read three, say what would hurt each one, then put money behind your answers.' };
-  const m40open = levelAtLeast(c, M40_LEVEL);
+  const m40open = true;   /* open from day one, like every game (owner, 9 Oct 2026) */
   /* A locked headline game at the top of the Arcade told a new child the
      best thing here was not for them. Open, it leads; locked, it waits at
      the bottom with the level that opens it. */
-  const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level ' + M40_LEVEL });
+  const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)' });
   /* ten cards, three groups (docs/12 §3): the flagships first — the Market Game waits there,
      locked, with the level that opens it — then Train and Play, in the catalogue's order */
   const of = (grp) => GAMES.filter((g) => GROUP[g.id] === grp);

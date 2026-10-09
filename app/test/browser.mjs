@@ -1359,13 +1359,13 @@ async function gameChecks() {
   const faces = await p.evaluate(() => { const f = window.BZF.R.game.g.look.faces || []; return f.map((im) => im.complete && im.naturalWidth > 0); });
   ok('Main Street\'s tokens are faces — the child\'s avatar, Mags and Bo — loaded and drawn', faces.length === 3 && faces.every(Boolean), JSON.stringify(faces));
   await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
-  /* §2.7 · the Market Game's level-13 lock holds on the ☰ drawer link and the route */
+  /* the Market Game is open from day one, on the ☰ drawer link and its route (it once opened at level 13) */
   await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = false; B.setTester(false); B.R.s.kids[B.R.s.active].learn.level = 4; B.fire('drawer'); });
   await p.waitForSelector('.drawer');
-  const dr = await p.evaluate(() => { const b = document.querySelector('.drawer [data-arg="market40"]'); return b ? { locked: b.classList.contains('locked'), says: /Opens at level 13/.test(b.textContent), lock: !!b.querySelector('svg') } : null; });
+  const dr = await p.evaluate(() => { const b = document.querySelector('.drawer [data-arg="market40"]'); return b ? { locked: b.classList.contains('locked') || /Opens at level/.test(b.textContent) || !!b.querySelector('svg.lock, [data-ico="lock"]') } : null; });
   await p.evaluate(() => { const B = window.BZF; B.fire('closeOv'); location.hash = '#/market40'; }); await p.waitForTimeout(400);
-  const route = await p.evaluate(() => ({ lock: !!document.querySelector('.m40lock'), game: !!document.querySelector('[data-act="mgAct"]') }));
-  ok('below level 13 the ☰ drawer shows the Market Game locked, and #/market40 shows the lock, not the game', dr && dr.locked && dr.says && route.lock && !route.game, JSON.stringify({ dr, route }));
+  const route = await p.evaluate(() => ({ game: !!document.querySelector('[data-act="mgAct"], [data-act="mgPlay"], .m40hall') }));
+  ok('at level 4 the ☰ drawer offers the Market Game unlocked, and #/market40 opens the game — every game is open from day one (owner, 9 Oct 2026)', dr && !dr.locked && route.game, JSON.stringify({ dr, route }));
   ok('games: nothing threw', !errors.length, errors.slice(0, 2).join(' | '));
   await ctx.close();
 }
@@ -1547,6 +1547,10 @@ async function playTabChecks() {
     const names = [...document.querySelectorAll('main .cover b')].map((b) => b.textContent.trim());
     return { groups, names, wide: document.scrollingElement.scrollWidth <= innerWidth + 1 };
   });
+  /* every game is open from the first day, before any chapter is finished (owner, 9 Oct 2026) */
+  const fresh = await p.evaluate(() => { const B = window.BZF, k = B.R.s.kids[B.R.s.active]; B.setTester(false); B.R.s.settings.tester = false; k.learn.done = {}; k.learn.level = 1; B.R.render();
+    return { locked: document.querySelectorAll('main .cover.locked').length, open: [...document.querySelectorAll('main .cover')].filter((b) => ['game', 'nav'].includes(b.dataset.act)).length }; });
+  ok('a child on day one, with no chapter finished, can open all ten games — nothing says learn first', fresh.locked === 0 && fresh.open === 10, JSON.stringify(fresh));
   const want = ['Stall of My Own', 'The Market Game', 'Smart Choices', 'Month Planner', 'Compound Climb', 'Save or Borrow?', 'Change Rush', 'Market Storm', 'The Market Cup', 'Main Street'];
   ok('T16: Play shows ten cards in three groups — Flagships · Train · Play — and no retired card',
     t.names.length === 10 && JSON.stringify(t.groups) === '["flagship","train","play"]' && want.every((n) => t.names.includes(n))
