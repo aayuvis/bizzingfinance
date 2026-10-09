@@ -135,7 +135,7 @@ ok(arcadeIds.every((id) => !('par' in S(id)) || S(id).par > 0) && AR.ARCADE_TIER
   /* Stall Rush and Market Storm: customers wait less, the panic climbs faster */
   const stall = (t) => { AR.startGame('sr', null, t); const g = R.game; for (let i = 0; i < 160; i++) g.advance(16); const p = g.st.q[0] ? g.st.q[0].patience : 1; AR.quitGame(); return p; };
   ok(stall('easy') > stall('standard') && stall('standard') > stall('tricky'), 'Stall Rush: patience runs out slower on Easy, faster on Tricky');
-  const panic = (t) => { AR.startGame('st', null, t); const g = R.game; for (let i = 0; i < 100; i++) g.advance(16); const p = g.st.panic; AR.quitGame(); return p; };
+  const panic = (t) => { AR.startGame('st', null, t); const g = R.game; g.act('stRule', 'stops'); g.act('stWhy', 'card'); g.act('stGo'); for (let i = 0; i < 100; i++) g.advance(16); const p = g.st.panic; AR.quitGame(); return p; };
   ok(panic('easy') < panic('standard') && panic('standard') < panic('tricky'), 'Market Storm: the panic climbs slower on Easy, faster on Tricky');
   AR.startGame('cc', null, 'tricky'); ok(R.game.kn.charge > 1 && R.game.kn.target === 480, 'Compound Climb on Tricky: a faster charge and a higher line'); AR.quitGame();
 }

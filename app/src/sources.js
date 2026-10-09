@@ -16,7 +16,7 @@
               a card that states a real-world figure without one.
 
    A number with neither is a bug, and the lint says so by name. */
-import { CAL, SB } from './world.js';
+import { CAL, SB, STORM } from './world.js';
 
 export const SOURCES = {
   grow: {
@@ -81,6 +81,22 @@ export const SOURCES = {
     value: () => "the town's own prices, weather and footfall",
     where: 'stallsim.js · PRODUCTS, WEATHER, LEVELS',
     says: 'What the wholesaler charges for chai, ice golas, rope and umbrellas, how many people walk past wanting one, how the weather moves them and what a pitch costs a week are dials of this town, chosen so a careful season makes a profit and a careless one loses money. They are Bizzington\'s, not any real market\'s.',
+  },
+  /* Market Storm (docs/12 §2.5): how far a storm falls, how often the company really stops */
+  storm: {
+    kind: 'own',
+    what: 'How Market Storm\'s storms fall',
+    value: () => `a company that is fine falls ${Math.round(STORM.fall[0] * 100)}–${Math.round(STORM.fall[1] * 100)} in every 100 at worst, never half · ${Math.round(STORM.stops * 100)} storms in every 100, the company stops making money and ends at ${Math.round(STORM.stopEnd[0] * 100)}–${Math.round(STORM.stopEnd[1] * 100)} of what you paid · a fine one stands at ${Math.round(STORM.back[0] * 100)}–${Math.round(STORM.back[1] * 100)} a few months later`,
+    where: 'world.js · STORM',
+    says: 'Dials of this town, chosen so that a plan has something to keep to: most storms are the market\'s mood, and some are a business that really stopped. They are Bizzington\'s, not a record of any real market\'s falls, and nothing here is advice.',
+  },
+  /* Main Street (docs/12 §2.9): the board's own money, cash flow included (board.js MN) */
+  mainstreet: {
+    kind: 'own',
+    what: 'What Main Street\'s shops cost, pay and need',
+    value: () => 'shops at 50–260 that pay a tenth or so of their price every lap · every shop you own adds 6 to each bill · a repair costs 30 in every 100 of your dearest shop · the buy card warns below a cushion of 50 and the bills',
+    where: 'board.js · SQUARES, CARDS and MN',
+    says: 'The board\'s prices are Bizzington\'s, chosen so buying everything you can afford can force a sale at half price and a cushion keeps you out of it. Not a claim about what any real shop costs or earns.',
   },
   /* Save or Borrow? (docs/12 §2.10): every dial its table uses, named by `dials`, so
      test/saveborrow.mjs can hold the register to covering all of world.js SB (SB3) */

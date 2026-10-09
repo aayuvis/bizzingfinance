@@ -54,8 +54,12 @@ export function play(id, seed = 1, tier = 'standard', how = 'best') {
       if (g.st.restock <= 0) { const c = g.st.q[0]; if (c) { if (g.st.stock[c.want]) g.serve(c.want); else g.restock(); } }
     }
   } else if (id === 'st') {
-    if (bad) g.act('stSell');
-    else for (let i = 0; i < 5000 && !g.st.done; i++) { g.advance(16); if (g.st.panic > 60) g.calm(); }
+    /* §2.5 · write the plan (sell only if the company stops making money; the card's reason),
+       then keep to it: re-read it when the panic climbs, sell only once the news says so.
+       'wrong' gives the crowd's reason and sells at the first wobble. */
+    g.act('stRule', 'stops'); g.act('stWhy', bad ? 'crowd' : 'card'); g.act('stGo');
+    if (bad) { g.advance(16); g.act('stSell'); }
+    else for (let i = 0; i < 5000 && !g.st.done; i++) { g.advance(16); if (g.st.factSeen) g.act('stSell'); else if (g.st.panic > 60) g.calm(); }
   } else if (id === 'mc') {
     /* spread out and keep the nerve: the basket plus a slice of each */
     if (!bad) { for (let i = 0; i < 4; i++) g.act('mcAdj', 'basket:10'); ['grain', 'chai', 'rocket'].forEach((k) => { g.act('mcAdj', k + ':10'); g.act('mcAdj', k + ':10'); }); }
@@ -81,7 +85,8 @@ export function play(id, seed = 1, tier = 'standard', how = 'best') {
         const ph = g.g.phase, me = g.g.players[g.g.turn];
         if (!me.human) break;
         if (ph === 'roll') g.act('mnRoll');
-        else if (ph === 'decide') g.act(!bad && me.cash >= 120 ? 'mnBuy' : 'mnPass');
+        /* §2.9 · buy only what leaves a cushion for a bad week (the buy card's own warning) */
+        else if (ph === 'decide') g.act(!bad && me.cash - g.squares[g.g.sq].cost >= g.cushion(me) ? 'mnBuy' : 'mnPass');
         else if (ph === 'card') g.act('mnCard', 0);
         else break;
       }
@@ -89,4 +94,27 @@ export function play(id, seed = 1, tier = 'standard', how = 'best') {
   }
   return g;
 }
+/* §2.5 (T11) · Market Storm's other players, for test/games.mjs:
+   'idle'  writes a plan and then does nothing at all, ever;
+   'mash'  picks at random and presses random buttons, a few times a second;
+   'plan'  keeps to whichever rule it is given, to the letter. */
+export function storm(seed, how, rule = 'stops', tier = 'standard') {
+  AR.startGame('st', seed, tier);
+  const g = R.game, rnd = mulberry(seed * 7 + 3);
+  if (how === 'mash') {
+    g.act('stRule', ['stops', 'half', 'never'][Math.floor(rnd() * 3)]);
+    g.act('stWhy', g.def.whys[Math.floor(rnd() * 3)].id); g.act('stGo');
+    for (let i = 0; i < 5000 && !g.st.done; i++) { g.advance(16); if (rnd() < 0.012) g.act(rnd() < 0.5 ? 'stSell' : 'stPlan'); }
+  } else {
+    g.act('stRule', rule); g.act('stWhy', 'card'); g.act('stGo');
+    for (let i = 0; i < 5000 && !g.st.done; i++) {
+      g.advance(16);
+      if (how !== 'plan') continue;
+      const due = rule === 'stops' ? g.st.factSeen : rule === 'half' ? g.st.halfAt != null : false;
+      if (due) g.act('stSell');
+    }
+  }
+  return g;
+}
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 export const done = (g) => (g.st ? g.st.done : g.g.done);

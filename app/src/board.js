@@ -75,6 +75,15 @@ export const CARDS = [
   { id: 'found', em: '🪙', t: 'Money in an old coat',
     body: 'Fifteen, and no idea when it went in there.',
     run: () => ({ note: 'Free money is rare and this is not a strategy.', cash: 15 }) },
+  /* §2.9 · cash-flow pressure: a shop is a thing that breaks. The bill lands on the
+     dearest place you own, so the more you bought, the bigger the week that comes */
+  { id: 'leak', em: '🔧', t: 'A repair at your shop',
+    body: 'Something broke at the biggest place you own. A quarter of what it cost to buy.',
+    run: (g, p) => {
+      const big = p.own.map((i) => SQUARES[i].cost || 0).sort((a, b) => b - a)[0];
+      return big ? { note: `${Math.round(big * MN.repair)} to put it right. A shop is a thing that pays, and a thing that breaks.`, cash: -Math.round(big * MN.repair) }
+        : { note: 'You own nothing yet, so nothing of yours broke.', cash: 0 };
+    } },
   { id: 'repair', em: '🔨', t: 'The roof again',
     body: 'Twenty-five, or fifty if you have nothing set aside.',
     run: (g, p) => p.cash >= 60
@@ -96,6 +105,14 @@ export const BOTS = [
 ];
 
 const START_CASH = 220, WAGE = 60, BASE_EXP = 24, MAX_LAPS = 8;
+/* §2.9 · cash flow, the town's own dials (sources.js 'mainstreet'): every shop you own adds
+   `rates` to each bill square, a repair card costs `repair` of your dearest shop, and the
+   buy card warns when buying would leave less than `buffer` for a bad week. Buy everything
+   you can afford and a bill can force a sale at half price; keep a cushion and it cannot. */
+export const MN = { rates: 6, repair: 0.3, buffer: 50 };
+/* what a bad week can cost you now: a bill with the shops' rates on it, and a margin */
+export const cushionFor = (p) => MN.buffer + MN.rates * (p.own.filter((i) => SQUARES[i].t === 'biz').length + 1);
+export const billFor = (p, sq) => sq.amt + MN.rates * p.own.filter((i) => SQUARES[i].t === 'biz').length;
 
 /* G8 · a level is the life everyone at the table has to pay for: `baseExp` is the
    starting expenses a lap (Standard 24, today's). The wage scales by Standard's over
@@ -202,7 +219,10 @@ export function mainStreet(opts = {}) {
   const land = (p) => {
     const i = p.pos, sq = SQUARES[i];
     g.sq = i;
-    if (sq.t === 'bill') { p.cash -= sq.amt; note(`${p.name} paid ${sq.n} — ${sq.amt}.`); settle(p); return endTurn(); }
+    if (sq.t === 'bill') {
+      const amt = billFor(p, sq), rates = amt - sq.amt;
+      p.cash -= amt; note(`${p.name} paid ${sq.n} — ${amt}${rates ? ` (${sq.amt}, and ${rates} for the shops)` : ''}.`); settle(p); return endTurn();
+    }
     if (sq.t === 'rest') { note(`${p.name} sat down for five minutes.`); return endTurn(); }
     if (sq.t === 'start') { note(`${p.name} landed on pay day.`); return endTurn(); }
     if (sq.t === 'chance') {
@@ -429,7 +449,7 @@ export function mainStreet(opts = {}) {
   };
 
   return {
-    id: 'mn', g, EXP0,
+    id: 'mn', g, EXP0, squares: SQUARES, cushion: cushionFor,
     mount() {
       if (typeof document === 'undefined' || g.done) return;
       const box = document.getElementById('msBoard'), cv = document.getElementById('msCanvas');
@@ -510,7 +530,7 @@ export function mainStreet(opts = {}) {
         const here = g.players.filter((x) => x.pos === i);
         const active = g.sq === i && g.phase !== 'roll';
         /* the dots are the board's truth in the DOM; the canvas draws the walking tokens over them */
-        return `<div class="mssq" data-sq="${i}" style="grid-row:${rw};grid-column:${c};
+        return `<div class="mssq" data-sq="${i}" data-t="${sq.t}"${sq.cost ? ` data-tier="${sq.cost >= 200 ? 3 : sq.cost >= 120 ? 2 : 1}"` : ''} style="grid-row:${rw};grid-column:${c};
           background:${active ? 'var(--action-tint)' : own ? (own.human ? 'var(--grow-tint)' : 'var(--tint)') : 'var(--surface)'};
           ${own ? `box-shadow:inset 0 -3px 0 ${own.human ? 'var(--grow)' : own.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}` : ''}">
           <div class="sqico">${ico(sq.em, sq.em, 20)}</div>
@@ -536,11 +556,15 @@ export function mainStreet(opts = {}) {
           <div class="bar" style="margin-top:4px"><i style="width:${Math.min(100, indep(g.players[0]) * 100)}%;background:var(--grow)"></i></div>
         </div>
         ${g.phase === 'decide' ? (() => {
-          const sq = SQUARES[g.sq];
-          return `<div style="background:var(--surface);border-radius:9px;padding:10px;text-align:center">
+          const sq = SQUARES[g.sq], left = p.cash - sq.cost, need = cushionFor(p);
+          /* §2.9 · what buying leaves, beside what a bad week can cost: the buffer is a decision */
+          return `<div class="msbuy" style="background:var(--surface);border-radius:9px;padding:10px;text-align:center">
             <div class="sqico">${ico(sq.em, sq.em, 26)}</div>
             <b style="font-size:13px">${esc(sq.n)}</b>
-            <p class="small muted" style="margin:3px 0 7px">${sq.cost} now · ${sq.inc} every lap, forever</p>
+            <p class="small muted" style="margin:3px 0 4px">${sq.cost} now · ${sq.inc} every lap, forever</p>
+            ${left >= 0 ? `<p class="small mscush${left < need ? ' thin' : ''}" style="margin:0 0 7px">Leaves you ${left}. ${left < need
+              ? `A bad week costs about ${need}: one bill and you sell a shop at half price.`
+              : `Enough for a bad week (about ${need}).`}</p>` : '<p class="small muted" style="margin:0 0 7px">Not enough cash, and nothing lends to you here.</p>'}
             <div class="row" style="gap:6px">
               <button class="btn sm grow" data-act="mnBuy" ${p.cash < sq.cost ? 'disabled' : ''}>Buy · Y</button>
               <button class="btn ghost sm grow" data-act="mnPass">Pass · N</button></div></div>`;

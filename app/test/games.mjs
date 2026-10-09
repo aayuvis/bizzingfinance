@@ -126,7 +126,7 @@ console.log('\nThe games · docs/12 §1, §2.6–2.9\n' + '─'.repeat(56));
     else if (id === 'bb') out = g.st.order.map((b) => b.n);
     else if (id === 'cc') { for (let k = 0; k < 4; k++) { g.st.holding = true; g.st.charge = 60; g.release(); } out = g.st.hist; }
     else if (id === 'sr') { for (let i = 0; i < 600; i++) g.advance(16); out = g.st.q.map((c) => c.want).concat(g.st.lost); }
-    else if (id === 'st') { for (let i = 0; i < 900; i++) g.advance(16); out = [g.st.shoutN, g.st.shout && g.st.shout[1], Math.round(g.st.val)]; }
+    else if (id === 'st') { g.act('stRule', 'never'); g.act('stWhy', 'card'); g.act('stGo'); for (let i = 0; i < 900; i++) g.advance(16); out = [g.def.co.id, g.def.stops, g.def.whys.map((w) => w.id).join(''), g.st.news.map((h) => h.text.slice(0, 12)), g.st.shoutN, g.st.shout && g.st.shout[1], Math.round(g.st.val)]; }
     else if (id === 'mc') { for (let i = 0; i < 4; i++) g.act('mcAdj', 'rocket:10'); for (let w = 0; w < 6; w++) g.act('mcNext'); out = g.st.log; }
     else if (id === 'sb') out = g.st.round.goals.map((x) => [x.thing.id, x.price, x.paths.map((q) => q.id).join('/')]);
     else if (id === 'mn') { const rolls = []; withQueue((q) => { for (let i = 0; i < 400 && !g.g.done; i++) { if (q.length) { q.shift()(); continue; } if (g.g.phase === 'roll') { g.act('mnRoll'); rolls.push(g.g.die); } else if (g.g.phase === 'decide') g.act('mnBuy'); else if (g.g.phase === 'card') g.act('mnCard', 0); else break; } }); out = rolls.slice(0, 12); }
@@ -280,9 +280,99 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
   const mainSrc = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
   const opener = (mainSrc.match(/on\('game', \(id\) => \{[\s\S]*?\n\}\);/) || [''])[0];
   ok('opening a game\'s title card ticks no quest (main.js on("game"))', opener && !/questTick/.test(opener.replace(/\/\*[\s\S]*?\*\//g, '')), opener.split('\n').length + ' lines');
+  /* cash-flow pressure: over-buying can force a sale at half price; a cushion keeps you out of it.
+     Watched failing with the pressure dials at zero (rates 0, repair 0): the always-buyer then
+     sold in 27 games of 200 (it needs one in five, 40). */
+  const BD = await import('../src/board.js');
+  const mnRun = (sd, buy) => { fresh(); AR.startGame('mn', sd, 'standard'); const gm = R.game;
+    withQueue((q) => { for (let i = 0; i < 20000 && !gm.g.done; i++) { if (q.length) { q.shift()(); continue; }
+      const ph = gm.g.phase, me = gm.g.players[gm.g.turn]; if (!me.human) break;
+      if (ph === 'roll') gm.act('mnRoll'); else if (ph === 'decide') gm.act(buy(me, BD.SQUARES[gm.g.sq]) ? 'mnBuy' : 'mnPass'); else if (ph === 'card') gm.act('mnCard', 0); else break; } });
+    const me = gm.g.players[0]; AR.quitGame(); return { sold: me.sold, owned: me.own.length }; };
+  const N = 200, all = [], cush = [];
+  for (let sd = 1; sd <= N; sd++) { all.push(mnRun(sd, (me, sq) => me.cash >= sq.cost)); cush.push(mnRun(sd, (me, sq) => me.cash - sq.cost >= BD.cushionFor(me))); }
+  const forced = (rs) => rs.filter((x) => x.sold > 0).length;
+  ok('Main Street: buying everything you can afford forces a sale at half price in at least one game in five, and three times as often as keeping a cushion',
+    forced(all) >= N / 5 && forced(all) >= 3 * Math.max(1, forced(cush)), `always-buy ${forced(all)}/${N} · cushion ${forced(cush)}/${N}`);
+  ok('and the "never sold at half price" goal is something a careful player meets and a greedy one often misses',
+    cush.filter((x) => x.owned >= 1 && x.sold === 0).length > all.filter((x) => x.owned >= 1 && x.sold === 0).length * 0.8 && cush.filter((x) => x.owned >= 1).length > N / 2);
+  { const p = { own: [1, 3, 5], cash: 0 };
+    ok('every shop you own adds the town\'s rates to a bill, and the repair card costs a share of your dearest shop',
+      BD.billFor(p, BD.SQUARES[19]) === 20 + 3 * BD.MN.rates && BD.CARDS.find((x) => x.id === 'leak').run({}, p).cash === -Math.round(100 * BD.MN.repair)); }
+  /* the buy card says what buying leaves beside what a bad week costs */
+  fresh(); AR.startGame('mn', 9, 'standard'); { const gm = R.game; gm.g.phase = 'decide'; gm.g.sq = 18; gm.g.players[0].cash = 280;
+    const thin = gm.view(); gm.g.players[0].cash = 600; const fat = gm.view();
+    ok('the buy card says what buying leaves, and warns when one bill would force a half-price sale', /Leaves you 20\. A bad week costs about \d+: one bill and you sell a shop at half price/.test(thin) && /Enough for a bad week/.test(fat), (thin.match(/Leaves you[^<]*/) || [])[0]);
+    AR.quitGame(); }
   AR.startGame('mn', 9, 'standard'); const v = R.game.view();
   ok('a token on the board is a face (an avatar or the cast\'s portrait), not a coloured dot', /class="mstok"[^>]*><img [^>]*alt="You"/.test(v) && /alt="Mags"/.test(v), (v.match(/class="mstok"[^>]*>[^]{0,80}/) || [])[0]);
   AR.quitGame();
+}
+
+/* ── §2.5 (T11) · Market Storm: the plan is the game ──
+   Watched failing first: panic at 100 selling for you again (the do-nothing bot "sold"),
+   the one-in-five dial at 0 (no storm ever stopped), and a score that read the price. */
+{
+  const { storm } = await import('./_bots.mjs');
+  const SM = await import('../src/storm.js');
+  const { STORM } = await import('../src/world.js');
+  /* the storms themselves: one in five stops, a fine one never falls by half, the headline says so */
+  const defs = Array.from({ length: 1000 }, (_, i) => SM.stormFor(i + 1));
+  const stops = defs.filter((d) => d.stops), fine = defs.filter((d) => !d.stops);
+  ok('about one storm in five is a company that really stops making money (drawn from the seed)', stops.length > 150 && stops.length < 250, `${stops.length} of 1000`);
+  const floor = Math.min(...fine.map((d) => Math.min(...Array.from({ length: 201 }, (_, k) => SM.stormValue(d, k / 200))))) - SM.WOBBLE / 2;
+  ok('a storm where the company is fine never falls as far as half, so "if it falls by half" only fires on real trouble', floor > SM.HALF, `lowest ${Math.round(floor)} vs half ${SM.HALF}`);
+  ok('in every storm that stops, a headline says "stopped making money" at the moment it does; in a fine storm no headline ever says it',
+    stops.every((d) => d.news.some((h) => h.kind === 'fact' && h.at === d.factMs && /stopped making money/.test(h.text)))
+    && fine.every((d) => !d.news.some((h) => /stopped making money/.test(h.text))));
+  ok('every play offers the card\'s own reason to have bought, beside the price and the crowd, in its own order',
+    defs.every((d) => d.whys.length === 3 && d.whys.find((w) => w.id === 'card').t === d.co.why) && new Set(defs.slice(0, 30).map((d) => d.whys.map((w) => w.id).join())).size > 1);
+  const seeds = Array.from({ length: 80 }, (_, i) => 900 + i * 13);
+  /* a do-nothing bot is never auto-sold: on Tricky, with no re-reading, the panic fills and nothing happens */
+  fresh();
+  const idle = seeds.map((sd) => { const g = storm(sd, 'idle', 'never', 'tricky'); const o = { sold: g.st.sold, done: g.st.done, t: g.st.t, full: g.st.maxPanic >= 100 }; AR.quitGame(); return o; });
+  ok('T11 · a do-nothing bot is never sold for: the storm runs to its end even with the panic full', idle.every((o) => o.done && !o.sold && o.t >= STORM.len) && idle.some((o) => o.full),
+    `${idle.filter((o) => o.sold).length} sold · ${idle.filter((o) => o.full).length} storms with the panic full`);
+  /* a random presser scores 30% or less */
+  fresh();
+  const mash = seeds.map((sd) => { storm(sd, 'mash'); const s = K().rounds.st.share / AR.PERFECT; AR.quitGame(); return s; });
+  const mavg = mash.reduce((t, x) => t + x, 0) / mash.length;
+  ok('T11 · a random-press bot scores 30% or less', mavg <= 0.3, `${Math.round(mavg * 100)}% over ${seeds.length} storms`);
+  /* in a storm that stops, keeping to a plan that says sell scores highest; in a fine one, holding does */
+  const stopSeeds = Array.from({ length: 400 }, (_, i) => i + 1).filter((sd) => SM.stormFor(sd).stops).slice(0, 24);
+  const fineSeeds = Array.from({ length: 400 }, (_, i) => i + 1).filter((sd) => !SM.stormFor(sd).stops).slice(0, 24);
+  const pts = (sd, how, rule) => { fresh(); const g = storm(sd, how, rule); const p = g.st.score.points; AR.quitGame(); return p; };
+  const panicSell = (sd) => { fresh(); AR.startGame('st', sd, 'standard'); const g = R.game; g.act('stRule', 'stops'); g.act('stWhy', 'card'); g.act('stGo');
+    for (let i = 0; i < 400; i++) g.advance(16); g.act('stSell'); const p = g.st.score.points; AR.quitGame(); return p; };
+  const rowsS = stopSeeds.map((sd) => ({ planStops: pts(sd, 'plan', 'stops'), planHalf: pts(sd, 'plan', 'half'), idle: pts(sd, 'idle', 'stops'), never: pts(sd, 'idle', 'never'), early: panicSell(sd) }));
+  ok('T11 · in "company stops" storms, a keep-to-plan bot that sells scores highest (full marks), above holding, panic-selling, or a plan that never sells',
+    rowsS.length >= 20 && rowsS.every((r) => r.planStops === SM.STORM_PAR && r.planHalf === SM.STORM_PAR && r.idle < r.planStops && r.never < r.planStops && r.early < r.planStops),
+    JSON.stringify(rowsS.slice(0, 3)));
+  const rowsF = fineSeeds.map((sd) => ({ hold: pts(sd, 'idle', 'stops'), half: pts(sd, 'plan', 'half'), never: pts(sd, 'idle', 'never'), early: panicSell(sd) }));
+  ok('and in a storm where the company is fine, holding to any of the three plans scores full marks, and selling in the fall scores low',
+    rowsF.length >= 20 && rowsF.every((r) => r.hold === SM.STORM_PAR && r.half === SM.STORM_PAR && r.never === SM.STORM_PAR && r.early <= 2), JSON.stringify(rowsF.slice(0, 3)));
+  /* the money is shown and never scored: the same decisions score the same whatever the price did */
+  const d0 = SM.stormFor(stopSeeds[0]), dec = { rule: 'stops', why: 'card', sold: true, soldT: d0.factMs + 10, halfAt: null };
+  const richer = Object.assign({}, d0, { endV: 900, after: 2000 }), poorer = Object.assign({}, d0, { endV: 150, after: 10 });
+  ok('the money is never scored: one set of decisions scores the same however far the price fell or came back (rule 3)',
+    SM.stormScore(richer, dec).points === SM.stormScore(poorer, dec).points && SM.stormScore.length === 2 && !/val|after|endV|soldAt/.test(SM.stormScore.toString()));
+  /* the screens: the plan by keyboard, the plan re-read by Space, and the money shown on the end card */
+  fresh(); AR.startGame('st', stopSeeds[1], 'standard'); { const g = R.game;
+    const v0 = g.view();
+    g.key({ key: '1' }); g.key({ key: '2' });
+    const planned = g.st.rule === 'stops' && g.st.why === g.def.whys[1].id;
+    g.key({ key: 'Enter', preventDefault() {} });
+    const v1 = g.view();
+    for (let i = 0; i < 60; i++) g.advance(16);
+    g.key({ key: ' ', preventDefault() {} });
+    ok('the plan is written before the storm (three rules, three reasons off the card), by keys 1 2 3 and Enter',
+      (v0.match(/data-act="stRule"/g) || []).length === 3 && (v0.match(/data-act="stWhy"/g) || []).length === 3 && v0.includes(esc(g.def.co.why)) && planned && g.st.phase === 'storm', g.st.phase);
+    ok('during the storm, SELL is there, nothing has sold, and Space re-reads your plan in your own words',
+      /data-act="stSell"/.test(v1) && !g.st.sold && g.st.calms === 1 && v1.includes(esc(SM.planWords(g.def, g.st.rule, g.st.why))));
+    for (let i = 0; i < 5000 && !g.st.factSeen && !g.st.done; i++) g.advance(16);
+    g.act('stSell'); const v2 = g.view();
+    ok('the end card scores the plan and the news, and shows the money under "shown, never scored"', /What was scored/.test(v2) && /shown, never scored/.test(v2) && v2.includes(String(g.st.soldAt)) && v2.includes(esc(AR.PRACTISED.st)), (v2.match(/<h2>([^<]+)<\/h2>/) || [])[1]);
+    AR.quitGame(); }
 }
 
 console.log(`\n${pass}/${pass + fail} passed`);

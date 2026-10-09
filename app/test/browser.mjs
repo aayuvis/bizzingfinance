@@ -492,7 +492,7 @@ async function familyChecks(page, label, vp, isMobile, scheme, errors, shot) {
   ok(`${label}: a missed question waits in the mistakes deck`, await page.evaluate(() => (window.BZF.R.s.kids[window.BZF.R.s.active].mistakes || []).length >= 1));
   /* G10 · every game answers the keyboard AND a tap (tester mode opens them all) */
   {
-    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: ' ', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1', sb: '1' };
+    const KEY = { so: '1', cr: 'ArrowLeft', nw: 'ArrowLeft', ss: 'ArrowLeft', bb: '1', cc: ' ', sr: '1', st: '1', mc: 'ArrowDown', mn: 'Enter', tt: '1', sn: '1', sb: '1' };
     await page.evaluate(() => { window.BZF.R.s.settings.tester = true; window.BZF.setTester(true); });
     const bad = [], painted = [];
     for (const id of await page.evaluate(() => window.BZF.games.map((g) => g.id))) {
@@ -1306,7 +1306,8 @@ async function gameChecks() {
   res.hidden = { held: t1 - t0, after: t2 - t1 };
   await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
   /* Market Storm (42 s) */
-  await start('st'); await p.evaluate(() => { window.__frames = []; }); await p.waitForTimeout(4000); res.st = await rate('t');
+  /* §2.5 · the plan is written first (when you would sell, why you bought), then the storm runs */
+  await start('st'); await p.evaluate(() => { const g = window.BZF.R.game; g.act('stRule', 'stops'); g.act('stWhy', 'card'); g.act('stGo'); window.__frames = []; }); await p.waitForTimeout(4000); res.st = await rate('t');
   await p.evaluate(() => window.BZF.R.game.act('stSell')); await p.waitForTimeout(300);
   /* §1.8 · the storm's end card, in dark mode: the sentence it is for can be read */
   const endContrast = () => p.evaluate(() => {

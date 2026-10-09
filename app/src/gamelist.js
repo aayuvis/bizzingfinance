@@ -18,8 +18,8 @@ export const GAMES = [
     blurb: 'Hold to grow the tower. Hold longer for more — and past a point it can go backwards, and you can be wiped out.' },
   { id: 'sr', em: '🫖', name: 'Stall Rush', keys: '1–4 · R', kind: 'action', needs: 'c3',
     blurb: 'Sixty seconds of customers. Serve them, restock, and find out whether busy and profitable are the same thing.' },
-  { id: 'st', em: '⛈️', name: 'Market Storm', keys: 'space', kind: 'action', needs: 'c7',
-    blurb: 'Everything is red and everyone is shouting sell. The winning move is to do nothing, and it is much harder than it sounds.' },
+  { id: 'st', em: '⛈️', name: 'Market Storm', keys: '1 2 3 · space', kind: 'action', needs: 'c7',
+    blurb: 'Write your plan, then live through the storm: everything red, everyone shouting sell. Keep to your plan, and read the news.' },
   { id: 'mc', em: '🏆', name: 'The Market Cup', keys: '↑↓←→ ⏎', kind: 'action', needs: 'c7',
     blurb: 'Six weeks against Chaser, Panicker and Boring Bella. Bella is annoying.' },
   { id: 'mn', em: '🎲', name: 'Main Street', keys: '⏎ · Y/N', kind: 'board', needs: 'c1',
@@ -34,7 +34,7 @@ export const GAMES = [
 
 export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'tcNext', 'bbPay', 'bbSkip',
   'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
-  'crLane', 'crGo', 'stSell', 'stPlan', 'stGo',
+  'crLane', 'crGo', 'stSell', 'stPlan', 'stGo', 'stRule', 'stWhy',
   'ccHold', 'ccRelease', 'srServe', 'srStock',
   /* Stall of My Own (stall.js) */
   'soGoal', 'soBuy', 'soStep', 'soJar', 'soOffer', 'soOpen', 'soAuto', 'soServe', 'soStock', 'soNext', 'soNew', 'soSel',

@@ -1,5 +1,5 @@
 {
-  "total": 1807,
+  "total": 1810,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,7 +12,7 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 13,
+    "figure": 15,
     "game": 12,
     "quest": 13,
     "medal": 48,
@@ -34,29 +34,29 @@
     "rank": 4,
     "needwant": 3,
     "scamspot": 10,
-    "chance": 8,
+    "chance": 9,
     "market": 4,
     "company": 39,
     "risk": 40,
     "event": 54
   },
   "byLevel": {
-    "chapter 1": 134,
+    "chapter 1": 135,
     "chapter 2": 153,
     "chapter 3": 238,
     "chapter 4": 203,
     "chapter 5": 163,
     "chapter 6": 165,
-    "chapter 7": 203,
+    "chapter 7": 204,
     "chapter 8": 120,
-    "any": 428
+    "any": 429
   },
   "levels": [
     {
       "level": 1,
       "chapter": "c1",
       "title": "What money even is",
-      "n": 134
+      "n": 135
     },
     {
       "level": 2,
@@ -92,7 +92,7 @@
       "level": 7,
       "chapter": "c7",
       "title": "Money that grows",
-      "n": 203
+      "n": 204
     },
     {
       "level": 8,

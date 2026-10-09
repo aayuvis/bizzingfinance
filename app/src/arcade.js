@@ -19,6 +19,7 @@ import { R } from './runtime.js';
 import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
 import { fx as makeFx, countdown, plate, plateSrc, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
+import { stormFor, stormValue, stormScore, planWords, RULES, START as STORM_START, HALF as STORM_HALF, STORM_PAR, WOBBLE } from './storm.js';
 
 import { GAMES, GAME_ACTS } from './gamelist.js';
 
@@ -88,7 +89,7 @@ export const HOW = {
   bb: ['A month of money. Bills arrive one at a time.', 'Pay what you must, keep what you can.', 'Tap a choice, or press 1 or 2.'],
   cc: ['Hold to let your money grow, let go to bank it.', 'Grow too greedily and a crash can wipe it out.', 'Hold space, or press and hold.'],
   sr: ['Sixty seconds of customers at your stall.', 'Serve the right thing at the right price.', 'Tap, or press 1–4 and R.'],
-  st: ['The market swings wildly. Do you act?', 'The winning move is usually to sit still.', 'Space to act — or don\'t.'],
+  st: ['Before the storm, write your plan: when you would sell, and why you bought.', 'Then the price falls, everyone shouts, the news arrives. Nothing sells unless you do.', '1 2 3 to plan, Space re-reads it, SELL is the only way out.'],
   mc: ['A season of the Exchange, a week at a time.', 'Spread your money and keep your nerve.', 'Arrows to choose, Enter to confirm.'],
   mn: ['The board game: buy shops, collect rent.', 'Win when your street pays for your life.', 'Enter to roll, Y or N to buy.'],
   tt: ['Monthly numbers, turned into yearly ones.', 'Times twelve, in your head.', 'Tap an answer, or press 1–4.'],
@@ -99,7 +100,7 @@ export const PRACTISED = {
   so: 'running a stall over weeks: stock, prices and waste — and that busy is not the same as profitable',
   cr: 'paying exact amounts and counting change', nw: 'telling needs from wants', ss: 'spotting the shape of a scam',
   bb: 'paying bills first and living inside a month', cc: 'how compounding grows — and why greed crashes it', sr: 'pricing and serving under time pressure',
-  st: 'doing nothing on a red day', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
+  st: 'making a plan before the storm and keeping to it — holding through noise, selling when the news says the business has stopped', mc: 'spreading money out and keeping your nerve', mn: 'buying things that pay you back',
   tt: 'turning monthly costs into yearly ones', sn: 'how big compounding really gets',
   sb: 'what borrowing really costs in all, and keeping a cushion for surprises',
 };
@@ -158,11 +159,12 @@ export const ARCADE_TIERS = {
     standard: { spawn: 1, patience: 9000, par: 186, says: 'Sixty seconds as they come.' },
     tricky:   { spawn: 0.75, patience: 7000, par: 224, says: 'A rush: more customers, less patience.' },
   },
-  /* every: ms between shouts · shout: panic per shout · drift: panic per ms · par: hold (1) */
+  /* every: ms between shouts · shout: panic per shout · drift: panic per ms · par: the plan
+     kept and the news read (storm.js stormScore, out of STORM_PAR) */
   st: {
-    easy:     { every: 4200, shout: 9, drift: 0.0018, par: 1, says: 'Fewer shouts, and they rattle you less.' },
-    standard: { every: 3400, shout: 11, drift: 0.0022, par: 1, says: 'The storm as it comes.' },
-    tricky:   { every: 2700, shout: 13, drift: 0.0026, par: 1, says: 'More shouting, louder, and the panic climbs faster.' },
+    easy:     { every: 4200, shout: 9, drift: 0.0018, par: 10, says: 'Fewer shouts, and they rattle you less.' },
+    standard: { every: 3400, shout: 11, drift: 0.0022, par: 10, says: 'The storm as it comes.' },
+    tricky:   { every: 2700, shout: 13, drift: 0.0026, par: 10, says: 'More shouting, louder, and the panic climbs faster.' },
   },
   /* shock: week-to-week swing, × · crash: the red week, × · par: Boring Bella's cup score on this level (worked out) */
   mc: {
@@ -238,9 +240,9 @@ export const ARCADE_GOALS = {
     { id: 'nowrong', name: 'Never served what nobody wanted', check: (r) => r.wrong === 0 && r.served >= 8 },
   ],
   st: [
-    { id: 'held', name: 'Held through the whole storm', check: (r) => r.held },
-    { id: 'cool', name: 'Held, and panic never reached 80', check: (r) => r.held && r.maxPanic < 80 },
-    { id: 'calm', name: 'Held, and panic never passed half', check: (r) => r.held && r.maxPanic <= 50 },
+    { id: 'kept', name: 'Kept to the plan you wrote', check: (r) => r.kept },
+    { id: 'news', name: 'Sold when the news said the company had stopped making money', check: (r) => r.stops && r.read && r.kept },
+    { id: 'calm', name: 'Kept to your plan, and panic never passed half', check: (r) => r.kept && r.maxPanic <= 50 },
   ],
   mc: [
     { id: 'spread', name: 'Spread out every single week', check: (r) => r.spreadWeeks === r.weeks },
@@ -293,7 +295,7 @@ export const SHARE = {
   bb: (r) => PERFECT * r.points / 14,
   cc: (r, par) => (r.ruined ? 0 : PERFECT * r.money / par),
   sr: (r, par) => Math.max(0, r.profitU) / par,
-  st: (r) => (r.held ? PERFECT : PERFECT * 3 / 14),
+  st: (r) => PERFECT * r.points / STORM_PAR,   /* the plan kept and the news read; never the money */
   mc: (r, par) => r.total / Math.max(1, r.par || par),   /* r.par: Bella on this round's own season */
   mn: (r) => PERFECT * Math.min(1, Math.max(0, r.indep)),
   sb: (r) => PERFECT * r.points / Math.max(1, r.par),   /* r.par: the round's points out of (saveborrow.js SB_PAR) */
@@ -2048,9 +2050,11 @@ function changeRush(seed = playSeed()) {
 }
 
 /* ══ MARKET STORM ═════════════════════════════════════════════════════
-   A game whose winning move is inaction. The only big button sells; the
-   small one re-reads your own plan. Panic rises on its own and jumps every
-   time somebody shouts. Nothing else in the app can teach this. */
+   The plan is the game (docs/12 §2.5). The only big button sells; the small one
+   re-reads the plan you wrote before the storm. Panic rises on its own and jumps every
+   time somebody shouts, and it never sells for you. In most storms the company is fine
+   and the plan says hold; in one in five it really stops making money, the headline
+   says so, and the plan says sell. */
 export const SHOUTS = [
   ['bea', 'It is down again. I told you. GET OUT.'],
   ['bea', 'Everyone is selling. Everyone.'],
@@ -2061,68 +2065,82 @@ export const SHOUTS = [
   ['mags', 'My cousin sold at the top. You could have been my cousin.'],
   ['bea', 'It has never been this bad. Well — it has, but still.'],
 ];
-/* The storm's chart: what you paid as a dashed line, the fall as a red area, and a
-   pulsing head that crawls toward the live price every frame, so the line draws itself. */
-function stormChart(line, live, t) {
-  const w = 300, h = 84, lo = 500, hi = 1060;
+/* The storm's chart: what you paid as a dashed line, half of it when that is your rule, the
+   fall as a red area, and a pulsing head that crawls toward the live price every frame. */
+function stormChart(line, live, t, half = false) {
+  const w = 300, h = 84, lo = 150, hi = 1060;
   const vals = line.concat([Math.round(live)]), n = Math.max(2, vals.length);
   const X = (i) => 4 + (i / (n - 1)) * (w - 22), Y = (v) => 6 + (1 - (v - lo) / (hi - lo)) * (h - 12);
   const pts = vals.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1));
   const hx = X(vals.length - 1), hy = Y(vals[vals.length - 1]);
   const pulse = still() ? 0 : Math.abs(Math.sin(t / 260));
+  const label = (v, txt) => `<line x1="0" x2="${w}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="5 5" stroke-width="1.4"/>
+    <text x="6" y="${(Y(v) < 14 ? Y(v) + 13 : Y(v) - 5).toFixed(1)}" font-size="10" font-weight="700" fill="currentColor" fill-opacity=".75" font-family="Hanken Grotesk, system-ui, sans-serif">${txt}</text>`;
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" style="display:block;width:100%;height:${h}px">
     <defs><linearGradient id="stFall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E0483A" stop-opacity=".45"/><stop offset="1" stop-color="#E0483A" stop-opacity="0"/></linearGradient></defs>
-    <line x1="0" x2="${w}" y1="${Y(1000).toFixed(1)}" y2="${Y(1000).toFixed(1)}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="5 5" stroke-width="1.4"/>
-    <text x="6" y="${(Y(1000) < 14 ? Y(1000) + 13 : Y(1000) - 5).toFixed(1)}" font-size="10" font-weight="700" fill="currentColor" fill-opacity=".7" font-family="Hanken Grotesk, system-ui, sans-serif">you paid 1000</text>
+    ${label(STORM_START, 'you paid ' + STORM_START)}${half ? label(STORM_HALF, 'half: ' + STORM_HALF) : ''}
     <path d="M${X(0).toFixed(1)},${h} L${pts.join(' L')} L${hx.toFixed(1)},${h} Z" fill="url(#stFall)"/>
     <polyline points="${pts.join(' ')}" fill="none" stroke="#E0483A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(6 + pulse * 7).toFixed(1)}" fill="#E0483A" fill-opacity="${(0.35 - pulse * 0.3).toFixed(2)}"/>
     <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4.5" fill="#fff" stroke="#E0483A" stroke-width="2.5"/>
   </svg>`;
 }
-function marketStorm(seed = 4477) {
-  const START = 1000, LEN = 42000, kn = knobs('st');
-  const st = { t: 0, panic: 0, val: START, low: START, line: [START, START, START], done: false,
-    sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0, shoutN: 0, maxPanic: 0, calms: 0 };
-  let iv = 0, last = 0, seenShout = 0;
-  /* §1.2 · this play's own shouts and wobble; the recovery stays authored (below) */
+/* §2.5 · the plan is the game. Three steps: write the plan (when you would sell, why you
+   bought — off the company's card), live through the storm (panic, shouts, headlines;
+   NOTHING sells by itself, SELL is the only exit, Space re-reads the plan), and the end
+   card, which scores keeping to the plan and reading the news, and shows the money
+   without scoring it. Rules and score: storm.js. */
+function marketStorm(seed = playSeed()) {
+  const kn = knobs('st'), def = stormFor(seed), LEN = def.len;
+  const st = { phase: 'plan', rule: null, why: null, t: 0, panic: 0, val: STORM_START, low: STORM_START,
+    line: [STORM_START, STORM_START, STORM_START], done: false, sold: false, soldT: null, halfAt: null,
+    shout: null, shoutT: kn.every * 0.6, calmT: 0, shoutN: 0, maxPanic: 0, calms: 0, news: [], newsN: 0, factSeen: false, def };
+  let iv = 0, last = 0, seenShout = 0, seenNews = 0;
+  /* this play's own shouts and wobble */
   const r = rng(seed);
+  const words = () => planWords(def, st.rule, st.why);
 
   const stop = () => { if (iv) cancelAnimationFrame(iv); iv = 0; };
   const finish = (sold) => {
-    if (st.done) return;
+    if (st.done || st.phase !== 'storm') return;
     st.done = true; st.sold = sold; stop();
-    /* the recovery is authored, not random: the lesson only lands if holding
-       is actually rewarded, and pretending otherwise would be a lie */
-    st.after = Math.round(START * 1.12);
-    st.soldAt = Math.round(st.val);
-    /* the same wage on every level: holding is the target, and a louder storm only makes it harder */
-    if (!sold) sim.badge(K(), 'held-the-storm');
-    st.won = roundEnd('st', { held: !sold, maxPanic: st.maxPanic, calms: st.calms }, 'Market Storm');
-    if (sold) sfx.bad(); else { sfx.level(); }
+    if (sold) { st.soldT = st.t; st.soldAt = Math.round(st.val); }
+    st.endAt = Math.round(stormValue(def, 1));
+    st.score = stormScore(def, { rule: st.rule, why: st.why, sold, soldT: st.soldT, halfAt: st.halfAt });
+    if (!sold && st.score.kept) sim.badge(K(), 'held-the-storm');
+    st.won = roundEnd('st', { points: st.score.points, kept: st.score.kept, read: st.score.read, whyOk: st.score.whyOk,
+      sold, stops: def.stops, maxPanic: st.maxPanic, calms: st.calms }, 'Market Storm');
+    if (st.score.kept) sfx.level(); else sfx.bad();
     R.render();
   };
   /* one slice of the storm — the frame loop and a headless player share it */
   const advance = (dt) => {
-    if (st.done) return;
+    if (st.done || st.phase !== 'storm') return;
     st.t += dt;
     const p = st.t / LEN;
-    const wobble = (r() - 0.5) * 22;
-    st.val = Math.max(520, START * (1 - 0.34 * Math.sin(Math.min(1, p) * Math.PI * 0.92)) + wobble);
+    st.val = Math.max(120, stormValue(def, p) + (r() - 0.5) * WOBBLE);
     st.low = Math.min(st.low, st.val);
+    if (st.halfAt == null && st.val <= STORM_HALF) st.halfAt = st.t;
     if (st.line.length < 120 && st.t - (st.lastPt || 0) > 350) { st.lastPt = st.t; st.line.push(Math.round(st.val)); }
     st.panic = clamp(st.panic + dt * kn.drift, 0, 100);
     st.shoutT -= dt; st.calmT = Math.max(0, st.calmT - dt);
+    /* the headlines arrive on the storm's own timetable */
+    let fresh = false;
+    while (st.newsN < def.news.length && def.news[st.newsN].at <= st.t) {
+      const h = def.news[st.newsN++];
+      st.news.unshift(h); if (h.kind === 'fact') st.factSeen = true;
+      fresh = true;
+    }
     if (st.shoutT <= 0) {
       st.shoutT = kn.every;
       st.shout = SHOUTS[Math.floor(r() * SHOUTS.length)];
       st.panic = clamp(st.panic + kn.shout, 0, 100);
-      st.shoutN++;
-      R.render();
+      st.shoutN++; fresh = true;
       jolt('bad'); domPop('.gplay .stpanic', '+' + kn.shout + ' panic', 'bad');
     }
     st.maxPanic = Math.max(st.maxPanic, st.panic);
-    if (st.panic >= 100) { finish(true); return; }
+    /* panic at the top does NOTHING by itself (§2.5): it used to sell for you at 100 */
+    if (fresh) R.render();
     if (st.t >= LEN) { finish(false); return; }
   };
   const tick = (ts) => {
@@ -2136,7 +2154,6 @@ function marketStorm(seed = 4477) {
       el.style.width = st.panic.toFixed(1) + '%';
       const wrap = el.parentElement; if (wrap) { wrap.classList.toggle('hot', st.panic >= 55); wrap.classList.toggle('crit', st.panic >= 80); }
     }
-    /* the stage reddens at the edges as the panic climbs, and the sell button starts to call */
     const sg = document.querySelector('.gplay .ststage');
     if (sg) sg.style.setProperty('--panic', (st.panic / 100).toFixed(3));
     const sb = document.querySelector('.gplay [data-act="stSell"]');
@@ -2145,73 +2162,124 @@ function marketStorm(seed = 4477) {
     if (vv) vv.textContent = Math.round(st.val);
     const tt = document.getElementById('stTime');
     if (tt) tt.textContent = Math.ceil((LEN - st.t) / 1000);
-    /* the falling line is the emotional core, so it updates in the loop —
-       a full re-render every frame would thrash the whole document */
     const ch = document.getElementById('stChart');
-    if (ch) ch.innerHTML = stormChart(st.line, st.val, st.t);
+    if (ch) ch.innerHTML = stormChart(st.line, st.val, st.t, st.rule === 'half');
     iv = requestAnimationFrame(tick);
   };
   const calm = () => {
-    if (st.done || st.calmT > 0) return;
+    if (st.done || st.phase !== 'storm' || st.calmT > 0) return;
     st.panic = clamp(st.panic - 26, 0, 100);
     st.calmT = 2600; st.calms++;
     sfx.good();
     R.render();
     domPop('.gplay .stpanic', '−26 panic', 'good');
   };
+  const pickRule = (id) => { if (st.phase === 'plan' && RULES.some((x) => x.id === id)) { st.rule = id; sfx.click(); R.render(); } };
+  const pickWhy = (id) => { if (st.phase === 'plan' && def.whys.some((x) => x.id === id)) { st.why = id; sfx.click(); R.render(); } };
+  const go = () => {
+    if (st.phase !== 'plan' || !st.rule || !st.why) return;
+    st.phase = 'storm'; last = 0; sfx.click(); R.render();
+  };
+  const sell = () => finish(true);
+  const opt = (act, id, text, on, n) => `<button class="opt stopt${on ? ' on' : ''}" data-act="${act}" data-arg="${id}" aria-pressed="${on}"><span class="tk" aria-hidden="true">${n}</span>${esc(text)}</button>`;
+  const head = (h, i) => `<div class="sthead${i === 0 && st.newsN !== seenNews ? ' in' : ''}"><span class="eyebrow">The Gazette</span><b>${esc(h.text)}</b></div>`;
   return {
-    id: 'st', st, advance, calm,
-    mount() { if (!st.done && !iv) { last = 0; iv = requestAnimationFrame(tick); } },
+    id: 'st', st, def, advance, calm, sell, go, pickRule, pickWhy,
+    mount() { if (st.phase === 'storm' && !st.done && !iv) { last = 0; iv = requestAnimationFrame(tick); } },
     stop,
     key(e) {
       if (st.done) { endKey(e); return; }
-      if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); calm(); }
+      if (st.phase === 'plan') {
+        const n = ['1', '2', '3'].indexOf(e.key);
+        if (n >= 0) { if (!st.rule) pickRule(RULES[n].id); else pickWhy(def.whys[n].id); return; }
+        if (e.key === 'Backspace') { if (st.why) st.why = null; else st.rule = null; R.render(); return; }
+        if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); go(); }
+        return;
+      }
+      if (e.key === ' ' || e.key === 'Spacebar') { if (e.preventDefault) e.preventDefault(); calm(); }
     },
-    act(n) { if (n === 'stSell') finish(true); else if (n === 'stPlan') calm(); },
+    act(n, arg) {
+      if (n === 'stRule') pickRule(arg);
+      else if (n === 'stWhy') pickWhy(arg);
+      else if (n === 'stGo') go();
+      else if (n === 'stSell') sell();
+      else if (n === 'stPlan') calm();
+    },
     view() {
+      const co = def.co;
+      if (st.phase === 'plan') {
+        return `<div class="stack">${hud([tierChip(), 'Before the storm'])}
+          <div class="stage ststage stplanstage">
+            <div class="gcard stcard"><div class="row" style="gap:10px">${ico(co.icon, '🏪', 34)}<div class="grow" style="text-align:left">
+              <span class="eyebrow">You own a share of</span><h2 style="margin:2px 0 0;font-size:21px">${esc(co.name)}</h2></div></div>
+              <ul class="stfacts">${co.card.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+              <p class="small muted" style="margin:0">A Bizzington company. It is not real.</p></div>
+            <div class="stq${st.rule ? ' done' : ' now'}"><span class="eyebrow">1 · When would you sell?</span>
+              ${RULES.map((x, i) => opt('stRule', x.id, x.t, st.rule === x.id, i + 1)).join('')}</div>
+            <div class="stq${st.why ? ' done' : st.rule ? ' now' : ''}"><span class="eyebrow">2 · Why did you buy it? Read the card</span>
+              ${def.whys.map((x, i) => opt('stWhy', x.id, x.t, st.why === x.id, i + 1)).join('')}</div>
+            ${st.rule && st.why ? `<div class="card stplan" style="box-shadow:none"><div class="eyebrow">Your plan, in your words</div><p class="stwords">“${esc(words())}”</p></div>` : ''}
+            <button class="btn wide" data-act="stGo" ${st.rule && st.why ? '' : 'disabled'}>Into the storm · Enter</button>
+            <p class="hint">${!st.rule ? 'Press 1, 2 or 3 for when you would sell — or tap.' : !st.why ? 'Now 1, 2 or 3 for why you bought it. Backspace goes back.' : 'Nothing will sell unless you press SELL. Your plan says when.'}</p>
+          </div></div>`;
+      }
       if (st.done) {
+        const s = st.score, ruleW = RULES.find((x) => x.id === st.rule);
+        const mark = (yes, good, bad) => `<li class="${yes ? 'met' : ''}"><span class="gtick" aria-hidden="true">${yes ? '✓' : '·'}</span><span>${esc(yes ? good : bad)}</span></li>`;
+        const keptLine = s.due == null
+          ? (s.kept ? 'Your rule never said sell, and you held.' : 'Your rule never said sell in this storm, and you sold.')
+          : (s.kept ? 'Your rule said sell, and you sold after it did.' : st.sold ? 'You sold before your rule said to.' : 'Your rule said sell, and you held on.');
+        const readLine = def.stops
+          ? (s.read ? 'The headline said it had stopped making money, and you acted on it.' : st.sold ? 'You sold before the news said anything about the business.' : 'The headline said it had stopped making money, and you held anyway.')
+          : (s.read ? 'Every headline about the business itself was ordinary; the rest was noise, and you let it be.' : 'The business was fine all the way through; the fall was the noise.');
         return `<div class="stack">${hud(['Storm over', tierChip()])}
-          <div class="stage" style="text-align:center;justify-content:center">
-            <div class="endico">${st.sold ? ico('chartDown', '📉', 48) : ico('mountain', '⛰️', 48)}</div>
-            <h2>${st.sold ? 'You sold' : 'You held'}</h2>
-            <p class="endkey">${st.sold
-              ? 'Locked in ' + st.soldAt + ' from ' + START + '. The fall became a loss the moment you sold.'
-              : 'It bottomed at ' + Math.round(st.low) + ' and came back to ' + st.after + '.'}</p>
-            <div class="card" style="box-shadow:none">
-              <div class="grid3">
-                <div><div class="small muted">Started</div><div style="font-weight:800">${START}</div></div>
+          <div class="stage ststage" style="text-align:center;justify-content:center">
+            <div class="endico">${s.kept ? ico('mountain', '⛰️', 48) : ico('chartDown', '📉', 48)}</div>
+            <h2>${s.points} of ${STORM_PAR} · ${s.kept ? 'you kept to your plan' : 'you broke your plan'}</h2>
+            <p class="endkey">${def.stops ? `${esc(co.name)} really did stop making money in this one.` : `${esc(co.name)} was fine all along: the storm was the market's mood.`} Your rule: <b>${esc(ruleW ? ruleW.short : '')}</b>.</p>
+            <div class="goals stscore"><div class="eyebrow">What was scored · your decisions</div><ul>
+              ${mark(s.kept, keptLine, keptLine)}${mark(s.read, readLine, readLine)}
+              ${mark(s.whyOk, 'Why you bought came off the card.', 'Why you bought was not on the card: the price and the crowd are not reasons the business gives.')}</ul></div>
+            <div class="card stmoney" style="box-shadow:none">
+              <div class="eyebrow">The money · shown, never scored</div>
+              <div class="grid3" style="margin-top:6px">
+                <div><div class="small muted">You paid</div><div style="font-weight:800">${STORM_START}</div></div>
                 <div><div class="small muted">Worst moment</div><div style="font-weight:800;color:var(--spend)">${Math.round(st.low)}</div></div>
-                <div><div class="small muted">${st.sold ? 'You got' : 'Ended'}</div>
-                  <div style="font-weight:800;color:${st.sold ? 'var(--spend)' : 'var(--grow)'}">${st.sold ? st.soldAt : st.after}</div></div>
+                <div><div class="small muted">${st.sold ? 'You sold at' : 'You still own it at'}</div><div style="font-weight:800">${st.sold ? st.soldAt : st.endAt}</div></div>
               </div>
+              <p class="small" style="margin-top:8px">A few months later it stood at <b>${def.after}</b>${st.sold ? ` — and you had ${st.soldAt}` : ''}. ${def.stops ? 'A business that stops making money rarely comes back.' : 'A fall is not a loss until you sell.'}</p>
             </div>
-            ${say(st.sold ? 'bea' : 'nana', st.sold
-              ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go.'
-              : 'A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.')}
-            ${endFoot(st.won, 'Fictional market, real behaviour, nothing here is advice.')}
+            ${say(s.kept ? 'nana' : 'bea', s.kept
+              ? (st.sold ? 'You wrote down when you would sell, and when the news said so, you did. That is not panic; that is a plan.'
+                : def.stops ? 'You kept to your plan, and that counts. But the reason you bought stopped being true. A plan is for the noise; the news is about the business.'
+                  : 'Sitting still while everyone shouts is the hardest thing in this whole subject, and your plan is what let you do it.')
+              : (st.sold ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Next storm, let your plan decide.' : 'The plan said sell and the plan was right. Holding is only brave when the business is still fine.'))}
+            ${endFoot(st.won, 'A fictional company, the town\'s own storm, nothing here is advice.')}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       const sh = st.shout, freshShout = st.shoutN !== seenShout; seenShout = st.shoutN;
+      const heads = st.news.slice(0, 2).map(head).join(''); seenNews = st.newsN;
       return `<div class="stack">
-        ${hud([tierChip(), `<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `<span id="stVal">${Math.round(st.val)}</span> / ${START}`])}
+        ${hud([tierChip(), `<span id="stTime">${Math.ceil((LEN - st.t) / 1000)}</span>s left`, `${esc(co.name)} <span id="stVal">${Math.round(st.val)}</span> / ${STORM_START}`])}
         <div class="stage ststage" style="--panic:${(st.panic / 100).toFixed(3)}">
           <div>
             <div class="row"><span class="eyebrow grow">Panic</span>
-              <span class="small muted">${st.calmT > 0 ? 'reading your plan…' : 'space, or the small button'}</span></div>
+              <span class="small muted">${st.panic >= 100 ? 'full — and still nothing sells unless you do' : st.calmT > 0 ? 'reading your plan…' : 'space re-reads your plan'}</span></div>
             <div class="bar stpanic${st.panic >= 55 ? ' hot' : ''}${st.panic >= 80 ? ' crit' : ''}" style="height:14px;margin-top:5px">
               <i id="stPanic" style="width:${st.panic}%;background:linear-gradient(90deg,var(--treasure),var(--spend));transition:width .2s linear"></i></div>
           </div>
-          <div id="stChart" class="stchart">${stormChart(st.line, st.val, st.t)}</div>
+          <div id="stChart" class="stchart">${stormChart(st.line, st.val, st.t, st.rule === 'half')}</div>
+          <div class="stnews" aria-live="polite">${heads || '<div class="sthead"><span class="eyebrow">The Gazette</span><b>No news yet. Only prices.</b></div>'}</div>
           <div class="stshout${freshShout ? ' in' : ''}">${sh ? say(sh[0], esc(sh[1])) : say('bo', 'It is going to be fine. Probably. I say that every week too.')}</div>
           <div class="card stplan${st.calmT > 0 ? ' calm' : ''}" style="box-shadow:none;border-style:dashed">
             <div class="eyebrow">Your plan, in your words</div>
-            <p style="font-weight:650;font-size:14.5px">"I'm in for five years. I won't sell before then unless the company stops making anything."</p>
+            <p class="stwords">“${esc(words())}”</p>
           </div>
           <div class="grow"></div>
-          <button class="btn wide${st.panic >= 65 ? ' tempt' : ''}" style="background:var(--spend)" data-act="stSell">SELL EVERYTHING</button>
+          <button class="btn wide${st.panic >= 65 ? ' tempt' : ''}" style="background:var(--spend)" data-act="stSell">SELL</button>
           <button class="btn ghost wide" data-act="stPlan" ${st.calmT > 0 ? 'disabled' : ''}>Re-read my plan · space</button>
-          <p class="hint">Doing nothing is the move. It will not feel like one.</p>
+          <p class="hint">Nothing sells by itself. Read the news, read your plan, then decide.</p>
         </div></div>`;
     },
   };
