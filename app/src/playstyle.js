@@ -1,3 +1,9 @@
+/* playstyle.js — the styles of the Play games of docs/12 weeks 3–5 (Market Storm's plan, the
+   Market Cup's series, Main Street's drawn street, the Market Game's Exchange hall), light and
+   dark. They travel WITH the games: arcade.js and marketgame.js load on demand, and so does
+   this, so the first screen (≤ 1.5 MB, test/browser.mjs) carries none of it. Injected once.
+   It is plain CSS in a string; edit it as CSS. */
+const CSS = `
 /* play.css — the Play games of docs/12 weeks 3–5: Market Storm's plan, the Market Cup's
    series, Main Street's drawn street and the Market Game's Exchange hall. Light and dark. */
 
@@ -72,3 +78,10 @@ html[data-bz-dark] .m40hall .m40leave{background:rgb(20 24 36 / .9);color:#F4EEE
 .m40steps li.done:not(.on) button{background:var(--grow);color:#fff;border-color:var(--grow)}
 html[data-bz-dark] .m40steps button{background:rgb(20 24 36 / .92);color:#F4EEE4}
 .m40nav .btn{min-height:48px}
+`;
+export function playStyles() {
+  if (typeof document === 'undefined' || document.getElementById('bz-play-css')) return;
+  const el = document.createElement('style'); el.id = 'bz-play-css'; el.textContent = CSS;
+  document.head.appendChild(el);
+}
+playStyles();

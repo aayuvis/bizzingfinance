@@ -20,6 +20,7 @@ import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
 import { fx as makeFx, countdown, plate, plateSrc, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
 import { seasonFor, cupRows, bellaCup, cupScore, CUP_SERIES, CUP_WEEKS } from './cup.js';
+import './playstyle.js';   /* the Play games' styles load with the games, not on the first screen */
 import { stormFor, stormValue, stormScore, planWords, RULES, START as STORM_START, HALF as STORM_HALF, STORM_PAR, WOBBLE } from './storm.js';
 
 import { GAMES, GAME_ACTS } from './gamelist.js';

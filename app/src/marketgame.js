@@ -22,6 +22,7 @@ import { esc, sfx, toast, clamp, sparkline, rng } from './ui.js';
 import { WORLDS } from './content.js';
 import { plateFor } from './looks.js';
 import { BLD } from './buildings-gen.js';
+import './playstyle.js';   /* the Exchange hall's styles load with the game, not on the first screen */
 import { money, price } from './fmt.js';
 import { say, ico } from './art.js';
 import { COMPANIES, SECTORS, byId as coById } from '../content/companies.js';
