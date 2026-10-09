@@ -1,4 +1,4 @@
-# CLAUDE.md — Bizzing Finance
+# CLAUDE.md — Bizzing Money
 
 Read this first, then [CONCEPT.md](CONCEPT.md), then [docs/01-tabs.md](docs/01-tabs.md).
 Before adding a feature because a sibling has it, read
@@ -7,7 +7,7 @@ what is built, what is done differently, and what is refused and why.
 
 ## What this is
 
-**Bizzing Finance** — a simulation-first web app teaching kids **8+** how money works:
+**Bizzing Money** — a simulation-first web app teaching kids **8+** how money works:
 basics → budgeting → banking → a stock portfolio → running a business. Third app in the
 Bizzing family, after [Bizzing Bee](https://github.com/aayuvis/Bizzing-Bee) (spelling, 8–15)
 and [Bizzing India](https://github.com/aayuvis/bizzingindia.com) (culture & Hindi, 4–12).

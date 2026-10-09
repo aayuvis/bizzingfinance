@@ -65,4 +65,4 @@ Built from $(git -C "$ROOT" rev-parse --short HEAD) on $(git -C "$ROOT" rev-pars
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 git push -q origin gh-pages
-echo "published → https://aayuvis.github.io/bizzingfinance/"
+echo "published → https://aayuvis.github.io/bizzingmoney/"

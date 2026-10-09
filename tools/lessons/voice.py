@@ -20,7 +20,7 @@ from scripts import LESSONS
 KEY = os.environ['GKEY']
 MODEL = 'gemini-2.5-flash-preview-tts'
 URL = f'https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent'
-# Neutral by request of the product owner: Bizzing Finance is the family's
+# Neutral by request of the product owner: Bizzing Money is the family's
 # global app (five currencies, "never assume a family's money"), and its
 # narrator carries no region — a deliberate divergence from Bizzing India's
 # channel voice, which is Indian because THERE that is the point.

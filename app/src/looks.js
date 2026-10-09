@@ -1,4 +1,4 @@
-/* looks.js — the six worlds of Bizzing Finance (FAMILY-STANDARD §7).
+/* looks.js — the six worlds of Bizzing Money (FAMILY-STANDARD §7).
 
    A world is a complete dress for the app, drawn from the town itself: a painted
    place by day and the SAME place painted again by night (lamps lit, windows warm),

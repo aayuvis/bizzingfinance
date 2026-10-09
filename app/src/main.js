@@ -261,7 +261,7 @@ function render() {
      Finance brings its words, Pip, the child's face, its six tabs (My Feed last) and its routes. */
   const tabOf = shell.tabOf(nav);
   root.innerHTML = bzShell({
-    app: 'finance', name: 'Finance', mascot: './mascot/sm/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
+    app: 'finance', name: 'Money', mascot: './mascot/sm/pip-wave.webp', coins: coinBalance(c.name), dark: !!R.dark,
     kid: { name: c.name, avatar: avatarSrc(c.avatar) }, search: 'Search lessons, words, games…', query: R.sq || '',
     inRun: !!R.game,
     tabs: [{ id: 'home', label: 'Home', icon: 'home', href: '#/home' }, { id: 'town', label: 'Town', icon: 'town', href: '#/town' },
@@ -280,7 +280,7 @@ function render() {
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
       ${sim.clockSuspect(s) ? clockWarning() : ''}${body}`,
   }) + `
-    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready · Reload</button>' : ''}
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Money is ready · Reload</button>' : ''}
     ${R.overlay ? overlay() : ''}`;
   /* string rendering blows the DOM away every frame, so a game with its own
      loop re-attaches here rather than holding a stale node */
@@ -423,7 +423,7 @@ function overlay() {
       <div class="sc-medal">${ico(b.em, b.em, 72)}</div>
       <div class="eyebrow">${esc(c.name)} earned a medal in Bizzington</div>
       <h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p>
-      <div class="sc-foot">${kidBadge(c, 44)}<span class="small">Bizzing Finance · no real money, ever</span></div>
+      <div class="sc-foot">${kidBadge(c, 44)}<span class="small">Bizzing Money · no real money, ever</span></div>
     </div></div>`;
   }
   if (o.kind === 'drawer') return shell.drawer(c);
@@ -1737,7 +1737,7 @@ on('print', () => {
     <ul>${CHAPTERS.map((ch) => `<li>${esc(ch.title)} — ${ch.cards.filter((x) => c.learn.done[x.id]).length}/${ch.cards.length}</li>`).join('')}</ul>
     <h2>Recent movements</h2>
     <ul>${c.money.txns.slice(0, 20).map((t) => `<li>${new Date(t.t).toLocaleDateString()} — ${esc(t.label)} — ${t.kind === 'in' ? '+' : '−'}${money(t.amt)}</li>`).join('')}</ul>
-    <p style="margin-top:18px;font-size:11px">Simulated money only. Bizzing Finance never touches real money.</p>`;
+    <p style="margin-top:18px;font-size:11px">Simulated money only. Bizzing Money never touches real money.</p>`;
   document.body.appendChild(w);
   setTimeout(() => {
     try { window.print(); } catch (e) { toast('Printing is not available here'); }

@@ -41,9 +41,9 @@ somebody made.** By that test the family divides sharply:
 |---|---|---|---|---|
 | **Bizzing India** | **11,506 narration clips** | 952 master photographs · 149 images | 1,008 stories authored | **2.7 GB** |
 | **Bizzing Bee** | **743 voice recordings** | ~200 art assets, 17 packs | **61 MB of word data** | ~70 MB |
-| **Bizzing Finance** | **0** | **0** | **0** | **7.5 MB** |
+| **Bizzing Money** | **0** | **0** | **0** | **7.5 MB** |
 
-Bizzing Finance owns 23 JavaScript files, 12 markdown files and three stylesheets. **It has
+Bizzing Money owns 23 JavaScript files, 12 markdown files and three stylesheets. **It has
 produced nothing.** Bee and India are defensible because somebody sat down and *made* 12,249
 audio files and 61 MB of compiled word lists. Finance has opinions and a prototype.
 
@@ -60,7 +60,7 @@ audio files and 61 MB of compiled word lists. Finance has opinions and a prototy
 | 7 | **The longitudinal family record** | Accrues | A child's multi-year mastery and net-worth history. Worthless on day one, a real switching cost in year two. |
 | 8 | **Licensed market data** | Rentable | ❌ **Not a moat.** A competitor rents the same feed. It is a cost barrier and nothing more. |
 
-**The honest bottom line: Bizzing Finance's only defendable asset today is that it is the
+**The honest bottom line: Bizzing Money's only defendable asset today is that it is the
 third app of a family that already has assets and users.** Everything else on this page is a
 plan, and plans are not USPs.
 

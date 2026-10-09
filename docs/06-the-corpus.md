@@ -1,4 +1,4 @@
-# 06 — The Corpus: what Bizzing Finance's 128,040 is
+# 06 — The Corpus: what Bizzing Money's 128,040 is
 
 Bizzing India asks the right question in [its own docs/10](https://github.com/aayuvis/bizzingindia.com/blob/main/docs/10-the-corpus.md),
 and it applies here with more force:
@@ -11,12 +11,12 @@ and it applies here with more force:
 |---|---|---|
 | **Bizzing Bee** | 128,040 words | one word: say it, spell it, know its origin |
 | **Bizzing India** | 1,008 stories · 2,500 verses · 36 states | one story, one verse, one place |
-| **Bizzing Finance** | **32 cards and 11 games** | — |
+| **Bizzing Money** | **32 cards and 11 games** | — |
 
 That is the whole diagnosis. Bizzing Bee is not engaging because spelling is fun; it is
 engaging because a child who loves words is handed the *real* championship list, with
 etymology, with a voice that pronounces it properly, and a promise that nothing is skipped.
-Bizzing Finance has games bolted to a syllabus. **It has never had a corpus, and a corpus is
+Bizzing Money has games bolted to a syllabus. **It has never had a corpus, and a corpus is
 the only thing here that compounds.**
 
 ---

@@ -1,7 +1,7 @@
 /* shell.js — the family chrome (FAMILY-STANDARD §3, §4, §5, §1.1, C4).
 
    Bee's top bar, in Bee's order, at 56px:
-     [⬡ Hive] [☰] [Pip + Bizzing Finance] ……… [search] [coin chip] [theme] [🔒] [avatar ▾]
+     [⬡ Hive] [☰] [Pip + Bizzing Money] ……… [search] [coin chip] [theme] [🔒] [avatar ▾]
    On a phone it keeps ⬡ ☰ logo … coin · avatar; search, theme and 🔒 move into ☰.
 
    Five tabs — Home · Town · Atlas · Money · Play — as Bee's row on a desk and a bottom
@@ -65,7 +65,7 @@ export function topbar(c) {
     <div class="topbar-in">
       ${playing ? '' : `<a class="iconbtn hive" href="${HIVE}" aria-label="Back to the Bizzing Hive" title="Back to the Bizzing Hive">${ico('hive', '', 22)}</a>`}
       <button class="iconbtn" data-act="drawer" aria-label="Menu" aria-haspopup="dialog">${ico('menu', '', 22)}</button>
-      <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Finance — home"><img class="brand-head" src="./mascot/pip-head.webp" alt="" width="28" height="28"><span class="wm"><b class="bz">Bizzing</b> <b class="app">Finance</b></span></button>
+      <button class="brand" data-act="nav" data-arg="home" aria-label="Bizzing Money — home"><img class="brand-head" src="./mascot/pip-head.webp" alt="" width="28" height="28"><span class="wm"><b class="bz">Bizzing</b> <b class="app">Money</b></span></button>
       ${R.fromHive ? `<a class="chip hiveback" href="${HIVE}">${ico('back', '', 16)} back to my day</a>` : ''}
       <span class="tb-gap"></span>
       <button class="searchpill desk" data-act="search" aria-label="Search the town">${ico('search', '', 18)}<span>Search lessons, words, games…</span></button>
@@ -109,7 +109,7 @@ export function drawer(c) {
 }
 
 /* ── the coin chip's sheet: balance, the last 30 lines in words, what coins are for ── */
-const APPNAME = { bee: 'Bee', maths: 'Maths', geography: 'Geography', india: 'India', finance: 'Finance' };
+const APPNAME = { bee: 'Bee', maths: 'Maths', geography: 'Geography', india: 'India', finance: 'Money' };
 const WHY = { answer: 'a right answer', stop: 'a lesson finished', contest: 'a test passed', mastery: 'an idea mastered', migrated: 'coins brought over' };
 export function walletLine(x) {
   let what;
@@ -197,13 +197,13 @@ export function settingsSheet(c, focus) {
     <section class="scard" aria-labelledby="st-gu"><h3 id="st-gu">Grown-ups ${ico('lock', '', 16)}</h3>
       ${row('Grown-ups’ area', pinSet(R.s.parent) ? 'Behind the PIN: age band, pay day, currency, the plan, backup and tester mode.' : 'Set a PIN to keep the money settings and tester tools away from an idle thumb.', `<button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('lock', '', 15)} Open</button>`)}
     </section>
-    <footer class="sfoot"><button class="small" data-act="privacy">Privacy</button> · <button class="small" data-act="about">About</button> · <span class="small muted">Bizzing Finance · build ${R.version || ''}</span>${R.install ? ` · <button class="small" data-act="install">Install</button>` : ''}</footer>`;
+    <footer class="sfoot"><button class="small" data-act="privacy">Privacy</button> · <button class="small" data-act="about">About</button> · <span class="small muted">Bizzing Money · build ${R.version || ''}</span>${R.install ? ` · <button class="small" data-act="install">Install</button>` : ''}</footer>`;
 }
 
 /* ── privacy: what is kept, where, and what never leaves ───────────────── */
 export function privacySheet() {
   return `<div class="sheet-h"><span class="eyebrow">Privacy</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico('close', '', 20)}</button></div>
-    <h2 style="margin:2px 0 10px">What Bizzing Finance keeps</h2>
+    <h2 style="margin:2px 0 10px">What Bizzing Money keeps</h2>
     <ul class="plist">
       <li><b>On this device only:</b> each child's first name, age band and avatar, and the town — the money, the lessons, the medals. Nothing else about a child is ever asked for.</li>
       <li><b>Shared with the other Bizzing apps on this device:</b> the Bizzing coins wallet and the minutes-and-milestones feed the Hive reads (<code>bizzing.wallet</code>, <code>bizzing.activity</code>). They stay in this browser.</li>

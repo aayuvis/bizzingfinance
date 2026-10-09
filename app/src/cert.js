@@ -26,7 +26,7 @@ export async function draw(c, worldId) {
   g.drawImage(plate, 0, 0, plate.width, plate.height * 0.8, 60, 60, W - 120, 380); g.restore();
   g.strokeStyle = '#3A2A5C'; g.lineWidth = 10; g.beginPath(); g.roundRect(30, 30, W - 60, H - 60, 44); g.stroke();
   g.fillStyle = '#3A2A5C'; g.textAlign = 'center';
-  g.font = '800 40px Fraunces, Georgia, serif'; g.fillText('Bizzing Finance', W / 2, 520);
+  g.font = '800 40px Fraunces, Georgia, serif'; g.fillText('Bizzing Money', W / 2, 520);
   g.font = '600 34px "Hanken Grotesk", system-ui, sans-serif'; g.fillText('This certificate is for', W / 2, 590);
   g.font = '800 92px Fraunces, Georgia, serif'; g.fillStyle = '#1F8A5B'; g.fillText(c.name, W / 2, 700);
   g.fillStyle = '#3A2A5C'; g.font = '600 36px "Hanken Grotesk", system-ui, sans-serif';

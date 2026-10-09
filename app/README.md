@@ -1,6 +1,6 @@
 # app/ — Bizzington
 
-The Bizzing Finance web app. **You live in Bizzington.** You have a room of your own, rent
+The Bizzing Money web app. **You live in Bizzington.** You have a room of your own, rent
 that goes out on Friday whether the week went well or not, and a wage that grows as you
 learn. From there: budget it, save, bank it, borrow, invest, run a shop — and climb until
 your money pays for your life without you working.
@@ -31,7 +31,7 @@ npm run single         # -> dist/bizzington.html   one self-contained file
 npm run deploy         # build + publish to the gh-pages branch
 ```
 
-**Live:** <https://aayuvis.github.io/bizzingfinance/> — served from the root of the
+**Live:** <https://aayuvis.github.io/bizzingmoney/> — served from the root of the
 `gh-pages` branch, the same way [bizzingindia.com](https://aayuvis.github.io/bizzingindia.com/)
 is. `deploy.sh` replaces that branch's contents wholesale each time, so stale hashed assets
 don't pile up, and drops a `.nojekyll` so GitHub serves `assets/` untouched. The one-file

@@ -2,7 +2,7 @@
   "name": "bizzington",
   "version": "0.2.0",
   "private": true,
-  "description": "Bizzing Finance — the town where kids 8+ learn how money works",
+  "description": "Bizzing Money — the town where kids 8+ learn how money works",
   "type": "module",
   "scripts": {
     "dev": "vite",

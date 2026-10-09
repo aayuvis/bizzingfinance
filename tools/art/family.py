@@ -1,4 +1,4 @@
-"""family.py — the family layer's art for Bizzing Finance (FAMILY-STANDARD v2 §2, §7, §8).
+"""family.py — the family layer's art for Bizzing Money (FAMILY-STANDARD v2 §2, §7, §8).
 
 Draws, with a generative IMAGE model (never motion):
   · avatars   — the 77 faces Finance generates to reach 96 (12 packs × 8), in the family

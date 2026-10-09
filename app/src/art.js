@@ -140,7 +140,7 @@ export function hasIcon(name) {
   return !!(ICONS[name] || ICONS[EMOJI_MAP[String(name || '').replace(/\uFE0F/g, '')]]);
 }
 
-/* The mark. Bizzing Finance had no mark at all — the top bar was bare text
+/* The mark. Bizzing Money had no mark at all — the top bar was bare text
    and the installed icon was a generic currency glyph that said "a finance
    app" and nothing about this one.
 
@@ -151,7 +151,7 @@ export function hasIcon(name) {
    three thin bars would silt up. Gold on teal, both straight from the tokens. */
 export function mark(size) {
   const s = size || 28;
-  return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Finance">
+  return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Money">
     <rect width="48" height="48" rx="12" fill="#0E6B78"/>
     <path fill="#F0B429" fill-rule="evenodd" d="M24 6a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-8.5 24.5a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v3.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6zm6.1-5.6a1.6 1.6 0 0 1 1.6-1.6h1.6a1.6 1.6 0 0 1 1.6 1.6v9.5a1.6 1.6 0 0 1-1.6 1.6h-1.6a1.6 1.6 0 0 1-1.6-1.6zm6-6.4a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v15.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6z"/>
   </svg>`;

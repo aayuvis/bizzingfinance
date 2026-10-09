@@ -14,7 +14,7 @@ shape and change the content spine. Its top nav is
 `Home · Practice · Explore · Arcade · Store · Progress · Collection`, with a 5-slot mobile
 bar and a drawer for everything else.
 
-| Bizzing Bee | Bizzing Finance | What changed and why |
+| Bizzing Bee | Bizzing Money | What changed and why |
 |---|---|---|
 | **Home** — streak, Champion's Quest, jump back in | **Home** — same, plus the money strip and Pay Day | Home gains a permanent net-worth line; the app's core fact must be visible on open. |
 | **Practice** — Word Coach, lists, Level ladder | **Learn** — lesson cards, chapters, the rank ladder | Same ladder machine. Drills are decisions rather than spellings. |
@@ -34,7 +34,7 @@ controls**, and **never leak the answer in on-screen text**.
 ## 1. The shell
 
 ```
-Topbar   [☰]  Bizzing Finance   ·  Wallet ₹840  ·  🔥 12  ·  [🔍]  [☀/☾]  [⚙]
+Topbar   [☰]  Bizzing Money   ·  Wallet ₹840  ·  🔥 12  ·  [🔍]  [☀/☾]  [⚙]
 Top nav  Home · Learn · Money · Arcade · Store · Progress · Collection
 Drawer   Glossary · Money Safety · Saga · Parents · Settings · Help
 ```

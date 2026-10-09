@@ -1,4 +1,4 @@
-# Bizzing Finance — Product Concept
+# Bizzing Money — Product Concept
 
 > **One line:** A simulation-first web app that teaches kids 8+ how money actually works —
 > by giving each child a wallet, a budget, a bank account and a stock portfolio that are
@@ -83,7 +83,7 @@ dashboard reads it.
 
 ### 3.1 One currency, and it is the curriculum
 
-Bizzing Bee has 🪙 coins for the shop and XP for the ladder. **Bizzing Finance must not.**
+Bizzing Bee has 🪙 coins for the shop and XP for the ladder. **Bizzing Money must not.**
 A soft reward currency stacked on top of simulated money is the one design mistake that
 would quietly destroy the whole product: it teaches that there is a magic second money that
 arrives for showing up, which is the exact opposite of the lesson.

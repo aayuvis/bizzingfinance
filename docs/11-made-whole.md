@@ -1,6 +1,6 @@
 # 11 — Made whole: what Bee and India have, and what Finance does about it
 
-A feature-by-feature diagnosis of Bizzing Finance against its two siblings, read from their
+A feature-by-feature diagnosis of Bizzing Money against its two siblings, read from their
 code — Bizzing Bee's live build (`gh-pages`) and Bizzing India's `app/` — not from memory or
 from the docs, which in both cases describe things that were never built. Every row is one
 of four dispositions:

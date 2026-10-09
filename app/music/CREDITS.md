@@ -1,6 +1,6 @@
-# Music credits — Bizzing Finance
+# Music credits — Bizzing Money
 
-All music in Bizzing Finance is **composed in code for Bizzing**. There are no audio files
+All music in Bizzing Money is **composed in code for Bizzing**. There are no audio files
 and nothing to license: every loop is a short score in `src/audio.js` (a chord progression,
 a bass line, a soft pad and a melody built from a fixed-seed motif) played by the browser's
 WebAudio engine on the child's device.
@@ -16,7 +16,7 @@ WebAudio engine on the child's device.
 | The Works | world 5 | 96 bpm · 32 bars (~80 s) |
 | Festival Night | world 6 | 100 bpm · 32 bars (~77 s) |
 
-Source: composed for Bizzing. Licence: part of the Bizzing Finance source.
+Source: composed for Bizzing. Licence: part of the Bizzing Money source.
 
 The effects (right, wrong, finish, medal, coin, unlock, the pay-day bell) are synthesised
 the same way. The lesson narration is unchanged and is credited on the About sheet.

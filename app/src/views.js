@@ -69,7 +69,7 @@ export function viewOnboard(draft) {
     return shell(`
       <div style="text-align:center">
         <div style="margin:0 auto 6px;width:112px">${pipPose('wave', 112, 'Pip waves hello')}</div>
-        ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ''}
+        ${first ? '<div class="eyebrow">Bizzing Money</div>' : ''}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : 'A new stall on Market Row'}</h1>
         <p class="muted" style="margin-top:8px">${first
           ? "Get a stall, a wallet and four jars — and learn money by running them."
@@ -344,7 +344,7 @@ export function viewHome() {
     /* every tile goes to its own thing (owner, 3 Oct): the word, the card, the person quoted */
     tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas/' + tip.card.id } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/atlas/c3b' },
     quote: { kicker: 'Overheard in Bizzington', text: cast[1], who: cast[0], href: '#/cast/' + ({ 'Nana Bizz': 'nana', Pip: 'pip', Mags: 'mags', Bea: 'bea', Bo: 'bo' }[cast[0]] || 'pip') },
-    foot: '<a href="#/privacy">Privacy</a> · Bizzing Finance — no real money, ever',
+    foot: '<a href="#/privacy">Privacy</a> · Bizzing Money — no real money, ever',
   });
   const deckN = deckIds(R.s, c).length;
   const homeBody = body.replace(/(data-bz="greet">)(<img [^>]*>)/, `$1<button class="bz-avbtn" data-act="avDeck" aria-label="Your avatar cards — ${deckN} yours" title="Flip through your avatar cards">$2<span class="bz-avcount" aria-hidden="true">${deckN}</span></button>`);
@@ -1016,7 +1016,7 @@ export function viewMoney() {
    as income from the family's apps, read-only, and kept apart from the town's
    money — the town's money is the curriculum, the coins are the family's
    reward for learning, and nothing converts one into the other. */
-const APP_NAMES = { bee: 'Bizzing Bee', maths: 'Bizzing Maths', geography: 'Bizzing Geography', india: 'Bizzing India', finance: 'Bizzing Finance' };
+const APP_NAMES = { bee: 'Bizzing Bee', maths: 'Bizzing Maths', geography: 'Bizzing Geography', india: 'Bizzing India', finance: 'Bizzing Money' };
 function familyCoinsCard(c) {
   if (R.demo) return '';
   const f = family.familyCoins(c.name);
@@ -2088,7 +2088,7 @@ export function settingsSheet(R) {
     </div>
     ${R.install ? `<div class="sect"><b>This device</b><i></i></div>
     <div class="rows" style="margin:0 -22px">
-      ${row('Install Bizzing Finance', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
+      ${row('Install Bizzing Money', 'Its own icon, full screen, works offline.', '<button class="btn sm" data-act="install">Install</button>')}
     </div>` : ''}
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn ghost sm" data-act="nav" data-arg="parents">${ico('family', '', 15)} Grown-ups</button>
@@ -2107,7 +2107,7 @@ export function settingsSheet(R) {
 export const VERSION = '2026-09-30';
 export function aboutSheet() {
   return `
-    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Finance</h2>
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Money</h2>
       <div class="small muted">Set in Bizzington · build ${VERSION}</div></div></div>
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own — with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
@@ -2178,7 +2178,7 @@ function landing() {
   const counts = [[ALL_CARDS.length, 'lessons, every one read aloud'], [GAMES.length, 'games, keyboard and touch'], [WORLDS.length, 'places to walk'], [Object.keys(BADGES).length, 'medals for decisions']];
   return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
     <div style="text-align:center">${pipPose('wave', 128, 'Pip the squirrel waves hello')}
-      <div class="eyebrow" style="margin-top:6px">Bizzing Finance</div>
+      <div class="eyebrow" style="margin-top:6px">Bizzing Money</div>
       <h1 style="font-size:clamp(30px,8vw,40px);line-height:1.05;margin-top:4px">Earn it, keep it, grow it — in a town of your own.</h1>
       <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own — and a grown-up's page that reports what they learned, not how long they stayed.</p>
     </div>

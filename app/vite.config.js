@@ -8,9 +8,9 @@ import { resolve } from 'node:path';
    The manifest and the icon have exactly the same problem and it bit us: Vite
    treated them as assets, hashed them and moved them into assets/, so their
    own relative fields resolved against THAT directory. On a project page at
-   /bizzingfinance/ the manifest's start_url pointed at
-   /bizzingfinance/assets/index.html and its icon at
-   /bizzingfinance/assets/icon.svg — both 404. The app was fine; installing it
+   /bizzingmoney/ the manifest's start_url pointed at
+   /bizzingmoney/assets/index.html and its icon at
+   /bizzingmoney/assets/icon.svg — both 404. The app was fine; installing it
    to a home screen launched a dead page with no icon, and nothing in a
    root-served dev build could show you that. They now live in public/, which
    Vite copies verbatim to the build root and never rewrites. */
