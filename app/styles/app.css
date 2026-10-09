@@ -155,7 +155,7 @@ input{font:inherit; color:inherit}
 .alrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px}
 .alrow.sel{border-color:var(--action);box-shadow:var(--focus)}
 .stepper{display:flex;align-items:center;gap:6px}
-.stepper button{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:16px}
+.stepper button{width:44px;height:44px;border-radius:8px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:16px}
 .stepper .n{min-width:42px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
 .spark{display:block;width:100%;height:44px}
 .lead{display:grid;gap:6px}
@@ -884,6 +884,17 @@ html[data-bz-dark] .gplay .hint{background:rgb(20 24 36 / .86);color:#F4EEE4}
 @media (prefers-reduced-motion:reduce){.gplay .stage::before,.gplay .stage::after,.gplay .gcard,.gplay .gcard .em{animation:none !important}}
 :root[data-motion="reduced"] .gplay .stage::before,:root[data-motion="reduced"] .gplay .stage::after,:root[data-motion="reduced"] .gplay .gcard,:root[data-motion="reduced"] .gplay .gcard .em{animation:none !important}
 .practised{background:var(--grow-tint);border-radius:var(--r-md);padding:10px 12px;font-size:14.5px}
+/* §1.8 · the sentence an end card is FOR sits on its own paper, so it reads on the painting in
+   either theme (Budget Blitz's and Market Storm's were near-invisible in dark mode) */
+.gplay .stage .endkey{align-self:center;color:var(--ink);background:rgb(255 252 245 / .93);border-radius:var(--r-md);padding:9px 13px;font-weight:650;max-width:36em}
+html[data-bz-dark] .gplay .stage .endkey{color:#F4EEE4;background:rgb(20 24 36 / .92)}
+.gplay .stage .lvloffer{align-self:center;display:flex;flex-direction:column;align-items:center;gap:6px;background:rgb(255 252 245 / .93);color:var(--ink);border-radius:var(--r-md);padding:9px 13px}
+html[data-bz-dark] .gplay .stage .lvloffer{color:#F4EEE4;background:rgb(20 24 36 / .92)}
+.gplay .stage .cuptrend{align-self:center;color:var(--ink);background:rgb(255 252 245 / .93);border-radius:var(--r-md);padding:7px 12px}
+html[data-bz-dark] .gplay .stage .cuptrend{color:#F4EEE4;background:rgb(20 24 36 / .92)}
+.gplay .stage .btn.tcright{outline:3px solid #fff;outline-offset:2px}
+.gplay .stage .btn.tcwrong{opacity:.55}
+.gplay .stage .choices .btn[disabled]{color:#fff}
 /* motion on every answer: right pops, wrong shakes */
 html[data-flash="ok"] .stage,html[data-flash="ok"] .opt.ok,html[data-flash="ok"] .fb.yes{animation:popok .38s cubic-bezier(.2,1.6,.4,1)}
 html[data-flash="no"] .stage,html[data-flash="no"] .opt.no,html[data-flash="no"] .fb.hold{animation:shake .38s ease}
@@ -1122,7 +1133,9 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
 .msboard .mssq{position:relative;border:1px solid var(--line);border-radius:7px;padding:4px 3px;font-size:9.5px;line-height:1.15;
   text-align:center;overflow:hidden;box-shadow:0 1px 0 rgb(40 25 5 / .12)}
 .msboard .mstoks{position:absolute;top:2px;right:2px;display:flex;gap:1px}
-.msboard .mstok{width:8px;height:8px;border-radius:50%;display:block}
+.msboard .mstok{width:20px;height:20px;border-radius:50%;display:block;border:2px solid;overflow:hidden;background:#FFF8EC;margin-left:-6px}
+.msboard .mstok:first-child{margin-left:0}
+.msboard .mstok img{width:100%;height:100%;object-fit:cover;display:block}
 .msboard.live .mstoks{visibility:hidden}
 .msboard .mscv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
 .msdie{height:58px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:28px}

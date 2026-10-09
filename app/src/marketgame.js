@@ -20,6 +20,7 @@ import { esc, sfx, toast, clamp, sparkline } from './ui.js';
 import { money, price } from './fmt.js';
 import { say, ico } from './art.js';
 import { COMPANIES, SECTORS, byId as coById } from '../content/companies.js';
+import { PESTEL } from '../content/events.js';
 import { simulate, priceSeries, explainYear, GAME_YEARS } from './gamemarket.js';
 import { annualReport, shareholderLetter } from './reports.js';
 import * as sim from './sim.js';
@@ -45,30 +46,34 @@ export function castFor(seed, act) {
 }
 
 /* ── the assessment. One question per company, and it is always the same
-   question, because it is the one that matters: what would hurt this? ── */
+   question, because it is the one that matters: what would hurt this?
+   §2.7 · the answer is the one the company's OWN sheet states (`c.hurt`, read off
+   its "what could hurt it" line in content/companies.js) — so the key can never
+   contradict what the child just read — and the explanation quotes that line. ── */
+export const ASSESS = [
+  { id: 'rate',    t: 'The bank raising interest rates' },
+  { id: 'infl',    t: 'Its costs rising faster than it can charge' },
+  { id: 'slump',   t: 'A recession cutting what people buy' },
+  { id: 'newtech', t: 'Rivals, or new tastes, taking its customers' },
+  { id: 'rule',    t: 'One ruling, accident or failure it cannot undo' },
+];
 export function assessOptions(c) {
-  const d = c.dna;
-  const cand = [
-    { id: 'rate',    t: 'The bank raising interest rates',      w: d.rateSens * (1 + d.debt) },
-    { id: 'infl',    t: 'Prices rising faster than it can charge', w: (1 - d.pricing) * 3 },
-    { id: 'slump',   t: 'A recession cutting what people buy',   w: d.cyc * 1.6 },
-    { id: 'newtech', t: 'Something new making it unnecessary',   w: d.disrupt * 3.2 },
-  ];
-  const best = cand.reduce((a, b) => (b.w > a.w ? b : a));
-  return { options: cand, answer: best.id,
-    why: {
-      rate: `It carries ${d.debt.toFixed(1)}× its revenue in borrowings and a rate sensitivity of ${d.rateSens.toFixed(1)}. When money gets dearer, this one feels it first.`,
-      infl: `It can only pass on about ${Math.round(d.pricing * 100)}% of a cost rise. The rest comes straight out of the margin.`,
-      slump: `Its earnings swing ${d.cyc.toFixed(1)}× as hard as the economy. A mild slowdown is not mild here.`,
-      newtech: `Roughly ${Math.round(d.disrupt * 100)}% of what it does could be replaced by something better. That is the risk that does not announce itself.`,
-    }[best.id] };
+  const d = c.dna, answer = c.hurt;
+  const said = `Its sheet says it: “${c.risk}”`;
+  const why = {
+    rate: `${said} It carries ${d.debt.toFixed(1)}× its revenue in borrowings and a rate sensitivity of ${d.rateSens.toFixed(1)}: when money gets dearer, this one feels it first.`,
+    infl: `${said} It can pass on only about ${Math.round(d.pricing * 100)}% of a cost rise; the rest comes straight out of the margin.`,
+    slump: `${said} Its earnings swing ${d.cyc.toFixed(1)}× as hard as the economy, so a mild slowdown is not mild here.`,
+    newtech: `${said} Its customers can go elsewhere, and nothing in the accounts warns you before they do.`,
+    rule: `${said} One decision or one bad event it cannot control can undo years of profit.`,
+  }[answer];
+  return { options: ASSESS.slice(), answer, why };
 }
 
 export function newGame(seed) {
   return { seed, act: null, year: 0, phase: 'pick', studied: [], assessed: {},
     cash: 10000, holdings: {}, opened: {}, log: [], score: { right: 0, asked: 0 } };
 }
-
 /* The simulation is heavy-ish; hold one per seed for the session. */
 const sims = new Map();
 export function simFor(seed) {
@@ -88,6 +93,9 @@ export function startAct(g, act) {
   g.act = act; g.year = ACTS[act].from; g.phase = 'study';
   g.studied = []; g.assessed = {}; g.holdings = {}; g.cash = 10000;
   g.startWorth = 10000; g.log = [];
+  /* §2.7 · "how well you read them" is about THIS decade's eight companies, so it starts
+     again with the decade (it used to add every decade ever played into one score) */
+  g.score = { right: 0, asked: 0 };
   return g;
 }
 export function study(g, id) { if (!g.studied.includes(id)) g.studied.push(id); }
@@ -130,6 +138,8 @@ export function advance(g) {
 }
 
 /* ══ the view ═══════════════════════════════════════════════════════════ */
+/* §2.7 · an event's tags are words a child can read — never "N" or "S" or "macro" */
+export const SCOPE_WORD = { macro: 'The whole economy', country: 'The country', sector: 'Its industry', company: 'This company' };
 const pctTone = (x) => (x >= 0 ? 'var(--grow)' : 'var(--spend)');
 const arrow = (x) => (x >= 0 ? '▲' : '▼');
 
@@ -314,8 +324,8 @@ function viewPlay(g) {
       ${last.events.length ? `<div class="stack" style="gap:8px;margin-top:10px">
         ${last.events.slice(0, 4).map((e) => `<div style="background:var(--surface2);border:1px solid var(--line);
           border-radius:var(--r-md);padding:10px 12px">
-          <div class="row"><span class="pill">${e.scope.kind}</span>
-            <span class="pill" style="margin-left:5px">${e.tag}</span></div>
+          <div class="row"><span class="pill">${esc(SCOPE_WORD[e.scope.kind] || e.scope.kind)}</span>
+            <span class="pill" style="margin-left:5px">${esc(PESTEL[e.tag] || e.tag)}</span></div>
           <b style="font-size:14px;display:block;margin-top:5px">${esc(e.head)}</b>
           <div class="small muted">${esc(e.body)}</div></div>`).join('')}
       </div>` : '<p class="small muted" style="margin-top:8px">A quiet year. They happen.</p>'}
@@ -335,7 +345,8 @@ function viewPlay(g) {
       <div class="stack" style="gap:8px;margin-top:10px">
         ${g.studied.filter((id) => (g.holdings[id] || 0) > 0).map((id) => {
           const co = coById[id], px = s.years[id][g.year].value;
-          const x = explainYear(s, id, g.year);
+          /* §2.7 · the first year of the first decade has no year before it: read it as "no move yet", never crash */
+          const x = Object.assign({ move: 0, reasons: [] }, explainYear(s, id, g.year));
           return `<div style="background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px">
             <div class="row"><b class="grow" style="font-size:14px">${esc(co.name)}</b>
               <b style="color:${pctTone(x.move)}">${arrow(x.move)} ${Math.abs(x.move * 100).toFixed(1)}%</b>

@@ -165,7 +165,7 @@ export const COMPANIES = [
     'An everything-store, plus the warehouses, plus a cloud business paying for it all.',
     'Retail barely breaks even. The cloud division is where the profit lives.',
     'Almost everybody, plus every company renting servers.',
-    'Two very different businesses in one, and only one of them earns.',
+    'Only one of its two businesses earns, and the price is mostly profit expected years from now: the kind dearer borrowing shrinks first.',
     'Retail at scale funding an infrastructure annuity',
     { rev0: 140000, margin: 0.07, growth: 14, cyc: 1.0, rateSens: 1.5, pricing: 0.55, disrupt: 0.35, debt: 0.6, payout: 0 }),
   C('search', 'Beacon Media', 'BCN', 'tech',
@@ -334,10 +334,34 @@ export const COMPANIES = [
     'Mobile masts on hills and rooftops, rented to the networks.',
     'One mast, three tenants, and each extra tenant is nearly pure profit.',
     'Every mobile network, on twenty-year leases.',
-    'Its customers keep merging, and each merger removes a tenant.',
+    'Built on borrowed money, so every rate rise bites; and each time its customers merge, a tenant goes.',
     'Tower REIT — operating leverage and consolidation risk',
     { rev0: 7600, margin: 0.36, growth: 7, cyc: 0.2, rateSens: 2.9, pricing: 0.65, disrupt: 0.25, debt: 3.0, payout: 0.75 }),
 ];
+
+/* §2.7 · WHAT COULD HURT IT, as the sheet itself says it. The Market Game asks one question
+   of every company — what would hurt it most? — and the answer key is read off the risk
+   line printed on that company's own sheet, never computed from hidden numbers that can
+   disagree with it (it once marked Great Western Rail "rates" while its sheet said
+   "volumes follow the economy"). Five answers, and no single one is right for more than
+   three companies in ten, so always giving the same answer cannot pass (test/market40.mjs).
+     rate     the bank raising interest rates (borrowings, or a price that is mostly future profit)
+     infl     its costs rising faster than it can charge
+     slump    a recession cutting what people buy
+     newtech  rivals, or new tastes, taking its customers
+     rule     one ruling, accident or failure it cannot undo                                  */
+export const HURT = {
+  bigbox: 'infl', clubco: 'slump', cereal: 'newtech', fizz: 'newtech', household: 'slump',
+  bigoil: 'newtech', shale: 'rate', solar: 'rate', pipeline: 'rate', nukegen: 'rule',
+  megabank: 'slump', cardnet: 'rule', insurer: 'rule', assetmgr: 'newtech', exchange: 'slump',
+  devices: 'newtech', everything: 'rate', search: 'newtech', chips: 'slump', stream: 'newtech',
+  pharma: 'rule', generic: 'newtech', hospitals: 'infl', healthins: 'rule', devicesmed: 'rule',
+  aero: 'rule', rail: 'slump', machines: 'slump', autos: 'newtech', chem: 'infl',
+  coffee: 'slump', burgers: 'newtech', sportswear: 'newtech', airline: 'infl', hotels: 'slump',
+  telecom: 'rule', utility: 'rule', datacenter: 'rate', waste: 'rule', towers: 'rate',
+};
+export const HURT_KINDS = ['rate', 'infl', 'slump', 'newtech', 'rule'];
+COMPANIES.forEach((c) => { c.hurt = HURT[c.id]; });
 
 export const bySector = (id) => COMPANIES.filter((c) => c.sector === id);
 export const byId = Object.fromEntries(COMPANIES.map((c) => [c.id, c]));
@@ -360,6 +384,11 @@ export function validate() {
     if (d.margin <= 0 || d.margin > 0.6) errs.push(`${c.id}: margin ${d.margin} is not plausible`);
     if (d.pricing < 0 || d.pricing > 1) errs.push(`${c.id}: pricing must be 0..1`);
     if (d.payout < 0 || d.payout > 1) errs.push(`${c.id}: payout must be 0..1`);
+    if (!HURT_KINDS.includes(c.hurt)) errs.push(`${c.id}: no answer key for "what could hurt it" (HURT)`);
+  });
+  HURT_KINDS.forEach((k) => {
+    const n = COMPANIES.filter((c) => c.hurt === k).length;
+    if (n > COMPANIES.length * 0.3) errs.push(`"${k}" is the right answer for ${n} of ${COMPANIES.length}: always answering it would pass`);
   });
   SECTORS.forEach((s) => {
     const n = bySector(s.id).length;

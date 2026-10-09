@@ -2200,9 +2200,10 @@ function landing() {
 
 /* ── today's till (dailypuzzle.js) ───────────────────────────────────────
    One a day, the same one in every house, no timer and no streak. */
-function tillCard(c) {
-  const p = puz.puzzle(), st = puz.stateOf(c, p.day);
-  const money2 = (n) => money(price(n));
+export function tillCard(c, day) {
+  const p = puz.puzzle(day), st = puz.stateOf(c, p.day);
+  /* §1.6 · the receipt is already in the child's own currency (dailypuzzle.js), so it adds up as shown */
+  const money2 = (n) => money(n);
   const line = (l, i) => `<div class="tline">
     <span class="grow">${ico(l.em, l.em, 16)} ${esc(l.name)}${l.qty > 1 ? ` <span class="small muted">× ${l.qty}</span>` : ''}</span>
     <i></i><b class="tabnum">${i === p.hidden ? (st.done ? money2(l.each) + (l.qty > 1 ? ' each' : '') : '<span class="tq">?</span>') : money2(l.each) + (l.qty > 1 ? ' each' : '')}</b>
@@ -2226,7 +2227,7 @@ function tillCard(c) {
          <div class="row" style="gap:8px;margin-top:10px">${marks}<span class="grow"></span>
            <button class="btn ghost sm" data-act="tillShare">Copy the shape</button></div>`
       : `<div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
-           <input class="field" data-field="till" inputmode="numeric" placeholder="What did one cost?" value="${esc(R.fields.till || '')}"
+           <input class="field" data-field="till" data-enter="till" inputmode="numeric" placeholder="What did one cost?" value="${esc(R.fields.till || '')}"
              style="flex:1;min-width:150px;padding:11px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font:inherit;font-weight:700">
            <button class="btn sm" data-act="till">Check</button></div>
          <div class="row" style="gap:8px;margin-top:8px">${marks}<span class="grow"></span>

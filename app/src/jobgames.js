@@ -29,18 +29,26 @@
    decide what arrives, never what it is worth. */
 
 import { esc, sfx, clamp } from './ui.js';
+import { dayIndex } from './fmt.js';
 import { ico } from './art.js';
 /* lives in the HUD, drawn — with the count in words for a screen reader, which
    is also what keeps the chip from reading as empty */
 const hearts = (n) => n > 0 ? `<span class="hearts">${ico('heart', '❤️', 14).repeat(n)}<span class="sr-only">${n} ${n === 1 ? 'life' : 'lives'}</span></span>` : '';
 import { JOBS } from './content.js';
-import { hud, endCard, tierPicker, goalList } from './arcade.js';
+import { hud, endCard, tierPicker, goalList, levelOffer } from './arcade.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { fx, countdown, plate, backdrop, rr, shadow, crate, ease, still } from './gamefx.js';
 
 const K = () => sim.kid(R.s);
 const W = 360, H = 300;
+/* §1.4 · what each kind of shift practised, in its own words */
+export const JOB_PRACTISED = {
+  stack: 'steady hands on a job that pays for care: a neat pile is a full wage',
+  trim: 'keeping a load balanced, one weight at a time, before it tips',
+  sweep: 'finishing the whole job before the clock does, not just the easy bits',
+  runner: 'getting every delivery to the right door while the street keeps moving',
+};
 
 /* the table lives in jobtable.js, so the Town can list jobs without loading the games */
 import { JOB_GAME, TIER_IDS, TIER_NAME, JOB_TIER_SAYS, tierOf, setTier, jobPar, jobKnobs, jobGoals, earnGoals } from './jobtable.js';
@@ -167,7 +175,11 @@ function shell(spec) {
        challenge and never a bigger payday — and sim.doJob clamps it at both ends. */
     st.quality = st.score / par();
     st.best = sim.setJobBest(K(), jobId, st.score);
+    /* §1.4 · a job pays once a day; a second shift is practice, and its card says so */
+    st.capped = !!(K().jobs && K().jobs[jobId] === dayIndex(Date.now()));
     st.won = sim.doJob(K(), jobId, st.quality);
+    /* §1.7 · the owner's level rule for a shift too: offered on the card, never applied by itself */
+    st.offer = levelOffer(st.tier, st.quality);
     /* G9 · goals are a record: ticked here, and they pay nothing */
     st.goals = earnGoals(K(), jobId, jobGoals(jobId), Object.assign({ tier: st.tier }, spec.summary()));
     if (R.s) sim.save(R.s);
@@ -183,6 +195,20 @@ function shell(spec) {
     sfx.level();
   };
   st.end = finish;
+  const takeOffer = () => {
+    const o = st.offer; if (!o || o.taken || !setTier(K(), jobId, o.to)) return;
+    st.offer = Object.assign({}, o, { taken: true });
+    if (R.s) sim.save(R.s);
+    sfx.click(); R.render();
+  };
+  const offerHtml = () => {
+    const o = st.offer; if (!o) return '';
+    if (o.taken) return `<p class="small lvloffer" data-dir="${o.dir}">Next shift is on <b>${TIER_NAME[o.to]}</b>.</p>`;
+    const line = o.dir === 'up' ? `Well over par on ${TIER_NAME[st.tier]}. Ready for ${TIER_NAME[o.to]}?`
+      : `That one was hard on ${TIER_NAME[st.tier]}. ${TIER_NAME[o.to]} is there if you want it: your choice.`;
+    return `<div class="lvloffer" data-dir="${o.dir}"><p class="small">${esc(line)}</p>
+      <button class="btn ghost sm" data-act="jgLevel" data-arg="${o.to}">L · ${TIER_NAME[o.to]} next shift</button></div>`;
+  };
   const pick = (t) => { if (!st.picking || !TIER_IDS.includes(t)) return; retier(t); setTier(K(), jobId, t); sfx.click(); R.render(); };
   const begin = () => { if (!st.picking) return; st.picking = false; setTier(K(), jobId, st.tier); if (R.s) sim.save(R.s); sfx.click(); R.render(); };
 
@@ -273,7 +299,7 @@ function shell(spec) {
     },
     stop,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { spec.quit(); R.render(); } return; }
+      if (st.done) { if (e.key === 'Enter') { spec.quit(); R.render(); } else if ((e.key === 'l' || e.key === 'L') && st.offer) takeOffer(); return; }
       if (st.picking) {
         /* the level picker by keyboard: 1 2 3, or ← →, then Enter or space to start */
         const i = TIER_IDS.indexOf(st.tier);
@@ -289,6 +315,7 @@ function shell(spec) {
     act(n, arg) {
       if (n === 'jgTier') { pick(arg); return; }
       if (n === 'jgStart') { begin(); return; }
+      if (n === 'jgLevel') { if (st.done && st.offer && arg === st.offer.to) takeOffer(); return; }
       if (spec.onAct && live()) spec.onAct(n, arg);
     },
     view() {
@@ -301,7 +328,10 @@ function shell(spec) {
           : ['think', 'Hard going'];
         return `<div class="stack">${hud([esc(job.name), chip])}
           ${endCard(grade[0], grade[1], `${st.score} ${spec.unit} · par ${par()} on ${TIER_NAME[st.tier]}${st.best ? ' · <b>new personal best</b>' : ''}`,
-            st.won, finishLine(st), job.whoArt || 'pip')}
+            st.won, finishLine(st), job.whoArt || 'pip',
+            /* §1.4 · the job's OWN practised line and its own capped notice — never the last arcade game's */
+            { id: null, practised: JOB_PRACTISED[cfg.kind], capped: st.capped, offer: offerHtml(),
+              capLine: `Paid shift used for today: ${job.name} pays once a day. This one is practice, and it still counts toward your goals.` })}
           ${goalList(jobGoals(jobId), K(), jobId, st.goals)}</div>`;
       }
       return `<div class="stack">

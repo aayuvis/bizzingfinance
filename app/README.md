@@ -136,6 +136,16 @@ idiom, kept deliberately. Views never compute money; `sim.js` does.
 - **Nothing is gated on an XP number.** Every surface and every game names the chapter that
   opens it (`UNLOCKS` in `content.js`), and the locked state says which one. Education first,
   then the tool — the Exchange cannot open before a child knows what a share is.
+- **One pay path for every game** (docs/12 §1.1). A round ends in `roundEnd()`: a decision
+  score against the level's par (`SHARE`), one wage on one scale (`wageUnits`, in price
+  units, a perfect round = `WAGE_NORM`), then `payout()` — the day's cap and the one
+  `price()`. Main Street pays through it too; nothing pays straight into the wallet.
+  `test/economy.mjs` holds every game within 1.5× the norm.
+- **A seed per play, kept with the round** (`c.rounds[id]`); content varies, rewards never do.
+  **A wrong answer holds** until Continue. **Every finish screen is its own game's** — its
+  practised line, its capped notice — and offers (never forces) a level up or down by the
+  owner's rule (`levelOffer`). **Amounts that must add up use `minorPrice`/`minorMoney`**
+  (25¢, 20p, 50 fils). `test/games.mjs` holds all of it.
 - **Quests advance from exactly one call site per kind** (`questTick`), so a quest can never
   be advanced twice by the same action.
 - **The curriculum lives in `objectives.js`, and it is data.** An objective is written as a
@@ -187,7 +197,7 @@ purpose (coins, packs, streak rewards), and the reasons are the app's own rules.
 - Only the **first receipt** is a keepsake so far. The first pay slip, the first statement and the season finales in docs/08 are the same shape and not yet objects.
 - Sprout mode hides the market and debt and cannot go negative, but the *reading level* is
   not yet differentiated.
-- The Market Cup replays one authored season. A shipping build wants many.
+- The Market Cup draws its season from a per-play seed (docs/12 §1.2), but from one generator: the authored "series" of seasons in docs/12 §2.6 is still to come.
 - Main Street is you plus two bots. Pass-and-play for two to four humans is the
   obvious next step and the rules already allow it.
 - **Only the Jar Shed switches representation so far.** The bank rate, the store's ten-year

@@ -35,23 +35,29 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
      `median worst ${med(worsts).toFixed(1)}%/yr`);
 }
 
-/* ── the whole point: one world, so things move for reasons ── */
+/* ── the whole point: one world, so things move for reasons ──
+   Held across all eight worlds against the same 85% bar (it once sampled the first world only,
+   and when the generator's seeding was fixed that one world became a tail case at 82%, while
+   60 worlds pooled sit at 95%). */
 {
-  const { sim } = sims[0];
   const rateSensitive = 'towers', rateProof = 'household';   /* 2.9 vs 0.4 rate sensitivity */
-  let hitYears = 0, sensFell = 0;
-  const rows = sim.years[rateSensitive], safe = sim.years[rateProof];
-  for (let y = 1; y < GAME_YEARS; y++) {
-    if (rows[y].rate - rows[y - 1].rate > 0.5) {
-      hitYears++;
-      const a = rows[y].mult / rows[y - 1].mult - 1;
-      const b = safe[y].mult / safe[y - 1].mult - 1;
-      if (a < b) sensFell++;
+  let hitYears = 0, sensFell = 0, worlds = 0;
+  for (const { sim } of sims) {
+    const rows = sim.years[rateSensitive], safe = sim.years[rateProof];
+    let h = 0;
+    for (let y = 1; y < GAME_YEARS; y++) {
+      if (rows[y].rate - rows[y - 1].rate > 0.5) {
+        h++;
+        const a = rows[y].mult / rows[y - 1].mult - 1;
+        const b = safe[y].mult / safe[y - 1].mult - 1;
+        if (a < b) sensFell++;
+      }
     }
+    hitYears += h; if (h > 2) worlds++;
   }
   ok('when rates rise, the indebted one is marked down harder than the safe one',
-     hitYears > 2 && sensFell / hitYears > 0.85,
-     `${sensFell}/${hitYears} rate rises`);
+     worlds === sims.length && sensFell / hitYears > 0.85,
+     `${sensFell}/${hitYears} rate rises across ${sims.length} worlds`);
 }
 
 /* ── pricing power decides who survives inflation ── */
@@ -139,6 +145,62 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
   ok('no company description carries a real-world count, scale or home town', tells.length === 0, tells.map((c) => c.name).join(', '));
   const tick = COMPANIES.map((c) => c.ticker);
   ok('every ticker is unique and none is a legal form', new Set(tick).size === tick.length && !tick.some((t) => /^(LLC|INC|PLC|LTD)$/.test(t)));
+}
+
+/* ── docs/12 §2.7 (T2): the flagship, played — every decade, the key, the score ── */
+{
+  globalThis.localStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = String(v); }, removeItem(k) { delete this._m[k]; } };
+  globalThis.Image = class {};
+  const { R } = await import('../src/runtime.js');
+  const S = await import('../src/sim.js');
+  const MG = await import('../src/marketgame.js');
+  const { PESTEL } = await import('../content/events.js');
+  R.s = S.newState(); R.s.kids.push(S.newChild('Asha', 'builder', 'INR')); R.render = () => {};
+  const c = R.s.kids[0];
+
+  /* the year-0 crash: the first year of the first decade has no year before it */
+  const x0 = explainYear(sims[0].sim, COMPANIES[0].id, 0);
+  ok('explainYear on year 0 is "no move, no reasons" — the same shape as any year, never []', x0 && x0.move === 0 && Array.isArray(x0.reasons) && !Array.isArray(x0), JSON.stringify(x0).slice(0, 60));
+
+  /* every decade starts, plays every year on screen, and finishes */
+  /* one game played decade after decade, as a child plays it: the score must start again each time */
+  const decades = [], tagsBad = [], g = MG.newGame(4242); c.game = g;
+  for (const act of MG.ACTS) {
+    let err = null, years = 0, html = '';
+    try {
+      MG.startAct(g, act.id);
+      const cast = MG.castFor(g.seed, g.act);
+      cast.slice(0, 3).forEach((co) => { MG.study(g, co.id); MG.assess(g, co.id, MG.assessOptions(co).answer); });
+      html = MG.viewMarketGame();
+      g.phase = 'invest'; html = MG.viewMarketGame();
+      g.studied.forEach((id) => MG.buy(g, id, 2500));
+      g.phase = 'play';
+      for (let i = 0; i < 20 && g.phase === 'play'; i++) {
+        html = MG.viewMarketGame(); years++;
+        for (const m of html.matchAll(/<span class="pill"[^>]*>([^<]*)<\/span>/g)) if (/^[A-Z]$/.test(m[1].trim()) || /^(macro|country|sector|company)$/.test(m[1].trim())) tagsBad.push(m[1]);
+        MG.advance(g);
+      }
+      html = MG.viewMarketGame();
+    } catch (e) { err = e.message; }
+    decades.push({ act: act.id, err, years, review: g.phase === 'review' && /How well you read them/.test(html), score: g.score.asked });
+  }
+  ok('every decade starts on its first year, plays every year on screen, and reaches its review', decades.every((d) => !d.err && d.years === 10 && d.review),
+     decades.map((d) => `${d.act}:${d.err || d.years + 'y' + (d.review ? ' ✓' : ' ✗')}`).join(' '));
+  ok('"how well you read them" is per decade: it starts again with each one', decades.every((d) => d.score === 3), decades.map((d) => d.score).join(','));
+  ok('an event\'s tags are words ("Economic", "This company"), never a letter or a code', tagsBad.length === 0 && Object.values(PESTEL).every((w) => w.length > 2), tagsBad.slice(0, 4).join(','));
+
+  /* the answer key comes from the sheet, and no one answer covers more than 3 in 10 */
+  const keys = COMPANIES.map((co) => MG.assessOptions(co));
+  const count = {}; keys.forEach((k) => { count[k.answer] = (count[k.answer] || 0) + 1; });
+  const most = Math.max(...Object.values(count));
+  ok('no single "what could hurt it" answer is right for more than 30% of companies', most <= COMPANIES.length * 0.3, JSON.stringify(count));
+  ok('every company has an answer, it is one of the offered options, and its reason quotes its own sheet',
+    keys.every((k, i) => k.options.some((o) => o.id === k.answer) && k.why.includes(COMPANIES[i].risk)));
+  const rail = COMPANIES.find((co) => co.id === 'rail');
+  ok('the key agrees with the sheet: Great Western Rail, whose sheet says "volumes follow the economy", is a recession risk', MG.assessOptions(rail).answer === 'slump', rail.risk);
+  /* always giving one answer: what a lazy player scores in every decade's cast */
+  const lazy = Object.keys(count).map((a) => [a, COMPANIES.filter((co) => MG.assessOptions(co).answer === a).length / COMPANIES.length]);
+  ok('always answering the same thing scores 30% or less, whichever thing it is', lazy.every(([, s]) => s <= 0.3), lazy.map(([a, s]) => `${a} ${Math.round(s * 100)}%`).join(' · '));
 }
 
 console.log('─'.repeat(60));

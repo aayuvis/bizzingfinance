@@ -167,6 +167,86 @@ console.log(`\nBizzington · ${YEARS} years × ${SEEDS.length} seeds\n${'─'.re
   ok('different seed, different world', a !== c);
 }
 
+/* ── 8. one pay path (docs/12 §1.1, T1) ─────────────────────────────────
+   Every game's wage goes through payout() → sim.gameWage (the day's cap, the level's
+   par) with exactly one price(). A perfect Standard round of any game pays about the
+   same — the norm — and none pays more than 1.5× it. Stall Rush used to pay ~₹2,100
+   (a second price() on rupees), Main Street paid round the cap, the till ticked twice. */
+{
+  globalThis.localStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = String(v); }, removeItem(k) { delete this._m[k]; } };
+  globalThis.Image = class {};
+  const { R } = await import('../src/runtime.js');
+  const sim = await import('../src/sim.js');
+  const AR = await import('../src/arcade.js');
+  const { price, setCurrency } = await import('../src/fmt.js');
+  const puz = await import('../src/dailypuzzle.js');
+  const { play } = await import('./_bots.mjs');
+  const { readFileSync } = await import('node:fs');
+  R.render = () => {};
+  const fresh = (cur = 'INR') => { setCurrency(cur); R.s = sim.newState(); R.s.kids.push(sim.newChild('Asha', 'builder', cur)); R.s.kids[0].learn.level = 30; return R.s.kids[0]; };
+  const NORM = AR.WAGE_NORM, ids = AR.GAMES.map((g) => g.id);
+
+  /* the table: the most any round can pay, whatever the score, and what a perfect one pays */
+  const top = ids.map((id) => [id, AR.wageUnits(id, 1e9), AR.wageUnits(id, AR.PERFECT)]);
+  ok('every game\'s maximum wage per round is within 1.5× of the norm', top.every(([, max, perf]) => max <= 1.5 * NORM && perf >= NORM / 1.5 && max >= perf),
+     top.map(([id, max]) => `${id} ${max}`).join(' · ') + ` (norm ${NORM} units)`);
+  ok('a nonsense score pays nothing, never a negative or NaN wage', ids.every((id) => AR.wageUnits(id, -5) === 0 && AR.wageUnits(id, NaN) === 0));
+
+  /* played: a careful round of every game, in INR, through the game's own controls */
+  const rows = [];
+  /* Stall of My Own is a season, not a round: test/stall.mjs plays it week by week and holds
+     each week's wage to this same norm through payout() (SA7) */
+  for (const id of ids.filter((x) => x !== 'so')) {
+    let best = { units: -1 };
+    for (const seed of [1, 7, 42]) {
+      const c = fresh(), w0 = c.money.wallet;
+      const g = play(id, seed, 'standard');
+      const p = AR.lastPay();
+      const delta = c.money.wallet - w0;
+      if (p.units > best.units) best = Object.assign({ id, delta, finished: g.st ? g.st.done : g.g.done }, p);
+    }
+    rows.push(best);
+  }
+  ok('a careful round of every game finishes and pays through payout()', rows.every((r) => r.finished && r.label), rows.filter((r) => !r.finished || !r.label).map((r) => r.id).join(','));
+  ok('no game\'s best round pays more than 1.5× the norm (₹, Standard)', rows.every((r) => r.units <= 1.5 * NORM),
+     rows.map((r) => `${r.id} ${r.units}u=₹${r.delta}`).join(' · '));
+  ok('each pays exactly price(units): one price(), never a second on money already converted', rows.every((r) => r.delta === price(r.units) && r.paid === r.delta),
+     rows.filter((r) => r.delta !== price(r.units)).map((r) => `${r.id}: paid ${r.delta}, price ${price(r.units)}`).join(' · '));
+  const perfect = rows.filter((r) => ['cr', 'nw', 'ss', 'tt', 'sn', 'bb', 'st', 'sr'].includes(r.id));
+  ok('a perfect round of the scored games pays about the norm (within 1.5× either way)', perfect.every((r) => r.units >= NORM / 1.5),
+     perfect.map((r) => `${r.id} ${r.units}`).join(' · '));
+
+  /* Main Street counts against the day's cap, like every other game */
+  {
+    const c = fresh(), paid = [];
+    for (let k = 0; k < 4; k++) { const w = c.money.wallet; play('mn', 11 + k, 'standard'); paid.push(c.money.wallet - w); }
+    ok('Main Street pays its first 3 games of a day and the 4th is practice — it counts against the cap', paid.slice(0, 3).every((x) => x > 0) && paid[3] === 0 && c.wages.by['Main Street'] === 3 && AR.lastPay().capped,
+       paid.join(','));
+  }
+  /* static: nothing upstream of payout() is money, and nothing pays round it */
+  {
+    const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
+    const calls = [];
+    for (const f of ['arcade.js', 'board.js', 'jobgames.js', 'dailypuzzle.js']) {
+      const s = src(f);
+      for (const m of s.matchAll(/\bpayout\(([^)]*(?:\([^)]*\))?[^)]*)\)/g)) calls.push([f, m[1]]);
+    }
+    const priced = calls.filter(([, a]) => /\bprice\(|money|revenue|profit\b|\.cash\b/.test(a));
+    ok('no payout() is handed an amount already priced in a currency', calls.length > 0 && !priced.length, priced.map((x) => x.join(': ')).join(' | '));
+    const round = ['arcade.js', 'board.js', 'dailypuzzle.js'].filter((f) => /\bsim\.earn\(/.test(src(f)));
+    ok('no game, the board or the till pays straight into the wallet (sim.earn) round the cap', !round.length, round.join(','));
+  }
+  /* Today's till: one daily wage, through the same capped path, counted once */
+  {
+    const c = fresh(); c.quests = { list: ['q-earn'], prog: {}, claimed: {} };
+    const p = puz.puzzle(); const w = c.money.wallet;
+    puz.guess(c, p.answer);
+    ok('Today\'s till pays one wage through the capped path, and counts toward "earn" once', c.money.wallet - w === price(puz.WAGE) && ((c.wages || {}).by || {})["Today's till"] === 1 && (c.quests.prog['q-earn'] || 0) === price(puz.WAGE),
+       `paid ${c.money.wallet - w}, earn quest ${c.quests.prog['q-earn']}`);
+  }
+  setCurrency('INR');
+}
+
 console.log('─'.repeat(56));
 console.log(`${n - fails}/${n} passed`);
 process.exit(fails ? 1 : 0);

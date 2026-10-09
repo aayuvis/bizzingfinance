@@ -4,8 +4,9 @@
    the same finish line as the Independence meter, on a board, in 20 minutes. */
 
 import { esc, sfx, rng, clamp } from './ui.js';
-import { money, price } from './fmt.js';
-import { say, CAST, ico } from './art.js';
+import { money } from './fmt.js';
+import { say, CAST, ico, portraitSrc } from './art.js';
+import { avatarSrc } from './avatars.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
 import { plateFor } from './looks.js';
@@ -102,7 +103,9 @@ const START_CASH = 220, WAGE = 60, BASE_EXP = 24, MAX_LAPS = 8;
    opts.onFinish(run) hands the run's summary back for the goals (G9); opts.chip and
    opts.goals are the arcade's level chip and goal list, drawn into this screen. */
 export function mainStreet(opts = {}) {
-  const r = rng(60607);
+  /* §2.9 · dice seeded per GAME (the arcade hands each play its own seed): one fixed
+     sequence of rolls made "always buy" a guaranteed win, every time */
+  const r = rng(opts.seed != null ? opts.seed : 60607);
   const EXP0 = opts.baseExp > 0 ? opts.baseExp : BASE_EXP;
   const chip = () => (opts.chip ? `<span class="box">${opts.chip()}</span>` : '');
   const mk = (name, who, human) => ({ name, who, human, pos: 0, cash: START_CASH,
@@ -112,7 +115,9 @@ export function mainStreet(opts = {}) {
     turn: 0, phase: 'roll', die: 0, log: [], card: null, sq: null, done: false, winner: null, moves: 0,
     trail: [], walk: null, rolled: '',
   };
-  let anim = 0, raf = 0;
+  let anim = 0, raf = 0, pend = null;
+  /* the bots' next move, kept so a hidden tab can pause it and pick it up again (§1.5) */
+  const later = (f, ms) => { pend = f; anim = setTimeout(() => { anim = 0; pend = null; f(); }, ms); };
 
   /* G2 · the kit's life on a DOM board. The die tumbles, then the token walks the
      squares one at a time — on the wall's clock, so a slow phone walks the same
@@ -122,7 +127,7 @@ export function mainStreet(opts = {}) {
   const instant = () => still() || typeof requestAnimationFrame !== 'function' || typeof document === 'undefined';
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const FX = makeFx();
-  const look = { cv: null, ctx: null, W: 0, H: 0, cells: [], die: null, col: {}, tok: [], stamps: [], prev: 0, at: [] };
+  const look = { cv: null, ctx: null, W: 0, H: 0, cells: [], die: null, col: {}, tok: [], stamps: [], prev: 0, at: [], faces: [] };
   g.look = look;
 
   const cur = () => g.players[g.turn];
@@ -155,12 +160,13 @@ export function mainStreet(opts = {}) {
     const me = g.players[0];
     g.mine = indep(me);
     const c = K();
-    const wage = Math.max(4, Math.round((income(me) / 2) * (BASE_EXP / EXP0)) + (g.winner === me ? 14 : 0));
-    g.won = price(wage);
-    sim.earn(c, g.won, 'Main Street', 'wage');
-    sim.stamp(c);
     if (g.winner === me) sim.badge(c, 'main-street');
-    if (opts.onFinish) opts.onFinish({ won: g.winner === me, owned: me.own.length, sold: me.sold, cash: me.cash, indep: g.mine });
+    /* §1.1 · the wage goes through the arcade's one door — payout(), the day's cap, the
+       level's par, one price() — never straight into the wallet. The arcade hands that
+       door in as onFinish; on its own, the board pays nothing. Independence is the score:
+       what you own ÷ what you spend, which already measures a dearer life on Tricky. */
+    g.won = (opts.onFinish && opts.onFinish({ won: g.winner === me, owned: me.own.length, sold: me.sold, cash: me.cash, indep: g.mine })) || 0;
+    sim.stamp(c);
     sfx.level();
     R.render();
   };
@@ -238,9 +244,9 @@ export function mainStreet(opts = {}) {
     g.phase = 'roll';
     g.turn = (g.turn + 1) % g.players.length;
     g.card = null;
-    if (cur().skip) { cur().skip = 0; note(`${cur().name} sits this one out.`); R.render(); anim = setTimeout(endTurn, 700); return; }
+    if (cur().skip) { cur().skip = 0; note(`${cur().name} sits this one out.`); R.render(); later(endTurn, 700); return; }
     R.render();
-    if (!cur().human) anim = setTimeout(roll, 520);
+    if (!cur().human) later(roll, 520);
   };
 
   /* one square forward; passing Start is pay day, exactly as before */
@@ -330,17 +336,27 @@ export function mainStreet(opts = {}) {
   const drawTok = (ctx, i, ts) => {
     const p = g.players[i], at = tokXY(i, ts);
     look.at[i] = at;
-    const cw = (look.cells[0] || { w: 60 }).w, s = Math.max(6, Math.min(12, cw * 0.14)) * (p.human ? 1.15 : 1);
+    /* §1.8 · a token is a FACE — the child's own avatar, Mags, Bo — on a coloured stand,
+       never a colour alone (it was an 8 px dot) */
+    const cw = (look.cells[0] || { w: 60 }).w, s = Math.max(9, Math.min(16, cw * 0.19)) * (p.human ? 1.12 : 1);
     shadow(ctx, at.x, at.gy + s * 0.75, s * 1.9 * Math.max(0.5, 1 - (at.gy - at.y) / (cw * 1.2)), 0.28);
     if (p === cur() && !g.done) {
       ctx.save(); ctx.globalAlpha = 0.85; ctx.strokeStyle = '#F0B429'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(at.x, at.gy + s * 0.75, s * 1.25, s * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
     ctx.fillStyle = colOf(p); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.6;
-    rr(ctx, at.x - s * 0.8, at.y - s * 0.05, s * 1.6, s * 0.8, s * 0.32); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(at.x, at.y - s * 0.45, s * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(at.x - s * 0.2, at.y - s * 0.65, s * 0.17, 0, Math.PI * 2); ctx.fill();
+    rr(ctx, at.x - s * 0.8, at.y + s * 0.1, s * 1.6, s * 0.65, s * 0.3); ctx.fill(); ctx.stroke();
+    const hx = at.x, hy = at.y - s * 0.55, hr = s * 0.82, im = look.faces[i];
+    ctx.beginPath(); ctx.arc(hx, hy, hr + 2, 0, Math.PI * 2); ctx.fillStyle = colOf(p); ctx.fill();
+    if (im && im.complete && im.naturalWidth) {
+      ctx.save(); ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = '#FFF8EC'; ctx.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
+      ctx.drawImage(im, hx - hr, hy - hr, hr * 2, hr * 2); ctx.restore();
+    } else { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(hx - s * 0.2, hy - s * 0.2, s * 0.17, 0, Math.PI * 2); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(hx, hy, hr + 1, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.8; ctx.stroke();
   };
+  /* who each token is, as a picture source: the child's avatar, and the cast for the bots */
+  const faceSrc = (p) => (p.human ? avatarSrc((K() || {}).avatar) : portraitSrc(p.who));
   const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
     5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
   const drawDie = (ctx, ts) => {
@@ -434,13 +450,21 @@ export function mainStreet(opts = {}) {
       look.die = d ? (() => { const q = d.getBoundingClientRect(); return { x: q.left - br.left + q.width / 2, y: q.top - br.top + q.height / 2 }; })() : null;
       const cs = getComputedStyle(document.documentElement), v = (n, f) => cs.getPropertyValue(n).trim() || f;
       look.col = { pip: v('--action', '#0E6B78'), mags: v('--give', '#8A5BD6'), bo: v('--treasure', '#C98A10') };
+      /* the faces the tokens wear, loaded once; a token draws a plain stand until its face arrives */
+      if (!look.faces.length && typeof Image !== 'undefined') look.faces = g.players.map((p) => { const im = new Image(); im.src = faceSrc(p) || ''; return im; });
       box.classList.add('live');
       const t = now(); watch(t); draw(t);
       if (!raf) { look.prev = 0; raf = requestAnimationFrame(tick); }
     },
     stop,
+    /* back from a hidden tab: the board is redrawn and a bot's pending move goes ahead */
+    resume() {
+      if (g.done) return;
+      this.mount();
+      if (pend && !anim) { const f = pend; pend = null; later(f, 400); }
+    },
     key(e) {
-      if (g.done) { if (e.key === 'Enter') { R.game = null; R.render(); } return; }
+      if (g.done) { if (opts.endKey) opts.endKey(e); else if (e.key === 'Enter') { R.game = null; R.render(); } return; }
       if (g.phase === 'roll' && cur().human && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); roll(); }
       else if (g.phase === 'decide') { if (e.key === 'y' || e.key === 'Y') buy(true); if (e.key === 'n' || e.key === 'N') buy(false); }
       else if (g.phase === 'card' && g.card && g.card.choices) {
@@ -474,8 +498,7 @@ export function mainStreet(opts = {}) {
                   <span class="p" style="font-size:17px">${Math.round(indep(p) * 100)}%</span></div>`).join('')}
             </div>
             ${say('nana', 'Nobody went bankrupt and nobody had to. You win this one when the things you own pay for the life you lead — that is the only definition of rich worth chasing.')}
-            ${opts.goals ? opts.goals() : ''}
-            <p class="small muted">Earned ${money(g.won)}.</p>
+            ${opts.foot ? opts.foot(g.won) : `${opts.goals ? opts.goals() : ''}<p class="small muted">Earned ${money(g.won)}.</p>`}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
@@ -494,7 +517,7 @@ export function mainStreet(opts = {}) {
           <div style="font-weight:700">${esc(sq.n)}</div>
           ${sq.cost ? `<div class="mono" style="opacity:.65">${sq.cost}</div>` : ''}
           ${here.length ? `<div class="mstoks">
-            ${here.map((x) => `<span class="mstok" data-who="${x.who}" style="background:${x.human ? 'var(--action)' : x.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}"></span>`).join('')}</div>` : ''}
+            ${here.map((x) => `<span class="mstok" data-who="${x.who}" title="${esc(x.name)}" style="border-color:${x.human ? 'var(--action)' : x.who === 'mags' ? 'var(--give)' : 'var(--treasure)'}"><img src="${faceSrc(x)}" alt="${esc(x.name)}" width="20" height="20"></span>`).join('')}</div>` : ''}
         </div>`;
       }).join('');
 

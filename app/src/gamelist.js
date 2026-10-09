@@ -9,7 +9,7 @@ export const GAMES = [
   { id: 'cr', em: '🪙', name: 'Change Rush', keys: '← →', kind: 'action', needs: null,
     blurb: 'Coins are falling and you need exactly the right amount. Catch one too many and you have overpaid.' },
   { id: 'nw', em: '⚖️', name: 'Needs vs Wants', keys: '← →', kind: 'action', needs: null,
-    blurb: 'Sort it before the bell. Some are both, and those are the good ones.' },
+    blurb: 'Need or want? Sort each one, and see why. Some are both, and those are the good ones.' },
   { id: 'ss', em: '🛡️', name: 'Scam Spotter', keys: '← →', kind: 'action', needs: null,
     blurb: 'Real message or trap? They are designed to look identical.' },
   { id: 'bb', em: '💸', name: 'Budget Blitz', keys: '1 2', kind: 'action', needs: 'c3',
@@ -30,7 +30,7 @@ export const GAMES = [
     blurb: 'Guess where compounding lands. Nobody guesses high enough.' },
 ];
 
-export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSkip',
+export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'tcNext', 'bbPay', 'bbSkip',
   'ttPick', 'ttNext', 'snPick', 'snNext', 'mcAdj', 'mcNext', 'mcSel',
   'crLane', 'crGo', 'stSell', 'stPlan', 'stGo',
   'ccHold', 'ccRelease', 'srServe', 'srStock',
@@ -38,4 +38,4 @@ export const GAME_ACTS = ['nwNeed', 'nwWant', 'ssSafe', 'ssScam', 'bbPay', 'bbSk
   'soGoal', 'soBuy', 'soStep', 'soJar', 'soOffer', 'soOpen', 'soAuto', 'soServe', 'soStock', 'soNext', 'soNew', 'soSel',
   'mnRoll', 'mnBuy', 'mnPass', 'mnCard', 'mnEnd',
   /* the job games (jobgames.js) — a job is a game now, not a button */
-  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart'];
+  'jgDrop', 'jgPort', 'jgStar', 'jgLeft', 'jgRight', 'jgLane', 'jgTier', 'jgStart', 'jgLevel'];

@@ -193,7 +193,9 @@ export function dividendYield(sim, id, y) {
 /* Why did it move? The answer, ranked, in plain words. */
 export function explainYear(sim, id, y) {
   const rows = sim.years[id], c = companyById[id];
-  if (y <= 0) return [];
+  /* §2.7 · year 0 has no year before it: nothing moved, for no reason. Always the same
+     shape, so a caller can read .move and .reasons on the first year of the first decade */
+  if (y <= 0 || !rows || !rows[y - 1]) return { move: 0, reasons: [], events: (rows && rows[Math.max(0, y)] && rows[Math.max(0, y)].events) || [] };
   const a = rows[y - 1], b = rows[y];
   const move = (b.value / a.value - 1);
   const reasons = [];

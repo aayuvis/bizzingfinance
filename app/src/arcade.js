@@ -7,7 +7,7 @@
 
 import { esc, sfx, toast, rng, clamp, sparkline, on } from './ui.js';
 import { TIER_IDS, TIER_NAME, tierOf, setTier, goalsMet, earnGoals } from './jobtable.js';
-import { money, price, currency, CURRENCIES } from './fmt.js';
+import { money, price, currency, CURRENCIES, minorPrice, minorMoney } from './fmt.js';
 import { say, ico } from './art.js';
 import { hero } from './hero.js';
 import { COVERS } from './covers-gen.js';
@@ -16,7 +16,7 @@ import { ASSETS, STOCK, CHAPTERS, chapterDone, gameOpen, levelAtLeast } from './
 import { mainStreet } from './board.js';
 import * as sim from './sim.js';
 import { R } from './runtime.js';
-import { pipPose, kidBadge } from './shell.js';
+import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
 import { fx as makeFx, countdown, plate, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 
 import { GAMES, GAME_ACTS } from './gamelist.js';
@@ -51,11 +51,11 @@ export function viewArcade() {
   };
   const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
     blurb: 'Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer.' };
-  const m40open = levelAtLeast(c, 13);
+  const m40open = levelAtLeast(c, M40_LEVEL);
   /* A locked headline game at the top of the Arcade told a new child the
      best thing here was not for them. Open, it leads; locked, it waits at
      the bottom with the level that opens it. */
-  const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level 13' });
+  const m40 = cover(M40, { big: true, open: m40open, act: 'nav', arg: 'market40', tint: 'var(--grow)', lock: 'Opens at level ' + M40_LEVEL });
   return `<div class="stack">
     ${hero({ eyebrow: 'The Arcade · practise it', title: 'Play', who: 'pip',
       line: 'Game wages go into your one wallet. There\'s no second, magic money.' })}
@@ -69,7 +69,8 @@ export function viewArcade() {
     <div class="sect"><b>Quick drills · no reflexes required</b><i></i></div>
     <div class="covers">${GAMES.filter((g) => g.kind === 'drill').map((g) => cover(g, { tint: 'var(--save)' })).join('')}</div>
     ${m40open ? '' : `<div class="sect"><b>Later on</b><i></i></div>${m40}`}
-    ${c.market.best ? `<p class="small muted" style="padding:0 6px">Best Market Cup finish: <b>${esc(c.market.best)}</b></p>` : ''}
+    ${c.market.best ? `<p class="small muted cupbest" style="padding:0 6px">Best Market Cup: <b>${esc(c.market.best)}</b>${Array.isArray(c.market.cups) && c.market.cups.length > 1
+      ? ` · last cups <span class="tabnum">${c.market.cups.slice(-5).join(' → ')}</span>, ${cupTrendWord(c.market.cups)}` : ''}</p>` : ''}
   </div>`;
 }
 
@@ -255,16 +256,100 @@ export const ARCADE_GOALS = {
   ],
 };
 
-let current = null, curTier = 'standard', lastGoals = null;
+let current = null, curTier = 'standard', lastGoals = null, curSeed = null, lastOffer = null;
 /* the knobs of the game being played, at the level it was started on */
 const knobs = (id) => ARCADE_TIERS[id][curTier] || ARCADE_TIERS[id].standard;
-/* pay measured against this level's par: Standard's scale is exactly 1 */
-const parScale = (id) => ARCADE_TIERS[id].standard.par / (knobs(id).par || ARCADE_TIERS[id].standard.par);
+
+/* ── §1.1 · ONE pay path, and one table that decides what play is worth ──────
+   Every game ends with a decision score against its level's par (SHARE), and the
+   wage is that score on one scale (wageUnits) — in PRICE UNITS, handed to payout(),
+   which converts to the child's currency exactly once. A careful-to-perfect round
+   is PERFECT × par (the jobs' own yardstick) and pays WAGE_NORM; nothing pays more,
+   so no game is a better farm than another and Tricky is never a bigger payday.
+   Main Street is a ten-minute board game against a one-minute arcade round, so its
+   top wage is a little higher — and still inside 1.5× the norm (test/economy.mjs). */
+export const WAGE_NORM = 12, PERFECT = 1.6;
+export const WAGE_SCALE = { mn: 1.4 };
+export function wageUnits(id, share) {
+  const s = Math.max(0, Math.min(PERFECT, Number.isFinite(share) ? share : 0));
+  return Math.round(WAGE_NORM * (WAGE_SCALE[id] || 1) * s / PERFECT);
+}
+/* the decision score of a finished round against `par` (this level's). A game scored
+   as a share of a fixed set calls par five in eight right, so a perfect set is 1.6× par. */
+export const SHARE = {
+  cr: (r, par) => r.score / par,
+  nw: (r) => PERFECT * r.right / Math.max(1, r.n),
+  ss: (r) => PERFECT * r.right / Math.max(1, r.n),
+  tt: (r) => PERFECT * r.right / Math.max(1, r.n),
+  sn: (r) => PERFECT * r.right / Math.max(1, r.n),
+  bb: (r) => PERFECT * r.points / 14,
+  cc: (r, par) => (r.ruined ? 0 : PERFECT * r.money / par),
+  sr: (r, par) => Math.max(0, r.profitU) / par,
+  st: (r) => (r.held ? PERFECT : PERFECT * 3 / 14),
+  mc: (r, par) => r.total / Math.max(1, r.par || par),   /* r.par: Bella on this round's own season */
+  mn: (r) => PERFECT * Math.min(1, Math.max(0, r.indep)),
+};
+export function shareOf(id, run, tier = 'standard') {
+  const t = ARCADE_TIERS[id], par = (t[tier] || t.standard).par || t.standard.par;
+  return SHARE[id](run, par);
+}
+/* §1.7 · the owner's level rule, on top of Easy · Standard · Tricky: at least half of
+   par keeps the level; under half OFFERS the one below; 1.6× par OFFERS the one above.
+   An offer is a button on the end card and nothing else — a level never changes by itself. */
+export function levelOffer(tier, share) {
+  const i = TIER_IDS.indexOf(tier);
+  if (i < 0 || !Number.isFinite(share)) return null;
+  if (share < 0.5 && i > 0) return { dir: 'down', to: TIER_IDS[i - 1] };
+  if (share >= PERFECT && i < TIER_IDS.length - 1) return { dir: 'up', to: TIER_IDS[i + 1] };
+  return null;
+}
+/* §1.2 · every play draws its own seed (content variety is simulation, never a reward:
+   no reward anywhere is random); the seed is kept with the round, so it can be replayed */
+export function playSeed() { return 1 + Math.floor(Math.random() * 2147483646); }
+
 function goalsFor(id, run) {
   const c = K();
   lastGoals = { id, list: earnGoals(c, id, ARCADE_GOALS[id], Object.assign({ tier: curTier }, run)) };
   if (R.s) sim.save(R.s);
   return lastGoals.list;
+}
+/* Every game's finish comes through here, once: the decision score, the level offer, the
+   round kept with its seed, the day's quests (on FINISH, never on opening the title card),
+   the goals, and the wage through payout(). Returns what was paid. */
+function roundEnd(id, run, label) {
+  const c = K(), share = shareOf(id, run, curTier);
+  lastOffer = Object.assign({ id, from: curTier, share }, levelOffer(curTier, share) || { dir: null });
+  if (!c.rounds) c.rounds = {};
+  c.rounds[id] = { seed: curSeed, tier: curTier, share: Math.round(share * 100) / 100, t: Date.now() };
+  sim.questTick(c, 'game', 1);
+  if (id === 'mn') sim.questTick(c, 'board', 1);
+  const paid = payout(wageUnits(id, share), label);
+  goalsFor(id, run);
+  return paid;
+}
+function levelTake(arg) {
+  const o = lastOffer, [id, t] = String(arg || '').split(':');
+  if (!o || !o.dir || o.taken || o.id !== id || o.to !== t || !setTier(K(), id, t)) return;
+  lastOffer = Object.assign({}, o, { taken: true });
+  if (R.s) sim.save(R.s);
+  sfx.click(); if (typeof document !== 'undefined') toast(`Next time: ${TIER_NAME[t]}`); R.render();
+}
+on('gLevel', levelTake);
+/* the offer, drawn on the end card: one button, and L for the keyboard */
+function offerHtml() {
+  const o = lastOffer;
+  if (!o || o.id !== current || !o.dir) return '';
+  if (o.taken) return `<p class="small lvloffer" data-dir="${o.dir}">Next round is on <b>${TIER_NAME[o.to]}</b>.</p>`;
+  const line = o.dir === 'up'
+    ? `Well over par on ${TIER_NAME[o.from]}. Ready for ${TIER_NAME[o.to]}?`
+    : `That one was hard on ${TIER_NAME[o.from]}. ${TIER_NAME[o.to]} is there if you want it: your choice.`;
+  return `<div class="lvloffer" data-dir="${o.dir}"><p class="small">${esc(line)}</p>
+    <button class="btn ghost sm" data-act="gLevel" data-arg="${o.id}:${o.to}">L · Play ${TIER_NAME[o.to]} next time</button></div>`;
+}
+/* a finished game's keys: Enter leaves, L takes the level offered (if one is) */
+export function endKey(e) {
+  if (e.key === 'Enter') { quitGame(); R.render(); return; }
+  if ((e.key === 'l' || e.key === 'L') && lastOffer && lastOffer.id === current) levelTake(lastOffer.id + ':' + lastOffer.to);
 }
 
 /* The level picker, shared with the job shifts: three buttons, the lit one says what it changes. */
@@ -324,13 +409,17 @@ if (typeof document !== 'undefined' && document.addEventListener) {
   });
 }
 export function startGame(id, seed, tier) {
-  current = id; lastGoals = null;
+  current = id; lastGoals = null; lastOffer = null; lastCapped = false;
   curTier = TIER_IDS.includes(tier) ? tier : (ARCADE_TIERS[id] ? tierOf(K(), id) : 'standard');
+  /* §1.2 · a seed per play, kept with the round — or the one given, to replay it */
+  curSeed = seed != null ? seed : playSeed();
   const f = { cr: changeRush, nw: needsWants, ss: scamSpotter, bb: budgetBlitz,
     cc: compoundClimb, sr: stallRush, st: marketStorm, tt: timesTwelve, sn: snowball,
-    mc: marketCup, mn: () => mainStreet({ baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, onFinish: (run) => goalsFor('mn', run) }) }[id];
-  if (id === 'so') return startStall(seed);
-  if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = seed != null ? f(seed) : f(); sfx.click(); }
+    mc: marketCup, mn: (sd) => mainStreet({ seed: sd, baseExp: knobs('mn').baseExp, chip: tierChip, goals: endGoals, foot: (won) => endFoot(won), endKey,
+      /* Main Street pays through the same door as every other game (§1.1, §2.9): the cap counts it */
+      onFinish: (run) => roundEnd('mn', run, 'Main Street') }) }[id];
+  if (id === 'so') return startStall(curSeed);
+  if (f) { if (R.game && R.game.stop) R.game.stop(); R.game = f(curSeed); if (R.game) R.game.seed = curSeed; sfx.click(); }
 }
 /* Stall of My Own is a season, not a round, and it loads on its own (stall.js): the arcade
    hands it the four things every game shares — the level, the one pay path, the HUD and
@@ -339,7 +428,7 @@ export function stallCtx() {
   return {
     tier: curTier,
     payout: (units) => { const paid = payout(units, 'Stall of My Own'); return { paid, capped: lastCapped }; },
-    hud, goals: (run) => goalsFor('so', run), endGoals, quit: quitGame,
+    hud, goals: (run) => goalsFor('so', run), endGoals, quit: quitGame, cappedLine: CAPPED_LINE,
   };
 }
 function startStall(seed) {
@@ -353,7 +442,7 @@ function startStall(seed) {
     return R.game;
   });
 }
-export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; }
+export function quitGame() { if (R.game && R.game.stop) R.game.stop(); R.game = null; lastGoals = null; lastOffer = null; }
 /* the level chip every game's HUD carries */
 const tierChip = () => `<span class="tierchip" data-tier="${curTier}">${TIER_NAME[curTier]}</span>`;
 
@@ -362,26 +451,47 @@ export function hud(bits) {
   return `<div class="hud">${bits.filter((b) => b != null && String(b).replace(/<[^>]*>/g, '').trim()).map((b) => `<span class="box">${b}</span>`).join('')}
     <span class="grow"></span><button class="btn ghost sm" data-act="gquit">Leave</button></div>`;
 }
+/* §1.1 · `n` is in PRICE UNITS. This is the one place a wage meets the currency:
+   price() runs here, once, and nowhere upstream of it (test/economy.mjs). */
+let lastPayRec = { units: 0, paid: 0, capped: false, label: '' };
 export function payout(n, label) {
-  const amt = price(n);
+  const units = Math.max(0, Math.round(n));
+  const amt = price(units);
   const r = sim.gameWage(K(), label, amt);
   lastCapped = r.capped;
+  lastPayRec = { units, paid: r.paid, capped: r.capped, label };
   if (r.paid > 0) { sim.stamp(K()); sfx.coin(); }
   return r.paid;
 }
+export const lastPay = () => Object.assign({}, lastPayRec);
 let lastCapped = false;
 const PIP_POSES = ['wave', 'think', 'point', 'cheer', 'oops', 'sleep'];
-export function endCard(em, title, sub, wage, line, who) {
+/* §1.4 · the bottom of every finish screen, written by the game it is about: what THAT
+   game practised, and what it paid — or, when the day's paid plays are used, why not. */
+export const CAPPED_LINE = 'Paid plays used for today: this one is practice, and it still counts toward your goals.';
+export function payLine(won, capped, capLine = CAPPED_LINE) {
+  return capped ? capLine
+    : won > 0 ? `Earned ${money(won)}, straight into your wallet.`
+      : 'Nothing earned this round: the wage follows how the round went against par.';
+}
+export function practisedLine(text) { return text ? `<p class="practised"><b>You practised:</b> ${esc(text)}</p>` : ''; }
+function endFoot(won, extra = '') {
+  return `${practisedLine(current && PRACTISED[current])}${offerHtml()}${endGoals()}
+    <p class="small muted endpay">${payLine(won, lastCapped)}${extra ? ' ' + extra : ''}</p>`;
+}
+/* `o` lets a caller that is not an arcade game (a job shift) speak for itself:
+   { id: null, practised, capped, capLine } — never the last arcade game's words */
+export function endCard(em, title, sub, wage, line, who, o = null) {
   /* §14 · a finish screen names what was practised and the child's own best — never
      anyone else's. Pip cheers a good round and thinks about a hard one; the child's
      own face is on it (J6). The best is the first number of the result, kept per game. */
-  const c = K(), n = (String(title).replace(/<[^>]+>/g, '').match(/-?\d+/) || [])[0];
+  const c = K(), own = o ? o.id : current, n = (String(title).replace(/<[^>]+>/g, '').match(/-?\d+/) || [])[0];
   let best = null, isNew = false;
-  if (current && n != null) {
+  if (own && n != null) {
     if (!c.bests) c.bests = {};
-    const prev = c.bests[current];
-    if (prev == null || +n > prev) { isNew = prev != null; c.bests[current] = +n; }
-    best = c.bests[current];
+    const prev = c.bests[own];
+    if (prev == null || +n > prev) { isNew = prev != null; c.bests[own] = +n; }
+    best = c.bests[own];
   }
   /* the first argument is the mood: one of Pip's poses, or a drawn thing for a
      good round (🏅 🎯 🪙 …). Never a face and never a skull (audit v4, N4) —
@@ -390,12 +500,10 @@ export function endCard(em, title, sub, wage, line, who) {
   return `<div class="stage endcard" style="justify-content:center;text-align:center">
     <div class="endfig">${pipPose(pose, 104)}<span class="endav">${kidBadge(c, 56)}</span></div>
     <h2>${esc(title)}</h2>
-    <p class="muted">${sub}</p>
+    ${sub ? `<p class="endkey">${sub}</p>` : ''}
     ${best != null ? `<p class="endbest">${isNew ? 'A new best for you' : 'Your best'}: <b class="tabnum">${best}</b></p>` : ''}
     ${line ? say(who || 'pip', line) : ''}
-    ${current && PRACTISED[current] ? `<p class="practised"><b>You practised:</b> ${esc(PRACTISED[current])}</p>` : ''}
-    ${endGoals()}
-    <p class="small muted">${lastCapped ? `Played for practice: ${esc(current ? (GAMES.find((g) => g.id === current) || {}).name || 'this game' : 'this game')} pays for its first ${sim.GAME_PAYS} games a day. Tomorrow it pays again.` : `Earned ${money(wage)}, straight into your wallet.`}</p>
+    ${o ? `${practisedLine(o.practised)}${o.offer || ''}<p class="small muted endpay">${payLine(wage, o.capped, o.capLine)}</p>` : endFoot(wage)}
     <button class="btn wide" data-act="gquit">Back to Play</button></div>`;
 }
 function shuffle(arr, seed) {
@@ -409,73 +517,98 @@ function shuffle(arr, seed) {
 /* Two-choice games share a shape: a card, a verdict, a note, a tally. */
 function twoChoice(cfg) {
   /* G8 · a level is how many cards and whether each one has a clock; the pay is the
-     share right, scaled to the full round, so a short round is not a cheaper one */
-  const kn = knobs(cfg.id), nStd = cfg.items.length;
+     share right, so a short round is not a cheaper one */
+  const kn = knobs(cfg.id);
+  /* §1.2 · the order is this play's own (cfg.seed is the play's seed) */
   const all = shuffle(cfg.items.slice(), cfg.seed);
   const items = kn.n ? all.slice(0, kn.n) : all;
-  const st = { i: 0, right: 0, note: null, done: false, wrong: {}, shown: Date.now() };
+  const st = { i: 0, right: 0, note: null, done: false, wrong: {}, shown: Date.now(), hold: null, left: kn.clock || 0 };
   let timer = 0;
-  const stop = () => { if (timer) clearTimeout(timer); timer = 0; };
-  const arm = () => {
-    stop();
-    st.shown = Date.now();
-    if (kn.clock && !st.done) timer = setTimeout(() => { timer = 0; pick(null); }, kn.clock);
+  const stop = () => { if (timer) { clearTimeout(timer); st.left = Math.max(0, st.left - (Date.now() - st.shown)); } timer = 0; };
+  const arm = (ms) => {
+    if (timer) clearTimeout(timer); timer = 0;
+    st.shown = Date.now(); st.left = ms != null ? ms : kn.clock;
+    if (kn.clock && !st.done && !st.hold) timer = setTimeout(() => { timer = 0; pick(null); }, st.left);
+  };
+  const nameOf = (it) => (cfg.nameOf ? cfg.nameOf(it) : it.t);
+  const finishIf = () => {
+    if (st.i < items.length) return false;
+    st.done = true;
+    const run = { right: st.right, n: items.length, needWrong: st.wrong.need || 0, wantWrong: st.wrong.want || 0,
+      scamWrong: st.wrong.scam || 0, safeWrong: st.wrong.safe || 0 };
+    st.won = roundEnd(cfg.id, run, cfg.name);
+    return true;
   };
   const pick = (side) => {
-    if (st.done) return;
-    stop();
+    if (st.done || st.hold) return;
+    if (timer) clearTimeout(timer); timer = 0;
     const it = items[st.i];
     const ok = side != null && (it.a === side || it.a === 'both');
     if (ok) { st.right++; st.combo = (st.combo || 0) + 1; sfx.good(); } else { st.combo = 0; st.wrong[it.a] = (st.wrong[it.a] || 0) + 1; sfx.bad(); }
     st.pop = ok ? (st.combo > 1 ? `Combo ×${st.combo}` : '+1') : null;
-    /* Specific, never a bare "Yes." (D3): say what it was and, when the item
-       carries one, why. */
-    const sideLabel = (k) => (cfg.left.side === k ? cfg.left : cfg.right).label;
-    const named = it.a === 'both' ? 'It can be both — that is the interesting kind.' : `${sideLabel(it.a)}.`;
-    const wrong = side == null ? `The bell rang. It was: ${named}` : cfg.wrongNote(it);
-    st.note = { ok, text: ok ? (it.note ? `${named} ${it.note}` : named) : (it.note ? `${wrong} ${it.note}` : wrong) };
-    st.i++;
-    if (st.i >= items.length) {
-      st.done = true;
-      st.won = payout(Math.round((st.right / items.length) * nStd * cfg.pay), cfg.name);
-      goalsFor(cfg.id, { right: st.right, n: items.length, needWrong: st.wrong.need || 0, wantWrong: st.wrong.want || 0,
-        scamWrong: st.wrong.scam || 0, safeWrong: st.wrong.safe || 0 });
-    } else arm();
+    /* Specific, never a bare "Yes." (D3): name the thing and the side it belongs on,
+       and, when the item carries one, why. */
+    const named = it.a === 'both' ? `“${nameOf(it)}” can be both: that is the interesting kind.` : `“${nameOf(it)}” is ${cfg.sideWord[it.a]}.`;
+    if (ok) {
+      st.note = { ok, text: it.note ? `${named} ${it.note}` : named };
+      st.i++;
+      if (!finishIf()) arm();
+    } else {
+      /* §1.3 · a wrong answer HOLDS: the same card stays, with its note naming the item
+         and the right side, until Continue. The correction never lands on the next card. */
+      const lead = side == null ? `The clock ran out. ${named}` : ['Not this time.', named, cfg.wrongNote(it)].filter(Boolean).join(' ');
+      st.note = { ok, text: it.note ? `${lead} ${it.note}` : lead };
+      st.hold = { side, right: it.a };
+    }
     R.render();
-    /* G2 · the kit's verdict from the button pressed (none when the bell rang) */
+    /* G2 · the kit's verdict from the button pressed (none when the clock ran out) */
     if (side != null && !st.done) verdict(`.gplay [data-act="${side === cfg.left.side ? cfg.left.act : cfg.right.act}"]`, ok);
+  };
+  const cont = () => {
+    if (!st.hold || st.done) return;
+    st.hold = null; st.note = null; st.i++;
+    if (!finishIf()) arm();
+    R.render();
   };
   arm();
   return {
-    id: cfg.id, st, stop,
+    id: cfg.id, st, stop, items, cont,
+    /* back from a hidden tab: the card's clock carries on from where it stopped */
+    resume() { if (!st.done && !st.hold && kn.clock && !timer) arm(st.left); },
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
+      if (st.hold) { if (e.key === 'Enter' || e.key === ' ') { if (e.preventDefault) e.preventDefault(); cont(); } return; }
       if (e.key === 'ArrowLeft') pick(cfg.left.side);
       else if (e.key === 'ArrowRight') pick(cfg.right.side);
     },
-    act(n) { if (n === cfg.left.act) pick(cfg.left.side); else if (n === cfg.right.act) pick(cfg.right.side); },
+    act(n) {
+      if (n === 'tcNext') cont();
+      else if (n === cfg.left.act) pick(cfg.left.side);
+      else if (n === cfg.right.act) pick(cfg.right.side);
+    },
     view() {
       if (st.done) return `<div class="stack">${hud(['Done', tierChip()])}
         ${endCard(st.right >= items.length - 1 ? '🏅' : 'think', st.right + ' of ' + items.length, '', st.won, cfg.outro(st.right, items.length), cfg.who)}</div>`;
-      const it = items[st.i];
+      const it = items[st.i], h = st.hold;
       /* the clock is a bar that drains; a re-render picks it up where it was */
-      const clock = kn.clock ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, Date.now() - st.shown)}ms"></i></div>` : '';
+      const clock = kn.clock && !h ? `<div class="tclock" aria-hidden="true"><i style="animation-duration:${kn.clock}ms;animation-delay:-${Math.min(kn.clock, kn.clock - st.left + (Date.now() - st.shown))}ms"></i></div>` : '';
+      const btn = (s) => {
+        const mark = h ? (s.side === h.right || h.right === 'both' ? ' tcright' : s.side === h.side ? ' tcwrong' : '') : '';
+        return `<button class="btn${mark}" style="background:${s.color}" data-act="${s.act}"${h ? ' disabled' : ''}>${s === cfg.left ? '← ' + s.label : s.label + ' →'}</button>`;
+      };
       return `<div class="stack">
         ${hud([tierChip(), `${st.i + 1} / ${items.length}`, `right ${st.right}`, st.combo > 1 ? `<span class="combo">Combo ×${st.combo}</span>` : ''].filter(Boolean))}
         <div class="stage">${st.pop ? `<span class="numpop" aria-hidden="true">${esc(st.pop)}</span>` : ''}
           ${clock}${cfg.card(it)}
-          ${st.note ? `<div style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
+          ${st.note ? `<div class="tcnote ${st.note.ok ? 'ok' : 'no'}" role="status" style="background:${st.note.ok ? 'var(--grow-tint)' : 'var(--spend-tint)'};border-radius:var(--r-md);padding:11px 13px;font-size:13.5px">${esc(st.note.text)}</div>` : ''}
           <div class="grow"></div>
-          <div class="choices">
-            <button class="btn" style="background:${cfg.left.color}" data-act="${cfg.left.act}">← ${cfg.left.label}</button>
-            <button class="btn" style="background:${cfg.right.color}" data-act="${cfg.right.act}">${cfg.right.label} →</button>
-          </div>
-          <p class="hint">${esc(cfg.hint)}</p>
+          <div class="choices">${btn(cfg.left)}${btn(cfg.right)}</div>
+          ${h ? `<button class="btn wide" data-act="tcNext">Continue · Enter</button>` : ''}
+          <p class="hint">${esc(h ? 'Read why, then Continue: Enter, or tap.' : cfg.hint(items))}</p>
         </div></div>`;
     },
   };
 }
-
 /* ══ 1 · NEEDS vs WANTS ═══════════════════════════════════════════════ */
 export const NW = [
   { em: '🍚', t: 'Rice for the week', a: 'need' },
@@ -491,20 +624,21 @@ export const NW = [
   { em: '💧', t: 'Clean water', a: 'need' },
   { em: '🎂', t: 'A cake for your sister', a: 'both', note: 'Nobody starves without it. It might still be the best thing you buy all month.' },
 ];
-function needsWants() {
+function needsWants(seed) {
   return twoChoice({
-    id: 'nw', name: 'Needs vs Wants', items: NW, seed: 7717, pay: 0.7, who: 'pip',
-    hint: 'Arrow keys, or tap. Some are both — either answer counts.',
+    id: 'nw', name: 'Needs vs Wants', items: NW, seed, who: 'pip',
+    hint: () => 'Arrow keys, or tap. Some are both — either answer counts.',
+    sideWord: { need: 'a need', want: 'a want' },
     left: { side: 'need', act: 'nwNeed', label: 'Need', color: 'var(--save)' },
     right: { side: 'want', act: 'nwWant', label: 'Want', color: 'var(--give)' },
     card: (it) => `<div class="gcard"><span class="em">${ico(it.em, it.em, 44)}</span><span class="nm">${esc(it.t)}</span></div>`,
-    wrongNote: (it) => it.a === 'need' ? 'That one you would be in trouble without.' : 'Lovely, but you would survive the week.',
+    wrongNote: (it) => it.a === 'need' ? 'You would be in trouble without it.' : 'Lovely, but you would survive the week.',
     outro: () => 'The ones that were <b>both</b> are the point. A list of needs that never changes is a list somebody else wrote for you.',
   });
 }
 
 /* ══ 2 · SCAM SPOTTER ═════════════════════════════════════════════════
-   Half of these are real and ordinary. A game where everything is a scam
+   Four in ten of these are real and ordinary. A game where everything is a scam
    teaches suspicion; the skill is telling them apart. */
 export const SS = [
   { t: 'Your parcel could not be delivered. Pay the £1.99 redelivery fee here to reschedule.', a: 'scam',
@@ -528,15 +662,20 @@ export const SS = [
   { t: 'INVESTMENT OPPORTUNITY: guaranteed to double in 30 days. Only 5 places left!', a: 'scam',
     note: 'Guaranteed and doubling do not belong in the same sentence — and there are always exactly five places left.' },
 ];
-function scamSpotter() {
+function scamSpotter(seed) {
   return twoChoice({
-    id: 'ss', name: 'Scam Spotter', items: SS, seed: 3391, pay: 1.1, who: 'nana',
-    hint: 'Arrow keys, or tap. Half of these are perfectly ordinary.',
+    id: 'ss', name: 'Scam Spotter', items: SS, seed, who: 'nana',
+    /* §1.8 · a blurb must be true: it counts the round actually dealt */
+    hint: (its) => { const n = its.filter((x) => x.a === 'safe').length;
+      return `Arrow keys, or tap. ${n} of these ${its.length} ${n === 1 ? 'is' : 'are'} perfectly ordinary.`; },
+    sideWord: { scam: 'a trap', safe: 'real' },
+    /* a long message is named by its opening words */
+    nameOf: (it) => { const w = it.t.split(/\s+/); return w.length > 6 ? w.slice(0, 6).join(' ') + '…' : it.t; },
     left: { side: 'safe', act: 'ssSafe', label: 'Looks fine', color: 'var(--grow)' },
     right: { side: 'scam', act: 'ssScam', label: 'It\'s a trap', color: 'var(--spend)' },
     card: (it) => `<div class="gcard" style="text-align:left"><span class="em" style="display:block;text-align:center">${ico('phone', '📱', 44)}</span>
       <p style="font-size:15px;line-height:1.5;font-weight:650">${esc(it.t)}</p></div>`,
-    wrongNote: (it) => it.a === 'scam' ? 'That one was a trap.' : 'That one was real. Suspecting everything is its own kind of expensive.',
+    wrongNote: (it) => it.a === 'scam' ? '' : 'Suspecting everything is its own kind of expensive.',
     outro: (r, n) => r === n
       ? 'All of them. The shape is always the same: a reward or a fright, a hurry, and a secret.'
       : 'Look for the <b>shape</b>, not the story: a reward or a fright, plus a hurry, plus a secret.',
@@ -544,7 +683,7 @@ function scamSpotter() {
 }
 
 /* ══ 3 · BUDGET BLITZ ═════════════════════════════════════════════════ */
-function budgetBlitz() {
+function budgetBlitz(seed) {
   const c = K(), kn = knobs('bb');
   const bills = [
     { n: 'Rent on the stall', u: 14, must: true }, { n: 'Food for the month', u: 22, must: true },
@@ -552,16 +691,19 @@ function budgetBlitz() {
     { n: 'Phone plan', u: 6, must: true }, { n: "Mags's brass button", u: 12, must: false },
     { n: 'Sister’s birthday cake', u: 5, must: false }, { n: 'New shoes — the old ones leak', u: 10, must: true },
   ];
+  /* §1.6 · every amount is in the currency's smallest unit and shown by one formatter,
+     so the month on screen adds up to the money on screen in ₹, $, £, € and AED alike */
+  const minor = CURRENCIES[currency()].minor || 1;
   /* G8 · a tight month is tight, never impossible: every bill you need always fits */
-  const mustSum = bills.filter((b) => b.must).reduce((t, b) => t + price(b.u), 0);
-  const base = sim.weeklyIncome(c) * 4;
-  const pot = kn.pot >= 1 ? base * kn.pot : Math.max(Math.ceil(mustSum * 1.05), Math.round(base * kn.pot));
-  const shuffled = shuffle(bills.slice(), 4423);
+  const mustSum = bills.filter((b) => b.must).reduce((t, b) => t + minorPrice(b.u), 0);
+  const base = Math.round(sim.weeklyIncome(c) * 4 * minor);
+  const pot = kn.pot >= 1 ? Math.round(base * kn.pot) : Math.max(Math.ceil(mustSum * 1.05), Math.round(base * kn.pot));
+  const shuffled = shuffle(bills.slice(), seed);
   const order = kn.first === 'wants' ? shuffled.filter((b) => !b.must).concat(shuffled.filter((b) => b.must)) : shuffled;
-  const st = { i: 0, left: pot, missed: [], paid: [], done: false };
+  const st = { i: 0, left: pot, missed: [], paid: [], done: false, pot, order };
   const decide = (payIt) => {
     if (st.done) return;
-    const b = order[st.i], amt = price(b.u);
+    const b = order[st.i], amt = minorPrice(b.u);
     if (payIt) {
       if (amt > st.left) { sfx.bad(); toast('Not enough left — and that is the lesson'); st.missed.push(b); }
       else { st.left -= amt; st.paid.push(b); sfx.click(); }
@@ -570,27 +712,27 @@ function budgetBlitz() {
     if (st.i >= order.length) {
       st.done = true;
       st.mustMissed = st.missed.filter((x) => x.must).length;
-      st.won = payout(Math.max(0, 10 - st.mustMissed * 4) + (st.left > 0 ? 4 : 0), 'Budget Blitz');
-      goalsFor('bb', { mustMissed: st.mustMissed, left: st.left, pot });
+      const points = Math.max(0, 10 - st.mustMissed * 4) + (st.left > 0 ? 4 : 0);
+      st.won = roundEnd('bb', { points, mustMissed: st.mustMissed, left: st.left, pot }, 'Budget Blitz');
     }
     R.render();
   };
   return {
     id: 'bb', st, decide,
-    key(e) { if (e.key === '1') decide(true); else if (e.key === '2') decide(false); else if (e.key === 'Enter' && st.done) { quitGame(); R.render(); } },
+    key(e) { if (st.done) { endKey(e); return; } if (e.key === '1') decide(true); else if (e.key === '2') decide(false); },
     act(n) { if (n === 'bbPay') decide(true); else if (n === 'bbSkip') decide(false); },
     view() {
       if (st.done) return `<div class="stack">${hud(['Month over', tierChip()])}
-        ${endCard(st.mustMissed === 0 ? '🎯' : 'think', money(st.left) + ' left over',
+        ${endCard(st.mustMissed === 0 ? '🎯' : 'think', minorMoney(st.left) + ' left over',
           st.mustMissed === 0 ? 'Everything you actually needed got paid.'
             : st.mustMissed + ' thing' + (st.mustMissed > 1 ? 's' : '') + ' you needed went unpaid. Those do not disappear — they move to next month.',
           st.won, 'Leftover money is not a prize. It is the part of the month you get to choose about.', 'nana')}</div>`;
-      const b = order[st.i], amt = price(b.u);
+      const b = order[st.i], amt = minorPrice(b.u);
       return `<div class="stack">
-        ${hud([tierChip(), `Left ${money(st.left)}`, `${st.i + 1} / ${order.length}`])}
+        ${hud([tierChip(), `Left ${minorMoney(st.left)}`, `${st.i + 1} / ${order.length}`])}
         <div class="stage">
           <div class="gcard"><span class="em">${ico('receipt', '🧾', 44)}</span><span class="nm">${esc(b.n)}</span>
-            <div class="big" style="margin-top:6px">${money(amt)}</div></div>
+            <div class="big" style="margin-top:6px">${minorMoney(amt)}</div></div>
           <div class="bar"><i style="width:${clamp(st.left / pot * 100, 0, 100)}%;background:${st.left > pot * 0.25 ? 'var(--grow)' : 'var(--spend)'}"></i></div>
           <div class="grow"></div>
           <div class="choices">
@@ -605,7 +747,7 @@ function budgetBlitz() {
 /* ── quiz-shaped games share a shape too ─────────────────────────────── */
 function quizGame(cfg) {
   /* G8 · a level is the numbers (cfg.build reads the level's set); the count stays the same */
-  const qs = cfg.build(knobs(cfg.id).set);
+  const qs = cfg.build(knobs(cfg.id).set, cfg.seed);
   const st = { i: 0, right: 0, pick: null, done: false, log: [] };
   const choose = (n) => {
     if (st.done || st.pick != null) return;
@@ -621,20 +763,20 @@ function quizGame(cfg) {
     if (st.pick == null) return;
     st.pick = null; st.i++;
     if (st.i >= qs.length) {
-      st.done = true; st.won = payout(Math.round(st.right * cfg.pay), cfg.name);
+      st.done = true;
       const L = st.log;
-      goalsFor(cfg.id, { right: st.right, n: qs.length,
+      st.won = roundEnd(cfg.id, { right: st.right, n: qs.length,
         weeklyWrong: L.filter((x) => x.q.tag === 'weekly' && !x.ok).length,
         compareRight: L.some((x) => x.q.tag === 'compare' && x.ok),
         simple: L.filter((x) => x.q.trap != null && x.pick === x.q.trap).length,
-        longWrong: L.filter((x) => x.q.tag === 'long' && !x.ok).length });
+        longWrong: L.filter((x) => x.q.tag === 'long' && !x.ok).length }, cfg.name);
     }
     R.render();
   };
   return {
     id: cfg.id, st, qs, choose, next,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       if (e.key === 'Enter') { next(); return; }
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= qs[st.i].opts.length) choose(n - 1);
@@ -672,43 +814,46 @@ export const TT_SETS = {
   standard: { monthly: [15, 25, 30, 40, 60, 12, 20], weekly: [8, 15, 25], compare: [45, 480] },
   tricky:   { monthly: [35, 45, 65, 75, 85, 95, 55], weekly: [17, 23, 35], compare: [65, 740] },
 };
-function timesTwelve() {
+function timesTwelve(seed) {
   return quizGame({
-    id: 'tt', name: 'Times Twelve', em: '🗓️', pay: 1.2, who: 'pip',
+    id: 'tt', name: 'Times Twelve', em: '🗓️', who: 'pip', seed,
     pickAct: 'ttPick', nextAct: 'ttNext',
     outro: 'Multiply every monthly thing by twelve <b>before</b> you agree to it. Then cancel the ones you would not buy at that price.',
-    build(set = 'standard') {
-      const r = rng(5150);
+    /* §1.6 · every amount is the shown price times a whole number, in the currency's
+       smallest unit, so £1.20 a month is £14.40 a year — never a re-rounded guess */
+    build(set = 'standard', sd = 5150) {
+      const r = rng(sd);
       const out = [];
       const N = TT_SETS[set] || TT_SETS.standard;
-      const monthly = N.monthly.slice();
-      shuffle(monthly.slice(), 991).slice(0, 4).forEach((m) => {
-        const right = m * 12;
-        const opts = shuffle([right, m * 10, m * 6, right + m], Math.round(r() * 1e6) + m);
+      const P = minorPrice, M = minorMoney;
+      const draw = () => Math.floor(r() * 1e6);
+      shuffle(N.monthly.slice(), draw()).slice(0, 4).forEach((m) => {
+        const p = P(m), right = p * 12;
+        const opts = shuffle([right, p * 10, p * 6, right + p], draw());
         out.push({
-          q: `A club costs <b>${money(price(m))} a month</b>. What is that in a year?`,
-          opts: opts.map((v) => money(price(v))), a: opts.indexOf(right),
-          why: `${money(price(m))} × 12 = <b>${money(price(right))}</b>. Small monthly numbers are the entire technique.`,
+          q: `A club costs <b>${M(p)} a month</b>. What is that in a year?`,
+          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
+          why: `${M(p)} × 12 = <b>${M(right)}</b>. Small monthly numbers are the entire technique.`,
         });
       });
-      const weekly = N.weekly;
-      weekly.forEach((w) => {
-        const right = w * 52;
-        const opts = shuffle([right, w * 12, w * 30, w * 100], w * 77);
+      shuffle(N.weekly.slice(), draw()).forEach((w) => {
+        const p = P(w), right = p * 52;
+        const opts = shuffle([right, p * 12, p * 30, p * 100], draw());
         out.push({
           tag: 'weekly',
-          q: `You spend <b>${money(price(w))} a week</b> on snacks. In a year?`,
-          opts: opts.map((v) => money(price(v))), a: opts.indexOf(right),
-          why: `${money(price(w))} × 52 = <b>${money(price(right))}</b>. A week is a small unit and a year is not.`,
+          q: `You spend <b>${M(p)} a week</b> on snacks. In a year?`,
+          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
+          why: `${M(p)} × 52 = <b>${M(right)}</b>. A week is a small unit and a year is not.`,
         });
       });
-      const [a, b] = N.compare;
+      const pa = P(N.compare[0]), pb = P(N.compare[1]);
+      const cmp = shuffle([0, 1, 2, 3], draw());
+      const words = [M(pa) + ' a month', M(pb) + ' a year', 'They are the same', 'Not enough information'];
       out.push({
         tag: 'compare',
-        q: `One shop wants <b>${money(price(a))} a month</b>. Another wants <b>${money(price(b))} once a year</b>. Which costs less?`,
-        opts: [money(price(a)) + ' a month', money(price(b)) + ' a year', 'They are the same', 'Not enough information'],
-        a: 1,
-        why: `${money(price(a))} × 12 = ${money(price(a * 12))}, which is more than ${money(price(b))}. The yearly one wins — and it is quoted that way precisely because it looks bigger.`,
+        q: `One shop wants <b>${M(pa)} a month</b>. Another wants <b>${M(pb)} once a year</b>. Which costs less?`,
+        opts: cmp.map((k) => words[k]), a: cmp.indexOf(1),
+        why: `${M(pa)} × 12 = ${M(pa * 12)}, which is more than ${M(pb)}. The yearly one wins — and it is quoted that way precisely because it looks bigger.`,
       });
       return out;
     },
@@ -731,23 +876,27 @@ export const SN_SETS = {
     { p: 120, r: 0.12, y: 30 }, { p: 800, r: 0.07, y: 40 }, { p: 300, r: 0.11, y: 15 },
   ],
 };
-function snowball() {
+function snowball(seed) {
   return quizGame({
-    id: 'sn', name: 'The Snowball', em: '❄️', pay: 1.6, who: 'nana',
+    id: 'sn', name: 'The Snowball', em: '❄️', who: 'nana', seed,
     pickAct: 'snPick', nextAct: 'snNext',
     outro: 'Almost nobody guesses high enough, because we all quietly add instead of multiplying. Time is the ingredient, not the amount.',
-    build(set = 'standard') {
-      const rows = SN_SETS[set] || SN_SETS.standard;
+    build(set = 'standard', sd = 700) {
+      const r = rng(sd), draw = () => Math.floor(r() * 1e6);
+      const rows = shuffle((SN_SETS[set] || SN_SETS.standard).slice(), draw());
       const longest = Math.max(...rows.map((x) => x.y));
-      return rows.map((row, i) => {
-        const right = Math.round(row.p * Math.pow(1 + row.r, row.y));
-        const simple = Math.round(row.p * (1 + row.r * row.y));   // the answer everyone reaches for
-        const opts = shuffle([right, simple, Math.round(row.p * (1 + row.r * row.y * 0.5)), Math.round(right * 2.1)], 700 + i * 13);
+      const M = minorMoney;
+      return rows.map((row) => {
+        /* grown from the price as SHOWN, so the sum on screen is the sum of what is on screen */
+        const p = minorPrice(row.p);
+        const right = Math.round(p * Math.pow(1 + row.r, row.y));
+        const simple = Math.round(p * (1 + row.r * row.y));   // the answer everyone reaches for
+        const opts = shuffle([right, simple, Math.round(p * (1 + row.r * row.y * 0.5)), Math.round(right * 2.1)], draw());
         return {
           tag: row.y === longest ? 'long' : '', trap: opts.indexOf(simple),
-          q: `<b>${money(price(row.p))}</b> growing <b>${(row.r * 100).toFixed(0)}% a year</b> for <b>${row.y} years</b>. Where does it land?`,
-          opts: opts.map((v) => money(price(v))), a: opts.indexOf(right),
-          why: `<b>${money(price(right))}</b>. Adding ${(row.r * 100).toFixed(0)}% ${row.y} times would only reach ${money(price(simple))} — the extra is growth landing on earlier growth.`,
+          q: `<b>${M(p)}</b> growing <b>${(row.r * 100).toFixed(0)}% a year</b> for <b>${row.y} years</b>. Where does it land?`,
+          opts: opts.map((v) => M(v)), a: opts.indexOf(right),
+          why: `<b>${M(right)}</b>. Adding ${(row.r * 100).toFixed(0)}% ${row.y} times would only reach ${M(simple)} — the extra is growth landing on earlier growth.`,
         };
       });
     },
@@ -759,8 +908,8 @@ function snowball() {
    would tell a child the luckiest single bet was the best decision, which
    is the one thing this app must never say. */
 /* the season's weeks, seeded: a level scales the swing and the red week, nothing else */
-function cupRows(kn) {
-  const ROUNDS = 6, RED = 3, r = rng(120), ret = [];
+function cupRows(kn, seed = 120) {
+  const ROUNDS = 6, RED = 3, r = rng(seed), ret = [];
   for (let k = 0; k < ROUNDS; k++) {
     const row = {};
     ASSETS.forEach((a) => {
@@ -773,15 +922,42 @@ function cupRows(kn) {
 }
 /* G8 · the Cup's par on each level is Boring Bella's own cup score there — the basket in
    week one and then home — worked out from the same weeks, so it cannot drift */
-function bellaCup(kn) {
+function bellaCup(kn, seed = 120) {
   let v = 1000;
-  cupRows(kn).forEach((row) => { v = Math.round(v * (1 + row.basket)); });
+  cupRows(kn, seed).forEach((row) => { v = Math.round(v * (1 + row.basket)); });
   return Math.round((v / 1000 - 1) * 100) + 4 * 7 + Math.max(0, 30 - Math.round(100 / 8));
 }
 TIER_IDS.forEach((t) => { ARCADE_TIERS.mc[t].par = bellaCup(ARCADE_TIERS.mc[t]); });
-function marketCup() {
+/* §2.6 · the Cup's record on the child: the best cup score (the line it was set with) and
+   the last eight cups, so a finish can say whether the seasons are going up or down.
+   A best written before this kept only the first finish's line; its number is read back. */
+export function cupRecord(c, total, line) {
+  const m = c.market;
+  if (!Array.isArray(m.cups)) m.cups = [];
+  const legacy = typeof m.best === 'string' && (m.best.match(/cup score (-?\d+)/) || [])[1];
+  const prev = typeof m.bestScore === 'number' ? m.bestScore : legacy != null ? +legacy : null;
+  m.cups.push(total);
+  if (m.cups.length > 8) m.cups.splice(0, m.cups.length - 8);
+  const isBest = prev == null || total > prev;
+  if (isBest) { m.bestScore = total; m.best = line; } else m.bestScore = prev;
+  return { cups: m.cups.slice(), best: m.bestScore, isBest, first: prev == null };
+}
+export function cupTrendWord(cups) {
+  if (!cups || cups.length < 2) return '';
+  const last = cups[cups.length - 1], before = cups.slice(Math.max(0, cups.length - 4), -1);
+  const avg = before.reduce((t, x) => t + x, 0) / before.length;
+  return last > avg + 2 ? 'going up' : last < avg - 2 ? 'going down' : 'holding steady';
+}
+function cupTrend(rec) {
+  if (!rec) return '';
+  const w = cupTrendWord(rec.cups);
+  return `<p class="small cuptrend"><b>${rec.isBest && !rec.first ? 'A new best cup score' : 'Your best cup score'}: <span class="tabnum">${rec.best}</span></b>${rec.cups.length > 1
+    ? ` · your last ${rec.cups.length} cups: <span class="tabnum">${rec.cups.join(' → ')}</span>${w ? `, ${w}` : ''}` : ''}</p>`;
+}
+function marketCup(seed) {
   const ROUNDS = 6, START = 1000;
-  const ret = cupRows(knobs('mc'));
+  /* §1.2 · a season drawn for this play; Bella's cup score on it is this round's par */
+  const ret = cupRows(knobs('mc'), seed), bellaPar = bellaCup(knobs('mc'), seed);
   const st = {
     round: 0, sel: 0, done: false, churn: 0, divSum: 0,
     alloc: { basket: 0, grain: 0, chai: 0, rocket: 0 },
@@ -849,21 +1025,26 @@ function marketCup() {
       .concat(Object.keys(st.bots).map((k) => ({ who: k, v: st.bots[k],
         sc: scoreOf(st.bots[k], st.botStat[k].div / ROUNDS, st.botStat[k].churn) })))
       .sort((a, b) => b.sc.total - a.sc.total);
-    st.place = st.table.findIndex((x) => x.who === 'You') + 1;
+    /* §2.6 · an equal cup score is a tie, shown as one: copying Bella ties with Bella,
+       it never beats her. A place is one more than the number strictly ahead. */
+    st.table.forEach((row) => { row.place = 1 + st.table.filter((x) => x.sc.total > row.sc.total).length; });
+    st.place = st.table.find((x) => x.who === 'You').place;
+    st.tiedWith = st.table.filter((x) => x.who !== 'You' && x.sc.total === st.score.total).map((x) => x.who);
     st.byReturn = st.table.slice().sort((a, b) => b.v - a.v)[0].who;
-    /* measured against this level's par (Bella's cup score here), so a wild market is not a richer one */
-    st.won = payout(Math.max(4, Math.round((st.score.total / 6) * parScale('mc'))), 'The Market Cup');
     const bella = st.table.find((x) => x.who === 'Boring Bella');
-    goalsFor('mc', { spreadWeeks: st.spread || 0, weeks: ROUNDS, churn: st.churn, beatBella: st.score.total > bella.sc.total });
+    /* measured against Bella's cup score on this very season, so a wild market is not a richer one */
+    st.won = roundEnd('mc', { total: st.score.total, par: bellaPar, spreadWeeks: st.spread || 0, weeks: ROUNDS, churn: st.churn,
+      beatBella: st.score.total > bella.sc.total }, 'The Market Cup');
     if (st.score.div >= 24) sim.badge(c, 'diversified');
-    const line = `${st.place}${['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]} of 4 · cup score ${st.score.total}`;
-    if (!c.market.best) c.market.best = line;
+    /* §2.6 · the record moves: the best is the best cup score so far (it used to be the
+       first finish, for ever), and the last few cups are kept so the trend can be shown */
+    st.record = cupRecord(c, st.score.total, `${st.place}${['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]}${st.tiedWith.length ? ' (tied)' : ''} of 4 · cup score ${st.score.total}`);
     sfx.level();
   };
   return {
-    id: 'mc',
+    id: 'mc', st,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       const ids = ASSETS.map((a) => a.id);
       if (e.key === 'ArrowDown') { st.sel = (st.sel + 1) % ids.length; R.render(); }
       else if (e.key === 'ArrowUp') { st.sel = (st.sel + ids.length - 1) % ids.length; R.render(); }
@@ -878,15 +1059,18 @@ function marketCup() {
     },
     view() {
       if (st.done) {
-        const sc = st.score;
+        const sc = st.score, tie = st.tiedWith.length > 0, top = st.place === 1;
+        const head = top && !tie ? 'You won the Cup'
+          : tie ? `${st.place === 1 ? 'Joint first' : 'Joint ' + st.place + ['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]}: a tie with ${st.tiedWith.join(' and ')}`
+            : st.place + ' of 4';
         return `<div class="stack">${hud(['Cup over', tierChip()])}
           <div class="stage">
-            <div style="text-align:center"><div class="endico">${st.place === 1 ? ico('trophy', '🏆', 48) : ico('rosette', '🎗️', 48)}</div>
-            <h2>${st.place === 1 ? 'You won the Cup' : st.place + ' of 4'}</h2>
+            <div style="text-align:center"><div class="endico">${top && !tie ? ico('trophy', '🏆', 48) : ico('rosette', '🎗️', 48)}</div>
+            <h2>${esc(head)}</h2>
             <p class="muted">Cup score ${sc.total} · ended on ${st.me} from ${START}.</p></div>
             <div class="lead">
-              ${st.table.map((row, i) => `<div class="leadrow ${row.who === 'You' ? 'me' : ''}">
-                <span>${i + 1}</span>
+              ${st.table.map((row) => `<div class="leadrow ${row.who === 'You' ? 'me' : ''}">
+                <span>${row.place}${st.table.filter((x) => x.place === row.place).length > 1 ? '=' : ''}</span>
                 <span>${esc(row.who)}<br><span style="font-weight:600;font-size:11.5px;opacity:.75">
                   ${row.sc.ret >= 0 ? '+' : ''}${row.sc.ret} return · ${row.sc.div} spread · ${row.sc.steady} nerve</span></span>
                 <span class="p" style="font-size:17px">${row.sc.total}</span></div>`).join('')}
@@ -904,12 +1088,14 @@ function marketCup() {
               <div class="sep" style="margin:10px 0"></div>
               <div class="row"><span class="grow" style="font-weight:800">Total</span><span class="big" style="font-size:22px">${sc.total}</span></div>
             </div>
-            ${say(st.table[0].who === 'Boring Bella' ? 'bea' : 'bo',
-              st.table[0].who === 'Boring Bella'
-                ? 'Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat.'
-                : 'You beat Bella this time. Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.')}
-            ${endGoals()}
-            <p class="small muted">Earned ${money(st.won)}. Fictional companies, real market behaviour, nothing here is advice.</p>
+            ${cupTrend(st.record)}
+            ${tie && st.tiedWith.includes('Boring Bella')
+              ? say('bea', 'You did exactly what Bella did, and you finished exactly where she did. That is a tie, not a win: the cup is about whether your own choices beat hers.')
+              : say(st.table[0].who === 'Boring Bella' ? 'bea' : 'bo',
+                st.table[0].who === 'Boring Bella'
+                  ? 'Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat.'
+                  : 'You beat Bella this time. Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.')}
+            ${endFoot(st.won, 'Fictional companies, real market behaviour, nothing here is advice.')}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
@@ -979,9 +1165,8 @@ function compoundClimb(seed = 8821) {
     if (st.done) return;
     st.done = true; stop();
     /* the same par on every level: the line moves the badge and a goal, never the wage */
-    st.won = payout(Math.max(3, Math.round((st.money / 22) * parScale('cc'))), 'Compound Climb');
     if (st.money >= TARGET) sim.badge(K(), 'climbed');
-    goalsFor('cc', { reached: st.money >= TARGET && !st.ruined, years: st.year, falls: st.falls, maxCharge: st.maxCharge });
+    st.won = roundEnd('cc', { money: st.money, ruined: st.ruined, reached: st.money >= TARGET && !st.ruined, years: st.year, falls: st.falls, maxCharge: st.maxCharge }, 'Compound Climb');
     sfx.level(); R.render();
   };
   /* the last year lands, the tower is seen, then the card — a beat, never a delay to input */
@@ -991,7 +1176,10 @@ function compoundClimb(seed = 8821) {
   };
   const release = () => {
     if (st.done || look.ending || !st.holding) return;
-    st.holding = false;
+    /* §1.5 · the charge is the time held, by the wall's clock, to the moment of letting go —
+       not to the last frame drawn, which at 4 fps can be a quarter of a second earlier */
+    if (st.pressAt != null) st.charge = chargeAt(nowMs());
+    st.holding = false; st.pressAt = null;
     st.maxCharge = Math.max(st.maxCharge, st.charge);
     const ch = st.charge / 100;
     const actual = ccYear(ch, r() + r() - 1);
@@ -1029,8 +1217,15 @@ function compoundClimb(seed = 8821) {
   const press = () => {
     if (st.done || look.ending || st.holding) return;
     if (!cd.done) cd = countdown(1);            // a press is a GO: nobody waits on a count they have already beaten
-    st.holding = true; st.charge = 0;
+    st.holding = true; st.charge = 0; st.pressAt = nowMs();
   };
+  /* charge from the moment of the press: a slow frame neither adds the time before it
+     nor loses the time after the last one drawn */
+  const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const chargeAt = (t) => Math.min(100, Math.max(0, t - st.pressAt) * 0.075 * kn.charge);
+  /* a hidden tab stops the clock (§1.5): a hold in progress is dropped — no year is played
+     for the child, and nothing is charged for the time away */
+  const away = () => { if (st.holding) { st.holding = false; st.pressAt = null; st.charge = 0; } };
 
   const step = (ts) => {
     if (st.done) return;
@@ -1038,7 +1233,7 @@ function compoundClimb(seed = 8821) {
     const dt = Math.min(1000, ts - (prev || ts)); prev = ts;
     look.clock += dt;
     cd.step(dt);
-    if (st.holding) st.charge = Math.min(100, st.charge + dt * 0.075 * kn.charge);
+    if (st.holding) st.charge = st.pressAt != null ? chargeAt(ts) : Math.min(100, st.charge + dt * 0.075 * kn.charge);
     /* the tower rises to its new height rather than jumping to it */
     look.disp = still() ? st.money : look.disp + (st.money - look.disp) * Math.min(1, dt * 0.007);
     look.land = Math.min(1, look.land + dt / 520);
@@ -1254,9 +1449,9 @@ function compoundClimb(seed = 8821) {
       cv.onpointerleave = () => { if (st.holding) release(); };
       cv.onpointercancel = () => { if (st.holding) release(); };
     },
-    stop,
+    stop() { away(); stop(); },
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       if ((e.key === ' ' || e.key === 'Spacebar') && e.type === 'keydown') { if (e.preventDefault) e.preventDefault(); press(); }
     },
     keyup(e) { if (e.key === ' ' || e.key === 'Spacebar') release(); },
@@ -1321,13 +1516,16 @@ function jolt(kind = 'bad') {
 /* ══ STALL RUSH ═══════════════════════════════════════════════════════
    Sixty seconds of customers, so that "busy" and "profitable" can come
    apart in front of the child rather than in a sentence. */
-function stallRush() {
+function stallRush(seed = 3312) {
   const LEN = 60000, MAXQ = 4, kn = knobs('sr');
-  const st = { t: 0, cash: 0, revenue: 0, spent: 0, served: 0, lost: 0,
+  /* revenue and spent are in the currency's smallest unit, for the screen (§1.6);
+     revU/spentU are the same day in PRICE UNITS, for the wage — so the wage is
+     converted to money exactly once, in payout(), and never twice (§1.1) */
+  const st = { t: 0, cash: 0, revenue: 0, spent: 0, revU: 0, spentU: 0, served: 0, lost: 0,
     stock: { chai: 3, ice: 3, umbrella: 2, rope: 2 }, q: [], done: false,
     spawn: 900, restock: 0, msg: '', wrong: 0 };
   let raf = 0, prev = 0, nid = 0;
-  const r = rng(3312);
+  const r = rng(seed);
   const items = STOCK.map((x) => x.id);
   const shown = new Set();   // customers already dealt in, so only a newcomer slides in
   const btnFor = (id) => (typeof document !== 'undefined' ? document.querySelector(`.gplay [data-act="srServe"][data-arg="${id}"]`) : null);
@@ -1337,10 +1535,10 @@ function stallRush() {
     if (st.done) return;
     st.done = true; stop();
     st.profit = st.revenue - st.spent;
-    /* measured against this level's par: a rush is busier, never richer */
-    st.won = payout(Math.max(2, Math.round((st.profit / 14) * parScale('sr'))), 'Stall Rush');
+    st.profitU = st.revU - st.spentU;
     if (st.profit > 0) sim.badge(K(), 'profit-day');
-    goalsFor('sr', { profit: st.profit, lost: st.lost, wrong: st.wrong, served: st.served });
+    /* the day's profit against this level's par, in price units: a rush is busier, never richer */
+    st.won = roundEnd('sr', { profitU: st.profitU, profit: st.profit, lost: st.lost, wrong: st.wrong, served: st.served }, 'Stall Rush');
     sfx.level(); R.render();
   };
   const serve = (id) => {
@@ -1350,22 +1548,22 @@ function stallRush() {
     if (!st.stock[id]) { sfx.bad(); st.msg = 'Out of ' + id + ' — restock costs time'; R.render(); jolt('bad'); domPop(btnFor(id), 'sold out', 'bad'); return; }
     const item = STOCK.find((x) => x.id === id);
     st.stock[id]--; st.q.splice(i, 1);
-    st.revenue += price(item.sells); st.served++;
+    st.revenue += minorPrice(item.sells); st.revU += item.sells; st.served++;
     st.msg = ''; sfx.coin(); R.render();
     const b = btnFor(id);
     if (b) b.classList.add('srhit');
-    domPop(b, '+' + money(price(item.sells)), 'good');
+    domPop(b, '+' + minorMoney(minorPrice(item.sells)), 'good');
     jolt('good');
   };
   const restock = () => {
     if (st.done || st.restock > 0) return;
-    let cost = 0;
-    STOCK.forEach((x) => { const add = 3 - (st.stock[x.id] || 0); if (add > 0) { st.stock[x.id] += add; cost += price(x.cost) * add; } });
+    let cost = 0, costU = 0;
+    STOCK.forEach((x) => { const add = 3 - (st.stock[x.id] || 0); if (add > 0) { st.stock[x.id] += add; cost += minorPrice(x.cost) * add; costU += x.cost * add; } });
     if (!cost) { st.msg = 'Everything is already stocked'; R.render(); return; }
-    st.spent += cost; st.restock = 2600;
-    st.msg = 'Restocked for ' + money(cost) + ' — and the queue did not wait';
+    st.spent += cost; st.spentU += costU; st.restock = 2600;
+    st.msg = 'Restocked for ' + minorMoney(cost) + ' — and the queue did not wait';
     sfx.click(); R.render();
-    domPop('.gplay [data-act="srStock"]', '−' + money(cost), 'cost');
+    domPop('.gplay [data-act="srStock"]', '−' + minorMoney(cost), 'cost');
   };
   /* one slice of the day — the frame loop and a headless player share it */
   const advance = (dt) => {
@@ -1408,7 +1606,7 @@ function stallRush() {
     mount() { if (!st.done && !raf) { prev = 0; raf = requestAnimationFrame(step); } },
     stop,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= items.length) serve(items[n - 1]);
       else if (e.key === 'r' || e.key === 'R') restock();
@@ -1418,12 +1616,12 @@ function stallRush() {
       if (st.done) {
         return `<div class="stack">${hud(['Closed', tierChip()])}
           <div class="stage" style="justify-content:center;text-align:center">
-            <div class="endico">${st.profit > 0 ? ico('chartUp', '💹', 48) : ico('chartDown', '📉', 48)}</div>
-            <h2>${st.profit >= 0 ? '+' : '−'}${money(Math.abs(st.profit))} profit</h2>
+            <div class="endico">${st.profit > 0 ? ico('chartUp', '📈', 48) : ico('chartDown', '📉', 48)}</div>
+            <h2>${st.profit >= 0 ? '+' : '−'}${minorMoney(Math.abs(st.profit))} profit</h2>
             <div class="card" style="box-shadow:none">
               <div class="grid3">
-                <div><div class="small muted">Took</div><div style="font-weight:800;color:var(--grow)">${money(st.revenue)}</div></div>
-                <div><div class="small muted">Spent on stock</div><div style="font-weight:800">${money(st.spent)}</div></div>
+                <div><div class="small muted">Took</div><div style="font-weight:800;color:var(--grow)">${minorMoney(st.revenue)}</div></div>
+                <div><div class="small muted">Spent on stock</div><div style="font-weight:800">${minorMoney(st.spent)}</div></div>
                 <div><div class="small muted">Served</div><div style="font-weight:800">${st.served}</div></div>
               </div>
             </div>
@@ -1431,14 +1629,13 @@ function stallRush() {
             ${say('nana', st.revenue > 0 && st.profit <= 0
               ? 'You were rushed off your feet and you are down on the day. Busy and profitable are two different words, and only one of them pays the rent.'
               : 'Revenue is the number people brag about. That one at the top is the one that decides whether you are open next year.')}
-            ${endGoals()}
-            <p class="small muted">Earned ${money(st.won)}.</p>
+            ${endFoot(st.won)}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }
       return `<div class="stack">
         ${hud([tierChip(), `<span id="srTime">${Math.ceil((LEN - st.t) / 1000)}</span>s`,
-          `took ${money(st.revenue)}`, `stock ${money(st.spent)}`, `lost ${st.lost}`])}
+          `took ${minorMoney(st.revenue)}`, `stock ${minorMoney(st.spent)}`, `lost ${st.lost}`])}
         <div class="stage">
           ${BLD.stall ? `<img class="srstall" src="${BLD.stall.src}" alt="Your stall" width="${BLD.stall.w}" height="${BLD.stall.h}">` : ''}
           <div class="eyebrow">The queue</div>
@@ -1450,7 +1647,7 @@ function stallRush() {
                 ${ico(item.em, item.em, 22)}
                 <span class="grow"><b style="font-size:14px">${esc(item.name)}</b>
                   <div class="bar" style="height:5px;margin-top:5px"><i id="srP${c.id}" style="width:${c.patience * 100}%;background:var(--treasure);transition:none"></i></div></span>
-                <span class="pill">${money(price(item.sells))}</span></div>`;
+                <span class="pill">${minorMoney(minorPrice(item.sells))}</span></div>`;
             }).join('') : '<p class="small muted">Nobody yet. They come in waves.</p>'}
           </div>
           ${st.msg ? `<p class="small srmsg" style="color:var(--spend);font-weight:650;text-align:center">${esc(st.msg)}</p>` : ''}
@@ -1474,7 +1671,7 @@ function stallRush() {
    A real game loop, not a quiz with a hat on. Coins fall, you catch the
    ones that make the amount exactly — and catching one too many is the
    whole point: overpaying is a mistake you can feel. */
-function changeRush(seed = (Date.now() % 100000) | 0) {
+function changeRush(seed = playSeed()) {
   const cur = CURRENCIES[currency()], kn = knobs('cr');
   /* G8 · Easy drops the biggest coin size (never below two kinds, so change still means choosing) */
   const COINS = cur.coins.slice(0, Math.max(Math.min(2, cur.coins.length), kn.coins));
@@ -1507,50 +1704,74 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     if (st.done) return;
     st.done = true;
     stop();
-    /* measured against this level's par: faster coins are a challenge, not a bigger wage */
-    st.won = payout(Math.round(st.score * 0.5 * parScale('cr')), 'Change Rush');
     if (st.round > 4) sim.badge(K(), 'exact-change');
-    goalsFor('cr', { exact: st.exact, overpays: st.overpays, firstRun: st.firstRun, finished: st.t >= LEN });
+    /* measured against this level's par: faster coins are a challenge, not a bigger wage */
+    st.won = roundEnd('cr', { score: st.score, exact: st.exact, overpays: st.overpays, firstRun: st.firstRun, finished: st.t >= LEN }, 'Change Rush');
     R.render();
   };
   const el = (id) => (typeof document !== 'undefined' ? document.getElementById(id) : null);
+  /* §1.6 · every coin and every amount through the one sub-unit formatter: a quarter is 25¢ */
+  const M = minorMoney;
   const hudSync = () => {
-    const n = el('crNeed'); if (n) n.textContent = money(st.target);
-    const g = el('crGot'); if (g) g.textContent = money(st.got);
+    const n = el('crNeed'); if (n) n.textContent = M(st.target);
+    const g = el('crGot'); if (g) g.textContent = M(st.got);
     const l = el('crLives'); if (l) l.textContent = String(Math.max(0, st.lives));
     const m = el('crMsg'); if (m) m.textContent = st.msg ? st.msg + ' · ' : '';
   };
   const catchCoin = (v, x, y) => {
     if (st.done) return;
+    const need = st.target - st.got;
     st.got += v;
     st.pops.push({ x, y, v, t: 0 });
     look.sq = 1;
     if (st.got === st.target) {
-      look.hold = { t: 900, kind: 'ok', text: 'Exact! ' + money(st.target) };
-      fxl.pop(x, H - 64, '+' + money(v), { color: '#127A43', size: 18 });
+      look.hold = { t: 900, kind: 'ok', text: 'Exact! ' + M(st.target) };
+      fxl.pop(x, H - 64, '+' + M(v), { color: '#127A43', size: 18 });
       fxl.pop(W / 2, H / 2 - 18, 'Exact!', { color: '#127A43', size: 42, life: 1150 });
       fxl.coins(x, H - 44, 16); fxl.burst(x, H - 44, { n: 26, speed: 0.28, colors: ['#F0B429', '#FFF3C4', '#2FBF71', '#FFFFFF'] });
       fxl.flash('#FFF3C4', 200);
-      st.score += 4 + st.round; st.round++; st.exact++; st.flash = 1; st.msg = 'Exact!';
+      st.score += 4 + st.round; st.round++; st.exact++; st.flash = 1; st.msg = 'Exact!'; st.over = null;
       if (!st.overpays) st.firstRun = st.exact;
       sfx.coin(); newTarget();
     } else if (st.got > st.target) {
-      look.hold = { t: 900, kind: 'over', text: 'Over by ' + money(st.got - st.target) };
-      fxl.pop(x, H - 64, '+' + money(v), { color: '#B23A2E', size: 18 });
+      /* §2.8 · say it plainly, and say what would have done it: the coin (or coins)
+         that make exactly what was still needed when the extra one landed */
+      const by = st.got - st.target, fix = exactCoins(need);
+      st.over = { by, need, fix, text: `Over by ${M(by)}`, hint: fixLine(need, fix) };
+      look.hold = { t: 1700, kind: 'over', text: st.over.text, sub: st.over.hint };
+      fxl.pop(x, H - 64, '+' + M(v), { color: '#B23A2E', size: 18 });
       fxl.pop(W / 2, H / 2 - 18, 'Overpaid!', { color: '#B23A2E', size: 34, life: 1100 });
       fxl.shake(11, 400); fxl.flash('#E0483A', 240);
       /* the purse bursts: what you handed over spills on the ground */
       fxl.coins(x, H - 40, 10); fxl.burst(x, H - 36, { n: 18, speed: 0.26, gravity: 0.0012, colors: ['#E0483A', '#F0B429', '#C87533'] });
-      st.lives--; st.overpays++; st.flash = -1; st.msg = 'Overpaid by ' + money(st.got - st.target);
+      st.lives--; st.overpays++; st.flash = -1; st.msg = `${st.over.text}. ${st.over.hint}`;
       sfx.bad(); newTarget();
       if (st.lives <= 0) end();
     } else {
-      fxl.pop(x, H - 64, '+' + money(v), { color: '#1C2A2E', size: 18 });
+      fxl.pop(x, H - 64, '+' + M(v), { color: '#1C2A2E', size: 18 });
       fxl.burst(x, H - 44, { n: 8, speed: 0.16, size: 3, colors: ['#FFF3C4', '#F0B429'] });
       sfx.click();
     }
     hudSync();
   };
+  /* the fewest coins of this round's kinds that make `n` exactly (n is always > 0 here,
+     and every target is built from these coins, so a way always exists) */
+  function exactCoins(n) {
+    const best = [[]];
+    for (let a = 1; a <= n; a++) {
+      let pick = null;
+      for (const c of COINS) if (c <= a && best[a - c] && (!pick || best[a - c].length + 1 < pick.length)) pick = best[a - c].concat(c);
+      best[a] = pick;
+    }
+    return (best[n] || []).sort((p, q) => q - p);
+  }
+  function fixLine(n, coins) {
+    if (!coins.length) return `You needed ${M(n)} more.`;
+    if (coins.length === 1) return `You needed ${M(n)} more: one ${M(coins[0])} coin would have made it exact.`;
+    /* grouped, so four pennies read as "4 × 1p", not a row of them */
+    const groups = [...new Set(coins)].map((c) => { const k = coins.filter((x) => x === c).length; return k > 1 ? `${k} × ${M(c)}` : M(c); });
+    return `You needed ${M(n)} more: ${groups.join(' + ')} would have made it exact.`;
+  }
 
   /* One frame of the game. The catch test runs over a SNAPSHOT of the falling
      coins: a catch can finish the round, and finishing the round empties the
@@ -1732,11 +1953,27 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
       for (let i = 1; i < ticks; i++) ctx.fillRect(mx + 3 + ((mw - 6) * i) / ticks, my + mh - 8, 1, 5);
     }
     const ink = dark ? '#F4EEE4' : '#1C2A2E';
-    if (h) label(h.text, W / 2, my + mh / 2 + 1, 14, h.kind === 'ok' ? '#0E3B22' : '#5A0E08');
-    else {
-      label('Need ' + money(st.target), mx + 12, my + mh / 2 + 1, 13, ink, 'left');
-      label('Got ' + money(st.got), mx + mw - 12, my + mh / 2 + 1, 13, over ? '#B23A2E' : ink, 'right');
-      label('still ' + money(Math.max(0, st.target - st.got)), W / 2, my + mh / 2 + 1, 11.5, dark ? '#FFD978' : '#8A5A00');
+    if (h) {
+      /* §2.8 · the verdict sits on its own solid chip — white on deep green or deep red —
+         so "Over by ₹7" reads at a glance instead of dark red ink on a red bar */
+      ctx.font = '800 15px "Hanken Grotesk", system-ui, sans-serif';
+      const tw = ctx.measureText(h.text).width + 26, ty = my + mh / 2 + 1;
+      ctx.fillStyle = h.kind === 'ok' ? '#0E5A33' : '#8E1F18'; rr(ctx, W / 2 - tw / 2, ty - 13, tw, 26, 13); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(h.text, W / 2, ty + 0.5);
+      if (h.sub) {
+        /* and which coin would have made it exact, under the meter */
+        ctx.font = '700 11.5px "Hanken Grotesk", system-ui, sans-serif';
+        const words = h.sub.split(' '), lines = [''];
+        words.forEach((w) => { const t = (lines[lines.length - 1] + ' ' + w).trim(); if (ctx.measureText(t).width > W - 60 && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; });
+        const bh = lines.length * 15 + 10, by = my + mh + 6, bw = Math.min(W - 24, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 22);
+        ctx.fillStyle = dark ? 'rgba(14,18,30,.92)' : 'rgba(255,252,245,.95)'; rr(ctx, W / 2 - bw / 2, by, bw, bh, 10); ctx.fill();
+        ctx.fillStyle = dark ? '#FFE3DD' : '#5A0E08';
+        lines.forEach((l, i) => ctx.fillText(l, W / 2, by + 12 + i * 15));
+      }
+    } else {
+      label('Need ' + M(st.target), mx + 12, my + mh / 2 + 1, 13, ink, 'left');
+      label('Got ' + M(st.got), mx + mw - 12, my + mh / 2 + 1, 13, over ? '#B23A2E' : ink, 'right');
+      label('still ' + M(Math.max(0, st.target - st.got)), W / 2, my + mh / 2 + 1, 11.5, dark ? '#FFD978' : '#8A5A00');
     }
     /* tries left, as hearts */
     for (let i = 0; i < 3; i++) {
@@ -1773,7 +2010,7 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
     },
     stop,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       if (e.key === 'ArrowLeft') st.lane = Math.max(0, st.lane - 1);
       else if (e.key === 'ArrowRight') st.lane = Math.min(LANES - 1, st.lane + 1);
       lanes();
@@ -1784,13 +2021,13 @@ function changeRush(seed = (Date.now() % 100000) | 0) {
         ${endCard(st.round > 4 ? '🏅' : '🪙', st.exact + ' exact', 'Score ' + st.score + ' · par ' + knobs('cr').par + ' on ' + TIER_NAME[curTier] + '.', st.won,
           'Overpaying is the one that costs you. A shop will take too much money all day long and never mention it.', 'mags')}</div>`;
       return `<div class="stack">
-        ${hud([tierChip(), `Need <b id="crNeed">${money(st.target)}</b>`, `Got <b id="crGot">${money(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
+        ${hud([tierChip(), `Need <b id="crNeed">${M(st.target)}</b>`, `Got <b id="crGot">${M(st.got)}</b>`, `Tries <b id="crLives">${Math.max(0, st.lives)}</b>`, `<span id="crTime">${Math.max(0, Math.ceil((LEN - st.t) / 1000))}</span>s`])}
         <div class="stage arcstage" style="min-height:0;padding:12px">
           <canvas id="crCanvas" class="arccv" role="img" aria-label="Coins falling in four lanes, and your purse" style="width:100%;max-width:400px;margin:0 auto;height:auto;aspect-ratio:${W}/${H};display:block;touch-action:none"></canvas>
           <div class="choices crlanes" style="grid-template-columns:repeat(4,1fr);max-width:400px;margin:0 auto;width:100%">
             ${[0, 1, 2, 3].map((i) => `<button class="btn ghost crlane" data-act="crLane" data-arg="${i}" aria-label="lane ${i + 1}" aria-pressed="${st.lane === i}">${i + 1}</button>`).join('')}
           </div>
-          <p class="hint"><span id="crMsg">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, tap a lane, or drag. Stop at exactly the amount.</p>
+          <p class="hint"><span id="crMsg" aria-live="polite">${st.msg ? esc(st.msg) + ' · ' : ''}</span>Arrow keys, tap a lane, or drag. Stop at exactly the amount.</p>
         </div></div>`;
     },
   };
@@ -1829,12 +2066,13 @@ function stormChart(line, live, t) {
     <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4.5" fill="#fff" stroke="#E0483A" stroke-width="2.5"/>
   </svg>`;
 }
-function marketStorm() {
+function marketStorm(seed = 4477) {
   const START = 1000, LEN = 42000, kn = knobs('st');
   const st = { t: 0, panic: 0, val: START, low: START, line: [START, START, START], done: false,
     sold: false, shout: null, shoutT: 0, calmT: 0, recover: 0, shoutN: 0, maxPanic: 0, calms: 0 };
   let iv = 0, last = 0, seenShout = 0;
-  const r = rng(4477);
+  /* §1.2 · this play's own shouts and wobble; the recovery stays authored (below) */
+  const r = rng(seed);
 
   const stop = () => { if (iv) cancelAnimationFrame(iv); iv = 0; };
   const finish = (sold) => {
@@ -1845,9 +2083,8 @@ function marketStorm() {
     st.after = Math.round(START * 1.12);
     st.soldAt = Math.round(st.val);
     /* the same wage on every level: holding is the target, and a louder storm only makes it harder */
-    st.won = payout(sold ? 3 : 14, 'Market Storm');
     if (!sold) sim.badge(K(), 'held-the-storm');
-    goalsFor('st', { held: !sold, maxPanic: st.maxPanic, calms: st.calms });
+    st.won = roundEnd('st', { held: !sold, maxPanic: st.maxPanic, calms: st.calms }, 'Market Storm');
     if (sold) sfx.bad(); else { sfx.level(); }
     R.render();
   };
@@ -1913,7 +2150,7 @@ function marketStorm() {
     mount() { if (!st.done && !iv) { last = 0; iv = requestAnimationFrame(tick); } },
     stop,
     key(e) {
-      if (st.done) { if (e.key === 'Enter') { quitGame(); R.render(); } return; }
+      if (st.done) { endKey(e); return; }
       if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); calm(); }
     },
     act(n) { if (n === 'stSell') finish(true); else if (n === 'stPlan') calm(); },
@@ -1923,7 +2160,7 @@ function marketStorm() {
           <div class="stage" style="text-align:center;justify-content:center">
             <div class="endico">${st.sold ? ico('chartDown', '📉', 48) : ico('mountain', '⛰️', 48)}</div>
             <h2>${st.sold ? 'You sold' : 'You held'}</h2>
-            <p class="muted">${st.sold
+            <p class="endkey">${st.sold
               ? 'Locked in ' + st.soldAt + ' from ' + START + '. The fall became a loss the moment you sold.'
               : 'It bottomed at ' + Math.round(st.low) + ' and came back to ' + st.after + '.'}</p>
             <div class="card" style="box-shadow:none">
@@ -1937,8 +2174,7 @@ function marketStorm() {
             ${say(st.sold ? 'bea' : 'nana', st.sold
               ? 'I talked you into it, and I am always this certain, and I am wrong about half the time. Have another go.'
               : 'A fall is not a loss until you sell. Sitting still is the hardest thing in this whole subject and you just did it.')}
-            ${endGoals()}
-            <p class="small muted">Earned ${money(st.won)}. Fictional market, real behaviour, nothing here is advice.</p>
+            ${endFoot(st.won, 'Fictional market, real behaviour, nothing here is advice.')}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
       }

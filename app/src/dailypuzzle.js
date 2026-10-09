@@ -23,6 +23,9 @@ export const TRIES = 3;
 export const WAGE = 4;                        /* price units, paid once */
 const EPOCH = Date.UTC(2026, 0, 1) / 86400000;   /* day 0 of the puzzle series */
 
+/* a price unit as the child's currency writes it, in whole units of it, never zero */
+const shown = (units) => Math.max(1, price(units));
+
 export function dayNo(t) { return Math.floor((t || Date.now()) / 86400000) - EPOCH; }
 
 /* A tiny deterministic generator: the day number is the only input, so the
@@ -46,7 +49,12 @@ export function puzzle(day) {
   const pick = [];
   const pool = GOODS.slice();
   for (let i = 0; i < n; i++) pick.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
-  const lines = pick.map(([name, em]) => ({ name, em, qty: 1, each: 5 + Math.floor(r() * 24) }));
+  /* the prices are drawn in price units (the same draw in every house), then written
+     in the child's OWN currency, as whole notes and coins of it, before anything is
+     added: §1.6 — a receipt converted line by line after the sum never adds up in $
+     or £, and one built in the display currency always does. Distinct units can land
+     on the same price in a coarse currency; the puzzle is still exact. */
+  const lines = pick.map(([name, em]) => ({ name, em, qty: 1, each: shown(5 + Math.floor(r() * 24)) }));
   /* one line gets a quantity, so division shows up about half the time */
   const multi = r() < 0.5;
   const hidden = Math.floor(r() * lines.length);
@@ -75,10 +83,13 @@ export function guess(c, n, day) {
   if (won || st.tries.length >= TRIES) { st.done = true; st.won = won; }
   c.puzzle = st;
   let paid = 0;
-  if (st.done && st.won && !st.paid) { st.paid = true; paid = sim.earn(c, price(WAGE), "Today's till", 'wage'); sim.questTick(c, 'earn', paid); }
+  /* §1.1 · one daily wage, through the same capped door as the games (sim.gameWage), and
+     no extra quest tick: earn() already counts it toward "earn" once — a second tick here
+     counted the till twice */
+  if (st.done && st.won && !st.paid) { st.paid = true; paid = sim.gameWage(c, "Today's till", price(WAGE)).paid; }
   if (st.done && st.won) sim.badge(c, st.tries.length === 1 ? 'first-look' : 'till-solved');
   sim.stamp(c);
-  return { won, done: st.done, left: TRIES - st.tries.length, paid, near: !won && Math.abs(v - p.answer) <= 2 };
+  return { won, done: st.done, left: TRIES - st.tries.length, paid, near: !won && Math.abs(v - p.answer) <= Math.max(1, shown(2)) };
 }
 
 /* The share is the shape of the attempt: how many tries, and whether each

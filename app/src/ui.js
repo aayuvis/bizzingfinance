@@ -91,7 +91,11 @@ export function sum(a) { return a.reduce((x, y) => x + y, 0); }
 /* Deterministic PRNG — the market must replay identically for everyone,
    and a demo that reshuffles on reload cannot be reasoned about. */
 export function rng(seed) {
-  let s = seed >>> 0 || 1;
+  /* the seed is mixed first (a murmur3 finaliser): xorshift's first draws for a small seed
+     sit near zero and track the seed, which made seed 1, 2, 3… all open Main Street on a 1 */
+  let s = seed >>> 0;
+  s ^= s >>> 16; s = Math.imul(s, 0x85ebca6b) >>> 0; s ^= s >>> 13; s = Math.imul(s, 0xc2b2ae35) >>> 0; s ^= s >>> 16;
+  s = s || 1;
   return function () {
     s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0;
     return s / 4294967296;

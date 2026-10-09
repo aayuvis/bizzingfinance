@@ -92,6 +92,17 @@ export function face(who, size) {
     : c.svg;
   return `<span class="who" style="${size ? `width:${size}px;height:${size}px` : ''}">${inner}</span>`;
 }
+/* an <img>-ready source for a character: the drawn portrait, or the SVG as a blob URL
+   (for a canvas, which cannot draw markup) — made once per character */
+const blobs = {};
+export function portraitSrc(who) {
+  const img = art('cast-' + who);
+  if (img) return img;
+  if (blobs[who]) return blobs[who];
+  const c = CAST[who] || CAST.pip;
+  if (typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) return '';
+  return (blobs[who] = URL.createObjectURL(new Blob([c.svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')], { type: 'image/svg+xml' })));
+}
 export function portrait(who) {
   const c = CAST[who] || CAST.pip;
   const img = art('cast-' + who);

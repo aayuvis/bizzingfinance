@@ -321,7 +321,7 @@ export function stallGame(ctx, seed) {
         ${row.lost ? `<p class="small muted">${row.lost} customer${row.lost === 1 ? '' : 's'} walked off without buying${row.wrong ? `, ${row.wrong} of them served the wrong thing` : ''}.</p>` : ''}
         ${row.auto ? '<p class="small muted">Auto-served: everyone was served, and a few people noticed nobody was really there. A little less goodwill next week.</p>' : ''}
       </div>
-      <p class="small so-pay">${wage.capped ? `Played for practice: Stall of My Own pays for its first ${sim.GAME_PAYS} weeks a day. Tomorrow it pays again.` : wage.paid ? `Earned ${money(wage.paid)} for the week, straight into your wallet.` : 'Nothing was sold, so nothing was earned this week.'}</p>
+      <p class="small so-pay">${wage.capped ? esc(ctx.cappedLine) : wage.paid ? `Earned ${money(wage.paid)} for the week, straight into your wallet.` : 'Nothing was sold, so nothing was earned this week.'}</p>
       <button class="btn wide" data-act="soNext">${last ? 'See the season →' : `On to week ${row.n + 1} →`}</button>`)}
     </div>`;
   };

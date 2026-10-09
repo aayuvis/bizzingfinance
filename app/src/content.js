@@ -1203,7 +1203,7 @@ export const BADGES = {
   'borrowed-well':     { em: '🤝', name: 'Repaid in full',    desc: 'Took a loan, knew the cost, cleared it.' },
   'diversified':       { em: '🧺', name: 'Never just one',    desc: 'Kept a Market Cup season spread out.' },
   'shopkeeper':        { em: '🏪', name: 'Open for business', desc: 'Traded a day at Bizz & Co and counted it honestly.' },
-  'profit-day':        { em: '💹', name: 'In the black',      desc: 'A trading day that made more than it cost.' },
+  'profit-day':        { em: '📈', name: 'In the black',      desc: 'A trading day that made more than it cost.' },
   'chapter-c1':        { em: '📗', name: 'What money is',     desc: 'Chapter one, done.' },
   'chapter-c2':        { em: '📗', name: 'Earning it',        desc: 'Chapter two, done.' },
   'chapter-c3':        { em: '📘', name: 'Making a plan',     desc: 'Chapter three, done.' },

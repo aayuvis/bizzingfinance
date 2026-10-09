@@ -20,6 +20,9 @@ import { LOOKS, isOpen as lookOpen, openSay } from './looks.js';
 import { ctxFor, BY_ID } from './catalogue.js';
 import * as audio from './audio.js';
 import { pinSet } from './pin.js';
+import { levelAtLeast } from './content.js';
+/* the Market Game's door, one number for the Play cover, the drawer and the route */
+export const M40_LEVEL = 13;
 
 export const HIVE = 'https://aayuvis.github.io/Bizzing_Schedule/';
 export const TABS = [
@@ -103,7 +106,9 @@ export function drawer(c) {
     <nav class="dr-list" aria-label="Everything else">
       ${DRAWER.map((d) => d.sep ? '<hr>' : d.href
         ? `<a class="dr-item" href="${d.href}">${ico(d.i, '', 22)}<span class="grow">${d.n}</span></a>`
-        : `<button class="dr-item" data-act="${d.act || 'nav'}" data-arg="${d.act ? '' : d.k}">${ico(d.i, '', 22)}<span class="grow">${d.n}${d.sub ? `<span class="small muted">${d.sub}</span>` : ''}</span>${d.lock ? ico('lock', '', 16) : ''}</button>`).join('')}
+        : `<button class="dr-item${d.k === 'market40' && !levelAtLeast(c, M40_LEVEL) ? ' locked' : ''}" data-act="${d.act || 'nav'}" data-arg="${d.act ? '' : d.k}">${ico(d.i, '', 22)}<span class="grow">${d.n}${d.k === 'market40' && !levelAtLeast(c, M40_LEVEL)
+          /* §2.7 · the level-13 lock shows here too, as it does on the Play cover */
+          ? `<span class="small muted">Opens at level ${M40_LEVEL}</span>` : d.sub ? `<span class="small muted">${d.sub}</span>` : ''}</span>${d.lock || (d.k === 'market40' && !levelAtLeast(c, M40_LEVEL)) ? ico('lock', '', 16) : ''}</button>`).join('')}
     </nav>
   </aside></div>`;
 }

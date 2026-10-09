@@ -986,6 +986,12 @@ const openBoard = async (p) => {
   await p.evaluate(FXWATCH);
   await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); B.fire('game', 'mn'); B.fire('gbegin', 'mn'); });
   await p.waitForSelector('#msBoard [data-sq]');
+  /* dice are seeded per game (docs/12 §2.9): replay the first game whose opening roll is
+     3 or more, so a walk has squares in between to be seen walking through */
+  await p.evaluate(async () => { const B = window.BZF, m = await B.arcadeReady();
+    let s = 1; for (; s < 200; s++) { m.startGame('mn', s); B.R.game.act('mnRoll'); const d = B.R.game.g.die; m.quitGame(); if (d >= 3) break; }
+    m.startGame('mn', s); B.R.render(); });
+  await p.waitForSelector('#msBoard [data-sq]');
 };
 async function kitChecks() {
   const kctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
@@ -1257,6 +1263,109 @@ async function stallChecks(label, vp, isMobile, scheme) {
   await ctx.close();
 }
 
+/* docs/12 §1.5, §1.8, §2.7 (T7) — the clocks at 4 fps, a hidden tab, the 44 px steppers,
+   dark end cards, faces on the board and the Market Game's lock, in the built app.
+   4 fps is made by replacing requestAnimationFrame with a 250 ms timer, and each frame
+   logs the game's own clock beside the frame's timestamp, so the comparison is exact. */
+async function gameChecks() {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark' });
+  const p = await ctx.newPage();
+  const errors = []; p.on('pageerror', (e) => errors.push(e.message + (process.env.STACK ? ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' ') : '')));
+  await p.goto(URL0 + '?demo'); await p.waitForSelector('[data-bz=next]');
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = true; B.setTester(true); B.fire('closeOv'); });
+  const SLOW = () => {
+    window.__frames = [];
+    window.requestAnimationFrame = (cb) => setTimeout(() => {
+      const ts = performance.now(); cb(ts);
+      const g = window.BZF.R.game, st = (g && g.st) || {};
+      window.__frames.push({ ts, t: st.t, left: st.left, wall: Date.now() });
+    }, 250);
+    window.cancelAnimationFrame = (id) => clearTimeout(id);
+  };
+  await p.evaluate(SLOW);
+  const start = async (id) => { await p.evaluate((g) => { const B = window.BZF; B.fire('game', g); B.fire('gbegin', g); }, id); await p.waitForFunction((g) => window.BZF.R.game && window.BZF.R.game.id === g, id); };
+  /* game time ÷ wall time between the first and last frames that moved the clock */
+  const rate = (key, sign = 1) => p.evaluate(({ key, sign }) => {
+    const f = window.__frames.filter((x) => Number.isFinite(x[key]));
+    const live = f.filter((x, i) => i > 0 && x[key] !== f[i - 1][key]);
+    if (live.length < 4) return { n: live.length };
+    const a = live[0], b = live[live.length - 1];
+    const gaps = live.slice(1).map((x, i) => x.ts - live[i].ts).sort((m, n) => m - n);
+    return { n: live.length, r: sign * (b[key] - a[key]) / (b.ts - a.ts), wall: (b.wall - a.wall) / (b.ts - a.ts), fps: 1000 / gaps[gaps.length >> 1] };
+  }, { key, sign });
+  const res = {};
+  /* Change Rush (60 s) — past its 3-2-1 */
+  await start('cr'); await p.evaluate(() => { window.__frames = []; }); await p.waitForTimeout(6500); res.cr = await rate('t');
+  /* a hidden tab: the clock stops, and carries on when it is back */
+  const hide = (h) => p.evaluate((h) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); document.dispatchEvent(new Event('visibilitychange')); if (!h) delete document.hidden; }, h);
+  const t0 = await p.evaluate(() => window.BZF.R.game.st.t);
+  await hide(true); await p.waitForTimeout(1500);
+  const t1 = await p.evaluate(() => window.BZF.R.game.st.t);
+  await hide(false); await p.waitForTimeout(1200);
+  const t2 = await p.evaluate(() => window.BZF.R.game.st.t);
+  res.hidden = { held: t1 - t0, after: t2 - t1 };
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* Market Storm (42 s) */
+  await start('st'); await p.evaluate(() => { window.__frames = []; }); await p.waitForTimeout(4000); res.st = await rate('t');
+  await p.evaluate(() => window.BZF.R.game.act('stSell')); await p.waitForTimeout(300);
+  /* §1.8 · the storm's end card, in dark mode: the sentence it is for can be read */
+  const endContrast = () => p.evaluate(() => {
+    const el = document.querySelector('.gplay .endkey'); if (!el) return null;
+    const rgb = (s) => (s.match(/[\d.]+/g) || []).map(Number);
+    const lum = (c) => { const v = c.slice(0, 3).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+    const cs = getComputedStyle(el), fg = rgb(cs.color), bg = rgb(cs.backgroundColor);
+    /* the painting behind can be anything from black to white: the sentence must read over both,
+       which only its own paper can promise */
+    const a = bg[3] == null ? (bg.length >= 3 ? 1 : 0) : bg[3];
+    const cr = (under) => { const b = (bg.length >= 3 ? bg : [0, 0, 0]).slice(0, 3).map((x, i) => x * a + under[i] * (1 - a)); const L1 = lum(fg), L2 = lum(b); return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05); };
+    return +Math.min(cr([0, 0, 0]), cr([255, 255, 255])).toFixed(2);
+  });
+  res.stEnd = await endContrast();
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* Budget Blitz's end card, dark */
+  await start('bb'); await p.evaluate(() => { const g = window.BZF.R.game; for (let i = 0; i < 12 && !g.st.done; i++) g.decide(false); });
+  await p.waitForTimeout(200); res.bbEnd = await endContrast();
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* Compound Climb's charge: hold 800 ms of wall time, let go between frames */
+  await start('cc');
+  res.cc = await p.evaluate(async () => {
+    const g = window.BZF.R.game; const a = performance.now(); g.act('ccHold');
+    await new Promise((r) => setTimeout(r, 830)); const b = performance.now(); g.act('ccRelease');
+    return { got: g.st.maxCharge, want: (b - a) * 0.075 * g.kn.charge };
+  });
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* the Sweep job (45 s) */
+  await p.evaluate(async () => { const B = window.BZF, g = await B.startJobGame('sweep', () => B.quitGame()); B.R.game = g; B.R.s.ui.nav = 'arcade'; B.R.render(); g.act('jgStart'); window.__frames = []; });
+  await p.waitForTimeout(6000); res.sweep = await rate('left', -1);
+  await p.evaluate(() => window.BZF.quitGame());
+  const near = (x) => x && x.r > 0.95 && x.r < 1.05 && x.fps > 3.5 && x.fps < 4.5 && Math.abs(x.wall - 1) < 0.05;
+  ok('clocks at 4 fps run at 1.0× wall time (±5%): Change Rush, Market Storm, the Sweep job', near(res.cr) && near(res.st) && near(res.sweep), JSON.stringify({ cr: res.cr, st: res.st, sweep: res.sweep }));
+  ok('Compound Climb\'s charge at 4 fps is the time actually held, to the moment of letting go (±5%)', res.cc.got > res.cc.want * 0.95 && res.cc.got < res.cc.want * 1.05, JSON.stringify(res.cc));
+  ok('a hidden tab pauses the game, and it carries on when the tab is back', res.hidden.held === 0 && res.hidden.after > 500, JSON.stringify(res.hidden));
+  ok('dark mode: Budget Blitz\'s and Market Storm\'s end-card sentence reads (contrast ≥ 4.5)', res.stEnd >= 4.5 && res.bbEnd >= 4.5, `storm ${res.stEnd} · blitz ${res.bbEnd}`);
+  /* §1.8 · the Market Cup's steppers are thumb-sized */
+  await start('mc');
+  const step = await p.evaluate(() => [...document.querySelectorAll('.gplay .stepper button')].map((b) => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }));
+  const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  ok('the Market Cup\'s steppers are at least 44 px, and the screen still fits a phone', step.length === 8 && step.every((x) => x >= 44) && over <= 1, `${step.join(',')} · overflow ${over}`);
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* §2.9 · the board's tokens wear faces */
+  await p.evaluate(() => { window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16); });
+  await start('mn'); await p.waitForTimeout(800);
+  const faces = await p.evaluate(() => { const f = window.BZF.R.game.g.look.faces || []; return f.map((im) => im.complete && im.naturalWidth > 0); });
+  ok('Main Street\'s tokens are faces — the child\'s avatar, Mags and Bo — loaded and drawn', faces.length === 3 && faces.every(Boolean), JSON.stringify(faces));
+  await p.evaluate(() => window.BZF.fire('gquit')); await p.evaluate(() => window.BZF.fire('closeOv'));
+  /* §2.7 · the Market Game's level-13 lock holds on the ☰ drawer link and the route */
+  await p.evaluate(() => { const B = window.BZF; B.R.s.settings.tester = false; B.setTester(false); B.R.s.kids[B.R.s.active].learn.level = 4; B.fire('drawer'); });
+  await p.waitForSelector('.drawer');
+  const dr = await p.evaluate(() => { const b = document.querySelector('.drawer [data-arg="market40"]'); return b ? { locked: b.classList.contains('locked'), says: /Opens at level 13/.test(b.textContent), lock: !!b.querySelector('svg') } : null; });
+  await p.evaluate(() => { const B = window.BZF; B.fire('closeOv'); location.hash = '#/market40'; }); await p.waitForTimeout(400);
+  const route = await p.evaluate(() => ({ lock: !!document.querySelector('.m40lock'), game: !!document.querySelector('[data-act="mgAct"]') }));
+  ok('below level 13 the ☰ drawer shows the Market Game locked, and #/market40 shows the lock, not the game', dr && dr.locked && dr.says && route.lock && !route.game, JSON.stringify({ dr, route }));
+  ok('games: nothing threw', !errors.length, errors.slice(0, 2).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1265,6 +1374,7 @@ await safely('phone-dark', () => run('phone-dark', { width: 390, height: 844 }, 
 await safely('demo', demo);
 await safely('kit', kitChecks);
 await safely('deck', deckChecks);
+await safely('games', gameChecks);
 await safely('a6-desktop', () => a6Checks('a6-desktop', { width: 1280, height: 860 }, false));
 await safely('a6-phone', () => a6Checks('a6-phone', { width: 390, height: 844 }, true));
 await safely('stall-phone', () => stallChecks('phone', { width: 390, height: 844 }, true, 'light'));

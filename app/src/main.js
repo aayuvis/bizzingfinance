@@ -18,7 +18,7 @@ import * as backup from './backup.js';
 import { setRate } from './lessonplayer.js';
 import { PLACES } from './town.js';
 import { ALL_CARDS, LETTERS, SHOP, ASSETS, CHAPTERS, BADGES, STOCK, HOMES, WORLDS, QUESTS, FIXES,
-  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, gameOpen, isOpen as chapterOpen, needFor, setTester, GLOSSARY, LORE, chapterLocked as chapterLockedFor } from './content.js';
+  rankFor, rankObj, shuffledDrill, drillCount, chapterDone, gameOpen, isOpen as chapterOpen, needFor, setTester, GLOSSARY, LORE, chapterLocked as chapterLockedFor, levelAtLeast } from './content.js';
 import * as sim from './sim.js';
 import { Store } from './store.js';
 import { hashPin, checkPin, pinSet } from './pin.js';
@@ -35,6 +35,17 @@ const mgReady = () => mgLoading || (mgLoading = Promise.all([import('./marketgam
   .then(([m, co, ev]) => { MG = m; MG_COMPANIES = co.COMPANIES; MG_EVENTS = ev.ALL; render(); return m; }));
 const mgView = () => MG ? MG.viewMarketGame() : (mgReady(), '<h1>The Market Game</h1><div class="card"><p class="small muted">Opening the Market Game…</p></div>');
 const mg = (fn) => (...a) => { if (MG) fn(...a); else mgReady(); };
+/* §2.7 · the Market Game opens at level 13 — by the Play cover, the ☰ drawer, search or a
+   typed #/market40 alike. The lock lives on the route, so no door can go round it. */
+import { M40_LEVEL } from './shell.js';
+function m40Locked(c) {
+  return `<div class="stack">
+    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Back to Play</button>
+    <div class="card m40lock"><div class="row" style="gap:10px">${ico('lock', '🔒', 22)}<div class="grow">
+      <div class="eyebrow">Opens at level ${M40_LEVEL}</div><h1 style="margin:2px 0;font-size:22px">The Market Game</h1>
+      <p class="small muted">You are on level ${c.learn.level}. Forty companies and forty years of reading the reports wait for you there — the chapters before it are what make the reports make sense.</p></div></div></div>
+  </div>`;
+}
 import { validate } from './objectives.js';
 import { OBJECTIVES, NEW_CARD_LIST, objective, assessCard, teachCard } from './objectives.js';
 import { cardById as resolveCard, isLesson, practiceCard, practiceTeach, genReady, whenGenReady } from './cards.js';
@@ -246,7 +257,7 @@ function render() {
     nav === 'mistakes' ? viewMistakes() :
     nav === 'parents' ? (R.gate ? viewParents() : viewGate()) :
     nav === 'report' ? (R.gate ? viewReport() : viewGate()) :
-    nav === 'market40' ? mgView() :
+    nav === 'market40' ? (levelAtLeast(c, M40_LEVEL) ? mgView() : m40Locked(c)) :
     nav === 'story' ? storyView() :
     nav === 'library' ? viewLibrary() :
     nav === 'sprint' ? sprintView() :
@@ -1747,9 +1758,8 @@ on('print', () => {
 
 /* arcade */
 on('game', (id) => {
-  const c = C();
-  sim.questTick(c, 'game', 1);
-  if (id === 'mn') sim.questTick(c, 'board', 1);
+  /* §1.1 · no quest ticks here: opening a title card is not playing. "Play two games" and
+     "Finish a game of Main Street" tick when a round FINISHES (arcade.js roundEnd) */
   /* the title card first (F3); Start begins the game */
   R.gameIntro = id; R.s.ui.nav = 'arcade'; sfx.click(); render(); window.scrollTo(0, 0);
 });
@@ -1804,6 +1814,14 @@ function requeue(field) {
   if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 }
 
+/* §1.5 · every game pauses while the tab is hidden and carries on from where it was when it
+   comes back: the loop stops (so no frame carries the time away), a card's clock keeps what
+   it had left, and a hold in progress is dropped rather than charged for the absence */
+document.addEventListener('visibilitychange', () => {
+  const g = R.game; if (!g) return;
+  if (document.hidden) { if (g.stop) g.stop(); R.paused = true; }
+  else if (R.paused) { R.paused = false; if (g.resume) g.resume(); else if (g.mount) g.mount(); }
+});
 document.addEventListener('keyup', (e) => {
   if (R.game && R.game.keyup && !R.overlay) R.game.keyup(e);
 });
@@ -2043,8 +2061,8 @@ on('sources', (key) => { R.overlay = { kind: 'sources', key: key || '' }; sfx.cl
 on('till', () => {
   const c = C(), v = (R.fields.till || '').replace(/[^0-9]/g, '');
   if (!v) { toast('Type what one cost'); return; }
-  /* the field is in the child's own currency; the puzzle is in price units */
-  const r = puz.guess(c, Math.round(Number(v) / (price(1) || 1)));
+  /* the field and the receipt are both in the child's own currency (§1.6): no conversion */
+  const r = puz.guess(c, Number(v));
   if (r.bad) { toast('A number, in ' + CURRENCIES[c.currency].sign); return; }
   R.fields.till = '';
   if (r.won) { sfx.level(); confetti(40); toast(r.paid ? 'Right — and ' + money(r.paid) + ' for the working' : 'Right'); }
