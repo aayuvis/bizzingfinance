@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Bizzing Finance</title>
+<title>Bizzing Money</title>
 <meta name="description" content="A town where kids 8+ get a wallet, a budget, a bank and a portfolio that are entirely simulated and entirely theirs.">
 <meta name="theme-color" content="#1F8A5B">
 <!-- The webfonts are ours, on our own origin, and that is deliberate twice over.
@@ -2834,7 +2834,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
   }
   function mark(size3) {
     const s = size3 || 28;
-    return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Finance">
+    return `<svg class="mark" viewBox="0 0 48 48" width="${s}" height="${s}" role="img" aria-label="Bizzing Money">
     <rect width="48" height="48" rx="12" fill="#0E6B78"/>
     <path fill="#F0B429" fill-rule="evenodd" d="M24 6a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-8.5 24.5a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v3.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6zm6.1-5.6a1.6 1.6 0 0 1 1.6-1.6h1.6a1.6 1.6 0 0 1 1.6 1.6v9.5a1.6 1.6 0 0 1-1.6 1.6h-1.6a1.6 1.6 0 0 1-1.6-1.6zm6-6.4a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6v15.9a1.6 1.6 0 0 1-1.6 1.6h-1.8a1.6 1.6 0 0 1-1.6-1.6z"/>
   </svg>`;
@@ -13016,11 +13016,11 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
     <section class="scard" aria-labelledby="st-gu"><h3 id="st-gu">Grown-ups ${ico("lock", "", 16)}</h3>
       ${row("Grown-ups\u2019 area", pinSet(R.s.parent) ? "Behind the PIN: age band, pay day, currency, the plan, backup and tester mode." : "Set a PIN to keep the money settings and tester tools away from an idle thumb.", `<button class="btn ghost sm" data-act="nav" data-arg="parents">${ico("lock", "", 15)} Open</button>`)}
     </section>
-    <footer class="sfoot"><button class="small" data-act="privacy">Privacy</button> \xB7 <button class="small" data-act="about">About</button> \xB7 <span class="small muted">Bizzing Finance \xB7 build ${R.version || ""}</span>${R.install ? ` \xB7 <button class="small" data-act="install">Install</button>` : ""}</footer>`;
+    <footer class="sfoot"><button class="small" data-act="privacy">Privacy</button> \xB7 <button class="small" data-act="about">About</button> \xB7 <span class="small muted">Bizzing Money \xB7 build ${R.version || ""}</span>${R.install ? ` \xB7 <button class="small" data-act="install">Install</button>` : ""}</footer>`;
   }
   function privacySheet() {
     return `<div class="sheet-h"><span class="eyebrow">Privacy</span><button class="iconbtn" data-act="closeOv" aria-label="Close">${ico("close", "", 20)}</button></div>
-    <h2 style="margin:2px 0 10px">What Bizzing Finance keeps</h2>
+    <h2 style="margin:2px 0 10px">What Bizzing Money keeps</h2>
     <ul class="plist">
       <li><b>On this device only:</b> each child's first name, age band and avatar, and the town \u2014 the money, the lessons, the medals. Nothing else about a child is ever asked for.</li>
       <li><b>Shared with the other Bizzing apps on this device:</b> the Bizzing coins wallet and the minutes-and-milestones feed the Hive reads (<code>bizzing.wallet</code>, <code>bizzing.activity</code>). They stay in this browser.</li>
@@ -13085,7 +13085,7 @@ html[data-bz-dark] .stchart{background:rgb(20 24 36 / .88);color:#F4EEE4}
         { k: "hive", n: "Back to the Hive", i: "hive", href: HIVE }
       ];
       coinSvg = (s = 20) => `<svg class="bzcoin" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="#F0B429" stroke="#3A2A5C" stroke-width="1.6"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#B57E10" stroke-width="1.2"/><path d="M12 8.2 13.2 10.8 16 11.2 14 13.1 14.5 15.9 12 14.6 9.5 15.9 10 13.1 8 11.2 10.8 10.8z" fill="#FFF3C4"/></svg>`;
-      APPNAME = { bee: "Bee", maths: "Maths", geography: "Geography", india: "India", finance: "Finance" };
+      APPNAME = { bee: "Bee", maths: "Maths", geography: "Geography", india: "India", finance: "Money" };
       WHY = { answer: "a right answer", stop: "a lesson finished", contest: "a test passed", mastery: "an idea mastered", migrated: "coins brought over" };
       sw = (act, on3, label3) => `<button class="sw" role="switch" aria-checked="${!!on3}" data-act="${act}" aria-label="${esc(label3)}"><i></i></button>`;
       seg = (act, opts, cur3, label3) => `<span class="seg" role="group" aria-label="${esc(label3)}">${opts.map(([v, l]) => `<button data-act="${act}" data-arg="${v}" aria-pressed="${cur3 === v}">${l}</button>`).join("")}</span>`;
@@ -24853,7 +24853,7 @@ ${drawerHTML(o)}`;
     g.fillStyle = "#3A2A5C";
     g.textAlign = "center";
     g.font = "800 40px Fraunces, Georgia, serif";
-    g.fillText("Bizzing Finance", W3 / 2, 520);
+    g.fillText("Bizzing Money", W3 / 2, 520);
     g.font = '600 34px "Hanken Grotesk", system-ui, sans-serif';
     g.fillText("This certificate is for", W3 / 2, 590);
     g.font = "800 92px Fraunces, Georgia, serif";
@@ -25050,7 +25050,7 @@ ${drawerHTML(o)}`;
       return shell4(`
       <div style="text-align:center">
         <div style="margin:0 auto 6px;width:112px">${pipPose("wave", 112, "Pip waves hello")}</div>
-        ${first ? '<div class="eyebrow">Bizzing Finance</div>' : ""}
+        ${first ? '<div class="eyebrow">Bizzing Money</div>' : ""}
         <h1 style="font-size:32px">${first ? 'Welcome to <em style="font-style:italic">Bizzington</em>' : "A new stall on Market Row"}</h1>
         <p class="muted" style="margin-top:8px">${first ? "Get a stall, a wallet and four jars \u2014 and learn money by running them." : "Another child, their own town, their own money. Nothing is shared between them."}</p>
       </div>
@@ -25308,7 +25308,7 @@ ${drawerHTML(o)}`;
       /* every tile goes to its own thing (owner, 3 Oct): the word, the card, the person quoted */
       tip: tip ? { kicker: "Tip from a card you read", text: tip.text, href: "#/atlas/" + tip.card.id } : { kicker: "Tip", text: "Split money the moment it lands \u2014 a pile gets spent as a pile.", href: "#/atlas/c3b" },
       quote: { kicker: "Overheard in Bizzington", text: cast[1], who: cast[0], href: "#/cast/" + ({ "Nana Bizz": "nana", Pip: "pip", Mags: "mags", Bea: "bea", Bo: "bo" }[cast[0]] || "pip") },
-      foot: '<a href="#/privacy">Privacy</a> \xB7 Bizzing Finance \u2014 no real money, ever'
+      foot: '<a href="#/privacy">Privacy</a> \xB7 Bizzing Money \u2014 no real money, ever'
     });
     const deckN = deckIds(R.s, c).length;
     const homeBody = body.replace(/(data-bz="greet">)(<img [^>]*>)/, `$1<button class="bz-avbtn" data-act="avDeck" aria-label="Your avatar cards \u2014 ${deckN} yours" title="Flip through your avatar cards">$2<span class="bz-avcount" aria-hidden="true">${deckN}</span></button>`);
@@ -25756,7 +25756,7 @@ ${drawerHTML(o)}`;
     const body = sub === "place" ? viewPlace() : sub === "jars" ? viewJars() : sub === "goals" ? viewGoals() : sub === "bank" ? viewBank() : sub === "portfolio" ? viewExchange() : sub === "business" ? viewBusiness() : viewWallet();
     return `<div class="stack">${strip}${body}</div>`;
   }
-  var APP_NAMES = { bee: "Bizzing Bee", maths: "Bizzing Maths", geography: "Bizzing Geography", india: "Bizzing India", finance: "Bizzing Finance" };
+  var APP_NAMES = { bee: "Bizzing Bee", maths: "Bizzing Maths", geography: "Bizzing Geography", india: "Bizzing India", finance: "Bizzing Money" };
   function familyCoinsCard(c) {
     if (R.demo) return "";
     const f = familyCoins(c.name);
@@ -26771,7 +26771,7 @@ ${drawerHTML(o)}`;
   var VERSION = "2026-09-30";
   function aboutSheet() {
     return `
-    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Finance</h2>
+    <div class="row" style="gap:12px;align-items:center">${mark(44)}<div><div class="eyebrow">About</div><h2 style="margin:2px 0 0">Bizzing Money</h2>
       <div class="small muted">Set in Bizzington \xB7 build ${VERSION}</div></div></div>
     <p class="small" style="margin-top:12px">A town where a child gets a stall, a wallet and four jars, and learns money by running their own \u2014 with money that isn't real. For children of eight and up, and the grown-ups who ask them what they did with it.</p>
     <div class="sect"><b>How it was made</b><i></i></div>
@@ -26831,7 +26831,7 @@ ${drawerHTML(o)}`;
     const counts2 = [[ALL_CARDS.length, "lessons, every one read aloud"], [GAMES.length, "games, keyboard and touch"], [WORLDS.length, "places to walk"], [Object.keys(BADGES).length, "medals for decisions"]];
     return `<div class="stack" style="max-width:560px;margin:3vh auto 0">
     <div style="text-align:center">${pipPose("wave", 128, "Pip the squirrel waves hello")}
-      <div class="eyebrow" style="margin-top:6px">Bizzing Finance</div>
+      <div class="eyebrow" style="margin-top:6px">Bizzing Money</div>
       <h1 style="font-size:clamp(30px,8vw,40px);line-height:1.05;margin-top:4px">Earn it, keep it, grow it \u2014 in a town of your own.</h1>
       <p class="muted" style="margin-top:10px;font-size:16px">For children of eight and up: a stall, a wallet, four jars, a bank that lends, an exchange, a shop of their own \u2014 and a grown-up's page that reports what they learned, not how long they stayed.</p>
     </div>
@@ -28123,7 +28123,7 @@ ${drawerHTML(o)}`;
     const tabOf2 = tabOf(nav);
     root.innerHTML = shell({
       app: "finance",
-      name: "Finance",
+      name: "Money",
       mascot: "./mascot/sm/pip-wave.webp",
       coins: coinBalance2(c.name),
       dark: !!R.dark,
@@ -28154,7 +28154,7 @@ ${drawerHTML(o)}`;
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> \u2014 Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ""}
       ${clockSuspect(s) ? clockWarning() : ""}${body}`
     }) + `
-    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Finance is ready \xB7 Reload</button>' : ""}
+    ${R.update ? '<button class="updatebar" data-act="update">A newer Bizzing Money is ready \xB7 Reload</button>' : ""}
     ${R.overlay ? overlay() : ""}`;
     if (R.game && R.game.mount) R.game.mount();
     const gc = root.querySelector(".gplay .gcard");
@@ -28297,7 +28297,7 @@ ${drawerHTML(o)}`;
       <div class="sc-medal">${ico(b.em, b.em, 72)}</div>
       <div class="eyebrow">${esc(c.name)} earned a medal in Bizzington</div>
       <h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p>
-      <div class="sc-foot">${kidBadge2(c, 44)}<span class="small">Bizzing Finance \xB7 no real money, ever</span></div>
+      <div class="sc-foot">${kidBadge2(c, 44)}<span class="small">Bizzing Money \xB7 no real money, ever</span></div>
     </div></div>`;
     }
     if (o.kind === "drawer") return drawer(c);
@@ -30400,7 +30400,7 @@ So it costs ${money(offer.cost)}.`);
     <ul>${CHAPTERS.map((ch) => `<li>${esc(ch.title)} \u2014 ${ch.cards.filter((x) => c.learn.done[x.id]).length}/${ch.cards.length}</li>`).join("")}</ul>
     <h2>Recent movements</h2>
     <ul>${c.money.txns.slice(0, 20).map((t) => `<li>${new Date(t.t).toLocaleDateString()} \u2014 ${esc(t.label)} \u2014 ${t.kind === "in" ? "+" : "\u2212"}${money(t.amt)}</li>`).join("")}</ul>
-    <p style="margin-top:18px;font-size:11px">Simulated money only. Bizzing Finance never touches real money.</p>`;
+    <p style="margin-top:18px;font-size:11px">Simulated money only. Bizzing Money never touches real money.</p>`;
     document.body.appendChild(w);
     setTimeout(() => {
       try {
