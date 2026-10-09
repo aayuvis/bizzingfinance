@@ -1580,9 +1580,11 @@ on('sell', (id) => { sim.sellAsset(C(), id); sfx.click(); render(); });
 
 /* bizz & co */
 /* the Market Game (marketgame.js) */
-const G = () => { const c = C(); if (!c.game) c.game = MG.newGame((c.market && c.market.seed) || 1); return c.game; };
+const G = () => { const c = C(); if (!c.game) c.game = MG.newGame(); return c.game; };
 on('mgAct', mg((a) => { MG.startAct(G(), +a); sfx.level(); render(); window.scrollTo(0, 0); }));
-on('mgOpen', mg((id) => { const g = G(); MG.study(g, id); g.opened = { co: id }; sfx.click(); render(); window.scrollTo(0, 0); }));
+on('mgOpen', mg((id) => { const g = G(); const i = (g.sheets || []).indexOf(id); if (i >= 0) { g.sheet = i; MG.study(g, id); } sfx.click(); render(); window.scrollTo(0, 0); }));
+/* §2.7 · reading first: three sheets, one at a time, each answered before the money moves */
+on('mgSheet', mg((i) => { const g = G(); MG.nextSheet(g, +i - (g.sheet || 0)); sfx.click(); render(); window.scrollTo(0, 0); }));
 on('mgClose', mg(() => { G().opened = {}; render(); window.scrollTo(0, 0); }));
 on('mgAssess', mg((arg) => {
   const [id, pick] = arg.split(':');
@@ -1590,7 +1592,7 @@ on('mgAssess', mg((arg) => {
   if (r.right) sfx.good(); else sfx.bad();
   render();
 }));
-on('mgToInvest', mg(() => { const g = G(); g.phase = 'invest'; g.opened = {}; sfx.click(); render(); window.scrollTo(0, 0); }));
+on('mgToInvest', mg(() => { if (MG.toInvest(G())) sfx.click(); else sfx.bad(); render(); window.scrollTo(0, 0); }));
 on('mgBuy', mg((arg) => { const [id, amt] = arg.split(':'); const a = MG.buy(G(), id, +amt); if (a) sfx.coin(); render(); }));
 on('mgSell', mg((id) => { const v = MG.sell(G(), id); if (v) { sfx.coin(); toast('Sold for ' + money(v)); } render(); }));
 on('mgPlay', mg(() => { G().phase = 'play'; sfx.level(); render(); window.scrollTo(0, 0); }));

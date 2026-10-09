@@ -54,7 +54,7 @@ export function viewArcade() {
     </button>`;
   };
   const M40 = { id: 'm40', name: 'The Market Game', keys: '', needs: null,
-    blurb: 'Forty companies that do not exist, forty years of things happening to them. Study one, say what would hurt it, then put money behind your answer.' };
+    blurb: 'Forty companies that do not exist, forty years of things happening to them. Read three, say what would hurt each one, then put money behind your answers.' };
   const m40open = levelAtLeast(c, M40_LEVEL);
   /* A locked headline game at the top of the Arcade told a new child the
      best thing here was not for them. Open, it leads; locked, it waits at

@@ -5,10 +5,12 @@
    commit, then live with it. Long only — a short is unlimited loss scored on
    outcome, and that is a hair from the gambling mechanics CONCEPT §6.3 bans.
 
-     PICK    choose a decade. Four acts, four different worlds.
-     STUDY   the description, the annual report, the shareholder letter
-     ASSESS  say what would hurt this company. Scored on the REASON.
-     INVEST  allocate. You may only buy what you studied.
+     PICK    choose a decade. Four acts, four different worlds. A how-to card first.
+     STUDY   three company sheets, dealt for this play: the description, the annual
+             report, the shareholder letter (docs/12 §2.7 · reading first)
+     ASSESS  on each sheet, say what would hurt it. Scored on the REASON. No money
+             moves until all three are answered.
+     INVEST  allocate. You may only buy what you read and answered.
      PLAY    a year a turn. Events land. Prices move. You may act.
      REVIEW  what happened, why, and what your assessment got right.
 
@@ -16,7 +18,10 @@
    ranks the quality of the thinking beside the money, and they come apart
    often enough to be the point.                                            */
 
-import { esc, sfx, toast, clamp, sparkline } from './ui.js';
+import { esc, sfx, toast, clamp, sparkline, rng } from './ui.js';
+import { WORLDS } from './content.js';
+import { plateFor } from './looks.js';
+import { BLD } from './buildings-gen.js';
 import { money, price } from './fmt.js';
 import { say, ico } from './art.js';
 import { COMPANIES, SECTORS, byId as coById } from '../content/companies.js';
@@ -45,6 +50,22 @@ export function castFor(seed, act) {
   return out;
 }
 
+/* §2.7 · reading first: the decade deals THREE sheets from its cast, for this play's seed —
+   three different industries, and where the cast allows it three different answers to
+   "what could hurt it", so no one answer reads all three */
+export const SHEETS = 3;
+export function sheetsFor(seed, act) {
+  const r = rng(((seed >>> 0) ^ (0x9e37 * (act + 1))) >>> 0);
+  const pool = castFor(seed, act).slice();
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const out = [];
+  pool.forEach((c) => { if (out.length < SHEETS && !out.some((o) => o.hurt === c.hurt)) out.push(c); });
+  pool.forEach((c) => { if (out.length < SHEETS && !out.includes(c)) out.push(c); });
+  return out.map((c) => c.id);
+}
+/* §1.2 · a seed per play: a decade started is a fresh forty years, kept with the round */
+export function freshSeed() { return 1 + Math.floor(Math.random() * 2147483646); }
+
 /* ── the assessment. One question per company, and it is always the same
    question, because it is the one that matters: what would hurt this?
    §2.7 · the answer is the one the company's OWN sheet states (`c.hurt`, read off
@@ -70,8 +91,8 @@ export function assessOptions(c) {
   return { options: ASSESS.slice(), answer, why };
 }
 
-export function newGame(seed) {
-  return { seed, act: null, year: 0, phase: 'pick', studied: [], assessed: {},
+export function newGame(seed = freshSeed()) {
+  return { seed, act: null, year: 0, phase: 'pick', studied: [], assessed: {}, sheets: [], sheet: 0,
     cash: 10000, holdings: {}, opened: {}, log: [], score: { right: 0, asked: 0 } };
 }
 /* The simulation is heavy-ish; hold one per seed for the session. */
@@ -89,7 +110,13 @@ export function portfolioValue(g) {
 export function netWorth(g) { return g.cash + portfolioValue(g); }
 
 /* ── actions ─────────────────────────────────────────────────────────── */
-export function startAct(g, act) {
+export function startAct(g, act, seed = freshSeed()) {
+  /* §1.2 · every decade started is its own play: its own forty years and its own three sheets,
+     the seed kept with the round (c.rounds.m40) so it can be replayed */
+  g.seed = seed;
+  g.sheets = sheetsFor(seed, act); g.sheet = 0; g.opened = {};
+  const c = R.s && sim.kid(R.s);
+  if (c) { if (!c.rounds) c.rounds = {}; c.rounds.m40 = { seed, act, t: Date.now() }; }
   g.act = act; g.year = ACTS[act].from; g.phase = 'study';
   g.studied = []; g.assessed = {}; g.holdings = {}; g.cash = 10000;
   g.startWorth = 10000; g.log = [];
@@ -106,10 +133,14 @@ export function assess(g, id, pick) {
   g.score.asked++; if (right) g.score.right++;
   return { right, answer: a.answer, why: a.why, label: a.options.find((o) => o.id === a.answer).t };
 }
+/* reading first: the money moves only once every sheet dealt has its answer */
+export const readAll = (g) => (g.sheets || []).length > 0 && g.sheets.every((id) => g.assessed[id]);
+export function toInvest(g) { if (!readAll(g)) return false; g.phase = 'invest'; g.opened = {}; return true; }
+export function nextSheet(g, d = 1) { const n = (g.sheets || []).length; if (!n) return; g.sheet = Math.max(0, Math.min(n - 1, (g.sheet || 0) + d)); study(g, g.sheets[g.sheet]); }
 export function buy(g, id, amount) {
   const s = simFor(g.seed);
   const amt = Math.min(Math.round(amount), g.cash);
-  if (amt <= 0 || !g.studied.includes(id)) return 0;
+  if (amt <= 0 || !g.assessed[id] || !readAll(g)) return 0;
   const px = s.years[id][g.year].value;
   g.cash -= amt;
   g.holdings[id] = (g.holdings[id] || 0) + amt / px;
@@ -145,23 +176,33 @@ const arrow = (x) => (x >= 0 ? '▲' : '▼');
 
 export function viewMarketGame() {
   const c = K();
-  if (!c.game) c.game = newGame((c.market && c.market.seed) || 1);
+  /* §1.2 · a game made before per-play seeds kept the child's market seed for ever; a fresh
+     game draws its own, and every decade started draws again (startAct) */
+  if (!c.game) c.game = newGame();
   const g = c.game;
-  if (g.phase === 'pick') return viewPick(g);
-  if (g.phase === 'study') return viewStudy(g);
-  if (g.phase === 'invest') return viewInvest(g);
-  if (g.phase === 'review') return viewReview(g);
-  return viewPlay(g);
+  if (g.phase === 'study' && !(g.sheets && g.sheets.length)) { g.sheets = sheetsFor(g.seed, g.act); g.sheet = 0; }
+  const body = g.phase === 'pick' ? viewPick(g) : g.phase === 'study' ? viewStudy(g) : g.phase === 'invest' ? viewInvest(g)
+    : g.phase === 'review' ? viewReview(g) : viewPlay(g);
+  return hall(body, g.phase === 'pick');
+}
+
+/* §2.7 · the Exchange hall: the Exchange Quarter painted full width behind every screen of
+   the game, the hall itself standing in the middle of the first one — symmetric, light and dark */
+function hall(body, front) {
+  const plate = plateFor((WORLDS[3] || {}).id || 'exchange', !!R.dark);
+  return `<div class="m40hall${front ? ' front' : ''}" style="--hall:url(${plate})">
+    ${front && BLD.exchange ? `<div class="m40door"><img src="${BLD.exchange.src}" alt="" aria-hidden="true" width="${BLD.exchange.w}" height="${BLD.exchange.h}"></div>` : ''}
+    ${body}</div>`;
 }
 
 function shell(g, body, sub) {
   const act = g.act === null ? null : ACTS[g.act];
   return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    <button class="btn ghost m40leave" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
     <h1 class="sr">The Market Game</h1>
-    ${act ? `<div class="card" style="border-color:var(--action)">
+    ${act ? `<div class="card m40head">
       <div class="row"><div class="grow"><div class="eyebrow">Act ${g.act + 1} of 4 · ${esc(act.name)}</div>
-        <h3 style="font-size:17px;margin:1px 0">Year ${g.year - act.from + 1} of ${act.years}</h3>
+        <h3 style="font-size:17px;margin:1px 0">${g.phase === 'study' ? `Sheet ${(g.sheet || 0) + 1} of ${(g.sheets || []).length}` : `Year ${g.year - act.from + 1} of ${act.years}`}</h3>
         <p class="small muted">${esc(sub || act.blurb)}</p></div>
         <div style="text-align:right"><div class="eyebrow">Worth</div>
           <div class="big" style="font-size:20px">${money(netWorth(g))}</div></div></div>
@@ -169,51 +210,45 @@ function shell(g, body, sub) {
     ${body}</div>`;
 }
 
+/* §2.7 · the how-to card: the order is the lesson, so it is said before anything else */
+export const HOWTO = [
+  ['Pick a decade', 'Four decades, four different worlds. Each one deals you three companies.'],
+  ['Read three sheets', 'What it does, its report, its letter. On each, say what could hurt it most.'],
+  ['Then the money', 'Only once all three are answered: put your money behind what you read.'],
+  ['Ten years', 'A year a turn. Things happen, and every move has a reason you can find.'],
+  ['The review', 'How well you read them comes first. The money comes second, because it is partly the decade.'],
+];
 function viewPick(g) {
   return `<div class="stack">
-    <button class="btn ghost" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
-    <h1 style="font-size:28px">The Market Game</h1>
+    <button class="btn ghost m40leave" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    <h1 class="m40title">The Market Game</h1>
+    <section class="card m40how" aria-labelledby="m40how-h">
+      <div class="eyebrow" id="m40how-h">How to play</div>
+      <ol>${HOWTO.map(([h, t]) => `<li><b>${esc(h)}.</b> ${esc(t)}</li>`).join('')}</ol>
+      <p class="small muted">Long only, and nothing here is real money or a real company: forty made-up firms, the town's own forty years. Nothing is advice.</p>
+    </section>
     ${say('bo', 'Forty companies, forty years, and none of them exist. Everything that happens to them happens for a reason you can find. Pick a decade.')}
-    ${ACTS.map((a) => `<button class="card" data-act="mgAct" data-arg="${a.id}" style="text-align:left;width:100%">
+    ${ACTS.map((a) => `<button class="card m40act" data-act="mgAct" data-arg="${a.id}" style="text-align:left;width:100%">
       <div class="eyebrow">Act ${a.id + 1} · years ${a.from + 1}–${a.from + a.years}</div>
       <h3 style="font-size:19px;margin:3px 0 4px">${esc(a.name)}</h3>
       <p class="small muted">${esc(a.blurb)}</p></button>`).join('')}
-    <p class="small muted" style="text-align:center">You can only buy what you have studied, and you
-      can only go long. Nothing here is real money or a real company.</p>
   </div>`;
 }
 
 function viewStudy(g) {
-  const cast = castFor(g.seed, g.act);
   const s = simFor(g.seed);
-  const open = g.opened.co ? coById[g.opened.co] : null;
-  if (open) return shell(g, companySheet(g, open, s), 'Read it, then say what would hurt it.');
-
-  const ready = g.studied.length >= 3;
-  return shell(g, `
-    <div class="card">
-      <div class="row"><div class="grow"><div class="eyebrow">Study the market</div>
-        <p class="small muted">Read at least three before you may invest. The report is the truth;
-          the letter is what they would like you to think.</p></div>
-        <span class="pill ${ready ? 'grow' : ''}">${g.studied.length}/8 read</span></div>
-    </div>
-    ${cast.map((co) => {
-      const done = g.studied.includes(co.id);
-      const a = g.assessed[co.id];
-      const sec = SECTORS.find((x) => x.id === co.sector);
-      return `<button class="card" data-act="mgOpen" data-arg="${co.id}" style="text-align:left;width:100%">
-        <div class="row">${ico('sec-' + co.sector, sec.em, 28)}
-          <div class="grow"><b style="font-size:15px">${esc(co.name)}</b>
-            <span class="pill" style="margin-left:6px">${co.ticker}</span>
-            <p class="small muted">${esc(co.what)}</p></div>
-          ${a ? `<span class="pill ${a.right ? 'grow' : ''}">${a.right ? '✓ assessed' : 'assessed'}</span>`
-             : done ? '<span class="pill">read</span>' : ''}
-        </div></button>`;
-    }).join('')}
-    <button class="btn wide" data-act="mgToInvest" ${ready ? '' : 'disabled'}>
-      ${ready ? 'Ready to invest →' : `Read ${3 - g.studied.length} more first`}</button>`);
+  const id = g.sheets[g.sheet || 0], co = coById[id];
+  study(g, id);
+  const answered = g.sheets.filter((x) => g.assessed[x]).length;
+  const steps = `<ol class="m40steps" aria-label="Three sheets">${g.sheets.map((x, i) => `<li class="${i === g.sheet ? 'on' : ''}${g.assessed[x] ? ' done' : ''}">
+    <button data-act="mgSheet" data-arg="${i}" aria-label="Sheet ${i + 1}${g.assessed[x] ? ', answered' : ''}">${g.assessed[x] ? '✓' : i + 1}</button></li>`).join('')}</ol>`;
+  return shell(g, `${steps}${companySheet(g, co, s)}
+    <div class="row m40nav" style="gap:8px">
+      ${g.sheet > 0 ? `<button class="btn ghost grow" data-act="mgSheet" data-arg="${g.sheet - 1}">← Sheet ${g.sheet}</button>` : ''}
+      ${g.sheet < g.sheets.length - 1 ? `<button class="btn grow${g.assessed[id] ? '' : ' ghost'}" data-act="mgSheet" data-arg="${g.sheet + 1}">Sheet ${g.sheet + 2} →</button>`
+        : `<button class="btn grow" data-act="mgToInvest" ${readAll(g) ? '' : 'disabled'}>${readAll(g) ? 'Now put money behind what you read →' : `Answer ${g.sheets.length - answered} more first`}</button>`}
+    </div>`, 'Read it, then say what would hurt it. No money moves until all three are answered.');
 }
-
 function companySheet(g, co, s) {
   const y = g.year;
   const rep = annualReport(s, co.id, y);
@@ -275,7 +310,6 @@ function companySheet(g, co, s) {
           <p class="small muted" style="margin-top:9px">${esc(a.why)}</p>`
         : `<div class="stack" style="gap:8px">${a.options.map((o) =>
             `<button class="opt" data-act="mgAssess" data-arg="${co.id}:${o.id}">${esc(o.t)}</button>`).join('')}</div>`}
-      <button class="btn wide ghost" style="margin-top:12px" data-act="mgClose">← Back to the list</button>
     </div>`;
 }
 
@@ -284,12 +318,12 @@ function viewInvest(g) {
   return shell(g, `
     <div class="card">
       <div class="row"><div class="grow"><div class="eyebrow">Put your money somewhere</div>
-        <p class="small muted">Only what you studied. Long only — you are buying a share of a
+        <p class="small muted">Only the three you read. Long only — you are buying a share of a
           business, not betting against one.</p></div>
         <div style="text-align:right"><div class="eyebrow">Cash</div>
           <div class="big" style="font-size:19px">${money(g.cash)}</div></div></div>
     </div>
-    ${g.studied.map((id) => {
+    ${g.sheets.map((id) => {
       const co = coById[id], px = s.years[id][g.year].value;
       const u = g.holdings[id] || 0;
       const a = g.assessed[id];
@@ -361,6 +395,8 @@ function viewPlay(g) {
     <button class="btn wide" data-act="mgNext">Next year →</button>`);
 }
 
+/* §2.7 · the review: how well you read them FIRST — each sheet, what you said, what the sheet
+   said — and the money SECOND, labelled as partly the decade you were handed */
 function viewReview(g) {
   const act = ACTS[g.act];
   const end = netWorth(g), start = g.startWorth || 10000;
@@ -369,30 +405,34 @@ function viewReview(g) {
   const cast = castFor(g.seed, g.act);
   const best = cast.map((co) => ({ co, m: s.years[co.id][g.year].value / s.years[co.id][act.from].value - 1 }))
     .sort((a, b) => b.m - a.m);
+  const read = (g.sheets || []).map((id) => {
+    const co = coById[id], a = g.assessed[id], key = assessOptions(co), said = a && key.options.find((o) => o.id === a.pick);
+    return `<li class="${a && a.right ? 'met' : ''}"><span class="gtick" aria-hidden="true">${a && a.right ? '✓' : '·'}</span>
+      <span><b>${esc(co.name)}</b> — you said “${esc(said ? said.t.toLowerCase() : 'nothing')}”.${a && a.right ? '' : ` Its sheet says: “${esc(co.risk)}”`}</span></li>`;
+  }).join('');
   return `<div class="stack">
-    <div class="card" style="border-color:var(--gold);background:var(--gold-tint)">
-      <div style="text-align:center"><div style="font-size:40px">${ret >= 0 ? '📈' : '📉'}</div>
-        <div class="eyebrow">${esc(act.name)} · ten years</div>
-        <h2 style="margin:4px 0 2px;font-size:26px">${money(end)}</h2>
-        <p style="color:${pctTone(ret)};font-weight:800">${arrow(ret)} ${Math.abs(ret * 100).toFixed(0)}% from ${money(start)}</p></div>
+    <button class="btn ghost m40leave" style="align-self:flex-start" data-act="nav" data-arg="play">← Leave</button>
+    <div class="card m40read" style="border-color:var(--action)">
+      <div class="eyebrow">How well you read them · ${esc(act.name)}</div>
+      <h2 style="font-size:24px;margin:4px 0">${g.score.right} of ${g.score.asked} right</h2>
+      <div class="goals"><ul>${read}</ul></div>
+      <p class="small muted" style="margin-top:8px">This is the number that matters. Whether you could see what would hurt a business is yours.</p>
     </div>
-    <div class="card">
-      <div class="eyebrow">How well you read them</div>
-      <h3 style="font-size:20px;margin:4px 0">${g.score.right} of ${g.score.asked} right</h3>
-      <p class="small muted">This is the number that matters. Money over ten years is partly the
-        decade you were handed; whether you could see what would hurt a business is yours.</p>
-    </div>
-    <div class="card">
-      <div class="eyebrow">What the decade did</div>
+    <div class="card m40money">
+      <div class="eyebrow">The money · second, and partly the decade you were handed</div>
+      <div class="row" style="margin-top:6px;gap:10px"><span class="grow" style="font-size:22px;font-weight:800">${money(end)}</span>
+        <b style="color:${pctTone(ret)}">${arrow(ret)} ${Math.abs(ret * 100).toFixed(0)}% from ${money(start)}</b></div>
+      <div class="eyebrow" style="margin-top:12px">What the decade did</div>
       <div class="stack" style="gap:7px;margin-top:9px">
         ${best.map((b) => `<div class="row"><span class="grow small">${esc(b.co.name)}</span>
           <b style="color:${pctTone(b.m)};font-variant-numeric:tabular-nums">${arrow(b.m)} ${Math.abs(b.m * 100).toFixed(0)}%</b>
           <span class="pill" style="margin-left:7px">${(g.holdings[b.co.id] || 0) > 0 ? 'held' : '—'}</span></div>`).join('')}
       </div>
+      <p class="small muted" style="margin-top:8px">Forty made-up companies and the town's own forty years. Nothing here is advice.</p>
     </div>
-    ${say('bea', ret >= 0
-      ? 'A good decade. Now do the next one, where the rate goes the other way, and find out how much of that was you.'
-      : 'A hard decade. Everyone gets one. The question is whether the things you got wrong were the things you said would go wrong.')}
+    ${say('bea', g.score.right >= 2
+      ? 'You read them well. Now play the next decade, where the rate goes the other way, and find out how much of the money was you and how much was the decade.'
+      : 'The money will come and go with the decade. The reading is the part you can get better at: go back to a sheet and find the line that says what could hurt it.')}
     <button class="btn wide" data-act="mgPick">Choose another decade →</button>
   </div>`;
 }

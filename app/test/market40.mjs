@@ -155,6 +155,7 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
   const S = await import('../src/sim.js');
   const MG = await import('../src/marketgame.js');
   const { PESTEL } = await import('../content/events.js');
+  const { byId: coById } = await import('../content/companies.js');
   R.s = S.newState(); R.s.kids.push(S.newChild('Asha', 'builder', 'INR')); R.render = () => {};
   const c = R.s.kids[0];
 
@@ -168,12 +169,12 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
   for (const act of MG.ACTS) {
     let err = null, years = 0, html = '';
     try {
-      MG.startAct(g, act.id);
-      const cast = MG.castFor(g.seed, g.act);
-      cast.slice(0, 3).forEach((co) => { MG.study(g, co.id); MG.assess(g, co.id, MG.assessOptions(co).answer); });
+      MG.startAct(g, act.id, 4242);
+      /* §2.7 · reading first: the three sheets dealt, each read and answered, then the money */
+      g.sheets.forEach((id, i) => { g.sheet = i; html = MG.viewMarketGame(); MG.assess(g, id, MG.assessOptions(coById[id]).answer); });
       html = MG.viewMarketGame();
-      g.phase = 'invest'; html = MG.viewMarketGame();
-      g.studied.forEach((id) => MG.buy(g, id, 2500));
+      MG.toInvest(g); html = MG.viewMarketGame();
+      g.sheets.forEach((id) => MG.buy(g, id, 2500));
       g.phase = 'play';
       for (let i = 0; i < 20 && g.phase === 'play'; i++) {
         html = MG.viewMarketGame(); years++;
@@ -202,6 +203,61 @@ const sims = SEEDS.map((s) => ({ s, sim: simulate(s, GAME_YEARS) }));
   const lazy = Object.keys(count).map((a) => [a, COMPANIES.filter((co) => MG.assessOptions(co).answer === a).length / COMPANIES.length]);
   ok('always answering the same thing scores 30% or less, whichever thing it is', lazy.every(([, s]) => s <= 0.3), lazy.map(([a, s]) => `${a} ${Math.round(s * 100)}%`).join(' · '));
 }
+
+/* ── docs/12 §2.7 · promoted: a how-to, the Exchange hall, reading first, a seed per play,
+   the review reading-first, and no real name anywhere near a buy button (rule 2) ──
+   Watched failing: toInvest() with one sheet unanswered let the money move; a fixed seed
+   per child (the old c.market.seed) replayed the same three sheets every decade. */
+{
+  const { R } = await import('../src/runtime.js');
+  const S = await import('../src/sim.js');
+  const MG = await import('../src/marketgame.js');
+  const { byId: coById } = await import('../content/companies.js');
+  R.s = S.newState(); R.s.kids.push(S.newChild('Asha', 'builder', 'INR')); R.render = () => {};
+  const c = R.s.kids[0];
+  c.game = MG.newGame(); const g = c.game;
+  const pick = MG.viewMarketGame();
+  ok('the first screen is the Exchange hall: the painted Exchange Quarter behind it, the hall drawn in the middle, and a how-to card before the decades',
+    /class="m40hall front" style="--hall:url\(/.test(pick) && /class="m40door"><img src="/.test(pick) && /How to play/.test(pick) && (pick.match(/<li><b>/g) || []).length === MG.HOWTO.length && pick.indexOf('How to play') < pick.indexOf('data-act="mgAct"'));
+  /* a seed per play: every decade started draws its own, and keeps it with the round */
+  MG.startAct(g, 1); const s1 = g.seed, sh1 = g.sheets.join(); MG.startAct(g, 1); const s2 = g.seed;
+  ok('every decade started draws its own seed and keeps it with the round (c.rounds.m40)', s1 !== s2 && c.rounds.m40 && c.rounds.m40.seed === s2 && c.rounds.m40.act === 1, `${s1} → ${s2}`);
+  const px1 = MG.simFor(s1).years[sh1.split(',')[0]][15].value;
+  MG.startAct(g, 1, s1);
+  ok('one seed replays the same three sheets and the same prices', g.sheets.join() === sh1 && simulate(s1, GAME_YEARS).years[g.sheets[0]][15].value === px1);
+  const many = Array.from({ length: 40 }, (_, i) => MG.sheetsFor(1000 + i * 7919, i % 4));
+  ok('three sheets a decade, from three different industries, and nearly always three different answers to "what could hurt it"',
+    many.every((ids) => ids.length === 3 && new Set(ids.map((id) => coById[id].sector)).size === 3) && many.filter((ids) => new Set(ids.map((id) => coById[id].hurt)).size === 3).length >= 36
+    && new Set(many.map((x) => x.join())).size > 30);
+  /* reading first: no money moves until all three sheets have their answer */
+  MG.startAct(g, 0, 777);
+  const v0 = MG.viewMarketGame();
+  MG.assess(g, g.sheets[0], 'rate'); MG.assess(g, g.sheets[1], 'rate');
+  const early = { invest: MG.toInvest(g), bought: MG.buy(g, g.sheets[0], 1000), phase: g.phase };
+  g.sheet = 2; const v1 = MG.viewMarketGame();
+  MG.assess(g, g.sheets[2], 'rate');
+  const late = { invest: MG.toInvest(g), bought: MG.buy(g, g.sheets[0], 1000) };
+  ok('reading first: the decade opens on sheet 1 of 3, and no money moves until all three have an answer',
+    /Sheet 1 of 3/.test(v0) && /data-act="mgAssess"/.test(v0) && !/data-act="mgBuy"/.test(v0) && !early.invest && early.bought === 0 && early.phase === 'study'
+    && /data-act="mgToInvest" disabled/.test(v1) && late.invest && late.bought === 1000, JSON.stringify({ early, late }));
+  /* the review: reading first, money second */
+  g.phase = 'play'; for (let i = 0; i < 12 && g.phase === 'play'; i++) MG.advance(g);
+  const rv = MG.viewMarketGame();
+  ok('the review puts "how well you read them" first (each sheet, what you said, what it said) and the money second',
+    g.phase === 'review' && rv.indexOf('How well you read them') > -1 && rv.indexOf('How well you read them') < rv.indexOf('The money') && g.sheets.every((id) => rv.includes(esc(coById[id].name))) && /partly the decade/.test(rv));
+  /* rule 2: real names only in a read-only, labelled window, never with a buy button */
+  const REAL = /\b(Apple|Amazon|Walmart|Costco|Tesla|Google|Alphabet|Microsoft|Meta|Facebook|Netflix|Nvidia|Intel|Reliance|Tata|Infosys|Coca[- ]Cola|Pepsi|Nike|Disney|McDonald|Starbucks|Exxon|Boeing|JPMorgan|Visa|Mastercard|Pfizer)\b/i;
+  const buyViews = [];
+  for (const act of MG.ACTS) { MG.startAct(g, act.id, 31337); g.sheets.forEach((id) => MG.assess(g, id, 'rate')); MG.toInvest(g); buyViews.push(MG.viewMarketGame()); }
+  const named = buyViews.flatMap((v) => [...v.matchAll(/<b style="font-size:15px">([^<]+)<\/b>[\s\S]*?data-act="mgBuy"/g)].map((m) => m[1]));
+  ok('rule 2: every company with a buy button is one of the forty fictional ones, and no real company is named anywhere a buy button is',
+    named.length === 12 && named.every((nm) => COMPANIES.some((co) => esc(co.name) === nm)) && buyViews.every((v) => !REAL.test(v)) && COMPANIES.every((co) => !REAL.test(co.name)), named.slice(0, 3).join(', '));
+  const { readFileSync } = await import('node:fs');
+  const mainSrc = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  const win = (mainSrc.match(/if \(o\.kind === 'mgRead'\) \{[\s\S]*?\n  \}/) || [''])[0];
+  ok('the register\'s window is read-only and labelled: "Fictional", "nothing on this page can be bought", and no buy button', /Fictional/.test(win) && /nothing on this page can be bought/.test(win) && !/mgBuy|data-act="buy/.test(win), win.split('\n').length + ' lines');
+}
+function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 console.log('─'.repeat(60));
 console.log(`${n - fails}/${n} passed`);
