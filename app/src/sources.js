@@ -90,6 +90,14 @@ export const SOURCES = {
     where: 'world.js · STORM',
     says: 'Dials of this town, chosen so that a plan has something to keep to: most storms are the market\'s mood, and some are a business that really stopped. They are Bizzington\'s, not a record of any real market\'s falls, and nothing here is advice.',
   },
+  /* The Market Cup (docs/12 §2.6): the series of seasons a play is dealt from (cup.js) */
+  cup: {
+    kind: 'own',
+    what: 'The Market Cup\'s seasons',
+    value: () => 'six weeks of the Exchange\'s four fictional companies, dealt from eight kinds of season: a steady one, the red week early, late or twice, a quiet one, Rocket Rickshaws taking off or crashing, and a chai boom',
+    where: 'cup.js · CUP_SERIES, cupRows',
+    says: 'The seasons are Bizzington\'s own, shaped so that the same way of investing can be tried against different kinds of six weeks. No real market\'s record is being replayed, and nothing here is advice.',
+  },
   /* Main Street (docs/12 §2.9): the board's own money, cash flow included (board.js MN) */
   mainstreet: {
     kind: 'own',

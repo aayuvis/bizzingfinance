@@ -250,6 +250,26 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
     (v.match(/<h2>([^<]+)<\/h2>/) || [])[1]);
   ok('the Cup\'s end card has the trend and its own practised line', /cuptrend/.test(v) && v.includes(esc(AR.PRACTISED.mc)));
   AR.quitGame();
+  /* §2.6 · seasons drawn per play from an authored series (watched failing with seasonFor
+     pinned to the first season: one kind of season, for ever) */
+  const CUP = await import('../src/cup.js');
+  const dealt = new Set(Array.from({ length: 300 }, (_, i) => CUP.seasonFor(i + 1).id));
+  ok('the Cup deals its seasons per play from an authored series of at least six, and 300 plays meet every one', CUP.CUP_SERIES.length >= 6 && dealt.size === CUP.CUP_SERIES.length, `${dealt.size} of ${CUP.CUP_SERIES.length}`);
+  const kn = AR.ARCADE_TIERS.mc.standard, seedOf = (id) => Array.from({ length: 300 }, (_, i) => i + 1).find((sd) => CUP.seasonFor(sd).id === id);
+  const worst = (sd) => { const rows = CUP.cupRows(kn, sd); return rows.map((r) => r.basket).indexOf(Math.min(...rows.map((r) => r.basket))); };
+  /* Rocket Rickshaws over six weeks, averaged over twenty plays of the season */
+  const rk = (id) => { const sds = Array.from({ length: 2000 }, (_, i) => i + 1).filter((sd) => CUP.seasonFor(sd).id === id).slice(0, 20);
+    return sds.reduce((t, sd) => t + CUP.cupRows(kn, sd).reduce((m, r) => m * (1 + r.rocket), 1), 0) / sds.length; };
+  ok('a season is the shape it says: the red week early, late, and Rocket Rickshaws up in its season and down in its bust',
+    worst(seedOf('early')) === 1 && worst(seedOf('late')) === 5 && rk('rocket') > 1.15 && rk('bust') < 0.9, `rocket ×${rk('rocket').toFixed(2)} · bust ×${rk('bust').toFixed(2)}`);
+  /* copying Bella is a tie in every kind of season, and the record says which seasons and how you did against her */
+  fresh();
+  const ties = CUP.CUP_SERIES.map((s) => { const g = cupWith(Array(10).fill('basket:10'), seedOf(s.id)); const t = g.st.tiedWith.includes('Boring Bella') && g.st.vsBella === 'tie'; AR.quitGame(); return t; });
+  ok('copying Bella is a tie in every kind of season in the series', ties.every(Boolean), ties.join(','));
+  const g2 = cupWith(spread, seedOf('rocket')); const v2 = g2.view();
+  ok('the end card names the season you were dealt, how many of the series you have met, and your last cups against Bella', v2.includes(esc(g2.season.name)) && /of the 8 kinds of season/.test(v2) && /Against Bella, your last/.test(v2)
+    && Object.keys(K().market.seasons).length === CUP.CUP_SERIES.length && K().market.vsBella.length === 8, (v2.match(/<p class="small cupseason">([\s\S]*?)<\/p>/) || [])[1]);
+  AR.quitGame();
 }
 
 /* ── §2.8 · Change Rush: an overpay says by how much, and which coin would have been exact ── */

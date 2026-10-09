@@ -1,5 +1,5 @@
 {
-  "total": 1810,
+  "total": 1811,
   "byKind": {
     "lesson": 61,
     "example": 61,
@@ -12,7 +12,7 @@
     "goal": 48,
     "word": 40,
     "wordmore": 39,
-    "figure": 15,
+    "figure": 16,
     "game": 12,
     "quest": 13,
     "medal": 48,
@@ -47,7 +47,7 @@
     "chapter 4": 203,
     "chapter 5": 163,
     "chapter 6": 165,
-    "chapter 7": 204,
+    "chapter 7": 205,
     "chapter 8": 120,
     "any": 429
   },
@@ -92,7 +92,7 @@
       "level": 7,
       "chapter": "c7",
       "title": "Money that grows",
-      "n": 204
+      "n": 205
     },
     {
       "level": 8,

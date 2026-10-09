@@ -47,3 +47,7 @@ html[data-bz-dark] .gplay .sthead .eyebrow{color:#cdbfa8}
 html[data-bz-dark] .msboard .msmid{box-shadow:0 0 0 7px #2A2D33}
 .msbuy .mscush{font-weight:650;color:var(--grow)}
 .msbuy .mscush.thin{color:var(--spend)}
+
+/* ── The Market Cup · the season you were dealt (docs/12 §2.6) ── */
+.gplay .stage .cupseason{align-self:center;color:var(--ink);background:rgb(255 252 245 / .93);border-radius:var(--r-md);padding:7px 12px;max-width:36em}
+html[data-bz-dark] .gplay .stage .cupseason{color:#F4EEE4;background:rgb(20 24 36 / .92)}

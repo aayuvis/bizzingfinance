@@ -19,6 +19,7 @@ import { R } from './runtime.js';
 import { pipPose, kidBadge, M40_LEVEL } from './shell.js';
 import { fx as makeFx, countdown, plate, plateSrc, backdrop, rr, shadow, coin, crate, still, verdict } from './gamefx.js';
 import { saveBorrow, SB_TIERS, SB_GOALS } from './saveborrow.js';
+import { seasonFor, cupRows, bellaCup, cupScore, CUP_SERIES, CUP_WEEKS } from './cup.js';
 import { stormFor, stormValue, stormScore, planWords, RULES, START as STORM_START, HALF as STORM_HALF, STORM_PAR, WOBBLE } from './storm.js';
 
 import { GAMES, GAME_ACTS } from './gamelist.js';
@@ -923,40 +924,27 @@ function snowball(seed) {
    Ranked on cup score, not returns. A leaderboard sorted by return alone
    would tell a child the luckiest single bet was the best decision, which
    is the one thing this app must never say. */
-/* the season's weeks, seeded: a level scales the swing and the red week, nothing else */
-function cupRows(kn, seed = 120) {
-  const ROUNDS = 6, RED = 3, r = rng(seed), ret = [];
-  for (let k = 0; k < ROUNDS; k++) {
-    const row = {};
-    ASSETS.forEach((a) => {
-      const shock = (r() + r() + r() - 1.5) * 2 * a.vol * 1.0 * kn.shock;
-      row[a.id] = a.drift * 3.6 + shock + (k === RED ? -a.vol * 1.5 * kn.crash : 0);
-    });
-    ret.push(row);
-  }
-  return ret;
-}
-/* G8 · the Cup's par on each level is Boring Bella's own cup score there — the basket in
-   week one and then home — worked out from the same weeks, so it cannot drift */
-function bellaCup(kn, seed = 120) {
-  let v = 1000;
-  cupRows(kn, seed).forEach((row) => { v = Math.round(v * (1 + row.basket)); });
-  return Math.round((v / 1000 - 1) * 100) + 4 * 7 + Math.max(0, 30 - Math.round(100 / 8));
-}
+/* §2.6 · the season's weeks come from the authored series in cup.js (seasonFor, cupRows), and
+   Bella's cup score on them is the par (bellaCup) — so it cannot drift */
 TIER_IDS.forEach((t) => { ARCADE_TIERS.mc[t].par = bellaCup(ARCADE_TIERS.mc[t]); });
 /* §2.6 · the Cup's record on the child: the best cup score (the line it was set with) and
    the last eight cups, so a finish can say whether the seasons are going up or down.
    A best written before this kept only the first finish's line; its number is read back. */
-export function cupRecord(c, total, line) {
+export function cupRecord(c, total, line, season = null, vsBella = null) {
   const m = c.market;
   if (!Array.isArray(m.cups)) m.cups = [];
+  /* which seasons of the series you have been dealt, and how you did against Bella in each
+     of the last eight cups — Bea's question, "does that keep happening?", answered */
+  if (season) { if (!m.seasons || typeof m.seasons !== 'object') m.seasons = {}; m.seasons[season] = (m.seasons[season] || 0) + 1; }
+  if (vsBella) { if (!Array.isArray(m.vsBella)) m.vsBella = []; m.vsBella.push(vsBella); if (m.vsBella.length > 8) m.vsBella.splice(0, m.vsBella.length - 8); }
   const legacy = typeof m.best === 'string' && (m.best.match(/cup score (-?\d+)/) || [])[1];
   const prev = typeof m.bestScore === 'number' ? m.bestScore : legacy != null ? +legacy : null;
   m.cups.push(total);
   if (m.cups.length > 8) m.cups.splice(0, m.cups.length - 8);
   const isBest = prev == null || total > prev;
   if (isBest) { m.bestScore = total; m.best = line; } else m.bestScore = prev;
-  return { cups: m.cups.slice(), best: m.bestScore, isBest, first: prev == null };
+  return { cups: m.cups.slice(), best: m.bestScore, isBest, first: prev == null,
+    seasons: Object.assign({}, m.seasons || {}), vsBella: (m.vsBella || []).slice() };
 }
 export function cupTrendWord(cups) {
   if (!cups || cups.length < 2) return '';
@@ -970,10 +958,18 @@ function cupTrend(rec) {
   return `<p class="small cuptrend"><b>${rec.isBest && !rec.first ? 'A new best cup score' : 'Your best cup score'}: <span class="tabnum">${rec.best}</span></b>${rec.cups.length > 1
     ? ` · your last ${rec.cups.length} cups: <span class="tabnum">${rec.cups.join(' → ')}</span>${w ? `, ${w}` : ''}` : ''}</p>`;
 }
+/* §2.6 · the season you were dealt, said only at the end, and how many of the series you have seen */
+function cupSeason(season, rec) {
+  const seen = Object.keys((rec && rec.seasons) || {}).length;
+  const vb = (rec && rec.vsBella) || [];
+  return `<p class="small cupseason"><b>This season: ${esc(season.name)}.</b> You have played ${seen} of the ${CUP_SERIES.length} kinds of season.${vb.length > 1
+    ? ` Against Bella, your last ${vb.length}: <span class="tabnum">${vb.map((x) => (x === 'beat' ? 'beat her' : x === 'tie' ? 'tied' : 'behind')).join(' · ')}</span>.` : ''}</p>`;
+}
+const beatLine = (rec) => { const vb = (rec && rec.vsBella) || []; const n = vb.filter((x) => x === 'beat').length; return vb.length > 1 ? ` That is ${n} of your last ${vb.length}.` : ''; };
 function marketCup(seed) {
-  const ROUNDS = 6, START = 1000;
-  /* §1.2 · a season drawn for this play; Bella's cup score on it is this round's par */
-  const ret = cupRows(knobs('mc'), seed), bellaPar = bellaCup(knobs('mc'), seed);
+  const ROUNDS = CUP_WEEKS, START = 1000;
+  /* §2.6 · a season drawn for this play from the series; Bella's cup score on it is this round's par */
+  const season = seasonFor(seed), ret = cupRows(knobs('mc'), seed), bellaPar = bellaCup(knobs('mc'), seed);
   const st = {
     round: 0, sel: 0, done: false, churn: 0, divSum: 0,
     alloc: { basket: 0, grain: 0, chai: 0, rocket: 0 },
@@ -997,12 +993,7 @@ function marketCup(seed) {
     ['grain', 'chai', 'rocket'].forEach((k) => { if (st.alloc[k] >= 15) n += 1; });
     return Math.min(4, n);
   };
-  const scoreOf = (final, divAvg, churn) => {
-    const rt = Math.round((final / START - 1) * 100);
-    const div = Math.round(divAvg * 7);
-    const steady = Math.max(0, 30 - Math.round(churn / 8));
-    return { ret: rt, div, steady, total: rt + div + steady };
-  };
+  const scoreOf = (final, divAvg, churn) => cupScore(final, divAvg, churn, START);
   const next = () => {
     if (st.done) return;
     st.divSum += effective();
@@ -1054,11 +1045,12 @@ function marketCup(seed) {
     if (st.score.div >= 24) sim.badge(c, 'diversified');
     /* §2.6 · the record moves: the best is the best cup score so far (it used to be the
        first finish, for ever), and the last few cups are kept so the trend can be shown */
-    st.record = cupRecord(c, st.score.total, `${st.place}${['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]}${st.tiedWith.length ? ' (tied)' : ''} of 4 · cup score ${st.score.total}`);
+    st.vsBella = st.score.total > bella.sc.total ? 'beat' : st.score.total === bella.sc.total ? 'tie' : 'lost';
+    st.record = cupRecord(c, st.score.total, `${st.place}${['st', 'nd', 'rd', 'th'][Math.min(st.place - 1, 3)]}${st.tiedWith.length ? ' (tied)' : ''} of 4 · cup score ${st.score.total}`, season.id, st.vsBella);
     sfx.level();
   };
   return {
-    id: 'mc', st,
+    id: 'mc', st, season,
     key(e) {
       if (st.done) { endKey(e); return; }
       const ids = ASSETS.map((a) => a.id);
@@ -1105,12 +1097,13 @@ function marketCup(seed) {
               <div class="row"><span class="grow" style="font-weight:800">Total</span><span class="big" style="font-size:22px">${sc.total}</span></div>
             </div>
             ${cupTrend(st.record)}
+            ${cupSeason(season, st.record)}
             ${tie && st.tiedWith.includes('Boring Bella')
               ? say('bea', 'You did exactly what Bella did, and you finished exactly where she did. That is a tie, not a win: the cup is about whether your own choices beat hers.')
               : say(st.table[0].who === 'Boring Bella' ? 'bea' : 'bo',
                 st.table[0].who === 'Boring Bella'
                   ? 'Bella bought the whole basket in week one and then went home. She does that every season, and she is very hard to beat.'
-                  : 'You beat Bella this time. Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.')}
+                  : `You beat Bella this time.${beatLine(st.record)} Run another six weeks and see whether that keeps happening — that question <b>is</b> the game.`)}
             ${endFoot(st.won, 'Fictional companies, real market behaviour, nothing here is advice.')}
             <button class="btn wide" data-act="gquit">Back to Play</button>
           </div></div>`;
