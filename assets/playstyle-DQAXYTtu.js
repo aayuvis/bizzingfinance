@@ -1,8 +1,18 @@
-const r=`
+const t=`
 /* play.css — the Play games of docs/12 weeks 3–5: Market Storm's plan, the Market Cup's
    series, Main Street's drawn street and the Market Game's Exchange hall. Light and dark. */
 
 /* ── Market Storm · the plan is the game (docs/12 §2.5) ── */
+.gplay .stacts{display:grid;gap:8px}
+/* on a phone the way out sits right under the price, above the news and the shouting: the SELL
+   button must be in reach the moment the storm starts, not below the fold */
+@media (max-width:640px){
+  .gplay .ststage > div:first-child{order:0}
+  .gplay .ststage .stchart{order:1}
+  .gplay .ststage .stacts{order:2}
+  .gplay .ststage .stnews,.gplay .ststage .stshout,.gplay .ststage .stplan{order:3}
+  .gplay .ststage .hint,.gplay .ststage > .grow{order:4}
+}
 .gplay .stcard{text-align:left;display:grid;gap:8px;padding:14px 16px;border-radius:var(--r-lg,16px)}
 .gplay .stfacts{margin:0;padding-left:18px;display:grid;gap:3px;font-size:14px;font-weight:600;color:var(--ink)}
 .gplay .stq{display:grid;gap:7px;padding:10px;border-radius:var(--r-md,12px);background:rgb(255 252 245 / .9);box-shadow:0 6px 16px rgb(40 25 5 / .14)}
@@ -73,4 +83,4 @@ html[data-bz-dark] .m40hall .m40leave{background:rgb(20 24 36 / .9);color:#F4EEE
 .m40steps li.done:not(.on) button{background:var(--grow);color:#fff;border-color:var(--grow)}
 html[data-bz-dark] .m40steps button{background:rgb(20 24 36 / .92);color:#F4EEE4}
 .m40nav .btn{min-height:48px}
-`;function t(){if(typeof document>"u"||document.getElementById("bz-play-css"))return;const a=document.createElement("style");a.id="bz-play-css",a.textContent=r,document.head.appendChild(a)}t();
+`;function r(){if(typeof document>"u"||document.getElementById("bz-play-css"))return;const a=document.createElement("style");a.id="bz-play-css",a.textContent=t,document.head.appendChild(a)}r();
