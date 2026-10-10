@@ -56,6 +56,7 @@ import { AVATARS, AVATAR_IDS, DEFAULT_AVATAR, guessCurrency, avatarSrc } from '.
 import { deckIds } from './avcards.js';
 import * as drill from './drill.js';
 import { teachFor, egFor } from './sprout.js';
+import * as metrics from './metrics.js';
 
 const K = () => sim.kid(R.s);
 
@@ -297,7 +298,7 @@ function fold(id, title, sub, icon, body) {
 }
 
 /* ══ HOME — Bee's three rows (FAMILY-STANDARD §6, integration/bizzing-shell.js) ══
-   Row 1: Pip's greeting · today's ring (with "Your level") · the money word of the hour.
+   Row 1: Pip's greeting · the daily goal's rings (with "Your level") · the money word of the hour.
    Row 2: next on your journey (the ONE filled Continue) · your street.
    Row 3: a tip from a card already read · a line from the town's cast. The street,
    today's three and the rest of the day live on the Town tab. */
@@ -318,12 +319,16 @@ export function viewHome() {
   const hello = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
   const line = String(hometalk(c)).replace(/<[^>]+>/g, '');
   const w = daily.wordOfHour(), tip = daily.tipOfDay(c);
-  const R0 = 44, C0 = 2 * Math.PI * R0, frac = quests.length ? qd / quests.length : 0;
-  const ring = `<div class="fring"><svg width="110" height="110" viewBox="0 0 110 110" role="img" aria-label="Today's three: ${qd} of ${quests.length} done">
-      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-line)" stroke-width="14"/>
-      <circle cx="55" cy="55" r="${R0}" fill="none" stroke="var(--bz-accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(C0 * frac).toFixed(1)} ${C0.toFixed(1)}" transform="rotate(-90 55 55)"/>
-      <text x="55" y="61" text-anchor="middle" font-family="Sono, monospace" font-weight="700" font-size="20" fill="currentColor">${qd}/${quests.length}</text></svg>
-    <div><b class="fring-h">Today's three</b>${quests.map((q, i) => `<p class="fring-q${q.done ? ' done' : ''}"><i style="--d:${['#E0457B', '#16956B', '#3D7DF0', '#E8962C'][i % 4]}"></i><span>${esc(q.t)}</span>${q.done && !q.claimed ? `<button class="fring-take" data-act="claim" data-arg="${q.id}">Take ${money(price(q.pay))}</button>` : `<b>${q.done ? '1/1' : '0/1'}</b>`}</p>`).join('')}</div></div>`;
+  const frac = quests.length ? qd / quests.length : 0, toTake = quests.filter((q) => q.done && !q.claimed).length;
+  /* The daily goal (Bizzing Bee's Daily targets, metrics.js): three rings and three lines,
+     and the card opens the Coach. Today's three — the paying quests — live on the Town tab,
+     where the street card below sends the child (and says when one is ready to take). */
+  const m = metrics.today(c), closed = metrics.allClosed(m);
+  const ring = `<button class="dgoal" data-act="nav" data-arg="coach" aria-label="${esc('Daily goal. ' + metrics.ringLabel(m) + '. Coach speaks')}">
+      <span class="dgoal-r">${metrics.ringsSVG(104, [m.pApp, m.pPrac, m.pRight])}</span>
+      <span class="dgoal-t"><b class="fring-h">Daily goal${closed ? ' ✓' : ''}</b>
+        ${metrics.lines(m).map((l) => `<span class="dgoal-l" data-m="${l.k}"><i style="--d:${l.col}"></i><span>${l.lab}</span><b>${esc(l.v)}<span>/${esc(l.t)}</span></b></span>`).join('')}
+        <span class="dgoal-go">${closed ? 'All three rings closed — ' : ''}Coach speaks →</span></span></button>`;
   const world = n.world || WORLDS[0], here = WORLDS[c.world || 0];
   const jobs = sim.jobsToday(c), jdone = jobs.filter((j) => j.done).length;
   const cast = CAST_LINES[new Date().getHours() % CAST_LINES.length];
@@ -340,7 +345,7 @@ export function viewHome() {
        street card wears the child's chosen world; if that is the journey's picture too, it
        shows their own stall, drawn ('#sprite' lets family.css lay a sprite out, not crop it) */
     second: { plate: (() => { const p1 = plateFor(world.id, R.dark), p2 = plateFor((c.fam && c.fam.look) || here.id, R.dark);
-        return p2 !== p1 ? p2 : (BLD.stall ? BLD.stall.src + '#sprite' : p2); })(), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
+        return p2 !== p1 ? p2 : (BLD.stall ? BLD.stall.src + '#sprite' : p2); })(), chip: `${jdone} of ${jobs.length} shifts`, kicker: 'Your street', title: here.name, sub: toTake ? `Today’s three: ${nWord(toTake)} ready to take` : 'Jobs, the postbox, the jars and today’s three', href: '#/town', cta: 'Open', ctaIcon: 'town',
       progress: { pct: Math.round(frac * 100) } },
     /* every tile goes to its own thing (owner, 3 Oct): the word, the card, the person quoted */
     tip: tip ? { kicker: 'Tip from a card you read', text: tip.text, href: '#/atlas/' + tip.card.id } : { kicker: 'Tip', text: 'Split money the moment it lands — a pile gets spent as a pile.', href: '#/atlas/c3b' },
@@ -804,7 +809,7 @@ function viewCard(card) {
   const who = CAST[card.who] || CAST.pip;
   return `<div class="stack">
     <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} ${card.assess ? 'Not now' : 'All chapters'}</button>
-    ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
+    ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: R.beat && R.beat.ids.includes(R.practice.from) ? `Practice · beating “${esc(R.beat.label)}”` : 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
       : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · asked fresh' : 'Still know this?', title: esc(card.title) })
       : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
     ${card.assess && R.practice && R.practice.id === card.id ? genHowBlock(card, st) : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'a situation, or numbers, the town has not put to you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
@@ -855,7 +860,7 @@ function viewCard(card) {
       ${done ? `<div class="fb ${p.right ? 'yes' : 'no'}" role="status">
           <b>${p.right ? (p.first === false ? 'Got it on the second go.' : 'That’s it.') : dq.num ? 'It is ' + esc(String(dq.value)) + '.' : 'That one is ' + esc(dq.opts[dq.answer]) + '.'}</b> ${esc(dq.why)}</div>` : ''}
       ${done && !last ? `<button class="btn wide" data-act="nextQ">Next question →</button>` : ''}
-      ${done && last && R.practice && R.practice.id === card.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.practice.from)}">Another one →</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>`
+      ${done && last && R.practice && R.practice.id === card.id ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="practise" data-arg="${esc(R.beat && R.beat.ids.includes(R.practice.from) ? R.beat.ids[R.beat.n % R.beat.ids.length] : R.practice.from)}">Another one →</button><button class="btn ghost" data-act="practiceDone">Back to the map</button></div>`
         : done && last && R.cold === card.id && st.right ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Skip ahead — it’s yours →</button>`
         : done && last && card.assess && !st.right && practiceTeach(card) ? `<button class="btn wide" data-act="cardDone" data-arg="${card.id}">Take it back to town →</button>
           <button class="btn ghost wide" data-act="moreLike" data-arg="${card.id}">${ico('repeat', '', 16)} One more like it, asked fresh</button>`
@@ -1611,6 +1616,32 @@ export function viewStore() {
 }
 
 /* ══ PROGRESS ═════════════════════════════════════════════════════════ */
+/* Daily goal · the last 30 days (Bee's metricsCard): one metric at a time, a bar a day
+   against a dashed target line. "Days on target" is a count in the window — never a run,
+   and a short day is a short bar, never a message. */
+function metricsCard(c) {
+  const sel = ['app', 'prac', 'right'].includes(R.metricSel) ? R.metricSel : 'app';
+  const g = metrics.chart(c, sel), m = metrics.today(c);
+  const bars = g.ds.map((d) => { const v = d[g.k], h = Math.max(v > 0 ? 3 : 0, Math.round(v / g.top * g.H)), on = v >= g.tgt;
+    return `<span class="mbar${on ? ' on' : ''}" title="${esc(d.k + ' · ' + g.fmt(v))}"><i style="height:${h}px"></i></span>`; }).join('');
+  const ticks = g.ds.map((d, i) => `<span>${i % 5 === 0 || i === g.ds.length - 1 ? d.day : ''}</span>`).join('');
+  const NOTE = { app: 'Every minute anywhere in Bizzing Money, counted only while it is on screen.',
+    prac: 'Lessons, the Atlas, practice, Ones to try again, the Library and the Coach. The clock stops in the games, the Town and the stores.',
+    right: 'Questions answered right first time, in lessons and practice. A second-go answer is learning, so it is not counted here.' };
+  return `<section class="card mchart" id="metrics" style="--mc:${g.col}" aria-labelledby="metrics-h">
+    <div class="row" style="gap:12px;align-items:center">${metrics.ringsSVG(46, [m.pApp, m.pPrac, m.pRight])}
+      <span style="min-width:0"><b id="metrics-h" style="display:block;font-size:15px">Daily goal · the last 30 days</b>
+      <span class="small muted">Pick one. The dashed line is your target; a solid bar is a day you reached it.</span></span></div>
+    <div class="seg mpick" role="group" aria-label="Which number">${metrics.METRICS.map((x) => `<button data-act="metricPick" data-arg="${x.k}" aria-pressed="${x.k === sel}">${esc(x.label)}</button>`).join('')}</div>
+    <div class="mstats">${[['Target', g.fmt(g.tgt)], ['Today', g.fmt(g.vals[g.vals.length - 1] || 0)], ['Daily average', g.fmt(g.avg)], ['Days on target', g.hit + ' of ' + g.ds.length]]
+      .map(([l, v]) => `<span data-mstat="${esc(l)}"><b>${esc(v)}</b><small>${l}</small></span>`).join('')}</div>
+    <div class="mplot" style="height:${g.H}px">
+      <span class="mtgt" style="top:${g.tgtY.toFixed(1)}px"><small>target ${esc(g.fmt(g.tgt))}</small></span>
+      <div class="mbars" style="height:${g.H}px">${bars}</div></div>
+    <div class="mticks">${ticks}</div>
+    <p class="small muted" style="margin-top:8px">${NOTE[g.k]} You set the targets in Settings.</p>
+  </section>`;
+}
 export function viewProgress() {
   const c = K();
   const vals = c.history.map((h) => h.v);
@@ -1626,6 +1657,7 @@ export function viewProgress() {
       <div><div class="k">Rank</div><div class="v">${ico(rank.em, rank.em, 16)} ${rank.name} <span class="small muted" style="font-family:var(--ui);font-weight:600">L${c.learn.level}</span></div></div>
       <div><div class="k">Letters</div><div class="v">${c.postbox.log.length} <span class="small muted" style="font-family:var(--ui);font-weight:600">${scamsAll ? scams + '/' + scamsAll + ' scams spotted' : ''}</span></div></div>
     </div>
+    ${metricsCard(c)}
     <div class="card">
       <div class="eyebrow">The six strands</div>
       <p class="small muted" style="margin:3px 0 10px">A strand fills when you learn something, still know it days later, and use it somewhere new.</p>

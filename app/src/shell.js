@@ -21,6 +21,7 @@ import { ctxFor, BY_ID } from './catalogue.js';
 import * as audio from './audio.js';
 import { pinSet } from './pin.js';
 import { levelAtLeast } from './content.js';
+import { targets, TGT_RANGE } from './metrics.js';
 /* the Market Game's door, one number for the Play cover, the drawer and the route */
 /* the Market Game once opened at level 13; every game is open from day one now (owner, 9 Oct 2026) */
 
@@ -33,7 +34,7 @@ export const TABS = [
 ];
 /* routes that belong to a tab, so the tab stays lit inside it */
 /* Money lives inside the Town (owner, 3 Oct 2026): its screens are the town's buildings */
-const TAB_OF = { money: 'town', library: 'learn', sprint: 'learn', arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn' };
+const TAB_OF = { money: 'town', library: 'learn', sprint: 'learn', arcade: 'play', market40: 'play', worlds: 'town', store: 'town', words: 'learn', mistakes: 'learn', coach: 'learn' };
 export const tabOf = (nav) => TAB_OF[nav] || nav;
 
 export const DRAWER = [
@@ -44,6 +45,7 @@ export const DRAWER = [
   { sep: true },
   { k: 'store', n: "Mags' General Store", i: 'shop', sub: 'Spend your town money' },
   { k: 'words', n: 'Money Words', i: 'lesson', sub: 'Every word, in plain English' },
+  { k: 'coach', n: 'The Coach', i: 'sparkle', sub: 'What trips you up, and the trick for it' },
   { k: 'mistakes', n: 'Ones to try again', i: 'repeat', sub: 'The questions that tripped you, back after a gap' },
   { k: 'market40', n: 'The Market Game', i: 'chartUp', sub: 'Forty companies that do not exist' },
   { sep: true },
@@ -168,6 +170,15 @@ export function kidsSheet() {
 const sw = (act, on, label) => `<button class="sw" role="switch" aria-checked="${!!on}" data-act="${act}" aria-label="${esc(label)}"><i></i></button>`;
 const seg = (act, opts, cur, label) => `<span class="seg" role="group" aria-label="${esc(label)}">${opts.map(([v, l]) => `<button data-act="${act}" data-arg="${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</span>`;
 const row = (t, sub, ctl) => `<div class="srow"><span class="grow" style="min-width:0"><b>${t}</b>${sub ? `<span class="small muted">${sub}</span>` : ''}</span>${ctl}</div>`;
+/* the daily goal's three targets, set by the child (metrics.js keeps each inside its range) */
+function goalRows(c) {
+  const t = targets(c);
+  const step = (k, unit, what) => { const [lo, hi] = TGT_RANGE[k];
+    return `<span class="stepper" role="group" aria-label="${esc(what)}"><button data-act="goalStep" data-arg="${k}:-1" aria-label="Less ${esc(what)}" ${t[k] <= lo ? 'disabled' : ''}>−</button><b class="n tabnum" data-goal="${k}">${t[k]}${unit}</b><button data-act="goalStep" data-arg="${k}:1" aria-label="More ${esc(what)}" ${t[k] >= hi ? 'disabled' : ''}>+</button></span>`; };
+  return row('Daily goal · app time', 'Minutes in Bizzing Money a day — the outer ring.', step('app', 'm', 'app time'))
+    + row('Daily goal · practise time', 'Minutes on lessons, the Atlas and practice — not games. The middle ring.', step('prac', 'm', 'practise time'))
+    + row('Daily goal · questions right', 'Right first time, in lessons and practice. The inner ring.', step('right', '', 'questions right'));
+}
 export function settingsSheet(c, focus) {
   const st = audio.state(), ctx = ctxFor(R.s, c);
   const look = c.fam && c.fam.look || 'market';
@@ -178,6 +189,7 @@ export function settingsSheet(c, focus) {
     <section class="scard" aria-labelledby="st-me"><h3 id="st-me">Me</h3>
       ${row('Name', 'The same name in every Bizzing app, so your coins follow you.', `<span class="pill">${esc(c.name)}</span>`)}
       ${row('Avatar', esc(avatarName(c.avatar)), `<button class="btn ghost sm" data-act="nav" data-arg="collection">${kidBadge(c, 28)} Choose</button>`)}
+      ${goalRows(c)}
       ${R.s.kids.length > 1 ? row('Switch child', `${R.s.kids.length} children on this device`, '<button class="btn ghost sm" data-act="kids">Switch</button>') : ''}
     </section>
     <section class="scard" aria-labelledby="st-snd"><h3 id="st-snd">Sound &amp; music</h3>

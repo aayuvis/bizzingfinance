@@ -897,15 +897,19 @@ async function demo() {
   /* List B/C (owner, 3 Oct 2026): the sample has coins; Home counts a met quest and takes it */
   ok('demo: the sample shows the coins it earned', +(await page.textContent('.bz-coins span')) > 0, await page.textContent('.bz-coins span'));
   await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForTimeout(300);
-  const ring = await page.evaluate(() => {
+  /* Home's ring card is the daily goal now (owner, 10 Oct 2026: Bee's metrics and coach);
+     today's three live on the Town tab, where Home's street card sends the child — and the
+     street card says when a met quest is waiting to be taken */
+  const ring = await page.evaluate(async () => {
     const { R, sim } = window.BZF, c = R.s.kids[R.s.active || 0], q = sim.questList(c)[0];
     c.quests.prog[q.id] = 999; window.BZF.fire('nav', 'home');
-    const take = document.querySelector('.fring [data-act="claim"]');
-    const label = document.querySelector('.fring svg').getAttribute('aria-label');
+    const say = (document.querySelector('[data-bz=second]') || {}).textContent || '';
+    window.BZF.fire('nav', 'town');
+    const card = [...document.querySelectorAll('.t3card')], take = document.querySelector('.t3card [data-act="claim"]');
     if (take) take.click();
-    return { take: !!take, label, claimed: !!c.quests.claimed[q.id], after: document.querySelector('.fring svg').getAttribute('aria-label') };
+    return { say: /ready to take/.test(say), cards: card.length, take: !!take, claimed: !!c.quests.claimed[q.id], done: document.querySelectorAll('.t3card.done').length };
   });
-  ok('Home: a met quest counts on the ring and can be taken right there', ring.take && /: 1 of/.test(ring.label) && ring.claimed && /: 1 of/.test(ring.after), JSON.stringify(ring));
+  ok('Today’s three: Home’s street card says a met quest is ready, and the Town’s three take it', ring.say && ring.cards === 3 && ring.take && ring.claimed && ring.done >= 1, JSON.stringify(ring));
   await page.evaluate(() => { window.scrollTo(0, 400); location.hash = '#/town'; }); await page.waitForTimeout(250);
   await page.evaluate(() => { window.scrollTo(0, 400); location.hash = '#/home'; }); await page.waitForTimeout(350);
   ok('Home: a tab opens its screen at the top', await page.evaluate(() => window.scrollY) === 0, String(await page.evaluate(() => window.scrollY)));
@@ -1596,6 +1600,155 @@ async function playTabChecks() {
   await ctx.close();
 }
 
+
+/* The daily goal and the Coach (owner, 10 Oct 2026: "Bee's metrics are relevant and there is
+   an inbuilt coach — implement these"). Home's ring card is three rings with their numbers and
+   opens the Coach; the Coach reads the child's own misses; Beat it practises those stops; the
+   clock ticks only while visible, practice only on a learning surface; a target set in Settings
+   moves its ring; My page carries the thirty days. Screenshots to SHOTS_COACH (or SHOTS) when set. */
+const SHOTS_COACH = process.env.SHOTS_COACH || SHOTS;
+async function coachChecks(label, vp, isMobile, scheme) {
+  if (SHOTS_COACH) mkdirSync(SHOTS_COACH, { recursive: true });
+  const ctx = await browser.newContext({ viewport: vp, isMobile, hasTouch: isMobile, deviceScaleFactor: isMobile ? 2 : 1, colorScheme: scheme });
+  const p = await ctx.newPage(); const errors = [];
+  p.on('pageerror', (e) => errors.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const shot = (n) => SHOTS_COACH && p.screenshot({ path: `${SHOTS_COACH}/coach-${label}-${n}.png`, fullPage: n !== 'home' });
+  const B = (f, a) => p.evaluate(f, a);
+  await p.goto(URL0); await p.waitForSelector('[data-act="obStart"]');
+  await p.click('[data-act="obStart"]'); await p.fill('#nm', 'Asha'); await p.click('[data-act="obAvatar"][data-arg="mango"]'); await p.click('[data-act="obNext"]');
+  await p.locator('[data-act="obBand"]').last().click();
+  await p.waitForFunction(() => /^#\/atlas\//.test(location.hash));
+  await B(() => { location.hash = '#/home'; }); await p.waitForSelector('[data-bz=ring] .dgoal');
+  await p.waitForTimeout(3600); await B(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
+
+  /* the clock: hidden moves nothing; Home moves app time only; the Atlas moves both; a menu over the Atlas, or a game, moves no practice */
+  const clock = await B(() => {
+    const { R, metrics, metricTick } = window.BZF, c = R.s.kids[R.s.active], k = metrics.dayKey();
+    const snap = () => { const d = (c.dayLog || {})[k] || {}; return [d.app || 0, d.prac || 0]; };
+    const out = {};
+    window.BZF.fire('nav', 'home'); const a0 = snap(); metricTick(); out.home = snap().map((v, i) => v - a0[i]);
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    window.BZF.fire('nav', 'learn'); const h0 = snap(); out.hiddenTicked = metricTick(); out.hidden = snap().map((v, i) => v - h0[i]);
+    delete document.visibilityState;
+    const l0 = snap(); metricTick(); out.learn = snap().map((v, i) => v - l0[i]);
+    window.BZF.fire('nav', 'mistakes'); const m0 = snap(); metricTick(); out.mistakes = snap().map((v, i) => v - m0[i]);
+    window.BZF.fire('nav', 'learn'); window.BZF.fire('drawer'); const d0 = snap(); metricTick(); out.menu = snap().map((v, i) => v - d0[i]); window.BZF.fire('closeOv');
+    window.BZF.fire('nav', 'play'); const g0 = snap(); metricTick(); out.play = snap().map((v, i) => v - g0[i]);
+    window.BZF.fire('nav', 'town'); const t0 = snap(); metricTick(); out.town = snap().map((v, i) => v - t0[i]);
+    return out;
+  });
+  ok(`${label}: the metric clock ticks only while visible, and practise time only on learning screens (Atlas, Ones to try again — not Home, a menu, Play or the Town)`,
+    JSON.stringify(clock) === JSON.stringify({ home: [15, 0], hiddenTicked: false, hidden: [0, 0], learn: [15, 15], mistakes: [15, 15], menu: [15, 0], play: [15, 0], town: [15, 0] }), JSON.stringify(clock));
+
+  /* Home: three rings with their numbers */
+  const home = await B(() => {
+    const { R, metrics } = window.BZF, c = R.s.kids[R.s.active];
+    c.dayLog[metrics.dayKey()] = { app: 600, prac: 300, right: 4, asked: 6 };
+    window.BZF.fire('nav', 'home');
+    const card = document.querySelector('[data-bz=ring] .dgoal');
+    return { tracks: card ? card.querySelectorAll('svg.rings circle[stroke-opacity]').length : 0,
+      p: [...(card ? card.querySelectorAll('.ring-v') : [])].map((x) => x.dataset.ring + ':' + x.dataset.p),
+      lines: [...(card ? card.querySelectorAll('.dgoal-l') : [])].map((x) => x.dataset.m + ':' + x.querySelector('b').textContent.trim()),
+      go: /Coach speaks/.test(card ? card.textContent : ''), foot: !!document.querySelector('[data-bz=ring] .bz-ringfoot'), oldThree: !!document.querySelector('[data-bz=ring] [data-act="claim"]') };
+  });
+  ok(`${label}: Home's card is the daily goal — three rings at their values, “App time 10m/30m · Practise time 5m/15m · Questions right 4/10”, Coach speaks, and the level foot`,
+    home.tracks === 3 && home.p.join() === 'app:0.333,prac:0.333,right:0.400' && home.lines.join() === 'app:10m/30m,prac:5m/15m,right:4/10' && home.go && home.foot && !home.oldThree, JSON.stringify(home));
+  const prim = await p.evaluate(PRIMARY);
+  ok(`${label}: Continue is still the only filled button on Home`, prim.length === 1 && prim[0] === 'continue', JSON.stringify(prim));
+  const cHome = await p.evaluate(CONTRAST);
+  ok(`${label}: the daily goal card meets AA contrast`, !cHome.length, cHome.slice(0, 3).join(' | '));
+  await shot('home');
+
+  /* the card opens the Coach; a new child gets the empty read */
+  await p.click('[data-bz=ring] .dgoal');
+  await p.waitForSelector('.coach', { timeout: 8000 });
+  const empty = await B(() => ({ hash: location.hash, mode: document.querySelector('.coach').dataset.mode, empty: !!document.querySelector('.co-empty'),
+    line: document.querySelector('.co-line').textContent, h1: document.querySelectorAll('main h1').length, tab: (document.querySelector('[aria-current="page"]') || {}).textContent || '' }));
+  ok(`${label}: Home's card opens the Coach (#/coach), and a new child gets “nothing to read yet — go and get some wrong”`, empty.hash === '#/coach' && empty.mode === 'empty' && empty.empty && /nothing for me to read/i.test(empty.line) && /get some wrong/.test(empty.line) && empty.h1 === 1, JSON.stringify(empty));
+  await shot('empty');
+
+  /* a child with misses: Pip names the pattern, Beat it practises exactly those stops */
+  const read = await B(async () => {
+    const { R, mistakes } = window.BZF, c = R.s.kids[R.s.active], t = Date.now() - 2 * 864e5;
+    c.learn.testedOut = { ...(c.learn.testedOut || {}), c4: true };   /* a miss is only ever on a stop the child could open: here, a tested-out chapter */
+    mistakes.record(c, 'c4f', 0, t); mistakes.record(c, 'c4f', 1, t); mistakes.record(c, 'x-ch4', 0, t); mistakes.record(c, 'c1b', 0, t);
+    R.render();
+    return { read: document.querySelector('.co-line').dataset.read, line: document.querySelector('.co-line').textContent, sel: (document.querySelector('.co-detail') || {}).dataset?.trap,
+      bars: [...document.querySelectorAll('.co-trap')].map((b) => b.dataset.arg + ':' + b.querySelector('.co-n').textContent), chips: [...document.querySelectorAll('.co-chip')].map((a) => a.dataset.miss),
+      steps: [...document.querySelectorAll('.co-step h3')].map((h) => h.textContent), worked: document.querySelectorAll('.co-eg ol li').length };
+  });
+  ok(`${label}: a child who missed Buy more and Which box twice-over gets Pip's read “the price of one”, the trap open, the chart and their own misses as chips`,
+    read.read === 'unitprice' && /the price of one/.test(read.line) && read.sel === 'unitprice' && read.bars.join() === 'unitprice:3,needwant:1' && read.chips[0] === 'c4f' && read.chips.length === 3
+    && read.steps.join('|') === 'What goes wrong|The trick|Watch it work' && read.worked >= 3, JSON.stringify(read));
+  const cCoach = await p.evaluate(CONTRAST);
+  ok(`${label}: the Coach meets AA contrast`, !cCoach.length, cCoach.slice(0, 3).join(' | '));
+  const a11 = await B(() => ({ h1: document.querySelectorAll('main h1').length, unnamed: [...document.querySelectorAll('button, a[href]')].filter((b) => b.offsetParent && !(b.getAttribute('aria-label') || b.textContent.trim() || b.title)).length,
+    wide: document.scrollingElement.scrollWidth > innerWidth + 1, streak: /day streak|days in a row|\bstreak\b/i.test(document.body.innerText) }));
+  ok(`${label}: the Coach has one h1, every button named, nothing off the screen and no streak copy`, a11.h1 === 1 && !a11.unnamed && !a11.wide && !a11.streak, JSON.stringify(a11));
+  const faces = await B(() => [...document.querySelectorAll('.coach .who')].map((w) => Math.round(w.getBoundingClientRect().width)).filter((w) => w > 72));
+  ok(`${label}: the cast's faces on the Coach are drawn at their size (none over 72px)`, !faces.length, faces.join(','));
+  await shot('misses');
+  await p.click('.co-trap[data-arg="needwant"]'); await p.waitForTimeout(150);
+  ok(`${label}: tapping a trap in the chart opens it`, await B(() => document.querySelector('.co-detail').dataset.trap === 'needwant'));
+  await p.click('.co-trap[data-arg="unitprice"]'); await p.waitForTimeout(150);
+  await p.click('.co-beat'); await p.waitForTimeout(900);
+  const beat = await B(() => { const { R } = window.BZF, c = R.s.kids[R.s.active], id = c.learn.openCard || '';
+    return { nav: R.s.ui.nav, from: R.practice && R.practice.from, open: id, eyebrow: (document.querySelector('.shero .eyebrow') || {}).textContent || '' }; });
+  ok(`${label}: Beat it starts practice on exactly the stops that trap caught, asked fresh`, beat.nav === 'learn' && ['c4f', 'x-ch4'].includes(beat.from) && /^CHOOSE-(4|10)~\d+$/.test(beat.open) && /beating/i.test(beat.eyebrow), JSON.stringify(beat));
+  /* "Another one" turns over to the trap's next stop */
+  if (await p.locator('#numAns').count()) { await p.fill('#numAns', String(await B(() => window.BZF.genValue(window.BZF.R.s.kids[window.BZF.R.s.active].learn.openCard)))); await p.press('#numAns', 'Enter'); }
+  else await p.click(`.opt[data-act="answer"][data-arg="${await B(() => window.BZF.key(window.BZF.R.s.kids[window.BZF.R.s.active].learn.openCard))}"]`);
+  await p.waitForTimeout(250);
+  const turn = await B(() => { const { R } = window.BZF; const b = document.querySelector('[data-act="practise"]'); const arg = b ? b.dataset.arg : null; if (b) b.click();
+    return { arg, ids: R.beat && R.beat.ids, from: R.practice && R.practice.from, open: R.s.kids[R.s.active].learn.openCard }; });
+  ok(`${label}: and “Another one” turns over to the trap's next stop, asked fresh`, turn.arg === 'x-ch4' && turn.from === 'x-ch4' && /^CHOOSE-(4|10)~\d+$/.test(turn.open), JSON.stringify(turn));
+  await B(() => window.BZF.fire('closeCard'));
+
+  /* the chips open the stop */
+  await B(() => { location.hash = '#/coach'; }); await p.waitForSelector('.co-chip');
+  await p.click('.co-chip[data-miss="c4f"]'); await p.waitForTimeout(400);
+  ok(`${label}: a worst-miss chip opens that stop`, await B(() => location.hash === '#/atlas/c4f' && window.BZF.R.s.kids[window.BZF.R.s.active].learn.openCard === 'c4f'));
+  await B(() => window.BZF.fire('closeCard'));
+
+  /* Settings changes a target, and the ring follows */
+  await B(() => { location.hash = '#/home'; }); await p.waitForSelector('[data-bz=ring] .dgoal');
+  await B(() => window.BZF.fire('settings')); await p.waitForSelector('[data-goal="right"]');
+  await p.click('[data-act="goalStep"][data-arg="right:1"]'); await p.waitForTimeout(150);
+  const tgt = await B(() => { const v = document.querySelector('[data-goal="right"]').textContent; const secs = [...document.querySelectorAll('.ovbox .scard h3')].map((h) => h.textContent.trim()).join('|'); window.BZF.fire('closeOv');
+    const r = document.querySelector('[data-bz=ring] .ring-v[data-ring="right"]'); const l = document.querySelector('[data-bz=ring] .dgoal-l[data-m="right"] b');
+    const n = window.BZF.metrics.today(window.BZF.R.s.kids[window.BZF.R.s.active]).right;
+    return { v, secs, n, p: r && r.dataset.p, line: l && l.textContent }; });
+  /* five by now: the four seeded, and the practice question Beat it asked, answered right first time */
+  ok(`${label}: Settings raises “questions right” to 11 and Home's inner ring and line follow (5/11 — Beat it's right answer counted)`, tgt.v === '11' && tgt.n === 5 && tgt.p === (5 / 11).toFixed(3) && tgt.line === '5/11' && tgt.secs === 'Me|Sound & music|Look|Comfort|Grown-ups', JSON.stringify(tgt));
+
+  /* the Coach's rings open the thirty days on My page */
+  await B(() => { location.hash = '#/coach'; }); await p.waitForSelector('.co-rings');
+  await p.click('.co-rings'); await p.waitForTimeout(500);
+  const ch = await B(() => {
+    const { R, metrics } = window.BZF, c = R.s.kids[R.s.active];
+    for (let i = 1; i < 12; i++) { const d = new Date(); d.setDate(d.getDate() - i); c.dayLog[metrics.dayKey(+d)] = { app: i % 2 ? 2400 : 300, prac: 600, right: i % 3 ? 12 : 2, asked: 14 }; }
+    R.render();
+    const st = () => Object.fromEntries([...document.querySelectorAll('#metrics [data-mstat]')].map((x) => [x.dataset.mstat, x.querySelector('b').textContent]));
+    const a = { hash: location.hash, bars: document.querySelectorAll('#metrics .mbar').length, on: document.querySelectorAll('#metrics .mbar.on').length, st: st() };
+    window.BZF.fire('metricPick', 'right');
+    return { ...a, right: st(), onR: document.querySelectorAll('#metrics .mbar.on').length, pressed: (document.querySelector('#metrics [aria-pressed="true"]') || {}).textContent };
+  });
+  ok(`${label}: the Coach's rings open My page's thirty days — a bar a day, target, today, average and days on target as a count`,
+    /^#\/me/.test(ch.hash) && ch.bars === 30 && ch.on === 6 && ch.st.Target === '30m' && ch.st['Days on target'] === '6 of 30' && ch.right.Target === '11' && ch.right.Today === '5' && ch.right['Days on target'] === '8 of 30' && ch.onR === 8 && ch.pressed === 'Questions right', JSON.stringify(ch));
+  const wide = await B(() => document.scrollingElement.scrollWidth > innerWidth + 1);
+  ok(`${label}: the thirty-day chart fits the screen`, !wide);
+  await p.evaluate(() => document.querySelector('#metrics').scrollIntoView({ block: 'center' }));
+  if (SHOTS_COACH) await p.screenshot({ path: `${SHOTS_COACH}/coach-${label}-metrics.png` });
+
+  /* the Coach is in the ☰ drawer and in search */
+  const doors = await B(() => { const r = window.BZF.search('coach'); return { search: r.length && r[0].arg === '#/coach' }; });
+  await p.click('[data-bz=menu]').catch(() => {}); await p.waitForTimeout(300);
+  const dr = await B(() => !!document.querySelector('[data-bz-dr="app"][href="#/coach"]'));
+  ok(`${label}: the Coach is in the ☰ drawer and the first search result for “coach”`, dr && doors.search, JSON.stringify({ dr, ...doors }));
+  ok(`${label}: the daily goal and the Coach threw nothing`, !errors.length, errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
 /* a run that throws is a failed check with a name, never a bare crash */
 const safely = async (label, f) => { if (process.env.ONLY && !process.env.ONLY.split(',').includes(label)) return; try { await f(); } catch (e) { ok(`${label}: the run completed`, false, String(e.message || e).split('\n')[0]); } };
 await safely('desktop', () => run('desktop', { width: 1280, height: 860 }, false, 'light'));
@@ -1617,6 +1770,10 @@ await safely('stall-desktop-dark', () => stallChecks('desktop-dark', { width: 12
 await safely('shift-desktop', () => shiftChecks('shift-desktop', { width: 1280, height: 860 }, false, 'light'));
 await safely('shift-phone', () => shiftChecks('shift-phone', { width: 390, height: 844 }, true, 'light'));
 await safely('shift-phone-dark', () => shiftChecks('shift-phone-dark', { width: 390, height: 844 }, true, 'dark'));
+await safely('coach-phone', () => coachChecks('phone', { width: 390, height: 844 }, true, 'light'));
+await safely('coach-phone-dark', () => coachChecks('phone-dark', { width: 390, height: 844 }, true, 'dark'));
+await safely('coach-desktop', () => coachChecks('desktop', { width: 1280, height: 860 }, false, 'light'));
+await safely('coach-desktop-dark', () => coachChecks('desktop-dark', { width: 1280, height: 860 }, false, 'dark'));
 await browser.close(); srv.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);

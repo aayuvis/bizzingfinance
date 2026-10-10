@@ -2,7 +2,7 @@
    state -> render() -> string -> innerHTML; clicks dispatch by [data-act]. */
 
 import { esc, on, bindRoot, fire, toast, sfx, confetti, setSound, say as speak, setSayRate, canSay, nWord } from './ui.js';
-import { money, price, setCurrency, CURRENCIES, weekday } from './fmt.js';
+import { money, price, setCurrency, CURRENCIES, weekday, dayIndex } from './fmt.js';
 import { say, CAST, ico, mark, face } from './art.js';
 import { mountLesson } from './lessonplayer.js';
 import * as co from './companion.js';
@@ -73,6 +73,11 @@ import { buy as buyAvatar, buyWorld } from './family/bizzing-avatars.js';
 import { spend as spendCoins } from './family/bizzing-wallet.js';
 const coinBalance = (who) => family.coinBalance(who);
 import * as mistakes from './mistakes.js';
+import * as metrics from './metrics.js';
+/* the Coach (coach.js) and its rulebook load when the page is opened, not with the first screen */
+let COACH = null;
+const coachMod = () => (COACH ? Promise.resolve(COACH) : import('./coach.js').then((m) => (COACH = m)));
+const coachView = () => COACH ? COACH.viewCoach() : (coachMod().then(() => render()), '<h1>Coach</h1><div class="card"><p class="small muted">Pip is opening your notes…</p></div>');
 /* the place stories load when one is opened, not on the first screen */
 import { viewLibrary } from './library.js';
 let viewStory = null, viewSprint = null;
@@ -145,6 +150,7 @@ function focusFor(m) {
     if (ch) { const wi = WORLDS.findIndex((w) => w.chapters.includes(ch.id)); if (wi >= 0) R.shelf = 'act:' + wi; return [`.stop[data-arg="${q(ch.cards[0].id)}"]`, `#act-${wi}`]; }
   }
   if (a === 'me' && b === 'rank') return ['.pcard'];
+  if (a === 'me' && b === 'metrics') return ['#metrics'];
   if (a === 'market40' && b === 'era') return [`[data-act="mgAct"][data-arg="${q(c2)}"]`];
   return null;
 }
@@ -196,7 +202,7 @@ function readHash() {
   if (['sources', 'cast'].includes(m[0])) { R.sheetNow = m[0] === 'cast' ? 'castCard' : 'sources'; R.sheetArg = decodeURIComponent(m[1] || ''); return false; }
   /* a place's story (stories.js): #/story/<world> */
   if (m[0] === 'story') { R.s.ui.nav = 'story'; R.storyAt = decodeURIComponent(m[1] || 'market'); R.focus = null; return true; }
-  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed', 'library', 'sprint'];
+  const known = ['home', 'town', 'learn', 'atlas', 'money', 'play', 'arcade', 'store', 'progress', 'me', 'collection', 'medals', 'shop', 'words', 'mistakes', 'parents', 'worlds', 'report', 'market40', 'feed', 'library', 'sprint', 'coach'];
   if (known.indexOf(m[0]) < 0) return false;
   R.s.ui.nav = ALIAS[m[0]] || m[0];
   if (m[0] === 'money' && m[1]) R.s.ui.sub = m[1];
@@ -255,6 +261,7 @@ function render() {
     nav === 'story' ? storyView() :
     nav === 'library' ? viewLibrary() :
     nav === 'sprint' ? sprintView() :
+    nav === 'coach' ? coachView() :
     nav === 'feed' ? FEED.view(c, s) : viewHome();
   if (nav === 'feed' && R.lastNav !== 'feed') FEED.resetVisit();
   const moved = R.lastNav !== undefined && R.lastNav !== nav;   /* a new screen, not a redraw */
@@ -279,7 +286,9 @@ function render() {
       routes: { me: '#/me', shop: '#/shop', collection: '#/collection', medals: '#/medals', settings: '#/settings', grownups: '#/parents', help: '#/help', privacy: '#/privacy' },
       app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
         { icon: 'book', label: 'The Library', sub: 'tools to try things on, and every Money Word', href: '#/library' },
-        { icon: 'path', label: 'Ones to try again', sub: 'questions that tripped you, back after a gap', href: '#/mistakes' },
+        /* the family drawer has four app slots; the Coach takes Ones to try again's, and the
+           Coach page is its door now (its "to revisit" opens the deck) */
+        { icon: 'lamp', label: 'The Coach', sub: 'what trips you up, the trick for it, and ones to try again', href: '#/coach' },
         { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
     content: `${R.session && nav !== 'parents' ? sessionBar() : ''}
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
@@ -861,6 +870,7 @@ on('mkPick', (i) => {
   if (cur.pick === d.answer || cur.tries >= 2) return;
   cur.pick = +i; cur.tries++;
   const right = +i === d.answer;
+  if (cur.tries === 1) metrics.answered(c, right);
   if (right || cur.tries >= 2) {
     const r = mistakes.answer(c, m.k, right && cur.tries === 1);
     if (right && cur.tries === 1) { sfx.good(); family.coins(c.name, 'answer'); if (r && r.moved === 'cleared') { sfx.medal(); toast('That one is yours again'); } } else sfx.bad();
@@ -895,6 +905,7 @@ on('itCheck', (id) => {
     : it.kind === 'order' ? (t.seq || []) : it.things.map((_, i) => (t.bins || {})[i]);
   const right = items.check(id, attempt);
   t.tries = (t.tries || 0) + 1; t.right = right; t.last = attempt;
+  if (t.tries === 1) metrics.answered(C(), right);
   if (right) { sfx.good(); t.settled = true; if (t.tries === 1) family.coins(C().name, 'answer'); }
   else if (t.tries >= 2) { sfx.bad(); t.settled = true; }
   else sfx.bad();
@@ -1099,14 +1110,16 @@ on('card', (id) => {
    resolver so every caller stops caring which. */
 const cardById = (id) => resolveCard(id, C());
 
-on('closeCard', () => { R.practice = null; R.cold = null; R.coldPlace = null; C().learn.openCard = null; C().learn.drill = null; render(); });
+on('closeCard', () => { R.practice = null; R.beat = null; R.cold = null; R.coldPlace = null; C().learn.openCard = null; C().learn.drill = null; render(); });
 on('answer', (i) => {
   const c = C(), card = cardById(c.learn.openCard);
   if (!card || card.pending) return;
   let st = c.learn.drill;
   if (!st || st.card !== card.id || !st.picks) st = c.learn.drill = { card: card.id, qi: 0, picks: [] };
   if (drill.settled(st.picks[st.qi])) return;        /* this question is answered */
+  const firstGo = !st.picks[st.qi];
   const p = drill.pick(st, st.qi, +i, shuffledDrill(card, st.qi).answer);
+  if (firstGo) metrics.answered(c, p.right);          /* the daily goal's "Questions right" (metrics.js) */
   /* the card counts as RIGHT only when every question was right first try —
      a second-go answer is learning, not evidence of having known (drill.js) */
   const t = drill.tally(st, drillCount(card));
@@ -1134,6 +1147,7 @@ on('answerNum', () => {
   if (drill.settled(cur)) return;
   const dq = shuffledDrill(card, st.qi), right = n === dq.value;
   const p = drill.pick(st, st.qi, right ? 0 : (cur ? 2 : 1), 0);
+  if (!cur) metrics.answered(c, p.right);
   p.typed = n;
   const t = drill.tally(st, drillCount(card));
   st.done = t.done; st.right = t.right;
@@ -1147,8 +1161,10 @@ on('answerNum', () => {
 on('practise', (fromId) => {
   const c = C(), from = cardById(fromId); if (!from) return;
   if (!R.practice && c.learn.openCard === fromId && c.learn.drill && c.learn.drill.done) { fire('cardDone', fromId); }
-  if (R.practice && R.practice.from === fromId && c.learn.drill && c.learn.drill.right) sim.addXP(c, sim.cardXP(false, true));
-  const n = R.practice && R.practice.from === fromId ? R.practice.n + 1 : 0;
+  /* the Coach's "Beat it" turns over the trap's own stops, one fresh question each (R.beat) */
+  const inBeat = !!(R.beat && R.beat.ids.includes(fromId));
+  if (R.practice && (R.practice.from === fromId || inBeat) && c.learn.drill && c.learn.drill.right) sim.addXP(c, sim.cardXP(false, true));
+  const n = inBeat ? R.beat.n++ : R.practice && R.practice.from === fromId ? R.practice.n + 1 : 0;
   const k = practiceCard(from, n, c); if (!k) return;
   R.practice = { from: fromId, n, id: k.id };
   R.s.ui.nav = 'learn'; c.learn.openCard = k.id; c.learn.drill = null;
@@ -1162,7 +1178,7 @@ on('moreLike', (id) => {
 on('practiceDone', () => {
   const c = C(), right = !!(c.learn.drill && c.learn.drill.right);
   if (right) sim.addXP(c, sim.cardXP(false, true));
-  R.practice = null; c.learn.openCard = null; c.learn.drill = null; R.s.ui.nav = 'learn';
+  R.practice = null; R.beat = null; c.learn.openCard = null; c.learn.drill = null; R.s.ui.nav = 'learn';
   sim.save(R.s); render(); window.scrollTo(0, 0);
 });
 /* Answering a stop cold (owner, 3 Oct 2026: "add per-stop skipping"). Runtime only until
@@ -1965,7 +1981,36 @@ on('install', async () => { const e = R.install; if (!e) return; R.install = nul
 on('about', () => { R.overlay = { kind: 'about' }; sfx.click(); render(); });
 window.addEventListener('appinstalled', () => { R.install = null; toast('Installed'); });
 
-window.BZF = { R, sim, quitGame, arcadeReady: arcadeMod, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
+/* ══ the daily goal and the Coach (metrics.js, coach.js) ══════════════
+   The clock ticks every fifteen seconds, and only while the tab is being looked at: a tab
+   left open overnight invents nothing. Practise time moves only on a learning surface
+   (metrics.learningNow). The tick never re-renders; it is written with the next render's
+   save, or at most a minute later, so a quiet page is not a page writing every tick. */
+function metricTick() {
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return false;
+  if (!R.s || !R.s.kids.length || R.adding) return false;
+  const moved = metrics.tick(C(), { visible: true, learning: metrics.learningNow({ nav: R.s.ui.nav, ov: R.overlay && R.overlay.kind, game: !!R.game }) });
+  if (moved && !R.metricSave) R.metricSave = setTimeout(() => { R.metricSave = null; sim.save(R.s); }, 60000);
+  return moved;
+}
+setInterval(metricTick, metrics.TICK * 1000);
+on('goalStep', (v) => {
+  const [k, d] = String(v || '').split(':');
+  if (metrics.stepTarget(C(), k, +d) == null) return;
+  sim.save(R.s); sfx.click(); render();
+});
+on('metricPick', (k) => { R.metricSel = k; sfx.click(); render(); });
+on('coachTrap', (k) => { R.coachTrap = k; sfx.click(); render(); const el = document.querySelector('.co-detail'); if (el && innerWidth < 760) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+on('coachTip', () => { R.coachTip = (R.coachTip == null ? dayIndex(Date.now()) : R.coachTip) + 1; sfx.click(); render(); });
+/* Beat it: practice on exactly the stops this trap caught, asked fresh (cards.js practiceFor),
+   turned over one at a time; a trap whose stops cannot be asked fresh opens its worst stop */
+on('coachBeat', (k) => coachMod().then((m) => {
+  const p = m.beatPlan(C(), k); if (!p) return;
+  if (p.ids.length) { R.practice = null; R.beat = { k, label: p.label, ids: p.ids, n: 0 }; fire('practise', p.ids[0]); }
+  else if (p.open) { R.beat = null; fire('card', p.open); }
+}));
+
+window.BZF = { R, sim, metrics, metricTick, coachReady: coachMod, quitGame, arcadeReady: arcadeMod, startJobGame: (id, q) => import('./jobgames.js').then((m) => m.startJobGame(id, q)), feed: FEED, ledger, mastery, decisions, letters: LETTERS, report: reportmod, reportcard, validate: () => validate(ALL_CARDS), objectives: OBJECTIVES,
   ambient, audio, looks: LOOKS, setTester, games: GAMES, catalogue: CATALOGUE, validateAvatars: () => validateAvatars(CATALOGUE), search: searchTown, mistakes,
   placement, cardById, genReady, genValue: (id) => { const k = cardById(id); return k && k.drill && k.drill.value; }, allCards: ALL_CARDS, fire, confetti, key: (id, qi) => shuffledDrill(cardById(id), qi || 0).answer };
 

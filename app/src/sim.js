@@ -78,6 +78,10 @@ export function newChild(name, band, cur, avatar) {
     companion: null,
     keepsakes: [], overnight: null, deeds: [], puzzle: null, maths: null, answers: [],
     stall: null,                      /* Stall of My Own: the season under way (stall.js) */
+    /* the daily goal (metrics.js): the child's own three targets, and a log a day of what was
+       measured. A child made before them reads the defaults (metrics.targets) and starts a log
+       on the first tick, so no migration is needed — the shape is only ever added to. */
+    tgt: { app: 30, prac: 15, right: 10 }, dayLog: {},
     shop: { owned: [], cooling: {} },
     /* the family layer (FAMILY-STANDARD §1, §7, §8): faces and worlds bought with
        Bizzing coins, the chosen world and cosmetics. Never town money. */

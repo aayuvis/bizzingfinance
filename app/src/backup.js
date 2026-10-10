@@ -39,6 +39,10 @@ export const SYNC_KEYS = [
   /* v15: Stall of My Own — the season under way (its seed, its ledger, its stock): a game
      record, nothing about the child */
   'stall',
+  /* the daily goal's three targets — a setting the child chose. The day log beside it
+     (minutes on screen, day by day) is deliberately NOT here: how long a child spent in
+     the app is usage, and usage stays on the device. */
+  'tgt',
 ];
 /* Named so the omission is deliberate and greppable rather than an oversight. */
 export const NEVER_SYNCED = ['name', 'answers'];

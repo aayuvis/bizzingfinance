@@ -32,6 +32,9 @@ export function index() {
   [['loan', 'The loan explorer', 'borrow loan cost price pay back weeks'], ['grow', 'The snowball', 'interest bank grow years compound'], ['split', 'Your jar split', 'jars split pay day rule save'],
     ['week', 'The budget sandbox', 'budget week rent food left over plan'], ['unit', 'The unit price checker', 'unit price cheaper pack better value']]
     .forEach(([id, t, b]) => out.push({ kind: 'Tool', title: t, sub: 'In the Library', body: b, act: 'goto', arg: '#/library/' + id, icon: 'book' }));
+  /* the Coach, and the daily goal it reads */
+  out.push({ kind: 'Page', title: 'The Coach', sub: 'Pip’s read on what trips you up, and the trick for it', body: 'coach mistakes misses pattern trap trick habit practise practice beat', act: 'goto', arg: '#/coach', icon: 'sparkle' });
+  out.push({ kind: 'Page', title: 'Daily goal', sub: 'App time, practise time and questions right — the last 30 days', body: 'daily goal target rings minutes time questions right chart', act: 'goto', arg: '#/me/metrics', icon: 'calendar' });
   /* Mags' store: each thing opens at its own shelf (audit v4, C4) */
   SHOP.forEach((it) => out.push({ kind: 'Store', title: it.name, sub: "In Mags' General Store", body: plain(it.desc) + ' ' + plain(it.gives || ''), act: 'goto', arg: '#/store/' + it.id, icon: 'bag' }));
   return (INDEX = out);

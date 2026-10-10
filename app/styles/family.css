@@ -277,15 +277,33 @@ html:root{ --bz-accent:var(--action); --bz-accent-ink:var(--action-ink); --bz-in
   --bz-line:var(--line); --bz-card:var(--surface); --bz-hdr:color-mix(in srgb,var(--paper) 82%,transparent);
   --bz-tabbar:color-mix(in srgb,var(--surface) 94%,transparent); --bz-hour:color-mix(in srgb,var(--treasure) 22%,var(--surface)); }
 html[data-bz-dark]:root{ --bz-card-line:#4a3f2a; --bz-chip:rgba(255,255,255,.09); --bz-hdr:color-mix(in srgb,var(--paper) 82%,transparent); }
-.fring{display:flex;gap:16px;align-items:center}
-.fring svg{flex:0 0 110px;color:var(--bz-ink)}
-.fring-h{display:block;font:800 20px var(--bz-display);margin-bottom:4px}
-.fring > div{flex:1;min-width:0}
-.fring-q{margin:4px 0 0;font-size:13px;display:flex;gap:7px;align-items:center;color:var(--bz-ink)}
-.fring-q i{flex:0 0 8px;height:8px;border-radius:50%;background:var(--d)}
-.fring-q span{flex:1;min-width:0}
-.fring-q b{font:700 13px var(--mono)}
-.fring-q.done span{text-decoration:line-through;text-decoration-color:var(--grow)}
+/* the daily goal on Home (metrics.js): Bee's three rings and three lines; the card opens the Coach */
+.fring-h{display:block;font:800 20px var(--bz-display);margin-bottom:6px;color:var(--bz-ink)}
+.dgoal{display:flex;gap:14px;align-items:center;width:100%;height:100%;padding:0;border:0;background:none;color:var(--bz-ink);text-align:left;cursor:pointer;font:inherit}
+.dgoal-r{flex:0 0 104px;height:104px;display:grid;place-items:center}
+.dgoal-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dgoal-l{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;line-height:1.35}
+.dgoal-l i{flex:0 0 8px;height:8px;border-radius:3px;background:var(--d)}
+.dgoal-l > span{color:var(--bz-muted)}
+.dgoal-l > b{margin-left:auto;font:700 13px var(--mono);white-space:nowrap;color:var(--bz-ink)}
+.dgoal-l > b span{color:var(--bz-muted)}
+.dgoal-go{display:block;margin-top:6px;font-weight:800;font-size:13px;color:var(--action)}
+.dgoal:hover .dgoal-go,.dgoal:focus-visible .dgoal-go{text-decoration:underline}
+/* My page: the thirty-day chart */
+.mchart .mpick{margin:12px 0 10px;flex-wrap:wrap}
+.mstats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.mstats span{min-width:76px}
+.mstats b{display:block;font:800 17px var(--mono);color:var(--ink)}
+.mstats small{display:block;font-size:11px;font-weight:700;color:var(--muted)}
+.mplot{position:relative}
+.mtgt{position:absolute;left:0;right:0;border-top:2px dashed var(--mc);pointer-events:none;z-index:1}
+.mtgt small{position:absolute;left:0;top:-17px;font-size:10px;font-weight:800;color:var(--ink);background:var(--surface);padding:0 5px 0 0}
+.mbars{display:flex;align-items:flex-end;gap:2px}
+.mbar{flex:1;min-width:4px;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+.mbar i{display:block;border-radius:3px 3px 2px 2px;background:color-mix(in srgb,var(--mc) 34%,transparent)}
+.mbar.on i{background:var(--mc)}
+.mticks{display:flex;gap:2px;margin-top:4px}
+.mticks span{flex:1;min-width:4px;text-align:center;font-size:9px;font-weight:700;color:var(--muted)}
 .bz-content .demobar{margin:-6px 0 14px;border-radius:14px}
 
 /* #app was a flex column for the old chrome; under the family shell it is a plain
@@ -295,8 +313,6 @@ html[data-bz-dark]:root{ --bz-card-line:#4a3f2a; --bz-chip:rgba(255,255,255,.09)
 /* AA (FAMILY-STANDARD §10): the shell's kicker gold is 3.7:1 on a white card; the
    app's treasure-deep keeps the same hue at 5.9:1 (light) — colour only, no geometry */
 html:not([data-bz-dark]) .bz-kicker{color:var(--treasure-deep)}
-.fring-take{flex:0 0 auto;font:800 12px var(--bz-body,inherit);padding:4px 10px;border-radius:999px;border:1.5px solid var(--bz-accent);background:transparent;color:var(--bz-ink);cursor:pointer;min-height:28px}
-.fring-take:hover,.fring-take:focus-visible{background:var(--bz-accent);color:#fff}
 /* the two chips the old bar carried (main.js inserts them after the brand) */
 .bz-hiveback,.bz-tester{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:999px;font:800 12px var(--bz-body,inherit);text-decoration:none;white-space:nowrap}
 .bz-hiveback{background:var(--bz-accent-soft,#FFF1D6);color:var(--bz-ink);border:1.5px solid var(--bz-line)}
