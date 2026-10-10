@@ -75,6 +75,18 @@ const markBad = STOPS.filter((k) => {
 });
 ok(!markBad.length, 'the same markup: <b>/<i> in the teaching, balanced; the example plain text', markBad.map((k) => k.id).join(' '));
 ok(STOPS.every((k) => SPROUT[k.id].teach !== k.teach), 'every Sprout teaching is a reading of its own, not the builder text copied');
+/* a RETELLING, not the builder text shortened (the doubling's finding: 87 of 122 readings were
+   80% the builder's own words) — a different way in, an image or a little scene, with the same
+   facts. Measured as My Feed measures a near-duplicate: words shared, against the shorter. */
+{
+  const W = (t) => new Set(plain(t).toLowerCase().match(/[a-z0-9']+/g) || []);
+  const near = [];
+  for (const k of STOPS) for (const f of ['teach', 'eg']) {
+    const a = W(SPROUT[k.id][f]), b = W(k[f]); let n = 0; for (const w of a) if (b.has(w)) n++;
+    const o = n / Math.min(a.size, b.size); if (o >= 0.8) near.push(`${k.id}.${f} ${Math.round(o * 100)}%`);
+  }
+  ok(!near.length, 'every Sprout reading retells its stop — none shares 80% of its words with the builder text', near.slice(0, 6).join(' | ') || `${STOPS.length * 2} readings`);
+}
 
 /* 5 · the picker: a Sprout gets the reading, a Builder the card's own words */
 const c1a = STOPS.find((k) => k.id === 'c1a');
