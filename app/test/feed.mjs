@@ -6,6 +6,9 @@
                  levels (≥ 100 a chapter or a declared, honest shortfall; ≥ 110 where not
                  declared; ≥ 300 with no level) · retrieval (its chapter, four options, no
                  currency) · lines (passages, never a shard) · letters (a scam looks like Pip's) · fresh
+   THE SECOND CUT doubled, or the shortfall declared · sprout (one band each) · generated and
+                 proved (worked siblings, worked sums, scam messages) · no currency sign · stories
+                 priced at render · a game's words open that game · only free faces
    THE RANKING   bands · ceiling (nothing above the next chapter) · arithmetic gate · context ·
                  due · mix · ends · climbing changes the "now" cards · two of a lesson at most ·
                  review past a chapter · why names the thing · pictures are the card's own
@@ -35,6 +38,11 @@ const { ART } = await import('../src/art-gen.js');
 const { COVERS } = await import('../src/covers-gen.js');
 const { COVER_ALIAS } = await import('../src/gamelist.js');
 const { BLD } = await import('../src/buildings-gen.js');
+const { WORKED } = await import('../src/worked.js');
+const { scamDeck } = await import('../src/smartsim.js');
+const { SPROUT } = await import('../src/sprout.js');
+const { STORIES } = await import('../src/stories.js');
+const { CATALOGUE } = await import('../src/catalogue.js');
 
 /* The sources the feed added for audit V1, resolved HERE, independently of the builder: an
    objective's authored retrieval item; its generated item, drawn again from the same seed
@@ -50,6 +58,16 @@ function resolve(src) {
   if (m) { const o = objectiveOf(m[1]), d = o && o.assess[+m[2]]; return d ? unsigned({ title: o.short, ...d }) : null; }
   m = /^gen:([A-Z]+-\d+)~(\d+)(#why)?$/.exec(src || '');
   if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]); return g ? unsigned(g) : null; }
+  /* the second cut's generated sources, drawn again here: a typed question's worked sibling
+     (generate.js E3), a stop's worked sum (worked.js) at one unit to the coin, a Scam Spotter
+     message from its own seed */
+  m = /^genhow:([A-Z]+-\d+)~(\d+)$/.exec(src || '');
+  if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]), w = g && g.drill.kind === 'num' && g.drill.worked; return w ? unsigned({ title: o.short, q: w.q, why: w.why }) : null; }
+  m = /^worked:([a-z0-9-]+)$/.exec(src || '');
+  if (m) { if (!WORKED[m[1]]) return null; const was = FMT.currency(); FMT.setCurrency('AED'); try { return unsigned({ title: card(m[1]).title, ...WORKED[m[1]]() }); } finally { FMT.setCurrency(was); } }
+  if (/^sprout:/.test(src || '')) { const o = C.resolve(src); return o && unsigned(o); }
+  m = /^scamdeck:(\d+)#(\d+)$/.exec(src || '');
+  if (m) { const d = scamDeck(+m[1], 'standard')[+m[2]]; return d ? { t: d.t, note: d.note } : null; }
   return C.resolve(src);
 }
 
@@ -148,6 +166,7 @@ const badRoute = DATA.filter((x) => {
   if (a === 'words' && b) return !GLOSSARY.some((g) => g[0] === b);
   if (a === 'sources') return !SOURCES[b];
   if (a === 'cast') return !LORE[b];
+  if (a === 'story') return !STORIES[b];
   if (a === 'play') return !has(C.GAMES, b);
   if (a === 'medals') return !C.BADGES[b];
   if (a === 'letter') return !has(C.LETTERS, b);
@@ -208,6 +227,80 @@ ok(per.every((n, i) => BUILD.SHORT[i + 1] || n >= 110), 'levels (audit V1): ever
     'letters: one frame for every letter — a scam has the same kind, source, button, gate and picture as a letter from Pip', `${L.length} letters, ${scam.length} of them scams`);
   const lbad = L.filter((x) => { const o = C.LETTERS.find((y) => 'letter:' + y.id === x.src); return x.route !== '#/letter/' + encodeURIComponent(o.id) || !plain(o.body).startsWith(x.body) || (x.body.length > 160 && /[.!?…]\s/.test(x.body)); });
   ok(!lbad.length, 'letters: each shows its title and the opening of its body, and opens that letter', lbad.slice(0, 2).map((x) => x.id).join(' '));
+}
+
+/* ── the second cut (owner, 10 Oct 2026: "look for additional content and double the feed
+   cards"): more of what the app already held, each kind held to its source ───────────── */
+{
+  const D = BUILD.DOUBLE, n = DATA.length, FROM = 1812, TARGET = 2 * FROM;
+  const held = n >= TARGET ? !D : !!D && D.from === FROM && D.target === TARGET && n >= D.floor && D.floor > FROM && typeof D.close === 'string' && D.close.length > 40;
+  ok(held, 'count (owner): the feed doubles its 1,812 cards — or what it holds is declared, with what would close the rest',
+    `${n} of ${TARGET}` + (D && n < TARGET ? ` · declared shortfall, floor ${D.floor}` : '') + (n >= TARGET && D ? ' · doubled and still declared short' : ''));
+
+  /* the Sprout reading: sprout.js word for word, a Sprout's card only; the stop it reads is then
+     the Builder's, and a builder-only stop always has its Sprout reading, so no band loses one */
+  const SP = DATA.filter((x) => /^sprout:/.test(x.src));
+  const spBad = SP.filter((x) => {
+    const m = /^sprout:([^#]+)#(teach|eg)$/.exec(x.src), twin = m && DATA.find((y) => y.src === `card:${m[1]}#${m[2]}`);
+    return !m || x.bands.join() !== 'sprout' || x.body !== plain(SPROUT[m[1]][m[2]].replace(SIGN_RE, '')) || x.kind !== (m[2] === 'teach' ? 'lesson' : 'example') || !twin || twin.bands.join() !== 'builder';
+  });
+  const orphan = DATA.filter((x) => /^card:[^#]+#(teach|eg)$/.test(x.src) && x.bands.join() !== 'sprout,builder' && !DATA.some((y) => y.src === x.src.replace(/^card:/, 'sprout:')));
+  ok(SP.length >= 20 && !spBad.length && !orphan.length, 'sprout: a Sprout reading is a Sprout\'s card, word for word, and the stop it reads is then the Builder\'s — neither band loses the stop',
+    `${SP.length} readings` + [...spBad, ...orphan].slice(0, 2).map((x) => ' · ' + x.id).join(''));
+
+  /* generated, and proved: a worked sibling is drawn again from its seed and never states the
+     answer of the typed question it is the sibling of; a worked sum's every written sum is right */
+  const GH = DATA.filter((x) => /^genhow:/.test(x.src));
+  const ghBad = GH.filter((x) => {
+    const [, id, seed] = /^genhow:([A-Z]+-\d+)~(\d+)$/.exec(x.src), g = genAgain(objectiveOf(id), +seed), d = g && unsigned(g.drill);
+    return !d || d.kind !== 'num' || !d.worked || x.body !== [d.worked.q, d.worked.why].map(plain).join('\n') || d.worked.value === d.value || GEN.numbersIn(x.body).includes(d.value);
+  });
+  ok(GH.length >= 30 && !ghBad.length, '"Show me how" (generated): drawn again from its seed, the generator\'s own words, and never the answer to the question it sits beside',
+    `${GH.length} worked siblings` + (ghBad.length ? ' · ' + ghBad[0].id : ''));
+  const sums = (t) => [...String(t).matchAll(/((?:\d[\d,]*\s*[+−×÷]\s*)+\d[\d,]*)\s*=\s*(\d[\d,]*)/g)];
+  const wrongSum = [];
+  DATA.filter((x) => x.kind === 'worked' || x.kind === 'showhow').forEach((x) => sums(x.body).forEach(([all, lhs, rhs]) => {
+    const v = Function(`return ${lhs.replace(/,/g, '').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')}`)();
+    if (Math.abs(v - Number(rhs.replace(/,/g, ''))) > 1e-9) wrongSum.push(`${x.id}: ${all}`);
+  }));
+  const WK = DATA.filter((x) => x.kind === 'worked');
+  ok(WK.length >= 10 && WK.every((x) => x.src === 'worked:' + x.topics.find((t) => t.startsWith('card:')).slice(5)) && !wrongSum.length,
+    'worked sums: each is its own stop\'s, and every sum a worked card writes out is right', `${WK.length} stops, ${DATA.filter((x) => x.kind === 'worked' || x.kind === 'showhow').reduce((t, x) => t + sums(x.body).length, 0)} sums checked` + (wrongSum.length ? ' · ' + wrongSum[0] : ''));
+
+  /* the Scam Spotter's generator: drawn again, real and trap alike, each with its note */
+  const SD = DATA.filter((x) => /^scamdeck:/.test(x.src));
+  const sdBad = SD.filter((x) => { const [, seed, i] = /^scamdeck:(\d+)#(\d+)$/.exec(x.src), m = scamDeck(+seed, 'standard')[+i]; return !m || x.body !== [m.t, m.note].map(plain).join('\n'); });
+  const kinds = new Set(SD.map((x) => { const [, seed, i] = /^scamdeck:(\d+)#(\d+)$/.exec(x.src); return scamDeck(+seed, 'standard')[+i].a; }));
+  ok(SD.length >= 30 && !sdBad.length && kinds.has('scam') && kinds.has('safe') && SD.every((x) => x.title === 'Real, or a trap?' && x.route === '#/play/sc'),
+    'scam messages: drawn again from their seed, real ones as well as traps, each with its note, and each opens Smart Choices', `${SD.length} messages` + (sdBad.length ? ' · ' + sdBad[0].id : ''));
+
+  /* currency stays a setting: nothing the second cut added carries a sign; a story's amounts
+     are {units} placeholders, priced at render in the child's own currency */
+  const SECOND = /^(sprout|worked|genhow|item:[^#]+#how|story|needwant:\d+#why|scamdeck|game:[^#]+#how|ggoal|storm|stall|chance:[^#]+#|fact|avatar|word:[^#]+#use)/;
+  const second = DATA.filter((x) => SECOND.test(x.src));
+  const HAS_SIGN = new RegExp(SIGN_RE.source);
+  const signed2 = second.filter((x) => HAS_SIGN.test(JSON.stringify([x.title, x.body])));
+  ok(!signed2.length, 'the second cut carries no currency sign — money is a bare number or a placeholder', `${second.length} cards` + (signed2.length ? ' · ' + signed2[0].id : ''));
+  const ST = DATA.filter((x) => x.kind === 'story');
+  const was = FMT.currency();
+  const priceBad = ST.filter((x) => /\{\d+\}/.test(x.body)).filter((x) => ['INR', 'USD'].some((cur) => {
+    FMT.setCurrency(cur); const out = FEED.priced(x.body);
+    return /\{\d+\}/.test(out) || [...x.body.matchAll(/\{(\d+)\}/g)].some(([, n]) => !out.includes(FMT.money(FMT.price(+n))));
+  }));
+  FMT.setCurrency(was);
+  const pages = Object.values(STORIES).reduce((t, S) => t + S.pages.length + 1, 0);
+  ok(ST.length >= pages - 5 && ST.some((x) => /\{\d+\}/.test(x.body)) && !priceBad.length && ST.every((x) => x.route === '#/story/' + x.src.slice(6).split('#')[0] && !x.gate),
+    'stories: each page opens its own story, ungated, and its amounts are priced at render in the child\'s currency', `${ST.length} of ${pages} pages and endings` + (priceBad.length ? ' · ' + priceBad[0].id : ''));
+
+  /* the games' own words open that game; the storm's companies say they are made up */
+  const GK = DATA.filter((x) => ['gamehow', 'gamegoal', 'storm', 'stall'].includes(x.kind));
+  const gkBad = GK.filter((x) => { const g = x.topics.find((t) => t.startsWith('game:')); return !g || x.route !== '#/play/' + g.slice(5) || (x.kind === 'storm' && !(x.badge && x.badge.id === 'fiction')); });
+  ok(GK.length >= 30 && !gkBad.length, 'a game\'s how-to, goals and content open that game, and the Market Storm\'s companies are labelled fictional', `${GK.length} cards` + (gkBad.length ? ' · ' + gkBad[0].id : ''));
+
+  /* the avatar cards: the history of money, and only faces free for everyone */
+  const AV = DATA.filter((x) => x.kind === 'avatar'), commons = new Set(CATALOGUE.filter((a) => a.tier === 'common').map((a) => a.id));
+  ok(AV.length && AV.every((x) => commons.has(x.src.slice(7).split('#')[0])) && DATA.filter((x) => x.kind === 'fact').length === C.FACTS.length,
+    'avatar cards: every line of the history of money, and only the faces that are free — the feed never shows one that has to be bought', `${AV.length} lines from free faces`);
 }
 
 /* ── the ranking ─────────────────────────────────────────────────────── */
@@ -317,7 +410,7 @@ ok(anyN.every((n) => n >= 1 && n <= 5), 'cards with no level season every sessio
   const own = DATA.filter((x) => FEED.artFor(x)).filter((x) => {
     const a = FEED.artFor(x), who = ((x.topics || []).find((t) => t.startsWith('who:')) || '').slice(4), g = /^#\/play\/(\w+)/.exec(x.route || '');
     if (['lesson', 'tryit', 'yourturn', 'cast', 'castline'].includes(x.kind)) return a !== ART['cast-' + who];
-    if (['game', 'needwant', 'scamspot', 'chance'].includes(x.kind)) return !g || a !== (COVERS[g[1]] || COVERS[COVER_ALIAS[g[1]]]).src;
+    if (['game', 'needwant', 'scamspot', 'chance', 'gamehow', 'gamegoal', 'storm', 'stall'].includes(x.kind)) return !g || a !== (COVERS[g[1]] || COVERS[COVER_ALIAS[g[1]]]).src;
     if (['home', 'shopstock', 'exchange'].includes(x.kind)) return !Object.values(BLD).some((b) => b.src === a);
     return !['chapter', 'place', 'companion'].includes(x.kind);
   });

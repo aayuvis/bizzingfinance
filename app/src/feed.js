@@ -38,6 +38,7 @@ import { WALKS } from './walks-gen.js';
 import { CO } from './companions-gen.js';
 import { HOMES, gameOpen } from './content.js';
 import { GAMES as GAME_DEFS, COVER_ALIAS } from './gamelist.js';
+import { money, price } from './fmt.js';
 
 /* ── more on each card (owner, 3 Oct 2026) ─────────────────────────────────
    The builder gives every card its provenance line (source) and an exact route.
@@ -54,9 +55,11 @@ const topicVal = (it, k) => ((it.topics || []).find((t) => t.startsWith(k + ':')
    a lesson, the game's own cover, a building's sprite, the place's own street, the
    companion itself — and when nothing specific exists it shows none. Never a plate. */
 const src = (o) => (o && o.src) || null;
+/* the kinds that wear their game's own cover: the game, and what was cut from inside it */
+export const COVER_KINDS = ['game', 'needwant', 'scamspot', 'chance', 'gamehow', 'gamegoal', 'storm', 'stall'];
 export function artFor(it) {
   const k = it.kind, m = /^#\/play\/(\w+)/.exec(it.route || ''), cov = m && (COVERS[m[1]] || COVERS[COVER_ALIAS[m[1]]]);
-  if (cov && ['game', 'needwant', 'scamspot', 'chance'].includes(k)) return src(cov);
+  if (cov && COVER_KINDS.includes(k)) return src(cov);
   if (['lesson', 'tryit', 'yourturn'].includes(k)) return ART['cast-' + topicVal(it, 'who')] || null;
   if (['cast', 'castline'].includes(k) && !topicVal(it, 'letter')) return ART['cast-' + topicVal(it, 'who')] || null;
   if (k === 'chapter') { const w = worldOfChapter(it.level); return w ? src(WALKS[w.id]) : null; }
@@ -70,7 +73,7 @@ export function artFor(it) {
 function statusFor(it, c, nextId) {
   const tail = decodeURIComponent((it.route || '').split('/').pop());
   const card = topicVal(it, 'card');
-  if (card && ['lesson', 'example', 'line', 'yourturn', 'tryit', 'goal'].includes(it.kind)) return card === nextId ? 'your next stop' : c.learn.done[card] ? 'you have read this one' : null;
+  if (card && ['lesson', 'example', 'line', 'yourturn', 'tryit', 'goal', 'worked', 'showhow'].includes(it.kind)) return card === nextId ? 'your next stop' : c.learn.done[card] ? 'you have read this one' : null;
   if (it.kind === 'medal') return 'not earned yet';
   if (it.kind === 'chapter') { const ch = CHAPTERS[it.level - 1]; const d = ch ? ch.cards.filter((k) => c.learn.done[k.id]).length : 0; return ch ? `${d} of ${ch.cards.length} read` : null; }
   if (['letter', 'scamletter'].includes(it.kind)) return ((c.postbox || {}).log || []).some((x) => x.id === tail) ? 'you answered it' : null;
@@ -81,9 +84,12 @@ function statusFor(it, c, nextId) {
   return null;
 }
 function enrich(it, c, nextId) {
-  const st = statusFor(it, c, nextId);
-  return { ...sproutBody(it, c), art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
+  const st = statusFor(it, c, nextId), r = sproutBody(it, c);
+  return { ...r, body: priced(r.body), art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
 }
+/* a story's amounts are {units} placeholders, as stories.js writes them: priced here, at render,
+   in the child's own currency — the feed is cut once for every child, and currency is a setting */
+export const priced = (t) => (t == null ? t : String(t).replace(/\{(\d+)\}/g, (_, n) => money(price(+n))));
 /* audit E2 · a lesson's teaching or example card reads to a Sprout as the stop itself does: her
    band's reading (sprout.js), the same idea and no new number. The card that was cut stays the
    builder text, so the corpus the feed is checked against is unchanged; only the words shown move. */
@@ -215,7 +221,7 @@ function whyOf(it, c) {
   if (k === 'letter') return L && answered(L.id) ? 'A letter you have answered' : 'A letter that can come to your postbox';
   if (['place', 'fix', 'fixed', 'job'].includes(k) && w) return w.id === (WORLDS[c.world || 0] || {}).id ? `You live in ${w.name}` : worldOpen(c, WORLDS.indexOf(w)) ? `${w.name} is open to you` : null;
   if (k === 'game') return game && gameOpen(c, game) ? 'A game that is open to you now' : null;
-  if (['needwant', 'scamspot', 'chance', 'castline'].includes(k) && game && gameOpen(c, game)) return `From ${game.name}, which is open to you`;
+  if (['needwant', 'scamspot', 'chance', 'castline', 'gamehow', 'gamegoal', 'storm', 'stall'].includes(k) && game && gameOpen(c, game)) return `From ${game.name}, which is open to you`;
   if (k === 'store') return ((c.shop || {}).owned || []).includes(it.ref) ? 'You own this' : 'On the shelf at Mags’ General Store';
   if (k === 'home') { const i = HOMES.findIndex((h) => h.id === it.ref), at = (c.home && c.home.tier) || 0; return i === at ? 'Where you live now' : i > at ? 'A rung above where you live' : 'A rung you have passed'; }
   if (k === 'companion') return co.has(c) ? `For ${co.get(c).name || 'your companion'}` : 'At the shelter behind the Jar Shed';
