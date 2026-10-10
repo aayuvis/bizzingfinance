@@ -638,20 +638,18 @@ for (const [term] of GLOSSARY) {
 export const SHORT = {
 };
 
-/* ── the honest shortfall, twice over ─────────────────────────────────────
-   The owner asked to double the feed (10 Oct 2026: 1,812 cards → 3,624). Section 10 cut
-   everything the app already held that the feed did not, and the near-duplicate rule let
-   most of what is new go: the Sprout readings are mostly the builder's own words, shortened
-   (87 of 122 are 80% the same), and the generators vary numbers inside fixed sentences, so of
-   thousands of drawn questions, worked siblings and scam messages only the ones that are a
-   new situation stay. The feed does not invent the rest. test/feed.mjs fails if the count
-   falls below `floor`, and fails if it reaches `target` while this is still declared. */
-export const DOUBLE = {
-  from: 1812, target: 3624, floor: 2288,
-  close: 'Sprout readings that retell a stop rather than shorten it (86 are let go as the builder\'s own words); '
-    + 'narration for the 29 stops that have none; more scenario pools in generate.js, so a drawn question is a new situation and not new numbers; '
-    + 'and the sentences Better Buy, Save or Borrow? and the Library compose on screen, moved into their modules as data the feed can read and prove',
-};
+/* ── the doubling, done ─────────────────────────────────────────────────────
+   The owner asked to double the feed (10 Oct 2026: 1,812 cards → 3,624). The first cut took
+   everything the app already held and stopped at 2,288, declared short: the near-duplicate
+   rule rightly let go of Sprout readings that were the builder's words shortened and of
+   generator output that only varied numbers inside fixed sentences. What closed it was new
+   content in the app itself, each made better where it lives and only then cut here: the
+   situations in src/scenes.js (a drawn question is a new situation), Sprout readings that
+   retell a stop, narration for the 29 stops that had none, and the sentences Better Buy,
+   Save or Borrow? and the Library build, moved into their modules as data. Nothing is
+   declared short now; test/feed.mjs fails if the count falls below the doubling while this
+   says it is done, and fails if a shortfall is declared once the doubling is reached. */
+export const DOUBLE = null;
 
 /* ── write ───────────────────────────────────────────────────────────── */
 const byKind = {}, byLevel = {};
@@ -660,7 +658,7 @@ items.forEach((x) => { byKind[x.kind] = (byKind[x.kind] || 0) + 1; const k = x.l
 const GENERATED = /^(genhow|scamdeck):/;
 const generatedLetGo = {}; dropped.filter((x) => GENERATED.test(x)).forEach((x) => { const k = x.split(':')[0]; generatedLetGo[k] = (generatedLetGo[k] || 0) + 1; });
 export const manifest = { total: items.length, byKind, byLevel, levels: CHAPTERS.map((c, i) => ({ level: i + 1, chapter: c.id, title: c.title, n: byLevel['chapter ' + (i + 1)] || 0, short: SHORT[i + 1] ? SHORT[i + 1].close : undefined })),
-  doubling: { ...DOUBLE, now: items.length }, nearDuplicatesLetGo: dropped.filter((x) => !GENERATED.test(x)), generatedRepeatsLetGo: generatedLetGo, shardsLetGo: shards, questionsLetGo: { tooShortToStandAlone: retrievalLog.filter((x) => /too short/.test(x)).map((x) => x.split(':').slice(0, -1).join(':')), sameAsOneAlreadyCut: retrievalLog.filter((x) => /same question/.test(x)).length } };
+  doubling: { from: 1812, target: 3624, declaredShort: !!DOUBLE, now: items.length }, nearDuplicatesLetGo: dropped.filter((x) => !GENERATED.test(x)), generatedRepeatsLetGo: generatedLetGo, shardsLetGo: shards, questionsLetGo: { tooShortToStandAlone: retrievalLog.filter((x) => /too short/.test(x)).map((x) => x.split(':').slice(0, -1).join(':')), sameAsOneAlreadyCut: retrievalLog.filter((x) => /same question/.test(x)).length } };
 export { items };
 /* lazy groups, by level: group n is chapter n's cards, group 0 the level-agnostic ones */
 export const groupOf = (x) => x.level ?? 0;

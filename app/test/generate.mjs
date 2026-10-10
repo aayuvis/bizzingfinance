@@ -69,6 +69,40 @@ ok(!mixed.length, 'each template keeps one shape', [...new Set(mixed)].join(' ')
   ok(!thin.length, `every four-option template asks at least six different questions over 60 seeds (${nm} templates)`, thin.join(' '));
 }
 
+/* the town's situations (scenes.js): a drawn question is a new situation, not new numbers in an
+   old sentence. Every scene belongs to a real template and keeps its shape; every one is drawn
+   (a scene nobody can reach is worse than none); no two scenes of one objective ask 80% the same
+   words, and no two give 80% the same reason; a four-option scene has three distinct wrong
+   answers; and none states a percent or a real-world year (rule 6) */
+{
+  const { SCENES, NUM_SCENES } = await import('../src/scenes.js');
+  setCurrency('INR');
+  const W = (t) => new Set(String(t).toLowerCase().replace(/\{[a-z0-9]+\}/gi, ' ').match(/[a-z0-9']+/g) || []);
+  const near = (a, b) => { let n = 0; for (const w of a) if (b.has(w)) n++; return n / Math.min(a.size, b.size) >= 0.8; };
+  const shapeBad = [], unreached = [], twins = [], badMc = [];
+  for (const [id, list] of Object.entries(SCENES)) {
+    const o = OBJECTIVES.find((x) => x.id === id);
+    if (!o || !GEN[id] || genCard(o, 1, { ceil: 6 }).drill.kind === 'num') { shapeBad.push(id); continue; }
+    const qs = new Set(); for (let seed = 1; seed <= 900; seed++) qs.add(genCard(o, seed, { ceil: 6 }).drill.q);
+    const all = [...qs].join('\n');
+    list.forEach(([q, right, wrongs, why], i) => {
+      const frag = q.split(/\{[a-zA-Z0-9]+\}/).sort((a, b) => b.length - a.length)[0].trim();
+      if (!all.includes(frag)) unreached.push(`${id}#${i}`);
+      if (!Array.isArray(wrongs) || wrongs.length !== 3 || new Set([right, ...wrongs]).size !== 4 || !why || /%|\b(19|20)\d\d\b/.test([q, right, ...wrongs, why].join(' '))) badMc.push(`${id}#${i}`);
+      for (let j = 0; j < i; j++) {
+        if (near(W(q), W(list[j][0]))) twins.push(`${id}#${j}≈#${i} (question)`);
+        if (near(W(why), W(list[j][3]))) twins.push(`${id}#${j}≈#${i} (why)`);
+      }
+    });
+  }
+  for (const id of Object.keys(NUM_SCENES)) { const o = OBJECTIVES.find((x) => x.id === id); if (!o || genCard(o, 1, { ceil: 6 }).drill.kind !== 'num') shapeBad.push(id + ' (typed)'); }
+  const n = Object.values(SCENES).reduce((t, l) => t + l.length, 0), nt = Object.values(NUM_SCENES).reduce((t, l) => t + l.length, 0);
+  ok(!shapeBad.length && n >= 400 && nt >= 40, 'scenes: every pool belongs to a real template and keeps its shape — four-option scenes on judgement objectives, typed ones on typed', `${n} four-option, ${nt} typed` + (shapeBad.length ? ' · ' + shapeBad.join(' ') : ''));
+  ok(!unreached.length, 'scenes: every situation is drawn within 900 seeds — none is unreachable', unreached.slice(0, 6).join(' '));
+  ok(!twins.length, 'scenes: no two situations of one objective ask, or answer why, in 80% the same words', twins.slice(0, 4).join(' | '));
+  ok(!badMc.length, 'scenes: three distinct wrong answers beside the right one, a reason, and no percent or real-world year', badMc.slice(0, 4).join(' '));
+}
+
 /* the number spine: a child who has met small numbers gets small numbers */
 setCurrency('INR');
 const avg = (ceil) => { let t = 0, n = 0; for (const id of ['EARN-2', 'KEEP-1', 'CHOOSE-7']) for (let s = 1; s <= 40; s++) { t += genCard(OBJECTIVES.find((o) => o.id === id), s, { ceil }).drill.value; n++; } return t / n; };
