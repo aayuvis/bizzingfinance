@@ -54,13 +54,38 @@ const SAY = {
   loanA: { name: 'The weekly-fee loan', icon: 'handshake' },
   loanB: { name: 'The one-fee loan', icon: 'iou' },
 };
-function offer(g, p) {
+export function sbOffer(g, p) {
   if (p.id === 'save') return `Save your ${money(g.income)} a week, then buy it for ${money(p.price)}.`;
   if (p.id === 'sale') return `Wait: from week ${p.week} it is ${money(p.price)} in the sale.`;
   if (p.id === 'used') return `Buy one second-hand for ${money(p.price)}. It may need a repair: ${money(p.repair)} if it does.`;
   if (p.id === 'loanA') return `Have it now. Pay back ${money(p.weekly)} a week for ${p.n} weeks — ${money(p.fee)} of every week is the fee.`;
   if (p.id === 'loanB') return `Have it now. Pay back ${money(p.weekly)} a week for ${p.n} weeks, then a ${money(p.oneOff)} fee with the last one.`;
   return `Have it now. Pay back ${money(p.weekly)} a week for ${p.n} weeks.`;
+}
+/* what one path came to, said in coins — the comparison card's line for it. Every number is
+   one sim.sbCompare made; `pct` adds the fee as a percent for a child who has met percents. */
+const wk = (n) => `${n} week${n === 1 ? '' : 's'}`;
+export function sbSaid(G, x, pct) {
+  const having = G.thing.having;
+  let t = `${SAY[x.id].name} cost ${money(x.cost)}${x.repaired ? ` (with a ${money(x.repaired)} repair)` : ''} and you were ${having} from week ${x.from}`;
+  if (x.id !== 'save') {
+    if (x.more && x.sooner) t += `: ${money(x.more)} for ${wk(x.sooner)} more of ${having}`;
+    else if (x.less && x.later) t += `: ${money(x.less)} less, and ${wk(x.later)} later`;
+    else if (x.less) t += `: ${money(x.less)} less, and ${x.sooner ? wk(x.sooner) + ' sooner' : 'from the same week'}`;
+    else t += `: ${money(x.more)} more, ${x.later ? wk(x.later) + ' later' : 'from the same week'}`;
+  }
+  t += '.';
+  if (x.fee > 0) t += pct ? ` The fee was ${money(x.fee)} — ${x.pct}% on top of the price.` : ` The fee was ${money(x.fee)} in coins.`;
+  if (G.invest && x.dJob > 0) t += ` Having it sooner, ${G.invest.job} paid ${money(x.dJob)} more than it did on the saving path${x.fee > 0 ? (x.ahead ? `, so you finished ${money(x.ahead)} ahead of saving: this time the loan paid for itself` : `, and still finished ${money(x.behind)} behind saving: this time it did not pay for itself`) : ''}.`;
+  return t;
+}
+export const SB_PRICE_LINE = 'Having it sooner has a price. Whether it is worth that price is yours to decide.';
+/* one goal, said whole: what it is, each path's offer, and what each path came to with the tin
+   kept — the game's own words, for My Feed to cut a goal the simulation has proved */
+export function sbCard(G, pct = false) {
+  const rows = sim.sbLive(G, true), cmp = sim.sbCompare(G, rows);
+  const lines = [cmp.save, ...cmp.lines.filter((x) => x.id !== 'save')].map((x) => sbSaid(G, x, pct));
+  return { title: G.thing.name.charAt(0).toUpperCase() + G.thing.name.slice(1), lines: [...G.paths.map((p) => `${SAY[p.id].name}: ${sbOffer(G, p)}`), ...lines, ...(G.invest ? [] : [SB_PRICE_LINE])] };
 }
 const askLine = (a) => `${money(a.a)} a week for ${a.b} weeks${a.extra ? `, then a ${money(a.extra)} fee` : ''}`;
 const sumLine = (a) => `${money(a.a)} × ${a.b}${a.extra ? ` + ${money(a.extra)}` : ''} = ${money(a.want)}`;
@@ -179,7 +204,7 @@ export function saveBorrow(kit, seed = (Date.now() % 100000) | 0) {
   };
   const pathList = (asButtons) => g().paths.map((p, i) => {
     const s = SAY[p.id];
-    const inner = `<span class="k">${i + 1}</span><span class="sbpi">${ICON(s.icon)}</span><span class="sbpt"><b>${esc(p.name)}</b><span class="small">${offer(g(), p)}</span></span>`;
+    const inner = `<span class="k">${i + 1}</span><span class="sbpi">${ICON(s.icon)}</span><span class="sbpt"><b>${esc(p.name)}</b><span class="small">${sbOffer(g(), p)}</span></span>`;
     return asButtons
       ? `<button class="opt sbpath" data-act="sbPath" data-arg="${p.id}" data-path="${p.id}">${inner}</button>`
       : `<div class="opt sbpath sbshow" data-path="${p.id}">${inner}</div>`;
@@ -253,29 +278,15 @@ export function saveBorrow(kit, seed = (Date.now() % 100000) | 0) {
       <p class="hint">Enter to ${end ? 'go on' : 'skip ahead'}.</p>`;
   };
   const cardView = () => {
-    const G = g(), l = L(), c = l.cmp, s = c.save, having = G.thing.having, pct = mathsMet(kit.K())('M10');
-    const said = (x) => {
-      const nm = SAY[x.id].name;
-      let t = `${nm} cost ${money(x.cost)}${x.repaired ? ` (with a ${money(x.repaired)} repair)` : ''} and you were ${having} from week ${x.from}`;
-      if (x.id !== 'save') {
-        const wk = (n) => `${n} week${n === 1 ? '' : 's'}`;
-        if (x.more && x.sooner) t += `: ${money(x.more)} for ${wk(x.sooner)} more of ${having}`;
-        else if (x.less && x.later) t += `: ${money(x.less)} less, and ${wk(x.later)} later`;
-        else if (x.less) t += `: ${money(x.less)} less, and ${x.sooner ? wk(x.sooner) + ' sooner' : 'from the same week'}`;
-        else t += `: ${money(x.more)} more, ${x.later ? wk(x.later) + ' later' : 'from the same week'}`;
-      }
-      t += '.';
-      if (x.fee > 0) t += pct ? ` The fee was ${money(x.fee)} — ${x.pct}% on top of the price.` : ` The fee was ${money(x.fee)} in coins.`;
-      if (G.invest && x.dJob > 0) t += ` Having it sooner, ${esc(G.invest.job)} paid ${money(x.dJob)} more than it did on the saving path${x.fee > 0 ? (x.ahead ? `, so you finished ${money(x.ahead)} ahead of saving: this time the loan paid for itself` : `, and still finished ${money(x.behind)} behind saving: this time it did not pay for itself`) : ''}.`;
-      return `<li data-path="${x.id}">${ICON(SAY[x.id].icon, 16)} <span>${t}</span></li>`;
-    };
+    const G = g(), l = L(), c = l.cmp, s = c.save, pct = mathsMet(kit.K())('M10');
+    const said = (x) => `<li data-path="${x.id}">${ICON(SAY[x.id].icon, 16)} <span>${esc(sbSaid(G, x, pct))}</span></li>`;
     const mine = c.lines.find((x) => x.id === l.path);
     const q = c.question, ansName = SAY[q.answer].name;
     const ans = c.lines.find((x) => x.id === q.answer);
     return `<div class="gcard sbcard"><span class="eyebrow">Step 4 · the comparison</span>
         <ul class="sblines">${said(s)}${c.lines.filter((x) => x.id !== 'save').map(said).join('')}</ul>
         <p class="small sbmine"><b>Your plan:</b> ${mine.broke == null ? `the purse still had money after ${esc(G.surprise.what)} in week ${G.surprise.week}${l.cushion ? ' — the tin took it' : ''}.` : `the purse ran ${money(mine.short)} short in week ${mine.broke}.`}</p>
-        ${G.invest ? '' : `<p class="small muted">Having it sooner has a price. Whether it is worth that price is yours to decide.</p>`}
+        ${G.invest ? '' : `<p class="small muted">${SB_PRICE_LINE}</p>`}
       </div>
       <div class="gcard sbask"><p class="sbq"><b>${q.kind === 'most' ? 'Which path cost the most in all?' : 'Which path cost the least in all?'}</b></p></div>
       <div class="sbpaths">${G.paths.map((p, i) => {

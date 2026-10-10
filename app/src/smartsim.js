@@ -19,7 +19,7 @@
    whole number of coins in ₹, $, £, € and AED alike, and the sum on screen is the sum checked.
    The shelf prices are town dials, registered in sources.js ('shelf'). */
 import { rng } from './ui.js';
-import { CURRENCIES, currency, minorPrice } from './fmt.js';
+import { CURRENCIES, currency, minorPrice, minorMoney } from './fmt.js';
 
 export const SC_MODES = ['nw', 'ss', 'bb'];
 export const SC_MODE_NAME = { nw: 'Needs and Wants', ss: 'Scam Spotter', bb: 'Better Buy' };
@@ -423,6 +423,52 @@ export function readTyped(str, want) {
   return v;
 }
 export function checkTyped(str, want) { const v = readTyped(str, want); return { ok: v === want, typed: v, want }; }
+
+/* Better Buy's words — every sentence the shelf says on screen, made here from the shelf's own
+   numbers, so the view only places them and My Feed can cut a proven shelf (shelfCard) in the
+   very words the game uses. Money through minorMoney: the price of one, to the coin. */
+export const shelfLabel = (g, t) => (t.kind === 'bogof' ? `${g.many}: ${minorMoney(t.single)} each, buy one, get one half price`
+  : g.vol ? `${t.count} ${t.count === 1 ? g.one : g.many} of ${g.of}` : `${t.count} ${t.count === 1 ? g.one : g.many}`);
+export const shelfShort = (g, t) => (t.kind === 'bogof' ? 'half-price offer' : g.vol ? `${t.count}-${g.one} pack` : `pack of ${t.count}`);
+export const shelfPrice = (t) => (t.kind === 'bogof' ? `${minorMoney(t.price)} for 2` : minorMoney(t.price));
+export function shelfQuestion(sh) {
+  const g = sh.good;
+  if (sh.kind === 'waste') return `You need ${sh.need} ${sh.need === 1 ? g.one : g.many} — and ${g.fresh}. Which costs you less for what you need?`;
+  if (sh.div === false) return `Which is the better buy for the same amount of ${g.of || g.many}?`;
+  return `Which is cheaper per ${g.one}?`;
+}
+export function shelfTypeQ(sh, choice) {
+  const g = sh.good, t = sh.tags[choice];
+  if (sh.kind === 'waste') return `What do you pay for ${sh.need} with the ${shelfShort(g, t)}?`;
+  if (sh.div === false) { const s = sh.tags[sh.small], b = sh.tags[1 - sh.small]; return `What would ${b.count} ${g.vol ? g.many + ' of ' + g.of : g.many} cost, bought in ${shelfShort(g, s)}s?`; }
+  return `How much is one ${g.one} in the ${shelfShort(g, t)}?`;
+}
+export function shelfWorking(sh) {
+  const g = sh.good, T = sh.tags, M = minorMoney, short = shelfShort;
+  if (sh.kind === 'waste') {
+    const lines = T.map((t, i) => `${short(g, t)}: ${sh.packsFor[i]} × ${M(t.price)} = <b>${M(sh.costs[i])}</b> for ${sh.need}${sh.spare[i] ? `, and ${sh.spare[i]} ${sh.spare[i] === 1 ? g.one : g.many} left over to waste` : ''}`);
+    const c = sh.cheaperEach, a = sh.answer;
+    return { lines, end: c === a ? `The ${short(g, T[a])} is cheaper each <b>and</b> cheaper for what you need.` : `The ${short(g, T[c])} is cheaper each — but for what you need, the ${short(g, T[a])} costs less. Cheaper each is not always cheaper for you.` };
+  }
+  if (sh.div === false) {
+    const s = T[sh.small], b = T[1 - sh.small];
+    return { lines: [`${sh.times} × ${short(g, s)} = ${b.count}: ${sh.times} × ${M(s.price)} = <b>${M(sh.sameCost)}</b>`, `The ${short(g, b)}: <b>${M(b.price)}</b>`],
+      end: `For the same ${b.count}, the ${short(g, T[sh.answer])} costs less.` };
+  }
+  const lines = T.map((t, i) => (t.kind === 'bogof'
+    ? `Half-price offer: ${M(t.single)} + ${M(t.half)} = ${M(t.price)} for 2, so <b>${M(sh.each[i])}</b> each`
+    : `${M(t.price)} ÷ ${t.count} = <b>${M(sh.each[i])}</b> each`));
+  const a = sh.answer, big = T[0].count > T[1].count ? 0 : 1, by = sh.by;
+  let end = `The ${short(g, T[a])} is cheaper per ${g.one}, by ${M(by)}.`;
+  if (sh.kind === 'bogof') end += T[a].kind === 'bogof' ? ' This time the offer really is the better price.' : ' The offer sounds bigger than it is.';
+  else if (big !== a) end += ' Bigger is not always cheaper.';
+  return { lines, end };
+}
+/* a whole shelf, said: the question, both tags, and the working the game shows after a pick */
+export function shelfCard(sh) {
+  const w = shelfWorking(sh), g = sh.good;
+  return [shelfQuestion(sh), ...sh.tags.map((t) => `${shelfLabel(g, t)}: ${shelfPrice(t)}.`), ...w.lines.map((l) => l + '.'), w.end];
+}
 
 /* ══ a round, and its score ══════════════════════════════════════════════ */
 export function scDeck(mode, seed, level = 'standard', opts = {}) {

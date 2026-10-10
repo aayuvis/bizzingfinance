@@ -34,7 +34,10 @@ import { loadCorpus, plain } from './feed-corpus.mjs';
 import { genCard, hasGen } from '../src/generate.js';
 import { CURRENCIES, setCurrency, currency } from '../src/fmt.js';
 import { WORKED } from '../src/worked.js';
-import { scamDeck } from '../src/smartsim.js';
+import { scamDeck, buyDeck, shelfCard, SC_MODE_NAME } from '../src/smartsim.js';
+import { sbCard } from '../src/saveborrow.js';
+import { sbRound } from '../src/sim.js';
+import { LIB_START, LIB_TOOLS, LIB_SAYS, libSaid, figures } from '../src/library.js';
 
 const C = await loadCorpus();
 const { CHAPTERS, ALL_CARDS, GLOSSARY, LETTERS, BADGES, QUESTS, JOBS, HOMES, FIXES, SHOP, RANKS, WORLDS, ASSETS, STOCK,
@@ -190,7 +193,7 @@ export function genNeutral(o, seed) {
    which letter-writer, which game — made only of names the corpus already has,
    never new words. */
 const [kindOf, idOfSrc] = [(src) => src.split(':')[0], (src) => src.split(':').slice(1).join(':').split('#')[0]];
-const GAME_OF = { needwant: 'sc', scamspot: 'sc', scamdeck: 'sc', shout: 'st', chance: 'mn', bot: 'mn', storm: 'st', stallgood: 'so', stallwx: 'so', stallgoal: 'so' };
+const GAME_OF = { needwant: 'sc', scamspot: 'sc', scamdeck: 'sc', shelf: 'sc', sbgoal: 'sb', shout: 'st', chance: 'mn', bot: 'mn', storm: 'st', stallgood: 'so', stallwx: 'so', stallgoal: 'so' };
 function routeOf(c) {
   const k = kindOf(c.src), id = idOfSrc(c.src), e = encodeURIComponent;
   switch (k) {
@@ -198,7 +201,8 @@ function routeOf(c) {
     case 'gen': return null;                                /* its lesson's route, set when it is cut */
     case 'story': return '#/story/' + e(id);
     case 'ggoal': return '#/play/' + id;
-    case 'scamdeck': case 'storm': case 'stallgood': case 'stallwx': case 'stallgoal': return '#/play/' + GAME_OF[k];
+    case 'scamdeck': case 'storm': case 'stallgood': case 'stallwx': case 'stallgoal': case 'shelf': case 'sbgoal': return '#/play/' + GAME_OF[k];
+    case 'libtool': return '#/library/' + e(id);
     case 'fact': case 'avatar': return '#/collection';
     case 'chapter': return '#/atlas/chapter/' + id;
     case 'game': return '#/play/' + id;
@@ -262,6 +266,8 @@ function sourceOf(c) {
     needwant: () => ['From ' + gameName('sc'), 'Needs and Wants'], scamspot: () => ['From ' + gameName('sc'), 'Scam Spotter'], shout: () => ['From ' + gameName('st')],
     chance: () => ['From ' + gameName('mn')], bot: () => ['From ' + gameName('mn')],
     scamdeck: () => ['From ' + gameName('sc'), 'Scam Spotter'],
+    shelf: () => ['From ' + gameName('sc'), SC_MODE_NAME.bb], sbgoal: () => ['From ' + gameName('sb'), 'a goal, every path lived'],
+    libtool: () => ['The Library', 'tools to try things on'],
     story: () => { const i = WORLDS.findIndex((w) => w.id === id); return ['A story', i >= 0 ? WORLDS[i].name : null]; },
     fact: () => ['Avatar cards'], avatar: () => ['Avatar cards', 'free for everyone'],
     ggoal: () => ['From ' + gameName(id), 'a goal to choose'],
@@ -617,6 +623,48 @@ for (const a of CATALOGUE.filter((x) => x.tier === 'common')) {
   add({ kind: 'avatar', src: `avatar:${a.id}#power`, topics: ['avatar'], title: d.name, body: [d.power, d.powerLine], route: '#/collection', cta: 'Avatar cards' });
 }
 
+/* 10i · the sentences three tools build on screen, now kept in their modules as data (the
+   doubling's second finding): a Better Buy shelf (smartsim.js shelfCard — the question, both
+   tags and the working), a Save or Borrow? goal with every path lived (saveborrow.js sbCard,
+   on sim.sbRound's own sums), and a Library tool at its starting point (library.js LIB_SAYS).
+   Each is drawn by its module in EVERY currency, because the shelf's coins, the loan's fee and
+   the tool's prices are rounded per currency and the module does its arithmetic on what it
+   shows: the card carries each currency's words (`cur`, which feed.js picks) and its body is
+   the rupee words with the sign taken off, for the near-duplicate rule and nothing else. */
+const inCur = (cur, f) => { const was = currency(); setCurrency(cur); try { return f(); } finally { setCurrency(was); } };
+export const everyCurrency = (f) => Object.fromEntries(Object.keys(CURRENCIES).map((cur) => [cur, inCur(cur, f)]));
+export const SHELF_SEEDS = 40, SHELF_MAX = 40, SB_SEEDS = 30, SB_MAX = 40;
+export const shelvesIn = (level, seed) => buyDeck(seed, level).map((sh) => shelfCard(sh).map(plain).join('\n'));
+export const sbGoalsIn = (level, seed) => sbRound(seed, level).goals.map((G) => { const k = sbCard(G); return { title: k.title, text: k.lines.map(plain).join('\n') }; });
+{
+  const g = gameById('sc'); let n = 0;
+  for (const level of ['standard', 'tricky']) for (let seed = 1; seed <= SHELF_SEEDS && n < SHELF_MAX; seed++) {
+    const all = everyCurrency(() => shelvesIn(level, seed));
+    all.INR.forEach((_, i) => {
+      if (n < SHELF_MAX && add({ kind: 'shelf', src: `shelf:${level}~${seed}#${i}`, level: gameLevel(g), topics: [...gameTopics(g), 'goal:CHOOSE-4'], gate: g.needs ? { chapter: g.needs } : undefined,
+        title: SC_MODE_NAME.bb, body: [neutral(all.INR[i])], cur: Object.fromEntries(Object.entries(all).map(([c, d]) => [c, d[i]])), route: '#/play/sc', cta: 'Smart Choices', maths: 'M8' })) n++;
+    });
+  }
+}
+{
+  const g = gameById('sb'); let n = 0;
+  for (const level of ['standard', 'tricky', 'easy']) for (let seed = 1; seed <= SB_SEEDS && n < SB_MAX; seed++) {
+    const all = everyCurrency(() => sbGoalsIn(level, seed));
+    all.INR.forEach((x, i) => {
+      if (n < SB_MAX && add({ kind: 'sbgoal', src: `sbgoal:${level}~${seed}#${i}`, level: gameLevel(g), topics: [...gameTopics(g), 'goal:OWE-6'], gate: g.needs ? { chapter: g.needs } : undefined,
+        title: x.title, body: [neutral(x.text)], cur: Object.fromEntries(Object.entries(all).map(([c, d]) => [c, d[i].text])), route: '#/play/sb', cta: 'Save or Borrow?', maths: 'M6' })) n++;
+    });
+  }
+}
+/* a Library tool's words at its own starting point (LIB_START): the budget sandbox and the unit
+   price checker, which need no child to work out (the loan, the snowball and the jar split
+   read the child's own trust, rate and rule, so they are not cut) */
+export const libToolIn = (id) => { const said = libSaid(figures(null, LIB_START)); return id === 'week' ? LIB_SAYS.week(said.week) : `${LIB_SAYS.packs(said.unit)} ${LIB_SAYS.unit(said.unit)}.`; };
+for (const id of ['week', 'unit']) {
+  const t = LIB_TOOLS[id], all = everyCurrency(() => libToolIn(id));
+  add({ kind: 'libtool', src: `libtool:${id}`, topics: ['library'], title: t.title, body: [neutral(all.INR)], cur: all, route: '#/library/' + id, cta: 'Try it in the Library', maths: t.needs });
+}
+
 /* 10h · a money word in use: the first sentence of the lessons that says it (most are let go
    as the lesson's own words; the rest are a sentence the feed had not shown) */
 for (const [term] of GLOSSARY) {
@@ -672,7 +720,7 @@ export const GROUPS = [...new Set(items.map(groupOf))].sort((a, b) => a - b);
 const BECAUSE = {
   company: 'The Market Game opened for you at level 16', risk: 'The Market Game opened for you at level 16',
   event: 'The Market Game opened for you at level 16', market: 'The Market Game opened for you at level 16',
-  medal: 'A medal you have not earned yet', deed: 'Something to do out in the real world', ask: 'A question to take home this week',
+  libtool: 'A tool in the Library, at its starting point', medal: 'A medal you have not earned yet', deed: 'Something to do out in the real world', ask: 'A question to take home this week',
   fact: 'From the history of money, on the avatar cards', avatar: 'A face on the avatar cards, free for everyone',
   rank: 'A rank on your way up', quest: 'One of today’s three, on the town page',
 };
@@ -682,7 +730,7 @@ function becauseOf(x) {
   if (['word', 'wordmore', 'worduse'].includes(x.kind) && x.level) return `A money word first used in ${chapterLine(x.level)}`;
   if (x.kind === 'story') { const w = WORLDS.find((y) => (x.topics || []).includes('world:' + y.id)); return w ? `A story from ${w.name}` : undefined; }
   const game = ((x.topics || []).find((t) => t.startsWith('game:')) || '').slice(5);
-  if (['gamehow', 'gamegoal', 'storm', 'stall', 'needwant', 'scamspot', 'chance'].includes(x.kind) && gameName(game)) return `From ${gameName(game)}`;
+  if (['gamehow', 'gamegoal', 'storm', 'stall', 'needwant', 'scamspot', 'chance', 'shelf', 'sbgoal'].includes(x.kind) && gameName(game)) return `From ${gameName(game)}`;
   if (x.kind === 'figure' && x.level) return `A number ${chapterLine(x.level)} runs on, and how we know it`;
   if (['exchange', 'shopstock'].includes(x.kind) && x.level) return `Opened by ${chapterLine(x.level)}`;
   return BECAUSE[x.kind];

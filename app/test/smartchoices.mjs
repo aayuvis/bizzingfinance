@@ -127,7 +127,7 @@ for (const mode of ['nw', 'ss', 'bb']) {
   const odd = Object.assign({}, sh, { tags: [Object.assign({}, sh.tags[0], { price: sh.tags[0].price + 1 }), sh.tags[1]] });
   ok('…and the proof fails a shelf whose answer is flipped, or whose price of one is not whole', !S.shelfProof(broken).ok && !S.shelfProof(odd).ok);
   /* re-proved from the screen: read each tag's count and price as drawn, and the answer follows */
-  const shown = [];
+  const shown = [], said = [];
   for (const cur of ['INR', 'USD', 'GBP', 'EUR', 'AED']) for (const lv of LV) for (let s = 1; s <= 12; s++) {
     fresh(cur); AR.startGame('sc', s, lv); const g = R.game; g.act('scMode', 'bb');
     while (!g.st.done) {
@@ -138,11 +138,15 @@ for (const mode of ['nw', 'ss', 'bb']) {
       if (!(g.st.held && g.st.held.pickOk && g.st.held.typedOk)) shown.push(`${cur}/${lv}/${s}: the right pick and price were not taken`);
       const w = plain(g.view());
       if (sh2.kind !== 'waste' && sh2.div !== false && !sh2.tags.every((t, i) => w.includes(F.minorMoney(sh2.each[i]) + ' each'))) shown.push(`${cur}/${lv}/${s}: the working does not say both prices of one`);
+      /* the screen's sentences are the module's (smartsim.js shelfQuestion / shelfWorking, which My Feed cuts too) */
+      const wk = S.shelfWorking(sh2), mine = [S.shelfQuestion(sh2), ...wk.lines, wk.end].map((t) => plain(t).trim());
+      if (mine.some((t) => !w.includes(t))) said.push(`${cur}/${lv}/${s}: “${mine.find((t) => !w.includes(t)).slice(0, 40)}”`);
       g.act('scNext');
     }
     AR.quitGame();
   }
   ok('on screen: every tag says its count, the right pick and its price typed as a child would type it are taken, and the working says both prices of one', !shown.length, shown.slice(0, 3).join(' | '));
+  ok('Better Buy says on screen exactly the sentences smartsim.js keeps for it — the question and the working, in every currency (My Feed cuts the same words)', !said.length, said.slice(0, 2).join(' | '));
   F.setCurrency('INR');
   /* the judgement layer at Tricky: waste where cheaper-each is NOT cheaper for you, the bigger pack dearer, half-price offers both ways */
   const T = []; for (let s = 1; s <= 200; s++) T.push(...S.buyDeck(s, 'tricky'));

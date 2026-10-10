@@ -43,6 +43,9 @@ const { scamDeck } = await import('../src/smartsim.js');
 const { SPROUT } = await import('../src/sprout.js');
 const { STORIES } = await import('../src/stories.js');
 const { CATALOGUE } = await import('../src/catalogue.js');
+const SMART = await import('../src/smartsim.js');
+const SB = await import('../src/saveborrow.js');
+const LIB = await import('../src/library.js');
 
 /* The sources the feed added for audit V1, resolved HERE, independently of the builder: an
    objective's authored retrieval item; its generated item, drawn again from the same seed
@@ -71,6 +74,14 @@ function resolve(src) {
   m = /^worked:([a-z0-9-]+)$/.exec(src || '');
   if (m) { if (!WORKED[m[1]]) return null; const was = FMT.currency(); FMT.setCurrency('AED'); try { return coinedHere({ title: card(m[1]).title, ...WORKED[m[1]]() }); } finally { FMT.setCurrency(was); } }
   if (/^sprout:/.test(src || '')) { const o = C.resolve(src); return o && unsigned(o); }
+  /* the tools' own sentences (smartsim.js, saveborrow.js, library.js), drawn again here in
+     rupees — the words the body was cut from, with the sign taken off */
+  m = /^shelf:([a-z]+)~(\d+)#(\d+)$/.exec(src || '');
+  if (m) { const was = FMT.currency(); FMT.setCurrency('INR'); try { const sh = SMART.buyDeck(+m[2], m[1])[+m[3]]; return sh ? unsigned({ title: SMART.SC_MODE_NAME.bb, lines: SMART.shelfCard(sh) }) : null; } finally { FMT.setCurrency(was); } }
+  m = /^sbgoal:([a-z]+)~(\d+)#(\d+)$/.exec(src || '');
+  if (m) { const was = FMT.currency(); FMT.setCurrency('INR'); try { const G = sim.sbRound(+m[2], m[1]).goals[+m[3]]; return G ? unsigned(SB.sbCard(G)) : null; } finally { FMT.setCurrency(was); } }
+  m = /^libtool:([a-z]+)$/.exec(src || '');
+  if (m) { const was = FMT.currency(); FMT.setCurrency('INR'); try { return LIB.LIB_TOOLS[m[1]] ? unsigned({ title: LIB.LIB_TOOLS[m[1]].title, words: BUILD.libToolIn(m[1]) }) : null; } finally { FMT.setCurrency(was); } }
   m = /^scamdeck:(\d+)#(\d+)$/.exec(src || '');
   if (m) { const d = scamDeck(+m[1], 'standard')[+m[2]]; return d ? { t: d.t, note: d.note } : null; }
   return C.resolve(src);
@@ -219,6 +230,7 @@ const badRoute = DATA.filter((x) => {
   if (a === 'market40' && b === 'company') return !has(C.COMPANIES, d);
   if (a === 'market40' && b === 'event') return !has(C.EVENTS, d);
   if (a === 'market40' && b === 'era') return !has(C.ERAS, d);
+  if (a === 'library') return !LIB.LIB_TOOLS[b] || !!d;
   return !SCREENS.includes(a) || !!b;
 });
 ok(!badRoute.length, 'routes: every card opens a real screen', `${new Set(DATA.map((x) => x.route)).size} routes` + (badRoute.length ? ' · ' + badRoute[0].route : ''));
@@ -314,7 +326,7 @@ ok(per.every((n, i) => BUILD.SHORT[i + 1] || n >= 110), 'levels (audit V1): ever
 
   /* currency stays a setting: nothing the second cut added carries a sign; a story's amounts
      are {units} placeholders, priced at render in the child's own currency */
-  const SECOND = /^(sprout|worked|genhow|item:[^#]+#how|story|needwant:\d+#why|scamdeck|game:[^#]+#how|ggoal|storm|stall|chance:[^#]+#|fact|avatar|word:[^#]+#use)/;
+  const SECOND = /^(sprout|worked|genhow|item:[^#]+#how|story|needwant:\d+#why|scamdeck|game:[^#]+#how|ggoal|storm|stall|chance:[^#]+#|fact|avatar|word:[^#]+#use|shelf|sbgoal|libtool)/;
   const second = DATA.filter((x) => SECOND.test(x.src));
   const HAS_SIGN = new RegExp(SIGN_RE.source);
   const signed2 = second.filter((x) => HAS_SIGN.test(JSON.stringify([x.title, x.body])));
@@ -329,6 +341,29 @@ ok(per.every((n, i) => BUILD.SHORT[i + 1] || n >= 110), 'levels (audit V1): ever
   const pages = Object.values(STORIES).reduce((t, S) => t + S.pages.length + 1, 0);
   ok(ST.length >= pages - 5 && ST.some((x) => /\{\d+\}/.test(x.body)) && !priceBad.length && ST.every((x) => x.route === '#/story/' + x.src.slice(6).split('#')[0] && !x.gate),
     'stories: each page opens its own story, ungated, and its amounts are priced at render in the child\'s currency', `${ST.length} of ${pages} pages and endings` + (priceBad.length ? ' · ' + priceBad[0].id : ''));
+
+  /* the tools' sentences, moved into their modules as data: a Better Buy shelf, a Save or
+     Borrow? goal and a Library tool carry each currency's words exactly as the module draws them
+     there (the shelf's coins and the loan's fee are rounded per currency, so no one set of
+     words could be priced into all five), its body is the rupee words with no sign, and it
+     opens its own game or tool */
+  {
+    const T = DATA.filter((x) => ['shelf', 'sbgoal', 'libtool'].includes(x.kind)), was = FMT.currency();
+    const words = (x, cur) => {
+      FMT.setCurrency(cur);
+      try {
+        let m = /^shelf:([a-z]+)~(\d+)#(\d+)$/.exec(x.src); if (m) return SMART.shelfCard(SMART.buyDeck(+m[2], m[1])[+m[3]]).map(plain).join('\n');
+        m = /^sbgoal:([a-z]+)~(\d+)#(\d+)$/.exec(x.src); if (m) return SB.sbCard(sim.sbRound(+m[2], m[1]).goals[+m[3]]).lines.map(plain).join('\n');
+        m = /^libtool:([a-z]+)$/.exec(x.src); return BUILD.libToolIn(m[1]);
+      } finally { FMT.setCurrency(was); }
+    };
+    const tBad = T.filter((x) => !x.cur || Object.keys(FMT.CURRENCIES).some((cur) => x.cur[cur] !== words(x, cur)) || x.body !== plain(words(x, 'INR').replace(SIGN_RE, ''))
+      || x.route !== (x.kind === 'shelf' ? '#/play/sc' : x.kind === 'sbgoal' ? '#/play/sb' : '#/library/' + x.src.slice(8)));
+    const sums = T.filter((x) => x.kind === 'shelf').flatMap((x) => [...x.cur.INR.replace(/₹/g, '').matchAll(/(\d+)\s*÷\s*(\d+)\s*=\s*(\d+(?:\.\d+)?)/g)].filter(([, a, b, c]) => Math.abs(a / b - c) > 1e-9).map(([all]) => x.id + ': ' + all));
+    ok(T.filter((x) => x.kind === 'shelf').length >= 20 && T.some((x) => x.kind === 'sbgoal') && T.some((x) => x.kind === 'libtool') && !tBad.length && !sums.length,
+      'the tools\' own sentences: a Better Buy shelf, a Save or Borrow? goal and a Library tool, each in every currency as its module draws it, and every price of one adds up',
+      ['shelf', 'sbgoal', 'libtool'].map((k) => `${T.filter((x) => x.kind === k).length} ${k}`).join(', ') + (tBad.length ? ' · ' + tBad[0].id : '') + (sums.length ? ' · ' + sums[0] : ''));
+  }
 
   /* the games' own words open that game; the storm's companies say they are made up */
   const GK = DATA.filter((x) => ['gamehow', 'gamegoal', 'storm', 'stall'].includes(x.kind));

@@ -260,50 +260,16 @@ export function smartChoices(kit, seed = (Date.now() % 100000) | 0) {
       <p class="hint">${h ? 'Read why, then Continue: Enter, or tap.' : tell ? 'Number keys, or tap the phrase.' : `← → (or 1 2), or tap. ${n} of these ${st.deck.length} ${n === 1 ? 'is' : 'are'} perfectly ordinary.`}</p>`;
   };
 
-  /* Better Buy's words: every number comes from the shelf (smartsim.js) */
-  const label = (g, t) => (t.kind === 'bogof' ? `${g.many}: ${minorMoney(t.single)} each, buy one, get one half price`
-    : g.vol ? `${t.count} ${t.count === 1 ? g.one : g.many} of ${g.of}` : `${t.count} ${t.count === 1 ? g.one : g.many}`);
-  const short = (g, t) => (t.kind === 'bogof' ? 'half-price offer' : g.vol ? `${t.count}-${g.one} pack` : `pack of ${t.count}`);
-  const question = (sh) => {
-    const g = sh.good;
-    if (sh.kind === 'waste') return `You need ${sh.need} ${sh.need === 1 ? g.one : g.many} — and ${g.fresh}. Which costs you less for what you need?`;
-    if (sh.div === false) return `Which is the better buy for the same amount of ${g.of || g.many}?`;
-    return `Which is cheaper per ${g.one}?`;
-  };
-  const typeQ = (sh) => {
-    const g = sh.good, t = sh.tags[st.choice];
-    if (sh.kind === 'waste') return `What do you pay for ${sh.need} with the ${short(g, t)}?`;
-    if (sh.div === false) { const s = sh.tags[sh.small], b = sh.tags[1 - sh.small]; return `What would ${b.count} ${g.vol ? g.many + ' of ' + g.of : g.many} cost, bought in ${short(g, s)}s?`; }
-    return `How much is one ${g.one} in the ${short(g, t)}?`;
-  };
-  const working = (sh) => {
-    const g = sh.good, T = sh.tags, M = minorMoney;
-    if (sh.kind === 'waste') {
-      const lines = T.map((t, i) => `${short(g, t)}: ${sh.packsFor[i]} × ${M(t.price)} = <b>${M(sh.costs[i])}</b> for ${sh.need}${sh.spare[i] ? `, and ${sh.spare[i]} ${sh.spare[i] === 1 ? g.one : g.many} left over to waste` : ''}`);
-      const c = sh.cheaperEach, a = sh.answer;
-      return { lines, end: c === a ? `The ${short(g, T[a])} is cheaper each <b>and</b> cheaper for what you need.` : `The ${short(g, T[c])} is cheaper each — but for what you need, the ${short(g, T[a])} costs less. Cheaper each is not always cheaper for you.` };
-    }
-    if (sh.div === false) {
-      const s = T[sh.small], b = T[1 - sh.small];
-      return { lines: [`${sh.times} × ${short(g, s)} = ${b.count}: ${sh.times} × ${M(s.price)} = <b>${M(sh.sameCost)}</b>`, `The ${short(g, b)}: <b>${M(b.price)}</b>`],
-        end: `For the same ${b.count}, the ${short(g, T[sh.answer])} costs less.` };
-    }
-    const lines = T.map((t, i) => (t.kind === 'bogof'
-      ? `Half-price offer: ${M(t.single)} + ${M(t.half)} = ${M(t.price)} for 2, so <b>${M(sh.each[i])}</b> each`
-      : `${M(t.price)} ÷ ${t.count} = <b>${M(sh.each[i])}</b> each`));
-    const a = sh.answer, big = T[0].count > T[1].count ? 0 : 1, by = sh.by;
-    let end = `The ${short(g, T[a])} is cheaper per ${g.one}, by ${M(by)}.`;
-    if (sh.kind === 'bogof') end += T[a].kind === 'bogof' ? ' This time the offer really is the better price.' : ' The offer sounds bigger than it is.';
-    else if (big !== a) end += ' Bigger is not always cheaper.';
-    return { lines, end };
-  };
+  /* Better Buy's words: every sentence and number comes from the shelf (smartsim.js) */
+  const label = S.shelfLabel, question = S.shelfQuestion, working = S.shelfWorking;
+  const typeQ = (sh) => S.shelfTypeQ(sh, st.choice);
   const tagHtml = (sh, i) => {
     const g = sh.good, t = sh.tags[i], h = st.held, chosen = st.choice === i;
     const mark = h ? (i === sh.answer ? ' ok' : chosen ? ' no' : '') : chosen ? ' sel' : '';
     const n = Math.min(12, t.count), icons = Array.from({ length: n }, () => ico(g.icon, '', n > 6 ? 16 : 22)).join('');
     return `<button class="sctag${mark}" data-act="scShelf" data-arg="${i}"${st.step !== 'shelf' ? ' disabled' : ''} aria-pressed="${chosen}">
       <span class="k">${i + 1}</span><span class="scicons" aria-hidden="true">${icons}</span>
-      <span class="sclabel">${esc(label(g, t))}</span><b class="scprice tabnum">${t.kind === 'bogof' ? `${minorMoney(t.price)} for 2` : minorMoney(t.price)}</b></button>`;
+      <span class="sclabel">${esc(label(g, t))}</span><b class="scprice tabnum">${S.shelfPrice(t)}</b></button>`;
   };
   const bbView = () => {
     const sh = card(), h = st.held;

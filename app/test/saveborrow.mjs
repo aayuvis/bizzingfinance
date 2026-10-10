@@ -95,6 +95,26 @@ const randomBot = { type: () => String(1 + Math.floor(rnd() * 99999)).slice(0, 1
   }
   fmt.setCurrency('INR');
   ok(!stray.length, 'SB1 · every amount on every screen (predict, choose, strip, card, end) is one sim.js computed — INR and USD, 360 rounds', stray.slice(0, 4).join(' | '));
+  /* (a2) the sentences on the choose step and the comparison card are the module's own data
+     (sbOffer, sbSaid, SB_PRICE_LINE) — the words My Feed cuts a proven goal in */
+  {
+    const miss = [], txt = (t) => plain(t).trim();
+    for (const cur of ['INR', 'USD']) {
+      fmt.setCurrency(cur);
+      for (let s = 1; s <= 12; s++) for (const lv of LEVELS) {
+        const { st, views } = play(s * 7, lv, careful());
+        const choose = views.filter(([step]) => step === 'choose').map(([, v]) => plain(v)), cards = views.filter(([step]) => step === 'card').map(([, v]) => plain(v));
+        st.round.goals.forEach((G, i) => {
+          const c = cards[i * 2] || '', ch = choose[i] || '';
+          G.paths.forEach((p) => { if (!ch.includes(txt(SBV.sbOffer(G, p)))) miss.push(`${cur}/${lv}/${s} offer ${p.id}`); });
+          st.log[i].cmp.lines.forEach((x) => { if (![false, true].some((pc) => c.includes(txt(SBV.sbSaid(G, x, pc))))) miss.push(`${cur}/${lv}/${s} line ${x.id}`); });
+          if (!G.invest && !c.includes(SBV.SB_PRICE_LINE)) miss.push(`${cur}/${lv}/${s} price line`);
+        });
+      }
+    }
+    fmt.setCurrency('INR');
+    ok(!miss.length, 'the offers and the comparison card say exactly the sentences saveborrow.js keeps as data (sbOffer, sbSaid) — My Feed cuts the same words', miss.slice(0, 3).join(' | '));
+  }
   /* (b) and the module does no sum on a money field itself */
   const src = readFileSync(new URL('../src/saveborrow.js', import.meta.url), 'utf8');
   const F = '(price|income|weekly|total|cost|fee|oneOff|repair|pay|purse|tin|has|want|cushion|job|end|short|more|less|dCost|dJob|dEnd|repaired|extra)';
