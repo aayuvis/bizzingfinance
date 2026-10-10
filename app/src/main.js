@@ -286,10 +286,11 @@ function render() {
       routes: { me: '#/me', shop: '#/shop', collection: '#/collection', medals: '#/medals', settings: '#/settings', grownups: '#/parents', help: '#/help', privacy: '#/privacy' },
       app: [{ icon: 'bag', label: "Mags' General Store", sub: 'spend your town money', href: '#/store' },
         { icon: 'book', label: 'The Library', sub: 'tools to try things on, and every Money Word', href: '#/library' },
-        /* the family drawer has four app slots; the Coach takes Ones to try again's, and the
-           Coach page is its door now (its "to revisit" opens the deck) */
-        { icon: 'lamp', label: 'The Coach', sub: 'what trips you up, the trick for it, and ones to try again', href: '#/coach' },
-        { icon: 'compass', label: 'The Market Game', sub: 'forty companies that do not exist', href: '#/market40' }] },
+        /* the family drawer has four app slots (bizzing-shell.js). The Coach and Ones to try again
+           both keep one (owner, 10 Oct 2026); the Market Game gave up its slot, because it is the
+           flagship card on the Play tab and stays in search and the in-app menu */
+        { icon: 'lamp', label: 'The Coach', sub: 'what trips you up, and the trick for it', href: '#/coach' },
+        { icon: 'clock', label: 'Ones to try again', sub: 'the questions that tripped you, back after a gap', href: '#/mistakes' }] },
     content: `${R.session && nav !== 'parents' ? sessionBar() : ''}
       ${R.demo ? `<div class="demobar" role="status"><b>Sample</b> — Riya's town, three weeks in. Nothing here is saved. <a href="./">Leave the sample</a></div>` : ''}
       ${sim.clockSuspect(s) ? clockWarning() : ''}${body}`,

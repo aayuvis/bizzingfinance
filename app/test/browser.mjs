@@ -1744,7 +1744,9 @@ async function coachChecks(label, vp, isMobile, scheme) {
   const doors = await B(() => { const r = window.BZF.search('coach'); return { search: r.length && r[0].arg === '#/coach' }; });
   await p.click('[data-bz=menu]').catch(() => {}); await p.waitForTimeout(300);
   const dr = await B(() => !!document.querySelector('[data-bz-dr="app"][href="#/coach"]'));
+  const mi = await B(() => !!document.querySelector('[data-bz-dr="app"][href="#/mistakes"]'));
   ok(`${label}: the Coach is in the ☰ drawer and the first search result for “coach”`, dr && doors.search, JSON.stringify({ dr, ...doors }));
+  ok(`${label}: Ones to try again keeps its place in the ☰ drawer beside the Coach (owner, 10 Oct 2026)`, mi);
   ok(`${label}: the daily goal and the Coach threw nothing`, !errors.length, errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
