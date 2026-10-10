@@ -804,9 +804,9 @@ function viewCard(card) {
   return `<div class="stack">
     <button class="backlink" data-act="closeCard">${ico('back', '←', 16)} ${card.assess ? 'Not now' : 'All chapters'}</button>
     ${card.assess && R.practice && R.practice.id === card.id ? hero({ eyebrow: 'Practice · asked fresh', title: esc(card.title) }) + `<p class="small muted">Practice, not a test: ${practiceExact(resolveCard(R.practice.from, c)) ? 'the same idea as' : 'an idea from the chapter of'} “${esc((resolveCard(R.practice.from, c) || {}).title || 'the lesson')}”, asked fresh. Nothing is recorded but what a right answer earns.</p>`
-      : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · in new numbers' : 'Still know this?', title: esc(card.title) })
+      : card.assess ? hero({ eyebrow: card.generated ? 'Still know this? · asked fresh' : 'Still know this?', title: esc(card.title) })
       : hero({ eyebrow: esc((CHAPTERS.find((x) => x.id === card.ch) || { title: 'A stop off the road' }).title), title: esc(card.title) })}
-    ${card.assess && R.practice && R.practice.id === card.id ? genHowBlock(card, st) : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'numbers the town has not asked you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
+    ${card.assess && R.practice && R.practice.id === card.id ? genHowBlock(card, st) : card.assess ? `<p class="small muted">You met this a while ago. One question — ${card.generated ? 'a situation, or numbers, the town has not put to you before' : 'a different one from last time'}. Getting it right after a gap is how the town knows it is yours.</p>`
       /* per-stop skipping (owner, 3 Oct 2026): answer a stop cold, lesson hidden; three right
          first time and it is walked; one miss and the lesson opens where the child is */
       : R.cold === card.id ? coldNote(c, card)
