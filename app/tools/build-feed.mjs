@@ -105,6 +105,7 @@ function add(c) {
   c.maths = maxM(c.maths, mathsOfText([c.title, c.body, c.play && c.play.q, ...(c.play ? c.play.opts : [])].join(' ')));
   if (c.level == null) delete c.level;
   if (!c.body) delete c.body;
+  if (!c.cur) delete c.cur;
   items.push(c);
   return true;
 }
@@ -151,20 +152,24 @@ function passagesOf(cardId, L) {
   return out;
 }
 
-/* ── money with no currency (audit V1) ─────────────────────────────────────
+/* ── money with no currency (audit V1), priced at render ───────────────────
    The feed is built once for every child, and currency is a setting, never an assumption.
-   So a retrieval item cut here shows its amounts as bare numbers — the way the lessons
-   themselves write them ("Rent 240 a month") — and nothing new carries a currency sign.
-   Generated items are drawn with one unit to the coin (no rounding to tens) and the sign
-   is then taken off; an authored item's sign is taken off the same way. test/feed.mjs
-   draws them again the same way and finds every word. */
+   So an authored retrieval item cut here shows its amounts as bare numbers — the way the
+   lessons themselves write them ("Rent 240 a month") — and nothing carries a currency sign.
+   A GENERATED item's money is a placeholder instead, {cN}: N of the coins the generator's
+   sums move in (fmt.js coin()), priced by feed.js at render. It is drawn once at one unit to
+   the coin and every amount the generator said through money() becomes its placeholder, so a
+   child on rupees reads ₹60 on the card where the lesson says ₹60 — never a bare 6 that
+   contradicts it. test/feed.mjs draws them again in her currency and finds every word. */
 export const SIGNS = Object.values(CURRENCIES).map((c) => c.sign);
 export const neutral = (t) => SIGNS.reduce((s, g) => s.split(g).join(''), String(t ?? ''));
 export const UNIT_CURRENCY = 'AED';                          /* RATE 1: one unit is one coin */
+const UNIT_MONEY = new RegExp(CURRENCIES[UNIT_CURRENCY].sign.replace(/\./g, '\\.') + '(\\d+(?:,\\d{3})*)', 'g');
+export const coined = (t) => String(t ?? '').replace(UNIT_MONEY, (_, n) => `{c${n.replace(/,/g, '')}}`);
 export const GEN_CX = { ceil: 6 };                           /* small numbers: every child can read them */
 export function genNeutral(o, seed) {
   const was = currency(); setCurrency(UNIT_CURRENCY);
-  try { const g = genCard(o, seed, GEN_CX); return g && JSON.parse(neutral(JSON.stringify(g))); } finally { setCurrency(was); }
+  try { const g = genCard(o, seed, GEN_CX); return g && JSON.parse(coined(JSON.stringify(g))); } finally { setCurrency(was); }
 }
 
 /* ── where a card leads, and where it comes from ───────────────────────────
@@ -498,13 +503,19 @@ for (const k of allCards) {
 
 /* 10b · the sum, written out (worked.js): every arithmetic stop's worked example, drawn at one
    unit to the coin and shown with no currency sign, as the retrieval items are */
-export function workedNeutral(id) {
-  const was = currency(); setCurrency(UNIT_CURRENCY);
-  try { return JSON.parse(neutral(JSON.stringify(WORKED[id]()))); } finally { setCurrency(was); }
+export function workedIn(id, cur) {
+  const was = currency(); setCurrency(cur);
+  try { return WORKED[id](); } finally { setCurrency(was); }
 }
+export const workedNeutral = (id) => JSON.parse(coined(JSON.stringify(workedIn(id, UNIT_CURRENCY))));
+/* a stop whose sum is worked on the town's dials (what a shift pays) rounds those dials in each
+   currency and does its arithmetic on what it shows — so its words are drawn in every currency
+   (`cur`, which feed.js picks), and every one of them adds up */
+export const workedCur = (id) => (/\{c\d+\}/.test(workedNeutral(id).steps.join(' '))
+  ? Object.fromEntries(Object.keys(CURRENCIES).map((cur) => [cur, workedIn(id, cur).steps.map(plain).join('\n')])) : undefined);
 for (const id of Object.keys(WORKED)) {
   const k = C.card(id); if (!k) continue;
-  add({ kind: 'worked', src: `worked:${id}`, level: chLevel(chapterOf(k)), topics: lessonTopics(k), title: k.title, body: workedNeutral(id).steps,
+  add({ kind: 'worked', src: `worked:${id}`, level: chLevel(chapterOf(k)), topics: lessonTopics(k), title: k.title, body: workedNeutral(id).steps, cur: workedCur(id),
     route: learnRoute(id), cta: 'Open the lesson', maths: mathsOfCard(k) });
 }
 

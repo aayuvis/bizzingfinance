@@ -11,7 +11,7 @@
    ordinary four-option kind. Every number is hypothetical and says so by being a story
    about Pip or Mags, never a claim about the real world (rule 6). Pure: same seed, same
    currency, same ceiling — same question. */
-import { price, money } from './fmt.js';
+import { coin, money, currency, setCurrency, CURRENCIES } from './fmt.js';
 
 /* a seeded generator, so an id like "EARN-2~41" always means the same question */
 function rng(seed) {
@@ -23,7 +23,7 @@ const int = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
 
 /* One "coin" of the currency in round numbers: ₹10, $1, £1, €1, AED 1. Derived from the
    same table every price uses, so nothing here assumes a currency. */
-const step = () => Math.max(1, Math.round(price(10) / 10));
+const step = coin;
 const m = (n) => money(n);
 
 /* small numbers until the child has met bigger ones */
@@ -259,23 +259,25 @@ export const GEN = {
   'CHOOSE-10': (r, cx) => {
     const s = step(), big = size(cx) === 'big', w = pick(r, WHO), f = int(r, 0, 2);
     const hint = 'Turn both offers into the same period first, then take the smaller from the bigger.';
+    /* worked in coins (d, diff, wk…) and priced once at the end, so no choice made here
+       depends on which currency the coins are in */
     if (f === 0) {
-      const d = s * (big ? int(r, 3, 12) : int(r, 2, 5)); let diff = s * int(r, 1, big ? 20 : 6); while (diff === d || diff === 30) diff += s;
+      const d = big ? int(r, 3, 12) : int(r, 2, 5); let diff = int(r, 1, big ? 20 : 6); while (diff === d || diff === 30) diff += 1;
       const B = 30 * d + (r() < 0.5 ? diff : -diff);
-      return { kind: 'num', hint, q: `Offer A is ${m(d)} a day. Offer B is ${m(B)} for a 30-day month. Over the month, how much does the cheaper one save?`, value: diff,
-        why: `${m(d)} × 30 = ${m(30 * d)} against ${m(B)}, a gap of ${m(diff)}. Until both were in months, the two numbers could not be compared at all.` };
+      return { kind: 'num', hint, q: `Offer A is ${m(s * d)} a day. Offer B is ${m(s * B)} for a 30-day month. Over the month, how much does the cheaper one save?`, value: s * diff,
+        why: `${m(s * d)} × 30 = ${m(s * 30 * d)} against ${m(s * B)}, a gap of ${m(s * diff)}. Until both were in months, the two numbers could not be compared at all.` };
     }
     if (f === 1) {
-      const wk = s * (big ? int(r, 3, 12) : int(r, 1, 4));
-      let mo = s * (Math.round(52 * wk / s / 12) + pick(r, [-2, -1, 1, 2]));
-      while (12 * mo === 52 * wk || [wk, mo, 52, 12].includes(Math.abs(12 * mo - 52 * wk))) mo += s;
-      return { kind: 'num', hint, q: `One club costs ${m(wk)} a week. Another costs ${m(mo)} a month. Over a year of 52 weeks, or 12 months, how much does the cheaper one save?`, value: Math.abs(12 * mo - 52 * wk),
-        why: `${m(wk)} × 52 = ${m(52 * wk)}; ${m(mo)} × 12 = ${m(12 * mo)}. The difference is ${m(Math.abs(12 * mo - 52 * wk))} — invisible until both were in years.` };
+      const wk = big ? int(r, 3, 12) : int(r, 1, 4);
+      let mo = Math.round(52 * wk / 12) + pick(r, [-2, -1, 1, 2]);
+      while (12 * mo === 52 * wk || [wk, mo, 52, 12].includes(Math.abs(12 * mo - 52 * wk))) mo += 1;
+      return { kind: 'num', hint, q: `One club costs ${m(s * wk)} a week. Another costs ${m(s * mo)} a month. Over a year of 52 weeks, or 12 months, how much does the cheaper one save?`, value: s * Math.abs(12 * mo - 52 * wk),
+        why: `${m(s * wk)} × 52 = ${m(s * 52 * wk)}; ${m(s * mo)} × 12 = ${m(s * 12 * mo)}. The difference is ${m(s * Math.abs(12 * mo - 52 * wk))} — invisible until both were in years.` };
     }
-    const S = s * 10 * (big ? int(r, 4, 20) : int(r, 2, 8)); let fl = s * (big ? int(r, 3, 25) : int(r, 1, 9));
-    while (fl === S / 10 || [fl, S, 1, 10].includes(Math.abs(fl - S / 10))) fl += s;
-    return { kind: 'num', hint, q: `A stall pitch costs a flat ${m(fl)} a week, or 1 in every 10 of what you sell. ${w} sells ${m(S)} a week. How much does the cheaper deal save each week?`, value: Math.abs(fl - S / 10),
-      why: `1 in 10 of ${m(S)} is ${m(S / 10)}, against the flat ${m(fl)}. Sell a different amount and the answer can flip — it depends on you, not on the offer.` };
+    const S = 10 * (big ? int(r, 4, 20) : int(r, 2, 8)); let fl = big ? int(r, 3, 25) : int(r, 1, 9);
+    while (fl === S / 10 || [fl, S, 1, 10].includes(Math.abs(fl - S / 10))) fl += 1;
+    return { kind: 'num', hint, q: `A stall pitch costs a flat ${m(s * fl)} a week, or 1 in every 10 of what you sell. ${w} sells ${m(s * S)} a week. How much does the cheaper deal save each week?`, value: s * Math.abs(fl - S / 10),
+      why: `1 in 10 of ${m(s * S)} is ${m(s * S / 10)}, against the flat ${m(s * fl)}. Sell a different amount and the answer can flip — it depends on you, not on the offer.` };
   },
   'CHOOSE-11': (r) => {
     const s = step(), w = pick(r, WHO), tempt = pick(r, TEMPTS), f = int(r, 0, 3);
@@ -725,16 +727,25 @@ const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
    child's maths ceiling. Returns the same card shape as objectives.assessCard. */
 export function genCard(o, seed, cx) {
   const g = GEN[o.id]; if (!g) return null;
+  const C = cx || { ceil: 6 };
+  /* The same id is the same question in EVERY currency, only priced differently: what is
+     redrawn (a leak) and which sibling is the worked one are decided on all of them at once,
+     so a card cut once for every child (My Feed) reads exactly as this draws it for her. */
+  const memo = {};
+  const drawAt = (cur, s) => { const key = cur + s; if (memo[key]) return memo[key]; const was = currency(); setCurrency(cur); try { return (memo[key] = g(rng(s), C)); } finally { setCurrency(was); } };
+  const everywhere = (s, test) => Object.keys(CURRENCIES).every((cur) => test(drawAt(cur, s), cur));
   /* a typed answer whose number is printed in its own question is a leak: draw again */
-  let d;
-  for (let k = 0; k < 12; k++) { d = g(rng(seed * 2654435761 + o.id.length + k * 7919), cx || { ceil: 6 }); if (!leaks(d)) break; }
+  let at = seed * 2654435761 + o.id.length;
+  for (let k = 0; k < 12; k++) { const s = seed * 2654435761 + o.id.length + k * 7919; at = s; if (everywhere(s, (d) => !leaks(d))) break; }
+  let d = drawAt(currency(), at);
   /* E3 · a typed amount carries its worked example: the same generator, other numbers —
      a sibling drawn from a different seed whose answer is not this one's. Every number in
      it is the generator's own, so it claims nothing about the real world. */
   if (d.kind === 'num' && !d.worked) {
     for (let k = 1; k < 40; k++) {
-      const s = g(rng((seed + 7 * k) * 2246822519 + o.id.length * 31 + k), cx || { ceil: 6 });
-      if (s.kind === 'num' && s.value !== d.value && s.q !== d.q && !leaks(s) && !numbersIn(s.q + ' ' + s.why).includes(d.value)) { d = { ...d, worked: { q: s.q, why: s.why, value: s.value } }; break; }
+      const s2 = (seed + 7 * k) * 2246822519 + o.id.length * 31 + k;
+      const fits = everywhere(s2, (w, cur) => { const dd = drawAt(cur, at); return w.kind === 'num' && w.value !== dd.value && w.q !== dd.q && !leaks(w) && !numbersIn(w.q + ' ' + w.why).includes(dd.value); });
+      if (fits) { const s = g(rng(s2), C); d = { ...d, worked: { q: s.q, why: s.why, value: s.value } }; break; }
     }
   }
   return { id: `${o.id}~${seed}`, title: o.short, who: 'pip', objective: o.id, assess: true, generated: true, drill: d };

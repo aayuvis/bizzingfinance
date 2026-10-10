@@ -1,0 +1,26 @@
+/* scratch: the first screen's weight, measured the way browser.mjs measures it (not in npm test) */
+import { chromium } from 'playwright';
+import { serve, BASE } from './serve.mjs';
+import { fileURLToPath } from 'node:url';
+const ROOT = fileURLToPath(new URL('../build', import.meta.url));
+const srv = await serve(ROOT);
+const URL0 = `http://localhost:${srv.address().port}${BASE}`;
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+const page = await ctx.newPage();
+await page.goto(URL0);
+await page.waitForSelector('[data-act="obStart"]');
+await page.click('[data-act="obStart"]');
+await page.fill('#nm', 'Asha');
+await page.click('[data-act="obAvatar"][data-arg="mango"]');
+await page.click('[data-act="obNext"]');
+await page.locator('[data-act="obBand"]').last().click();
+await page.waitForFunction(() => /^#\/atlas\/c1a$/.test(location.hash));
+await page.evaluate(() => { location.hash = '#/home'; });
+await page.waitForSelector('[data-bz=next]');
+await page.waitForTimeout(3600);
+const list = await page.evaluate(() => performance.getEntriesByType('resource').concat(performance.getEntriesByType('navigation')).map((e) => [e.name.split('/').pop(), e.encodedBodySize || 0]));
+const total = list.reduce((t, x) => t + x[1], 0);
+console.log((total / 1024 / 1024).toFixed(4), 'MB', total, 'bytes; headroom', 1.5 * 1024 * 1024 - total);
+if (process.argv[2]) list.sort((a, b) => b[1] - a[1]).slice(0, 25).forEach((x) => console.log(x[1], x[0]));
+await browser.close(); srv.close();

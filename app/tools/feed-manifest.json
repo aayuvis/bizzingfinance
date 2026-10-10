@@ -1,10 +1,10 @@
 {
-  "total": 2288,
+  "total": 2292,
   "byKind": {
     "lesson": 78,
     "example": 79,
-    "question": 667,
-    "why": 369,
+    "question": 668,
+    "why": 371,
     "yourturn": 51,
     "line": 57,
     "tryit": 7,
@@ -40,7 +40,7 @@
     "risk": 40,
     "event": 54,
     "worked": 14,
-    "showhow": 62,
+    "showhow": 63,
     "story": 37,
     "gamehow": 9,
     "gamegoal": 23,
@@ -52,12 +52,12 @@
   },
   "byLevel": {
     "chapter 1": 165,
-    "chapter 2": 177,
+    "chapter 2": 180,
     "chapter 3": 320,
     "chapter 4": 246,
     "chapter 5": 181,
     "chapter 6": 193,
-    "chapter 7": 250,
+    "chapter 7": 251,
     "chapter 8": 142,
     "any": 614
   },
@@ -72,7 +72,7 @@
       "level": 2,
       "chapter": "c2",
       "title": "Earning it",
-      "n": 177
+      "n": 180
     },
     {
       "level": 3,
@@ -102,7 +102,7 @@
       "level": 7,
       "chapter": "c7",
       "title": "Money that grows",
-      "n": 250
+      "n": 251
     },
     {
       "level": 8,
@@ -116,7 +116,7 @@
     "target": 3624,
     "floor": 2288,
     "close": "Sprout readings that retell a stop rather than shorten it (86 are let go as the builder's own words); narration for the 29 stops that have none; more scenario pools in generate.js, so a drawn question is a new situation and not new numbers; and the sentences Better Buy, Save or Borrow? and the Library compose on screen, moved into their modules as data the feed can read and prove",
-    "now": 2288
+    "now": 2292
   },
   "nearDuplicatesLetGo": [
     "lesson:c1a#beat3 ≈ card:c1a#eg",
@@ -232,6 +232,7 @@
     "gen:CHOOSE-4~3#why ≈ gen:CHOOSE-4~1#why",
     "gen:CHOOSE-4~5#why ≈ gen:CHOOSE-4~1#why",
     "gen:CHOOSE-4~8#why ≈ gen:CHOOSE-4~1#why",
+    "gen:CHOOSE-4~104#why ≈ gen:CHOOSE-4~1#why",
     "gen:CHOOSE-5~1#why ≈ assess:CHOOSE-5#0why",
     "gen:CHOOSE-5~2#why ≈ assess:CHOOSE-5#2why",
     "gen:CHOOSE-5~3#why ≈ assess:CHOOSE-5#2why",
@@ -293,11 +294,9 @@
     "gen:EARN-3~79#why ≈ gen:EARN-3~10#why",
     "gen:EARN-3~94#why ≈ gen:EARN-3~10#why",
     "gen:EARN-3~97#why ≈ gen:EARN-3~10#why",
-    "gen:EARN-4~5#why ≈ gen:EARN-4~1#why",
-    "gen:EARN-4~6#why ≈ gen:EARN-4~1#why",
-    "gen:EARN-4~48#why ≈ gen:EARN-4~4#why",
-    "gen:EARN-4~53#why ≈ gen:EARN-4~1#why",
-    "gen:EARN-4~74#why ≈ gen:EARN-4~1#why",
+    "gen:EARN-4~6#why ≈ gen:EARN-4~3#why",
+    "gen:EARN-4~48#why ≈ gen:EARN-4~20#why",
+    "gen:EARN-4~74#why ≈ gen:EARN-4~5#why",
     "gen:EARN-4~111#why ≈ gen:EARN-4~3#why",
     "gen:EARN-5~8#why ≈ gen:EARN-5~2#why",
     "gen:EARN-5~9#why ≈ gen:EARN-5~1#why",
@@ -338,6 +337,7 @@
     "gen:GROW-1~52#why ≈ gen:GROW-1~3#why",
     "gen:GROW-4~21#why ≈ gen:GROW-4~10#why",
     "gen:GROW-4~63#why ≈ gen:GROW-4~10#why",
+    "gen:GROW-4~88#why ≈ gen:GROW-4~10#why",
     "gen:GROW-5~20#why ≈ gen:GROW-5~6#why",
     "gen:GROW-5~50#why ≈ gen:GROW-5~6#why",
     "gen:GROW-5~76#why ≈ gen:GROW-5~6#why",
@@ -424,7 +424,6 @@
     "gen:CHOOSE-3~144#why ≈ assess:CHOOSE-3#2why",
     "gen:CHOOSE-3~336#why ≈ assess:CHOOSE-3#0why",
     "gen:CHOOSE-3~429#why ≈ gen:CHOOSE-3~6#why",
-    "gen:CHOOSE-4~260#why ≈ gen:CHOOSE-4~1#why",
     "gen:CHOOSE-5~22#why ≈ gen:CHOOSE-5~11#why",
     "gen:CHOOSE-5~23#why ≈ assess:CHOOSE-5#2why",
     "gen:CHOOSE-5~24#why ≈ assess:CHOOSE-5#0why",
@@ -470,8 +469,8 @@
     "gen:KEEP-5~157#why ≈ gen:KEEP-5~3#why",
     "gen:KEEP-5~198#why ≈ gen:KEEP-5~7#why",
     "gen:KEEP-6~351#why ≈ gen:KEEP-6~5#why",
-    "gen:GROW-4~153#why ≈ gen:GROW-4~10#why",
-    "gen:GROW-4~494#why ≈ gen:GROW-4~10#why",
+    "gen:GROW-4~131#why ≈ gen:GROW-4~10#why",
+    "gen:GROW-4~287#why ≈ gen:GROW-4~10#why",
     "gen:GUARD-3~53#why ≈ gen:GUARD-3~5#why",
     "gen:GUARD-3~74#why ≈ gen:GUARD-3~4#why",
     "gen:GUARD-3~102#why ≈ gen:GUARD-3~4#why",
@@ -599,7 +598,7 @@
     "avatar:sparkler#power ≈ avatar:envelope#power"
   ],
   "generatedRepeatsLetGo": {
-    "genhow": 10760,
+    "genhow": 10759,
     "scamdeck": 3899
   },
   "shardsLetGo": [
@@ -623,6 +622,6 @@
       "assess:KEEP-6#1",
       "assess:GROW-2#1"
     ],
-    "sameAsOneAlreadyCut": 20287
+    "sameAsOneAlreadyCut": 20284
   }
 }

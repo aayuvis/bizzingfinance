@@ -32,10 +32,15 @@ export function price(units) {
   const raw = units * RATE[cur];
   return raw >= 100 ? Math.round(raw / 10) * 10 : Math.round(raw);
 }
+/* One "coin" of the currency in round numbers: ₹10, $1, £1, €1, AED 1 — the step the town's
+   generated sums move in (generate.js), and what a {cN} placeholder is priced by (feed.js):
+   one table, so a card cut once for every child says what the app says in her currency. */
+export const coin = () => Math.max(1, Math.round(price(10) / 10));
+const WHOLE = {};                       /* one formatter per locale: building one is the slow part */
 export function money(n, opts) {
   const c = CURRENCIES[cur];
   const v = Math.round(n);
-  const s = new Intl.NumberFormat(c.locale, { maximumFractionDigits: 0 }).format(Math.abs(v));
+  const s = (WHOLE[c.locale] = WHOLE[c.locale] || new Intl.NumberFormat(c.locale, { maximumFractionDigits: 0 })).format(Math.abs(v));
   const body = c.sign + s;
   if (opts && opts.signed && v > 0) return '+' + body;
   return v < 0 ? '−' + body : body;

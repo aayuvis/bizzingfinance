@@ -51,20 +51,25 @@ const { CATALOGUE } = await import('../src/catalogue.js');
    before its words are looked for, so nothing else can slip through. */
 const SIGN_RE = new RegExp(Object.values(FMT.CURRENCIES).map((c) => c.sign.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
 const unsigned = (o) => JSON.parse(JSON.stringify(o).replace(SIGN_RE, ''));
+/* a generated amount, drawn at one unit to the coin, is a {cN} placeholder priced at render —
+   written here from the AED sign, independently of the builder's own regex */
+const AED = FMT.CURRENCIES.AED.sign;
+const coinedHere = (o) => JSON.parse(JSON.stringify(o).split(AED).map((part, i) => (i ? part.replace(/^(\d+(?:,\d{3})*)/, (n) => `{c${n.replace(/,/g, '')}}`) : part)).join(''));
 const objectiveOf = (id) => C.OBJECTIVES.find((o) => o.id === id);
-const genAgain = (o, seed) => { const was = FMT.currency(); FMT.setCurrency('AED'); try { return GEN.genCard(o, seed, { ceil: 6 }); } finally { FMT.setCurrency(was); } };
+const genIn = (o, seed, cur) => { const was = FMT.currency(); FMT.setCurrency(cur); try { return GEN.genCard(o, seed, { ceil: 6 }); } finally { FMT.setCurrency(was); } };
+const genAgain = (o, seed) => genIn(o, seed, 'AED');
 function resolve(src) {
   let m = /^assess:([A-Z]+-\d+)#(\d+)(why)?$/.exec(src || '');
   if (m) { const o = objectiveOf(m[1]), d = o && o.assess[+m[2]]; return d ? unsigned({ title: o.short, ...d }) : null; }
   m = /^gen:([A-Z]+-\d+)~(\d+)(#why)?$/.exec(src || '');
-  if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]); return g ? unsigned(g) : null; }
+  if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]); return g ? coinedHere(g) : null; }
   /* the second cut's generated sources, drawn again here: a typed question's worked sibling
      (generate.js E3), a stop's worked sum (worked.js) at one unit to the coin, a Scam Spotter
      message from its own seed */
   m = /^genhow:([A-Z]+-\d+)~(\d+)$/.exec(src || '');
-  if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]), w = g && g.drill.kind === 'num' && g.drill.worked; return w ? unsigned({ title: o.short, q: w.q, why: w.why }) : null; }
+  if (m) { const o = objectiveOf(m[1]), g = o && genAgain(o, +m[2]), w = g && g.drill.kind === 'num' && g.drill.worked; return w ? coinedHere({ title: o.short, q: w.q, why: w.why }) : null; }
   m = /^worked:([a-z0-9-]+)$/.exec(src || '');
-  if (m) { if (!WORKED[m[1]]) return null; const was = FMT.currency(); FMT.setCurrency('AED'); try { return unsigned({ title: card(m[1]).title, ...WORKED[m[1]]() }); } finally { FMT.setCurrency(was); } }
+  if (m) { if (!WORKED[m[1]]) return null; const was = FMT.currency(); FMT.setCurrency('AED'); try { return coinedHere({ title: card(m[1]).title, ...WORKED[m[1]]() }); } finally { FMT.setCurrency(was); } }
   if (/^sprout:/.test(src || '')) { const o = C.resolve(src); return o && unsigned(o); }
   m = /^scamdeck:(\d+)#(\d+)$/.exec(src || '');
   if (m) { const d = scamDeck(+m[1], 'standard')[+m[2]]; return d ? { t: d.t, note: d.note } : null; }
@@ -132,7 +137,39 @@ ok(qs.length && !qbad.length, 'questions come only from the lesson drills and th
   ok(!shapeBad.length, 'retrieval: a question with options to tap, or its reason (shown only after the lesson)', shapeBad.slice(0, 2).map((x) => x.id).join(' '));
   const HAS_SIGN = new RegExp(SIGN_RE.source);
   const signed = R.filter((x) => HAS_SIGN.test(JSON.stringify([x.title, x.body, x.play])));
-  ok(!signed.length, 'retrieval: no currency sign on any card the feed added — money is a bare number, as the lessons write it', signed.slice(0, 2).map((x) => x.id).join(' '));
+  ok(!signed.length, 'retrieval: no currency sign on any card the feed added — money is a bare number (authored) or a placeholder (generated)', signed.slice(0, 2).map((x) => x.id).join(' '));
+}
+
+/* PRICED AT RENDER (the doubling's first finding: a worked card said "pays 6 a shift" while its
+   lesson said ₹60). Every generated card — a question, its reason, a worked sibling — carries
+   its money as {cN} placeholders, never a bare amount; priced in a child's currency by feed.js,
+   it reads EXACTLY as the app's own generator draws that seed in that currency. A worked sum on
+   the town's dials carries its words in every currency, each the module's own, each adding up. */
+{
+  const G = DATA.filter((x) => /^(gen|genhow):/.test(x.src));
+  const was = FMT.currency(), bad = [];
+  for (const cur of ['INR', 'USD', 'GBP']) {
+    FMT.setCurrency(cur);
+    for (const x of G) {
+      const [, kind, id, seed] = /^(gen|genhow):([A-Z]+-\d+)~(\d+)/.exec(x.src), d = genIn(objectiveOf(id), +seed, cur).drill;
+      const want = kind === 'genhow' ? [d.worked.q, d.worked.why] : x.play ? [d.q, d.opts[d.a], d.why, ...d.opts.filter((_, i) => i !== d.a).map(plain).sort()] : [d.why];
+      const got = kind === 'genhow' || !x.play ? x.body.split('\n') : [x.play.q, x.play.opts[0], x.play.after, ...x.play.opts.slice(1).map((t) => FEED.priced(t)).sort()];
+      const g2 = got.map((t) => FEED.priced(t)), w2 = want.map(plain);
+      if (JSON.stringify(g2) !== JSON.stringify(w2)) bad.push(`${cur} ${x.id}: “${g2.find((t, i) => t !== w2[i])}”`);
+    }
+  }
+  FMT.setCurrency(was);
+  const coinless = G.filter((x) => /\{c\d+\}/.test(JSON.stringify([x.body, x.play])) === false && /\d/.test(JSON.stringify([x.body, x.play && x.play.q])));
+  ok(G.length >= 300 && !bad.length, 'priced at render: a generated card, in rupees, dollars or pounds, reads exactly as the app\'s generator draws it in that currency',
+    `${G.length} cards × 3 currencies` + (bad.length ? ' · ' + bad.slice(0, 2).join(' | ') : '') + ` · ${G.length - coinless.length} carry money placeholders`);
+  const W = DATA.filter((x) => x.kind === 'worked' && x.cur);
+  const sums = (t) => [...String(t).replace(/[^\d\s+−×÷=,.]/g, (ch) => (/[a-z]/i.test(ch) ? ' ' : ch)).matchAll(/((?:\d[\d,]*\s*[+−×÷]\s*)+\d[\d,]*)\s*=\s*(\d[\d,]*)/g)];
+  const wBad = W.filter((x) => Object.keys(FMT.CURRENCIES).some((cur) => {
+    FMT.setCurrency(cur); const steps = WORKED[x.src.slice(7)]().steps.map(plain).join('\n'); FMT.setCurrency(was);
+    return x.cur[cur] !== steps || /\{c?\d+\}/.test(x.cur[cur]) || sums(x.cur[cur].replace(/[^\x00-\x7f−×÷]/g, ' ')).some(([, l, r]) => Math.abs(Function(`return ${l.replace(/,/g, '').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')}`)() - +r.replace(/,/g, '')) > 1e-9);
+  }));
+  ok(W.length >= 2 && !wBad.length && W.every((x) => /\{c\d+\}/.test(x.body)), 'priced at render: a worked sum on the town\'s dials carries its words in every currency, the module\'s own, and every sum in each adds up',
+    `${W.length} stops × ${Object.keys(FMT.CURRENCIES).length} currencies` + (wBad.length ? ' · ' + wBad[0].id : ''));
 }
 
 /* figures: ONLY the register in sources.js; and no card states a real-world figure */
@@ -252,7 +289,7 @@ ok(per.every((n, i) => BUILD.SHORT[i + 1] || n >= 110), 'levels (audit V1): ever
      answer of the typed question it is the sibling of; a worked sum's every written sum is right */
   const GH = DATA.filter((x) => /^genhow:/.test(x.src));
   const ghBad = GH.filter((x) => {
-    const [, id, seed] = /^genhow:([A-Z]+-\d+)~(\d+)$/.exec(x.src), g = genAgain(objectiveOf(id), +seed), d = g && unsigned(g.drill);
+    const [, id, seed] = /^genhow:([A-Z]+-\d+)~(\d+)$/.exec(x.src), g = genAgain(objectiveOf(id), +seed), d = g && coinedHere(g.drill);
     return !d || d.kind !== 'num' || !d.worked || x.body !== [d.worked.q, d.worked.why].map(plain).join('\n') || d.worked.value === d.value || GEN.numbersIn(x.body).includes(d.value);
   });
   ok(GH.length >= 30 && !ghBad.length, '"Show me how" (generated): drawn again from its seed, the generator\'s own words, and never the answer to the question it sits beside',

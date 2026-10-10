@@ -38,7 +38,7 @@ import { WALKS } from './walks-gen.js';
 import { CO } from './companions-gen.js';
 import { HOMES, gameOpen } from './content.js';
 import { GAMES as GAME_DEFS, COVER_ALIAS } from './gamelist.js';
-import { money, price } from './fmt.js';
+import { money, price, coin, currency } from './fmt.js';
 
 /* ── more on each card (owner, 3 Oct 2026) ─────────────────────────────────
    The builder gives every card its provenance line (source) and an exact route.
@@ -85,11 +85,17 @@ function statusFor(it, c, nextId) {
 }
 function enrich(it, c, nextId) {
   const st = statusFor(it, c, nextId), r = sproutBody(it, c);
-  return { ...r, body: priced(r.body), art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
+  const P = r.play && { ...r.play, q: priced(r.play.q), opts: r.play.opts.map(priced), after: priced(r.play.after) };
+  return { ...r, title: priced(r.title), body: (r.cur && r.cur[currency()]) || priced(r.body), ...(P ? { play: P } : {}), art: it.art || artFor(it) || undefined, source: [it.source, st].filter(Boolean).join(' · ') || undefined };
 }
-/* a story's amounts are {units} placeholders, as stories.js writes them: priced here, at render,
-   in the child's own currency — the feed is cut once for every child, and currency is a setting */
-export const priced = (t) => (t == null ? t : String(t).replace(/\{(\d+)\}/g, (_, n) => money(price(+n))));
+/* Money on a card is never a bare number (the feed is cut once for every child, and currency
+   is a setting): it is a placeholder, priced here, at render, in the child's own currency.
+     {40}   a story's amount in town units, as stories.js writes it — price(40)
+     {c6}   six of the coins the town's generated sums move in (fmt.js coin(): ₹10, $1…), so a
+            generated question reads exactly as the app's own generator draws it in her currency
+   A card whose sums are worked on currency-rounded dials (worked.js) carries its words in each
+   currency instead (`cur`), drawn by the builder from the module itself. */
+export const priced = (t) => (t == null ? t : String(t).replace(/\{(\d+)\}/g, (_, n) => money(price(+n))).replace(/\{c(\d+)\}/g, (_, n) => money(+n * coin())));
 /* audit E2 · a lesson's teaching or example card reads to a Sprout as the stop itself does: her
    band's reading (sprout.js), the same idea and no new number. The card that was cut stays the
    builder text, so the corpus the feed is checked against is unchanged; only the words shown move. */
