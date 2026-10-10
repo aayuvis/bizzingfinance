@@ -24,6 +24,8 @@ ok(sacredSafe(CATALOGUE, []).length === 0 && !CATALOGUE.some((a) => a.real || a.
 const pub = new URL('../public/', import.meta.url);
 const missing = CATALOGUE.filter((a) => !existsSync(new URL(a.art.replace('./', ''), pub)));
 ok(!missing.length, 'every face is a file that ships', missing.slice(0, 4).map((a) => a.id).join(' '));
+{ const noPick = COMMONS.filter((a) => !existsSync(new URL(`avatars/fin/p/${a.id}.webp`, pub)));
+  ok(!noPick.length, 'every free face has its small copy for the setup picker (avatars/fin/p, drawn at 56px on the first screen)', noPick.map((a) => a.id).join(' ')); }
 ok(!CATALOGUE.some((a) => a.id === 'koi'), 'the koi stays with Maths');
 /* no face shared with a sibling's 96: Maths' packs and Bee's kept packs */
 const SIBLING = ['koi', 'bizzy', 'panda', 'samurai', 'neko', 'rocket', 'astro', 'comet', 'robo', 'beaker', 'scopey', 'snowfox', 'aryabhatta', 'ottie'];

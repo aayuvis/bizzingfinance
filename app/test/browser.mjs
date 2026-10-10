@@ -1059,6 +1059,20 @@ async function kitChecks() {
   if (await kp.evaluate(() => window.BZF.R.game.st.step === 'reason')) await kp.keyboard.press(String(await kp.evaluate(() => window.BZF.R.game.st.deck[0].reason + 1)));
   await kp.waitForFunction(() => window.__fx > 0, null, { timeout: 3000 }).catch(() => {});
   ok('drill game: Smart Choices bursts on a right answer and not before', tt0 === 0 && await kp.evaluate(() => window.__fx) > 0, `${tt0} → ${await kp.evaluate(() => window.__fx)}`);
+  /* and when the right answer is "both" + its reason: the burst comes from the chip, before the
+     card moves on (it used to fire after, from a chip already gone — only when a "both" card came up) */
+  await kp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); });
+  const bothSeed = await kp.evaluate(async () => { const B = window.BZF, m = await B.arcadeReady();
+    for (let s = 1; s < 400; s++) { m.startGame('sc', s); B.R.game.act('scMode', 'nw'); const c = B.R.game.st.deck[0]; m.quitGame(); if (c && c.a === 'both') return s; } return null; });
+  await kp.evaluate(async (s) => { const B = window.BZF, m = await B.arcadeReady(); window.__fx = 0; m.startGame('sc', s); B.R.s.ui.nav = 'play'; B.R.render(); B.R.game.act('scMode', 'nw'); B.R.render(); }, bothSeed);
+  await kp.waitForSelector('.gplay [data-act="scSide"][data-arg="both"]');
+  await kp.waitForFunction(() => !document.querySelector('.fxlayer'), null, { timeout: 8000 });   /* the last burst's layer has cleared itself */
+  await kp.evaluate(() => { window.__fx = 0; });
+  await kp.keyboard.press('ArrowDown'); await kp.waitForSelector('.gplay [data-act="scChip"]');
+  const b0 = await kp.evaluate(() => window.__fx);
+  await kp.keyboard.press(String(await kp.evaluate(() => window.BZF.R.game.st.deck[0].reason + 1)));
+  await kp.waitForFunction(() => window.__fx > 0, null, { timeout: 3000 }).catch(() => {});
+  ok('drill game: a right "both" with its reason bursts from the chip (seed pinned to a "both" card)', bothSeed != null && b0 === 0 && await kp.evaluate(() => window.__fx) > 0, `seed ${bothSeed}: ${b0} → ${await kp.evaluate(() => window.__fx)}`);
   await kp.evaluate(() => { window.BZF.fire('gquit'); window.BZF.fire('closeOv'); });
   ok('kit: no errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await kctx.close();

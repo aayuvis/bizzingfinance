@@ -123,8 +123,10 @@ export function smartChoices(kit, seed = (Date.now() % 100000) | 0) {
     if (ok) {
       st.points += 1; sfx.good();
       st.note = { ok: true, text: `${nwNamed(c)}${c.note ? ' ' + c.note : ''}` };
-      advance(); R.render();
+      /* the burst first, from the button the child pressed — after the card moves on, a "both"
+         reason chip is gone and there would be nothing to burst from */
       verdict(`.gplay [data-act="${c.a === 'both' ? 'scChip' : 'scSide'}"][data-arg="${c.a === 'both' ? chip : side}"]`, true);
+      advance(); R.render();
       return;
     }
     sfx.bad();
@@ -147,7 +149,7 @@ export function smartChoices(kit, seed = (Date.now() % 100000) | 0) {
     if (ok) {
       st.points += S.SS_POINTS.call; sfx.good();
       st.note = { ok: true, text: `${ssNamed(m)} ${m.note}` };
-      advance(); R.render(); verdict('.gplay [data-act="scCall"][data-arg="safe"]', true); return;
+      verdict('.gplay [data-act="scCall"][data-arg="safe"]', true); advance(); R.render(); return;
     }
     sfx.bad();
     st.held = { ok: false, call, tells: m.a === 'scam',
@@ -164,7 +166,7 @@ export function smartChoices(kit, seed = (Date.now() % 100000) | 0) {
     if (ok) {
       st.points += S.SS_POINTS.tell; sfx.good();
       st.note = { ok: true, text: `Found it: “${m.ph[k].t}” ${m.ph[k].role === 'secret' ? 'asks for a secret.' : 'is the hurry.'} ${m.note}` };
-      advance(); R.render(); verdict(`.gplay [data-act="scTell"][data-arg="${k}"]`, true); return;
+      verdict(`.gplay [data-act="scTell"][data-arg="${k}"]`, true); advance(); R.render(); return;
     }
     sfx.bad();
     const role = m.ph[k].role;

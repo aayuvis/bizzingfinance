@@ -84,7 +84,8 @@ export function viewOnboard(draft) {
           style="padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);font-size:16px;font-weight:700;width:100%">
         <div class="eyebrow" id="av-h" style="margin-top:4px">Pick a face</div>
         <div class="avpick" role="radiogroup" aria-labelledby="av-h">
-          ${AVATAR_IDS.map((id) => `<button class="avopt" role="radio" aria-checked="${(draft.avatar || DEFAULT_AVATAR) === id}" aria-label="${esc(AVATARS[id].name)}" data-act="obAvatar" data-arg="${id}"><img src="${AVATARS[id].src}" alt="" width="56" height="56"></button>`).join('')}
+          ${/* the picker's faces are 112px copies (avatars/fin/p): it draws them at 56, on the first screen */''}
+          ${AVATAR_IDS.map((id) => `<button class="avopt" role="radio" aria-checked="${(draft.avatar || DEFAULT_AVATAR) === id}" aria-label="${esc(AVATARS[id].name)}" data-act="obAvatar" data-arg="${id}"><img src="./avatars/fin/p/${id}.webp" alt="" width="56" height="56"></button>`).join('')}
         </div>
         <p class="small muted">A first name and a face. Never a surname, birthday, photo or email.</p>
         <button class="btn wide" data-act="obNext">Next →</button>
