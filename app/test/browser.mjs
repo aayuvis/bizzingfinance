@@ -265,6 +265,18 @@ async function run(label, vp, isMobile, scheme) {
     await page.evaluate(() => { const o = document.querySelector('.ov [data-act="closeOv"]'); if (o) o.click(); });
   } else ok(`${label}: the first card asks a question`, false);
 
+  /* the doubling · a stop narrated in the device's own voice: no clip, so the player says each
+     line with the browser's speech and the voice is the clock — the line is said, its caption
+     shows, and when the voice ends the next beat begins */
+  {
+    await page.goto(URL0 + '#/atlas/c1e'); await page.waitForSelector('#lessonstage [data-l="toggle"]'); await page.waitForTimeout(400);
+    await page.evaluate(() => { window.__said = []; Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speak: (u) => { window.__said.push(u.text); setTimeout(() => u.onend && u.onend({ type: 'end' }), 60); }, cancel: () => {}, getVoices: () => [] } }); Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, writable: true, value: function (t) { this.text = t; } }); });
+    await page.click('#lessonstage [data-l="toggle"]'); await page.waitForTimeout(400);
+    const tts = await page.evaluate(() => ({ said: window.__said.slice(), cap: document.querySelector('#lessonstage .lcap').textContent }));
+    ok(`${label}: a stop with no clip is read aloud, line by line, in the device's voice`, tts.said.length >= 2 && /^Long ago on Market Row/.test(tts.said[0]) && tts.said.includes(tts.cap), `${tts.said.length} lines said · “${(tts.said[0] || '').slice(0, 30)}”`);
+    await page.click('#lessonstage [data-l="toggle"]');
+  }
+
   /* FIX §1 · Change Rush plays on after catches with other coins falling: the
      loop that froze for good (arcade.js splice) runs eight seconds by keys */
   await page.goto(URL0 + '#/arcade'); await page.waitForSelector('.cover[data-arg="cr"]');

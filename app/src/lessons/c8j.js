@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Try a small batch first", beats: [
+    { dur: 8.58, line: "Mags once had a brilliant idea for painted umbrellas, and she was sure everyone in Bizzington would want one.", stage: "avatar(talk); show(umbrella)" },
+    { dur: 9.00, line: "Instead of painting a big pile, she painted just a few. Then she put them on the stall and watched.", stage: "show(shop); banner(MAKE A FEW)" },
+    { dur: 9.00, line: "Some colours flew off the stall. Others sat there for days, and that told her exactly what to paint next.", stage: "cols(Sold fast,Sat there); show(tick); sort(tick, a); show(cross); sort(cross, b)" },
+    { dur: 10.68, line: "A small test costs a little money and teaches a lot. A big mistake costs a lot of money and teaches the same thing.", stage: "avatar(point)" },
+    { dur: 8.16, line: "Try small, watch carefully, change what did not work, then make more. That is how good shops grow.", stage: "avatar(smile); banner(TRY SMALL FIRST)" },
+] };

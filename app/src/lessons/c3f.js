@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Write it down", beats: [
+    { dur: 9.00, line: "Your memory is a kind friend but a poor bookkeeper. It forgets the little things and keeps the big ones.", stage: "avatar(talk); show(book)" },
+    { dur: 9.42, line: "A snack here, a snack there, each one too small to notice. By Friday your head says it was hardly anything.", stage: "show(cake); banner(TOO SMALL TO NOTICE)" },
+    { dur: 8.16, line: "A notebook does not forget. Write each spend down as it happens, or read your wallet's own list.", stage: "show(page); avatar(point)" },
+    { dur: 9.00, line: "Then add the lines up. Very often the true number is bigger than the guess, and that surprise is useful.", stage: "show(receipt); banner(ADD THE LINES)" },
+    { dur: 8.16, line: "You cannot change what you cannot see. The record is how you see where the money really went.", stage: "avatar(smile)" },
+] };

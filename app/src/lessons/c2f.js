@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Plan on the slow week", beats: [
+    { dur: 10.26, line: "Some jobs pay the same every week. Others jump about, high one week and low the next, like a kite in gusty wind.", stage: "avatar(talk); show(chart)" },
+    { dur: 8.58, line: "If you plan your spending on your best week, the ordinary weeks will leave a hole every single time.", stage: "show(chartdown); banner(NOT THE BEST WEEK)" },
+    { dur: 9.42, line: "So look back at your weeks and find the slowest one. Build your plan so that even that week covers it.", stage: "avatar(point); show(calendar)" },
+    { dur: 10.26, line: "Then something lovely happens. Every week that beats the slow one has a little left over, and the extra can go to Save.", stage: "show(jars); banner(A BONUS)" },
+    { dur: 9.00, line: "A plan built on the slow week never lets you down. A plan built on the best week usually does.", stage: "avatar(smile)" },
+] };

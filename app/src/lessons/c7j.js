@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Little and often, started early", beats: [
+    { dur: 9.00, line: "Here is something that surprises grown-ups. A little bit, put away every week, can become a lot, given enough years.", stage: "avatar(talk); show(seed)" },
+    { dur: 7.74, line: "The early coins are the luckiest coins of all, because they get the longest time to grow.", stage: "show(coin); banner(THE EARLY COINS)" },
+    { dur: 9.00, line: "Picture a pair of friends saving the same amount each month. One starts in winter, the other waits until summer.", stage: "cols(Starts early,Starts late); show(calendar)" },
+    { dur: 10.26, line: "The early one is ahead before any growth at all, just from the extra months, and the growth widens the gap every year.", stage: "avatar(point); show(chart)" },
+    { dur: 9.42, line: "So if you can only change one thing, change when you start. Little and often, begun early, is hard to beat.", stage: "avatar(smile); banner(START EARLY)" },
+] };

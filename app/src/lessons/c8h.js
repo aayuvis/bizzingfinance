@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Paying yourself", beats: [
+    { dur: 9.84, line: "When the shop makes a profit, it is tempting to take it all home. I have seen many shops close that way.", stage: "avatar(talk); show(shop)" },
+    { dur: 9.00, line: "Next week will need stock, and some weeks will be quiet. The shop needs money of its own for both.", stage: "show(calendar); banner(THE SHOP NEEDS SOME)" },
+    { dur: 10.26, line: "So split the profit, the way your jars split a wage. Part stays in the shop tin, and part comes home with you.", stage: "cols(Shop tin,Home); show(box); sort(box, a); show(home); sort(home, b)" },
+    { dur: 9.00, line: "The part in the tin keeps the shop alive. The part you take home is what the shop pays you.", stage: "avatar(point)" },
+    { dur: 8.16, line: "Split it every time, and the shop never runs dry, even in the quietest week of the year.", stage: "avatar(smile)" },
+] };

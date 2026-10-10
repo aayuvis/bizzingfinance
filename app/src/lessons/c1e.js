@@ -1,0 +1,10 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Before there was money", beats: [
+    { dur: 10.68, line: "Long ago on Market Row, there were no coins at all. If you wanted bread, you had to bring something the baker would take.", stage: "avatar(talk); show(roti)" },
+    { dur: 10.68, line: "Picture a fisherman with a basket of fish, hungry for shoes, standing in front of a shoemaker who cannot stand the smell of fish.", stage: "show(basket); cols(Has,Wants)" },
+    { dur: 9.42, line: "Nothing happens. The swap is stuck, because each of them has to want the other's thing on the very same day.", stage: "sort(basket, a); banner(STUCK)" },
+    { dur: 9.84, line: "Coins were the clever answer. A coin is the thing everybody will take, so the fisherman sells to anyone who likes fish.", stage: "show(coin); sort(coin, b); avatar(point)" },
+    { dur: 9.84, line: "A coin does not go off by Friday, and you can break a big price into many small pieces to pay it.", stage: "show(coin2); banner(IT KEEPS)" },
+    { dur: 10.26, line: "So money is a go-between. It lets the fish find a buyer and the shoes find a buyer, without the two ever meeting.", stage: "avatar(smile); show(deal)" },
+] };

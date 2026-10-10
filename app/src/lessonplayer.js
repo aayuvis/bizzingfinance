@@ -44,7 +44,7 @@ function loadLesson(id) {
    and the measured duration is the clock instead. */
 const clipURL = (key) => 'voice/lessons/' + key + '.mp3';
 import { ico } from './art.js';
-import { esc } from './ui.js';
+import { esc, say, hush, canSay } from './ui.js';
 import { plateFor } from './looks.js';
 import { ALL_CARDS, WORLDS } from './content.js';
 import { R } from './runtime.js';
@@ -180,10 +180,16 @@ function playBeat() {
   clearTimeout(P.timer);
   if (P.audio) { P.audio.onended = null; P.audio.pause(); }
   if (!b.key) {
-    /* a lite lesson (or a browser with no audio): the measured duration is
-       still the clock, so the teaching still walks at the narrated pace */
+    /* A beat with no clip — a stop narrated in the device's own voice, or the one-file
+       build — is read aloud by the browser's speech (ui.say: an Indian English voice
+       first, at the narration-speed setting), and the voice is the clock: the beat ends
+       when the line has been said. The measured length is the backstop for a device with
+       no voice (the teaching still walks, in captions), and generously so for a slow one. */
     P.audio = null; refresh();
-    P.timer = setTimeout(() => advance(), b.dur * 1000);
+    const beat = P.i, lid = P.lid;
+    const next = () => { if (P && P.lid === lid && P.i === beat && P.playing) { clearTimeout(P.timer); advance(); } };
+    const spoke = canSay() && say(b.line, next);
+    P.timer = setTimeout(() => { if (spoke) hush(); next(); }, b.dur * 1000 * (spoke ? 2 / RATE : 1));
     return;
   }
   P.audio = new Audio(clipURL(b.key));
@@ -205,7 +211,7 @@ function advance() {
 function toggle() {
   const L = MEDIA[P.lid];
   if (P.done) { P.done = false; P.i = 0; P.playing = true; playBeat(); return; }
-  if (P.playing) { P.playing = false; P.audio && P.audio.pause(); clearTimeout(P.timer); refresh(); return; }
+  if (P.playing) { P.playing = false; P.audio && P.audio.pause(); if (!P.audio) hush(); clearTimeout(P.timer); refresh(); return; }
   P.playing = true;
   if (P.audio && P.audio.currentTime > 0 && !P.audio.ended) { P.audio.play().catch(() => {}); refresh(); }
   else playBeat();
@@ -213,6 +219,7 @@ function toggle() {
 function stop() {
   if (!P) return;
   clearTimeout(P.timer);
+  if (!P.audio) hush();
   if (P.audio) { P.audio.onended = null; P.audio.pause(); }
   document.removeEventListener('keydown', P.keys);
   P = null;

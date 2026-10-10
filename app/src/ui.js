@@ -138,14 +138,14 @@ function pickVoice() {
   const vs = speechSynthesis.getVoices() || [];
   return vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang)) || null;
 }
-export function say(text) {
+export function say(text, done) {
   if (!canSay() || !text) return false;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
     const v = pickVoice(); if (v) u.voice = v;
     u.lang = (v && v.lang) || 'en-IN'; u.rate = sayRate; u.pitch = 1;
-    audio.speaking(true); u.onend = u.onerror = () => audio.speaking(false);
+    audio.speaking(true); u.onend = u.onerror = (e) => { audio.speaking(false); if (done) done(e && e.type === 'error'); };
     speechSynthesis.speak(u);
     return true;
   } catch (e) { return false; }

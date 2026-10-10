@@ -1,0 +1,9 @@
+/* written for this stop, not generated: it has no recorded clip, so the player reads each line in
+   the device's own voice (ui.say) and the measured-length estimate below is only its backstop. */
+export default { title: "Costs that stay, costs that move", beats: [
+    { dur: 9.84, line: "Some of your costs are like the morning sun. They turn up every day, whatever you do, whether you worked or not.", stage: "avatar(talk); weather(sun)" },
+    { dur: 10.26, line: "A bus pass, a club fee, the rent on a room: you agreed to them once, and now they arrive on their own.", stage: "cols(Arrive anyway,Follow your choices); show(calendar); sort(calendar, a)" },
+    { dur: 8.58, line: "Other costs only happen when you say yes. A snack after school, a comic, a ride at the fair.", stage: "show(cake); sort(cake, b); show(game); sort(game, b)" },
+    { dur: 10.68, line: "In a thin week, those are the ones you can move. They wait for your yes, so you can simply say not this week.", stage: "avatar(point); banner(MOVE THESE FIRST)" },
+    { dur: 9.42, line: "The costs that arrive anyway only change when you change the deal itself, which takes longer and needs a calm day.", stage: "avatar(smile)" },
+] };
