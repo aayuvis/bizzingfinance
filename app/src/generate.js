@@ -12,6 +12,7 @@
    about Pip or Mags, never a claim about the real world (rule 6). Pure: same seed, same
    currency, same ceiling — same question. */
 import { coin, money, currency, setCurrency, CURRENCIES } from './fmt.js';
+import { SCENES, NUM_SCENES } from './scenes.js';
 
 /* a seeded generator, so an id like "EARN-2~41" always means the same question */
 function rng(seed) {
@@ -718,6 +719,30 @@ export const GEN = {
       'A trick needs silence to work. Saying it out loud to one person is usually enough to break it.');
   },
 };
+/* ── the town's situations (scenes.js) ──────────────────────────────────────
+   Each objective with a pool of scenes draws one of them, or (OLD_WEIGHT times in every
+   pool-plus-OLD_WEIGHT draws) one of its own branches above, so every seed is a situation
+   and the pool, not a swapped name, is what makes two seeds two questions. A scene keeps its
+   template's shape: a four-option objective draws four-option scenes, a typed one typed. */
+export const OLD_WEIGHT = 4;
+const fillIn = (t, v) => t.replace(/\{(w2|w|p|P)\}/g, (_, k) => v[k]);
+export const SCENE_COUNT = {};
+for (const id of new Set([...Object.keys(SCENES), ...Object.keys(NUM_SCENES)])) {
+  const base = GEN[id], four = SCENES[id] || [], typed = NUM_SCENES[id] || [], n = four.length + typed.length;
+  if (!base) throw new Error('scenes.js names an objective with no template: ' + id);
+  SCENE_COUNT[id] = n;
+  GEN[id] = (r, cx) => {
+    const i = int(r, 0, n + OLD_WEIGHT - 1);
+    if (i >= n) return base(r, cx);
+    const s = step(), big = size(cx) === 'big', w = pick(r, WHO), w2 = other(r, w);
+    if (i < four.length) {
+      const [q, right, wrongs, why] = four[i];
+      const v = { w, w2, p: m(s * (big ? int(r, 10, 40) : int(r, 2, 9))), P: m(s * 10 * (big ? int(r, 5, 30) : int(r, 2, 9))) };
+      return mc(r, fillIn(q, v), fillIn(right, v), wrongs.map((x) => fillIn(x, v)), fillIn(why, v));
+    }
+    return { kind: 'num', ...typed[i - four.length]({ r, s, big, w, w2, int, pick, m }) };
+  };
+}
 /* the numbers a question prints, commas and currency signs stripped */
 export const numbersIn = (t) => (String(t).match(/\d[\d,]*(\.\d+)?/g) || []).map((x) => Number(x.replace(/,/g, '')));
 export function leaks(d) { return d.kind === 'num' ? numbersIn(d.q).includes(d.value) : new Set(d.opts.map(String)).size !== d.opts.length; }
@@ -733,7 +758,9 @@ export function genCard(o, seed, cx) {
      so a card cut once for every child (My Feed) reads exactly as this draws it for her. */
   const memo = {};
   const drawAt = (cur, s) => { const key = cur + s; if (memo[key]) return memo[key]; const was = currency(); setCurrency(cur); try { return (memo[key] = g(rng(s), C)); } finally { setCurrency(was); } };
-  const everywhere = (s, test) => Object.keys(CURRENCIES).every((cur) => test(drawAt(cur, s), cur));
+  /* (a four-option one's only leak is two equal options, and pricing scales every amount
+     alike, so its own currency decides for all of them) */
+  const everywhere = (s, test) => { const here = drawAt(currency(), s); return here.kind !== 'num' ? test(here, currency()) : Object.keys(CURRENCIES).every((cur) => test(drawAt(cur, s), cur)); };
   /* a typed answer whose number is printed in its own question is a leak: draw again */
   let at = seed * 2654435761 + o.id.length;
   for (let k = 0; k < 12; k++) { const s = seed * 2654435761 + o.id.length + k * 7919; at = s; if (everywhere(s, (d) => !leaks(d))) break; }

@@ -294,7 +294,8 @@ ok(per.every((n, i) => BUILD.SHORT[i + 1] || n >= 110), 'levels (audit V1): ever
   });
   ok(GH.length >= 30 && !ghBad.length, '"Show me how" (generated): drawn again from its seed, the generator\'s own words, and never the answer to the question it sits beside',
     `${GH.length} worked siblings` + (ghBad.length ? ' · ' + ghBad[0].id : ''));
-  const sums = (t) => [...String(t).matchAll(/((?:\d[\d,]*\s*[+−×÷]\s*)+\d[\d,]*)\s*=\s*(\d[\d,]*)/g)];
+  /* a placeholder is checked in coins: pricing scales every amount alike, so a sum right in coins is right in every currency */
+  const sums = (t) => [...String(t).replace(/\{c(\d+)\}/g, "$1").matchAll(/((?:\d[\d,]*\s*[+−×÷]\s*)+\d[\d,]*)\s*=\s*(\d[\d,]*)/g)];
   const wrongSum = [];
   DATA.filter((x) => x.kind === 'worked' || x.kind === 'showhow').forEach((x) => sums(x.body).forEach(([all, lhs, rhs]) => {
     const v = Function(`return ${lhs.replace(/,/g, '').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')}`)();

@@ -86,11 +86,20 @@ const idOf = (src) => 'f-' + src.replace(/[^a-z0-9]+/gi, '-').replace(/-+$/, '')
    first and fullest telling is the one kept. What was let go is listed in the manifest. */
 const wordsOf = (t) => new Set((plain(t).toLowerCase().match(/[a-z0-9']+/g) || []));
 export const overlap = (a, b) => { let n = 0; for (const w of a) if (b.has(w)) n++; return n / Math.min(a.size, b.size); };
+/* overlap(a, b) >= 0.8, exactly, but it stops at the first word too many that the shorter one
+   does not share — the builder asks it of thousands of drawn questions against every card */
+export const NEAR = 0.8;
+export function near(a, b) {
+  const [s, l] = a.size <= b.size ? [a, b] : [b, a];
+  let miss = 0; const allowed = s.size - Math.ceil(NEAR * s.size - 1e-9);
+  for (const w of s) if (!l.has(w) && ++miss > allowed) return false;
+  return true;
+}
 const bodies = [], dropped = [];
 function add(c) {
   const bw = c.body ? wordsOf(c.body.join(' ')) : null;
   if (bw && bw.size >= 4) {
-    const twin = bodies.find((b) => overlap(bw, b.w) >= 0.8);
+    const twin = bodies.find((b) => near(bw, b.w));
     if (twin) { dropped.push(`${c.src} ≈ ${twin.src}`); return false; }
     bodies.push({ w: bw, src: c.src });
   }
@@ -133,7 +142,7 @@ function passagesOf(cardId, L) {
   const runs = [[]];
   L.beats.forEach((b, i) => {
     const bw = wordsOf(b.line);
-    const twin = bw.size >= 4 && bodies.find((x) => overlap(bw, x.w) >= 0.8);
+    const twin = bw.size >= 4 && bodies.find((x) => near(bw, x.w));
     if (twin) { dropped.push(`lesson:${cardId}#beat${i} ≈ ${twin.src}`); runs.push([]); return; }
     runs[runs.length - 1].push(i);
   });
@@ -426,7 +435,7 @@ EVENTS.forEach((ev) => add({ kind: 'event', src: `event:${ev.id}`, topics: ['mar
 export const GEN_SEEDS = 120, GEN_MAX = 16, STANDALONE_WORDS = 6;
 /* the second cut (section 10) goes on drawing: as many situations as an objective's generator
    can tell apart, up to GEN_MORE — the near-duplicate rule, not this number, usually stops it */
-export const GEN_MORE_SEEDS = 600, GEN_MORE = 48;
+export const GEN_MORE_SEEDS = 1500, GEN_MORE = 48;
 const qWords = [];
 for (const k of allCards) for (let qi = 0; qi < drillCount(k); qi++) qWords.push(wordsOf(drillAt(k, qi).q));
 const permuted = (seed, d) => {                     /* the wrong options, in an order taken from the seed */
@@ -440,7 +449,7 @@ function addRetrieval(o, k, src, cardId, d) {
   if (d.kind === 'num' || !Array.isArray(d.opts)) return false;
   const qw = wordsOf(d.q);
   if (nWords(d.q) < STANDALONE_WORDS) { retrievalLog.push(`${src}: too short to stand alone`); return false; }
-  if (qWords.some((w) => overlap(qw, w) >= 0.8)) { retrievalLog.push(`${src}: the same question as one already cut`); return false; }
+  if (qWords.some((w) => near(qw, w))) { retrievalLog.push(`${src}: the same question as one already cut`); return false; }
   const ch = chapterOf(k), level = chLevel(ch);
   const title = !leaks(o.short, d) ? o.short : CHAPTERS[level - 1].title;
   if (leaks(title, d)) return false;
