@@ -20,3 +20,4 @@ tools/art/*.log
 # family art: raw generations, looked at before processing
 tools/art/raw/
 .claude/worktrees/
+app/.ref/
